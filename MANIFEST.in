@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+include *.sh
+include *.md
+
+
+
+
+
