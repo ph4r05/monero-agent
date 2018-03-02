@@ -1668,7 +1668,7 @@ def mn_encode( message ):
     for i in range(0, len(message), 8):
         message = message[0:i] + mn_swap_endian_4byte(message[i:i+8]) + message[i+8:]
         #print(len(st[i:i+8]))
-    for i in range(len(message)/8):
+    for i in range(len(message)//8):
         word = message[8*i:8*i+8]
         x = int(word, 16)
         w1 = (x%n)
@@ -1680,7 +1680,7 @@ def mn_encode( message ):
 def mn_decode( wlist ):
     out = ''
     n = len(words)
-    for i in range(len(wlist)/3): #note 24 / 3 = 8... 12 / 3 = 4.. 
+    for i in range(len(wlist)//3): #note 24 / 3 = 8... 12 / 3 = 4..
         word1, word2, word3 = wlist[3*i:3*i+3]
         w1 = words.index(word1)
         w2 = words.index(word2)

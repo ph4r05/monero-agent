@@ -100,7 +100,7 @@ class Keccak:
             raise KeccakError.KeccakError("The provided string does not end with a full byte")
 
         #Perform the modification
-        temp=''
+        temp=b''
         nrBytes=len(string)//2
         for i in range(nrBytes):
             offset=(nrBytes-i-1)*2
@@ -110,9 +110,9 @@ class Keccak:
     def fromLaneToHexString(self, lane):
         """Convert a lane value to a string of bytes written in hexadecimal"""
 
-        laneHexBE = (("%%0%dX" % (self.w//4)) % lane)
+        laneHexBE = ((b"%%0%dX" % (self.w//4)) % lane)
         #Perform the modification
-        temp=''
+        temp=b''
         nrBytes=len(laneHexBE)//2
         for i in range(nrBytes):
             offset=(nrBytes-i-1)*2
@@ -166,11 +166,11 @@ class Keccak:
             raise KeccakError.KeccakError("table must b")
 
         #Convert
-        output=['']*25
+        output=[b'']*25
         for x in range(5):
             for y in range(5):
                 output[5*y+x]=self.fromLaneToHexString(table[x][y])
-        output =''.join(output).upper()
+        output = b''.join(output).upper()
         return output
 
     def Round(self,A,RCfixed):
@@ -251,7 +251,7 @@ class Keccak:
         if len(my_string)%2!=0:
             #Pad with one '0' to reach correct length (don't know test
             #vectors coding)
-            my_string=my_string+'0'
+            my_string=my_string+b'0'
         if my_string_length>(len(my_string)//2*8):
             raise KeccakError.KeccakError("the string is too short to contain the number of bits announced")
 
@@ -265,7 +265,7 @@ class Keccak:
                 my_byte=int(my_string[nr_bytes_filled*2:nr_bytes_filled*2+2],16)
             my_byte=(my_byte>>(8-nbr_bits_filled))
             my_byte=my_byte+2**(nbr_bits_filled)+2**7
-            my_byte="%02X" % my_byte
+            my_byte=b'%02X' % my_byte
             my_string=my_string[0:nr_bytes_filled*2]+my_byte
         else:
             if (nbr_bits_filled == 0):
@@ -274,11 +274,11 @@ class Keccak:
                 my_byte=int(my_string[nr_bytes_filled*2:nr_bytes_filled*2+2],16)
             my_byte=(my_byte>>(8-nbr_bits_filled))
             my_byte=my_byte+2**(nbr_bits_filled)
-            my_byte="%02X" % my_byte
+            my_byte=b'%02X' % my_byte
             my_string=my_string[0:nr_bytes_filled*2]+my_byte
             while((8*len(my_string)//2)%n < (n-8)):
-                my_string=my_string+'00'
-            my_string = my_string+'80'
+                my_string=my_string+b'00'
+            my_string = my_string+b'80'
 
         return my_string
 
@@ -320,7 +320,7 @@ class Keccak:
 
         #Absorbing phase
         for i in range((len(P)*8//2)//r):
-            Pi=self.convertStrToTable(P[i*(2*r//8):(i+1)*(2*r//8)]+'00'*(c//8))
+            Pi=self.convertStrToTable(P[i*(2*r//8):(i+1)*(2*r//8)]+b'00'*(c//8))
 
             for y in range(5):
               for x in range(5):
@@ -331,7 +331,7 @@ class Keccak:
             print("Value after absorption : %s" % (self.convertTableToStr(S)))
 
         #Squeezing phase
-        Z = ''
+        Z = b''
         outputLength = n
         while outputLength>0:
             string=self.convertTableToStr(S)

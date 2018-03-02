@@ -16,7 +16,7 @@ q = 2**255 - 19
 l = 2**252 + 27742317777372353535851937790883648493
 
 def netVersion():
-    return "12"
+    return b'12'
 
 def public_key(sk):
     #returns point encoded to binary .. sk is just an int..
@@ -56,8 +56,8 @@ def electrumChecksum(wordlist):
     upl = 3 #prefix length
     wl2 = ''
     for a in wl:
-        wl2+= a[:upl]
-    z = ((zlib.crc32(wl2) & 0xffffffff) ^ 0xffffffff ) >> 0
+        wl2+= (a[:upl])
+    z = ((zlib.crc32(bytes(wl2, 'utf8')) & 0xffffffff) ^ 0xffffffff ) >> 0
     z2 = ((z ^ 0xffffffff) >> 0) % len(wl)
     return wl[z2]
 
@@ -66,7 +66,7 @@ __b58base = len(__b58chars)
 
 def b58encode(v):
     a = [reverseBytes(v[i:i+16]) for i in range(0, len(v)-16, 16)]
-    rr = -2*((len(v) /2 )% 16)
+    rr = -2*((len(v) //2 )% 16)
 
     res = ''
     for b in a:
@@ -165,7 +165,7 @@ def recoverSK(seed):
 
 def cn_fast_hash(s):
     k = Keccak.Keccak()
-    return k.Keccak((len(s) * 4, s), 1088, 512, 32 * 8, False).lower() #r = bitrate = 1088, c = capacity, n = output length in bits
+    return k.Keccak((len(s) * 4, s), 1088, 512, 32 * 8, False).lower()  #r = bitrate = 1088, c = capacity, n = output length in bits
 
 def getView(sk):
     a = hexToInt(cn_fast_hash(sc_reduce_key(sk))) % l
@@ -177,12 +177,12 @@ def getViewMM(sk):
 
 def reverseBytes(a): #input is byte string, it reverse the endianness
     b = [a[i:i+2] for i in range(0, len(a)-1, 2)]
-    return ''.join(b[::-1])
+    return b''.join(b[::-1])
 
 def encode_addr(version, spendP, viewP):
     buf = version + spendP + viewP
     h = cn_fast_hash(buf)
-    buf = buf +  h[0:8]
+    buf = buf + h[0:8]
     return b58encode(buf)
 
 def hexToInt(h):
