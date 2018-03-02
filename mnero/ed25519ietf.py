@@ -27,7 +27,6 @@
 #either expressed or implied, of the FreeBSD Project.
 
 import hashlib
-import MiniNero
 
 def sha512(s):
     return hashlib.sha512(s).digest()
