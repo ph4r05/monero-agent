@@ -258,7 +258,7 @@ def hashToPointCN(hexVal):
 
     #like sqrt (w / x) although may have to check signs..
     #so, note that if a squareroot exists, then clearly a square exists..
-    rx = ed25519.expmod(w * ed25519.inv(xp),(q+3)/8,q) 
+    rx = ed25519.expmod(w * ed25519.inv(xp),(q+3)//8,q)
     #rx is ok. 
 
     x = rx * rx * (w * w - 2 * A * A * u * u) % q
