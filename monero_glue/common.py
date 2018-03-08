@@ -8,11 +8,11 @@ import functools
 
 def hash_bytearray(ba):
     """
-    Hashing bytearrat
+    Hashing bytearray
     :param ba:
     :return:
     """
-    return functools.reduce(lambda a,d: (a*256 + d), ba, 0)
+    return functools.reduce(lambda a,d: (a*256 + d) & 0xffffffffffffffff, ba, 0)
 
 
 class HashWrapper(object):
