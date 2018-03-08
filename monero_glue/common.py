@@ -3,9 +3,19 @@
 from mnero import mininero
 from monero_serialize import xmrtypes, xmrserialize, protobuf as xproto
 import hashlib
+import functools
 
 
-class KeccakWrapper(object):
+def hash_bytearray(ba):
+    """
+    Hashing bytearrat
+    :param ba:
+    :return:
+    """
+    return functools.reduce(lambda a,d: (a*256 + d), ba, 0)
+
+
+class HashWrapper(object):
     def __init__(self, ctx):
         self.ctx = ctx
 
@@ -48,4 +58,7 @@ def get_keccak_writer(sub_writer=None):
     :param sub_writer:
     :return:
     """
-    return xproto.AHashWriter(KeccakWrapper(get_keccak()), sub_writer=sub_writer)
+    return xproto.AHashWriter(HashWrapper(get_keccak()), sub_writer=sub_writer)
+
+
+
