@@ -70,16 +70,18 @@ class Basetest(aiounittest.AsyncTestCase):
         await ar.message(unsig)
 
         trez = trezor.Trezor()
-
         print(js)
 
         for tx in unsig.txes:
             # Init transaction
             tsx_data = trezor.TsxData()
-            tsx_data.payment_id = []  # TODO: extract payment id
+            tsx_data.payment_id = []  # TODO: extract payment id from extra
             tsx_data.outputs = tx.dests
-
+            tsx_data.change_dts = tx.change_dts
             await trez.init_transaction(tsx_data)
+
+            # Set transaction inputs
+
 
         print('Vertig')
 
