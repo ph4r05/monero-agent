@@ -11,7 +11,7 @@ import aiounittest
 from mnero import mininero
 import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor
+from monero_glue import trezor, monero, common
 
 __author__ = 'dusanklinec'
 
@@ -70,9 +70,15 @@ class Basetest(aiounittest.AsyncTestCase):
         await ar.message(unsig)
 
         trez = trezor.Trezor()
+        trez.creds = trezor.WalletCreds.new_wallet(
+            priv_view_key=int(b'4ce88c168e0f5f8d6524f712d5f8d7d83233b1e7a2a60b5aba5206cc0ea2bc08', 16),
+            priv_spend_key=int(b'f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a', 16))
+
         print(js)
 
         for tx in unsig.txes:
+            extras = await monero.parse_extra_fields(tx.extra)
+
             # Init transaction
             tsx_data = trezor.TsxData()
             tsx_data.payment_id = []  # TODO: extract payment id from extra
