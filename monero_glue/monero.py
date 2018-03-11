@@ -75,7 +75,7 @@ async def parse_extra_fields(extra_buff):
     return extras
 
 
-async def find_tx_extra_field_by_type(extra_fields, msg):
+def find_tx_extra_field_by_type(extra_fields, msg):
     """
     Finds given message type in the extra array, or returns None if not found
     :param extra_fields:
@@ -85,4 +85,26 @@ async def find_tx_extra_field_by_type(extra_fields, msg):
     for x in extra_fields:
         if isinstance(x, msg):
             return x
+
+
+def has_encrypted_payment_id(extra_nonce):
+    """
+    Returns true if encrypted payment id is present
+    :param extra_nonce:
+    :return:
+    """
+    return len(extra_nonce) == 9 and extra_nonce[0] == 1
+
+
+def get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce):
+    """
+    Extracts encrypted payment id from extra
+    :param extra_nonce:
+    :return:
+    """
+    if 9 != len(extra_nonce):
+        raise ValueError('Nonce size mismatch')
+    if 0x1 != extra_nonce[0]:
+        raise ValueError('Nonce payment type invalid')
+    return extra_nonce[1:]
 
