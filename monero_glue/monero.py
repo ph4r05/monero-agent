@@ -108,3 +108,28 @@ def get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce):
         raise ValueError('Nonce payment type invalid')
     return extra_nonce[1:]
 
+
+def get_destination_view_key_pub(destinations, change_addr=None):
+    """
+    Returns destination address public view key
+    :param destinations:
+    :type destinations: list[xmrtypes.TxDestinationEntry]
+    :param change_addr:
+    :return:
+    """
+    addr = xmrtypes.AccountPublicAddress(m_spend_public_key=[0]*32, m_view_public_key=[0]*32)
+    count = 0
+    for dest in destinations:
+        if dest.amount == 0:
+            continue
+        if change_addr and dest.addr == change_addr:
+            continue
+        if dest.addr == addr:
+            continue
+        if count > 0:
+            return [0]*32
+        addr = dest.addr
+        count += 1
+    return addr.m_view_public_key
+
+
