@@ -61,32 +61,32 @@ def electrumChecksum(wordlist):
     z2 = ((z ^ 0xffffffff) >> 0) % len(wl)
     return wl[z2]
 
-__b58chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+__b58chars = b'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 __b58base = len(__b58chars)
 
 def b58encode(v):
     a = [reverseBytes(v[i:i+16]) for i in range(0, len(v)-16, 16)]
-    rr = -2*((len(v) //2 )% 16)
+    rr = -2*((len(v) // 2) % 16)
 
-    res = ''
+    res = b''
     for b in a:
         bb = hexToInt(b)
-        result = ''
+        result = b''
         while bb >= __b58base:
             div, mod = divmod(bb, __b58base)
-            result = __b58chars[mod] + result
+            result = __b58chars[mod:mod+1] + result
             bb = div
-        result = __b58chars[bb] + result
+        result = __b58chars[bb:bb+1] + result
         res += result
-    result = ''
+    result = b''
     if rr < 0:
-        bf =  hexToInt(reverseBytes(v[rr:])) #since we only reversed the ones in the array..
-        result = ''
+        bf = hexToInt(reverseBytes(v[rr:])) #since we only reversed the ones in the array..
+        result = b''
         while bf >= __b58base:
             div, mod = divmod(bf, __b58base)
-            result = __b58chars[mod] + result
+            result = __b58chars[mod:mod+1] + result
             bf = div
-        result = __b58chars[bf] + result
+        result = __b58chars[bf:bf+1] + result
     res += result
     return res
     
