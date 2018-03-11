@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import binascii
+
 from mnero import mininero
 from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses, addr_to_hash
@@ -7,12 +9,39 @@ from . import monero
 from . import common as common
 
 
+class WalletCreds(object):
+    """
+    Stores wallet private keys
+    """
+    def __init__(self, view_key_private=None, spend_key_private=None, view_key_public=None, spend_key_public=None, address=None):
+        self.view_key_private = view_key_private
+        self.view_key_public = None
+        self.spend_key_private = spend_key_private
+        self.spend_key_public = None
+        self.address = None
+
+    @classmethod
+    def new_wallet(cls, priv_view_key, priv_spend_key):
+        pub_view_key = mininero.public_key(priv_view_key)
+        pub_spend_key = mininero.public_key(priv_spend_key)
+        addr = mininero.encode_addr(mininero.netVersion(),
+                                    binascii.hexlify(pub_spend_key),
+                                    binascii.hexlify(pub_view_key))
+        return cls(view_key_private=priv_view_key, spend_key_private=priv_spend_key,
+                   view_key_public=pub_view_key, spend_key_public=pub_spend_key,
+                   address=addr)
+
+
 class Trezor(object):
+    """
+    Main Trezor object
+    """
     def __init__(self):
         self.tsx_ctr = 0
         self.tsx_obj = None
         self.key_master = None
         self.key_hmac = None
+        self.creds = None  # type: WalletCreds
 
     async def init_transaction(self, tsx_data: TsxData):
         self.tsx_ctr += 1
@@ -38,6 +67,9 @@ class Trezor(object):
 
 
 class TTransaction(object):
+    """
+    Transaction builder
+    """
     def __init__(self):
         self.r = None  # txkey
         self.r_pub = None
