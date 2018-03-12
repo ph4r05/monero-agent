@@ -381,8 +381,12 @@ def cn_fast_hash(buff):
 
 
 def random_scalar():
+    """
+    Generates random scalar (secret key)
+    :return:
+    """
     tmp = rand.getrandbits(64 * 8)  # 8 bits to a byte ...
-    tmp = sc_reduce(tmp)  # -> turns 64 to 32 (note sure why don't just gt 32 in first place ... )
+    tmp = sc_reduce(tmp)
     return tmp
 
 
@@ -398,11 +402,6 @@ def hash_to_scalar(data, length=None):
     return sc_reduce32(res)
 
 
-def sc_check(key):
-    #in other words, keys which are too small are rejected
-    return 0
-
-
 def check_ed25519point(P):
     """
     Simple check if the point has exactly 2 coordinates
@@ -412,6 +411,57 @@ def check_ed25519point(P):
     check_point_fmt(P)
     if not isoncurve(P):
         raise ValueError('P is not on ed25519 curve')
+
+
+def sc_check(key):
+    """
+    TODO: Implement secret key check
+    :param key:
+    :return:
+    """
+    return 0
+
+
+def sc_reduce(s):
+    """
+    Inputs a 64 byte int and outputs the lowest 32 bytes
+    Used by hash_to_scalar, which turns cn_fast_hash to number.
+    :param s:
+    :return:
+    """
+    r = encodeint(s)
+    r = r[64::]
+    return decodeint(r) % l
+
+
+def sc_reduce32(data):
+    """
+    Exactly the same as sc_reduce (which is default lib sodium)
+    except it is assumed that your input s is alread in the form:
+    s[0]+256*s[1]+...+256^31*s[31] = s
+
+    And the rest is just reducing mod l,
+    so basically take a 32 byte input, and reduce modulo the prime.
+    :param data:
+    :return:
+    """
+    return data % l
+
+
+def sc_add(aa, bb):
+    return (aa + bb) % l
+
+
+def sc_sub(aa, bb):
+    return (aa - bb) % l
+
+
+def sc_isnonzero(c):
+    return c % l != 0
+
+
+def sc_mulsub(aa, bb, cc):
+    return (cc - aa * bb) % l
 
 
 def ge_scalarmult(a, A):
@@ -435,55 +485,47 @@ def ge_scalarmult(a, A):
 
 
 def ge_mul8(P):
-    #ok, the point of this is to double three times
-    #and the point is that the ge_p2_dbl returns a point in the p1p1 form
-    #so that's why have to convert it first and then double
+    """
+    3 times doubling the point
+    :param P:
+    :return:
+    """
     return ge_scalarmult(8, P)
 
 
-def sc_reduce(s):
-    #inputs a 64 byte int and outputs the lowest 32 bytes
-    #used by hash_to_scalar, which turns cn_fast_hash to number..
-    r = mininero.intToHex(s)
-    r = r[64::]
-    return mininero.hexToInt(r) % l
-
-
-def sc_reduce32(data):
-    #ok, the code here is exactly the same as sc_reduce
-    #(which is default lib sodium)
-    #except it is assumed that your input
-    #s is alread in the form:
-    # s[0]+256*s[1]+...+256^31*s[31] = s
-    #and the rest is just reducing mod l
-    #so basically take a 32 byte input, and reduce modulo the prime
-    return data % l
-
-
 def ge_scalarmult_base(a):
-    #in this function in the original code, they've assumed it's already clamped ...
-    #c.f. also https://godoc.org/github.com/agl/ed25519/edwards25519
-    #it will return h = a*B, where B is ed25519 bp (x,4/5)
-    #and a = a[0] + 256a[1] + ... + 256^31 a[31]
-    #it assumes that a[31 <= 127 already
+    """
+    In this function in the original code, they've assumed it's already clamped ...
+    c.f. also https://godoc.org/github.com/agl/ed25519/edwards25519
+    It will return h = a*B, where B is ed25519 bp (x,4/5)
+    And a = a[0] + 256a[1] + ... + 256^31 a[31]
+    it assumes that a[31 <= 127 already
+    :param a:
+    :return:
+    """
     return scalarmult_base(8*a)
-    #return ge_scalarmult(8*a, BASEPOINT)
 
 
 def ge_frombytes_vartime(key):
-    #https://www.imperialviolet.org/2013/12/25/elligator.html
-    #basically it takes some bytes of data
-    #converts to a point on the edwards curve
-    #if the bytes aren't on the curve
-    #also does some checking on the numbers
-    #ex. your secret key has to be at least >=4294967277
-    #also it rejects certain curve points, i.e. "if x = 0, sign must be positive
+    """
+    https://www.imperialviolet.org/2013/12/25/elligator.html
+
+    Basically it takes some bytes of data
+    converts to a point on the edwards curve
+    if the bytes aren't on the curve
+    also does some checking on the numbers
+    ex. your secret key has to be at least >= 4294967277
+    also it rejects certain curve points, i.e. "if x = 0, sign must be positive"
+
+    :param key:
+    :return:
+    """
     return 0
 
 
 def generate_key_derivation(key1, key2):
     """
-    Key derivation.
+    Key derivation: 8*(key2*key1)
 
     :param key1: public key of receiver Bob (see page 7)
     :param key2: Alice's private
@@ -515,6 +557,14 @@ def derivation_to_scalar(derivation, output_index):
 
 
 def derive_public_key(derivation, output_index, base):
+    """
+    H_s(derivation || varint(output_index))G + base
+
+    :param derivation:
+    :param output_index:
+    :param base:
+    :return:
+    """
     if ge_frombytes_vartime(base) != 0:  # check some conditions on the point
         raise ValueError("derive pub key bad point")
     check_ed25519point(base)
@@ -526,22 +576,6 @@ def derive_public_key(derivation, output_index, base):
     # because the CN code adds using the monty curve
     point4 = point_add(point1, point3)
     return point4
-
-
-def sc_add(aa, bb):
-    return (aa + bb) % l
-
-
-def sc_sub(aa, bb):
-    return (aa - bb) % l
-
-
-def sc_isnonzero(c):
-    return c % l != 0
-
-
-def sc_mulsub(aa, bb, cc):
-    return (cc - aa * bb) % l
 
 
 def derive_secret_key(derivation, output_index, base):
