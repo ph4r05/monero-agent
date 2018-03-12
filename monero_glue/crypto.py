@@ -10,6 +10,7 @@ import binascii  # conversion between hex, int, and binary. Also for the crc32 t
 from mnero import ed25519  # Bernsteins python ed25519 code from cr.yp.to
 
 from mnero.mininero import b, q, l
+from mnero.ed25519 import d
 
 from mnero import mininero, keccak2
 from monero_serialize import xmrtypes, xmrserialize
@@ -38,6 +39,40 @@ else:
 # Extended curve coordinates
 B_ext = (ed25519.Bx % q, ed25519.By % q, 1, (ed25519.Bx * ed25519.By) % q)
 I_ext = (0, 1, 1, 0)
+
+fe_m1 = 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffec      # -1
+fe_sqrtm1 = 0x2B8324804FC1DF0B2B4D00993DFBD7A72F431806AD2FE478C4EE1B274A0EA0B0  # sqrt(-1)
+fe_d2 = (2 * ed25519.d) % q
+
+# fe_A = 2 * (1 - ed25519.d) * ed25519.inv(1 + ed25519.d)
+fe_A = 486662
+fe_ma = -486662
+fe_ma2 = -1 * fe_A * fe_A
+
+# fe_fffb1 = [0xfe1c4201,0xffda5d4d,0xfe71a455,0xff45c954,0xff465013,0xfffb19e4,0x00e29ba1,0xff62e415,0xfefdad62,0xfff9c7f0]
+
+# k.<a> = FiniteField(2**255-19, 'a')
+# A = fe_A * a
+fe_fffb1 = 0x018e04102529e4e8df563ac8be04e61c2e6bfb5746d58c72dd58968acde3bdff   # sqrt(-2 * A * (A + 2))
+fe_fffb2 = 0x32f9e1f5fba5d3096e2bae483fe9a041ae21fcb9fba908202d219b7c9f83650d   # sqrt( 2 * A * (A + 2))
+fe_fffb3 = 0x18b5eef2eb3df710476ab9bfc0f25d12bfdb00b15a69bdd6a7e48278e8cfd387   # sqrt(-sqrt(-1*a) * A * (A + 2))
+fe_fffb4 = 0x1a43f3031067dbf926c0f4887ef7432eee46fc08a13f4a49853d1903b6b39186   # sqrt( sqrt(-1*a) * A * (A + 2))
+
+
+def fe_mod(a):
+    return a % q
+
+
+def fe_add(a, b):
+    return (a + b) % q
+
+
+def fe_mul(a, b):
+    return (a * b) % q
+
+
+def fe_expmod(b, e):
+    return ed25519.expmod(b, e, q)
 
 
 def b16_to_scalar(bts):
@@ -91,6 +126,17 @@ def pow2(x, p):
         x = x * x % q
         p -= 1
     return x
+
+
+def expmod(b, e, m):
+    """
+    Modular exponentiation
+    :param b:
+    :param e:
+    :param m:
+    :return:
+    """
+    return ed25519.expmod(b, e, m)
 
 
 def inv(z):
