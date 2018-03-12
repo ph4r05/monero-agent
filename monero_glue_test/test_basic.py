@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# Author: Dusan Klinec, ph4r05, 2018
+
 import random
 import base64
 import unittest
@@ -14,8 +16,6 @@ import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
 from monero_glue import trezor, monero, common, crypto
 from mnero import keccak2
-
-__author__ = 'dusanklinec'
 
 
 class Basetest(aiounittest.AsyncTestCase):

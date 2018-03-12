@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# Author: Dusan Klinec, ph4r05, 2018
+
 import random
 import base64
 import unittest
@@ -12,9 +14,6 @@ from mnero import mininero
 from mnero import PaperWallet as pw
 from mnero import mnemonic
 from mnero import ed25519
-
-
-__author__ = 'dusanklinec'
 
 
 class Basetest(unittest.TestCase):

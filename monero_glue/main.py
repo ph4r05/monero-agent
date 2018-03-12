@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from mnero import mininero
+# Author: Dusan Klinec, ph4r05, 2018
 
 
 def main():

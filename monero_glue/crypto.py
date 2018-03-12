@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# Author: Dusan Klinec, ph4r05, 2018
+#
+# Resources:
+# https://cr.yp.to
+# https://github.com/monero-project/mininero
+# https://godoc.org/github.com/agl/ed25519/edwards25519
+# https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-00#section-4
+# https://github.com/monero-project/research-lab
+
 import math
 import sys
 import operator
