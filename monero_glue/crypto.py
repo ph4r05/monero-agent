@@ -24,11 +24,11 @@ def random_scalar():
     return tmp
 
 
-def hash_to_scalar(data, length):
+def hash_to_scalar(data, length=None):
     #this one is H_s(P)
     #relies on cn_fast_hash and sc_reduce32 (which makes an int smaller)
     #the input here is not necessarily a 64 byte thing, and that's why sc_reduce32
-    res = mininero.hexToInt(mininero.cn_fast_hash(data[:length]))
+    res = mininero.hexToInt(mininero.cn_fast_hash(data[:length] if length else data))
     return sc_reduce32(res)
 
 
