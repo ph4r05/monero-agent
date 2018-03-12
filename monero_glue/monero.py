@@ -210,6 +210,50 @@ def derive_subaddress_public_key(pub_key, derivation, output_index):
                                             output_index))
 
 
+def is_out_to_acc_precomp(subaddresses, out_key, derivation, additional_derivations, output_index):
+    subaddress_spendkey = derive_subaddress_public_key(out_key, derivation, output_index)
+    if subaddress_spendkey in subaddresses:
+        return subaddresses[subaddress_spendkey], derivation
+
+    if additional_derivations and len(additional_derivations) > 0:
+        if output_index >= len(additional_derivations):
+            raise ValueError('Wrong number of additional derivations')
+
+        subaddress_spendkey = derive_subaddress_public_key(out_key, additional_derivations[output_index], output_index)
+        if subaddress_spendkey in subaddresses:
+            return subaddresses[subaddress_spendkey], additional_derivations[output_index]
+
+    return None
+
+
+def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output_index, received_index, in_ephemeral, ki):
+    if ack.spend_key_private == 0:
+        raise ValueError('Watch-only wallet not supported')
+
+    # derive secret key with subaddress - step 1: original CN derivation
+    scalar_step1 = crypto.derive_secret_key(ed25519.decodepointcheck(recv_derivation), real_output_index, ack.spend_key_private)
+
+    # step 2: add Hs(SubAddr || a || index_major || index_minor)
+    subaddr_sk = None
+    scalar_step2 = None
+    if received_index == (0, 0):
+        scalar_step2 = scalar_step1
+    else:
+        subaddr_sk = get_subaddress_secret_key(ack.view_key_private, received_index)
+        scalar_step2 = crypto.sc_add(scalar_step1, subaddr_sk)
+
+    # TODO: multisig here
+    # ...
+
+    pub_ver = ed25519.encodepoint(crypto.ge_scalarmult_base(scalar_step2))
+
+    if pub_ver != out_key:
+        raise ValueError('key image helper precomp: given output pubkey doesn\'t match the derived one')
+
+    ki = crypto.generate_key_image(pub_ver, scalar_step2)
+    return scalar_step2, ki
+
+
 def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, additional_tx_public_keys, real_output_index, in_ephemeral, ki):
     recv_derivation = generate_key_derivation(tx_public_key, creds.view_key_private)
     print(base64.b16encode(recv_derivation))
@@ -218,4 +262,8 @@ def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, addit
     for add_pub_key in additional_tx_public_keys:
         additional_recv_derivations.append(generate_key_derivation(add_pub_key, creds.view_key_private))
 
+    subaddr_recv_info = is_out_to_acc_precomp(subaddresses, out_key, recv_derivation, additional_recv_derivations, real_output_index)
+
+    derv = generate_key_image_helper_precomp(creds, out_key, subaddr_recv_info[1], real_output_index, subaddr_recv_info[0], in_ephemeral, ki)
+    return derv
 
