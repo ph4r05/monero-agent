@@ -141,6 +141,10 @@ class TTransaction(object):
             raise ValueError('real_output index %s bigger than output_keys.size()' % (src_entr.real_output, len(src_entr.outputs)))
         self.summary_inputs_money += src_entr.amount
 
+        out_key = src_entr.outputs[src_entr.real_output][1].dest
+        monero.generate_key_image_helper(self.trezor.creds, self.subaddresses, out_key,
+                                         src_entr.real_out_tx_key, src_entr.real_out_additional_tx_keys,
+                                         src_entr.real_output_in_tx_index, None, None)
 
 
 
