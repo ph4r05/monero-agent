@@ -595,6 +595,7 @@ def hash_to_ec(buf):
     """
     H_p(buf)
 
+    Code adapted from MiniNero: https://github.com/monero-project/mininero
     https://github.com/monero-project/research-lab/blob/master/whitepaper/ge_fromfe_writeup/ge_fromfe.pdf
     http://archive.is/yfINb
     :param key:
@@ -623,11 +624,11 @@ def hash_to_ec(buf):
             negative = True
 
         else:
-            rx = rx * -1 * ed25519.sqroot(-2 * A * (A + 2)) % q  # TODO: use constants
+            rx = rx * -1 * fe_fffb1 % q
             negative = False
     else:
         # y was 0..
-        rx = (rx * -1 * ed25519.sqroot(2 * A * (A + 2))) % q
+        rx = (rx * -1 * fe_fffb2) % q
 
     if not negative:
         rx = (rx * u) % q
@@ -639,9 +640,9 @@ def hash_to_ec(buf):
         x = x * sqrtm1 % q  # ..
         y = (w - x) % q
         if (y != 0):
-            rx = rx * ed25519.sqroot(-1 * sqrtm1 * A * (A + 2)) % q
+            rx = rx * fe_fffb3 % q
         else:
-            rx = rx * -1 * ed25519.sqroot(sqrtm1 * A * (A + 2)) % q
+            rx = rx * -1 * fe_fffb4 % q
         sign = 1
 
     # setsign
