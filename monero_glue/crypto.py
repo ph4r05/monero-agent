@@ -188,36 +188,40 @@ def ge_frombytes_vartime(key):
 
 
 def generate_key_derivation(key1, key2):
-    # key1 is public key of receiver Bob (see page 7)
-    # key2 is Alice's private
-    # this is a helper function for the key-derivation
-    # which is the generating one-time key's thingy
+    """
+    Key derivation.
+
+    :param key1: public key of receiver Bob (see page 7)
+    :param key2: Alice's private
+    :return:
+    """
     if sc_check(key2) != 0:
         # checks that the secret key is uniform enough...
         raise ValueError("error in sc_check in keyder")
     if ge_frombytes_vartime(key1) != 0:
         raise ValueError("didn't pass curve checks in keyder")
 
-    point = key1  ## this ones the public
+    point = key1
     point2 = ge_scalarmult(key2, point)
-    # print("p2", encodepoint(point2).encode("hex"))
     point3 = ge_mul8(point2)  # This has to do with n==0 mod 8 by dedfinition, c.f. the top paragraph of page 5 of http://cr.yp.to/ecdh/curve25519-20060209.pdf
     # and also c.f. middle of page 8 in same document (Bernstein)
     return point3
 
 
 def derivation_to_scalar(derivation, output_index):
-    # this function specifically hashes your
-    # output index (for the one time keys )
-    # in order to get an int, so we can do ge_mult_scalar
-    # buf = s_comm(d = derivation, o = output_index)
+    """
+    H_s(derivation || varint(output_index))
+    :param derivation:
+    :param output_index:
+    :return:
+    """
     check_ed25519point(derivation)
     buf2 = ed25519.encodepoint(derivation) + xmrserialize.dump_uvarint_b(output_index)
     return hash_to_scalar(buf2, len(buf2))
 
 
 def derive_public_key(derivation, output_index, base):
-    if ge_frombytes_vartime(base) != 0: #check some conditions on the point
+    if ge_frombytes_vartime(base) != 0:  # check some conditions on the point
         raise ValueError("derive pub key bad point")
     check_ed25519point(base)
 
@@ -247,7 +251,13 @@ def sc_mulsub(aa, bb, cc):
 
 
 def derive_secret_key(derivation, output_index, base):
-    # outputs a derived key...
+    """
+    base + H_s(derivation || varint(output_index))
+    :param derivation:
+    :param output_index:
+    :param base:
+    :return:
+    """
     if sc_check(base) !=0:
         raise ValueError("cs_check in derive_secret_key")
     scalar = derivation_to_scalar(derivation, output_index)
@@ -255,16 +265,23 @@ def derive_secret_key(derivation, output_index, base):
 
 
 def hash_to_ec(key):
-    #takes a hash and turns into a point on the curve
-    #In MININERO, I'm not using the byte representation
-    #So this function is superfluous
+    """
+    H_p(data)
+    :param key:
+    :return:
+    """
     h = hash_to_scalar(key, len(key))
     point = ge_scalarmult_base(h)
     return ge_mul8(point)
 
 
 def generate_key_image(public_key, secret_key):
-    # should return a key image as defined in whitepaper
+    """
+    Key image: H_p(pub_key) * secret_key
+    :param public_key:
+    :param secret_key:
+    :return:
+    """
     if sc_check(secret_key) != 0:
         raise ValueError("sc check error in key image")
     point = hash_to_ec(public_key)
@@ -273,6 +290,13 @@ def generate_key_image(public_key, secret_key):
 
 
 def derive_subaddress_public_key(out_key, derivation, output_index):
+    """
+    out_key - H_s(derivation || varint(output_index))G
+    :param out_key:
+    :param derivation:
+    :param output_index:
+    :return:
+    """
     check_ed25519point(out_key)
     scalar = derivation_to_scalar(derivation, output_index)
     point2 = ed25519.scalarmultbase(scalar)
