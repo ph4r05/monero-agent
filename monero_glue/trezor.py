@@ -93,10 +93,19 @@ class TTransaction(object):
         self.subaddresses = {}
 
     def gen_r(self):
-        self.r = mininero.randomScalar()
-        self.r_pub = mininero.public_key(self.r)
+        """
+        Generates a new transaction key pair.
+        :return:
+        """
+        self.r = crypto.random_scalar()
+        self.r_pub = crypto.public_key(self.r)
 
     def init_transaction(self, tsx_data):
+        """
+        Initializes a new transaction.
+        :param tsx_data:
+        :return:
+        """
         self.tsx_data = tsx_data
         self.gen_r()
 
@@ -144,7 +153,7 @@ class TTransaction(object):
         out_key = src_entr.outputs[src_entr.real_output][1].dest
         monero.generate_key_image_helper(self.trezor.creds, self.subaddresses, out_key,
                                          src_entr.real_out_tx_key, src_entr.real_out_additional_tx_keys,
-                                         src_entr.real_output_in_tx_index, None, None)
+                                         src_entr.real_output_in_tx_index)
 
 
 
