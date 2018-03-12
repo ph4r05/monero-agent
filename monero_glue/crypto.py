@@ -384,9 +384,7 @@ def random_scalar():
     Generates random scalar (secret key)
     :return:
     """
-    tmp = rand.getrandbits(64 * 8)  # 8 bits to a byte ...
-    tmp = sc_reduce(tmp)
-    return tmp
+    return 8 * (rand.getrandbits(64 * 8)) % l
 
 
 def hash_to_scalar(data, length=None):
@@ -419,18 +417,6 @@ def sc_check(key):
     :return:
     """
     return 0
-
-
-def sc_reduce(s):
-    """
-    Inputs a 64 byte int and outputs the lowest 32 bytes
-    Used by hash_to_scalar, which turns cn_fast_hash to number.
-    :param s:
-    :return:
-    """
-    r = encodeint(s)
-    r = r[64::]
-    return decodeint(r) % l
 
 
 def sc_reduce32(data):
