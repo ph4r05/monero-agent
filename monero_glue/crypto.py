@@ -18,6 +18,51 @@ from monero_serialize import xmrtypes, xmrserialize
 from . import common as common
 
 
+def b16_to_scalar(bts):
+    """
+    Converts hexcoded bytearray to the scalar
+    :param bts:
+    :return:
+    """
+    return ed25519.decodeint(binascii.unhexlify(bts))
+
+
+def decodeint(x):
+    """
+    bytearray to integer scalar
+    :param x:
+    :return:
+    """
+    return ed25519.decodeint(x)
+
+
+def decodepoint(P):
+    """
+
+    :param P:
+    :return:
+    """
+    return ed25519.decodepointcheck(P)
+
+
+def encodeint(x):
+    """
+    Encodeint
+    :param x:
+    :return:
+    """
+    return ed25519.encodeint(x)
+
+
+def encodepoint(P):
+    """
+    Point encode
+    :param P:
+    :return:
+    """
+    return ed25519.encodepoint(P)
+
+
 def cn_fast_hash(buff):
     kc2 = keccak2.Keccak256()
     kc2.update(buff)
@@ -44,7 +89,8 @@ def hash_to_scalar(data, length=None):
     #relies on cn_fast_hash and sc_reduce32 (which makes an int smaller)
     #the input here is not necessarily a 64 byte thing, and that's why sc_reduce32
     # res = mininero.hexToInt(mininero.cn_fast_hash(binascii.hexlify(data[:length] if length else data)))
-    res = b2d(cn_fast_hash(data[:length] if length else data))
+    hash = cn_fast_hash(data[:length] if length else data)
+    res = ed25519.decodeint(hash)
     return sc_reduce32(res)
 
 
@@ -154,7 +200,7 @@ def derivation_to_scalar(derivation, output_index):
     # in order to get an int, so we can do ge_mult_scalar
     # buf = s_comm(d = derivation, o = output_index)
     check_ed25519point(derivation)
-    buf2 = struct.pack('64sl', ed25519.encodepoint(derivation), output_index)
+    buf2 = ed25519.encodepoint(derivation) + xmrserialize.dump_uvarint_b(output_index)
     return hash_to_scalar(buf2, len(buf2))
 
 
@@ -165,9 +211,9 @@ def derive_public_key(derivation, output_index, base):
 
     point1 = base
     scalar = derivation_to_scalar(derivation, output_index)
-    point2 = ge_scalarmult_base(scalar)
-    point3 = point2 #I think the cached is just for the sake of adding
-    #because the CN code adds using the monty curve
+    point2 = ed25519.scalarmultbase(scalar)
+    point3 = point2  # I think the cached is just for the sake of adding
+    # because the CN code adds using the monty curve
     point4 = ed25519.edwards(point1, point3)
     return point4
 
@@ -217,7 +263,7 @@ def generate_key_image(public_key, secret_key):
 def derive_subaddress_public_key(out_key, derivation, output_index):
     check_ed25519point(out_key)
     scalar = derivation_to_scalar(derivation, output_index)
-    point2 = ge_scalarmult_base(scalar)
+    point2 = ed25519.scalarmultbase(scalar)
     point4 = ed25519.edwards_Minus(out_key, point2)
     return point4
 
