@@ -126,18 +126,14 @@ class TTransaction(object):
         :param indices:
         :return:
         """
-        pkeys = []
         for idx in indices:
             if account == 0 and idx == 0:
-                pkeys.append(self.trezor.creds.spend_key_public)
                 self.subaddresses[self.trezor.creds.spend_key_public] = (0,0)
                 continue
 
             m = monero.get_subaddress_secret_key(self.trezor.creds.view_key_private, major=account, minor=idx)
             pub = mininero.public_key(m)
-            pkeys.append(pub)
             self.subaddresses[pub] = (account, indices)
-
 
     def set_input(self, src_entr):
         """
