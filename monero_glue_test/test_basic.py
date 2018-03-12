@@ -11,7 +11,8 @@ import aiounittest
 from mnero import mininero
 import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor, monero, common
+from monero_glue import trezor, monero, common, crypto
+from mnero import keccak2
 
 __author__ = 'dusanklinec'
 
@@ -78,15 +79,25 @@ class Basetest(aiounittest.AsyncTestCase):
 
         for tx in unsig.txes:
             extras = await monero.parse_extra_fields(tx.extra)
+            extra_nonce = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraNonce)
+            if extra_nonce and monero.has_encrypted_payment_id(extra_nonce.nonce):
+                payment_id = monero.get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce.nonce)
 
             # Init transaction
             tsx_data = trezor.TsxData()
-            tsx_data.payment_id = []  # TODO: extract payment id from extra
+            tsx_data.payment_id = payment_id
             tsx_data.outputs = tx.dests
             tsx_data.change_dts = tx.change_dts
             await trez.init_transaction(tsx_data)
 
+            # Subaddresses
+            await trez.precompute_subaddr(tx.subaddr_account, tx.subaddr_indices)
+
             # Set transaction inputs
+            for src in tx.sources:
+                await trez.set_tsx_input(src)
+
+
 
 
         print('Vertig')
