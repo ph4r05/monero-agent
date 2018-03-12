@@ -137,6 +137,14 @@ def get_destination_view_key_pub(destinations, change_addr=None):
 
 
 def encrypt_payment_id(payment_id, public_key, secret_key):
+    """
+    Encrypts payment_id hex.
+    Used in the transaction extra. Only recipient is able to decrypt.
+    :param payment_id:
+    :param public_key:
+    :param secret_key:
+    :return:
+    """
     derivation_p = crypto.generate_key_derivation(public_key, secret_key)
     derivation = crypto.encodepoint(derivation_p)
     derivation += b'\x8b'
@@ -151,10 +159,16 @@ def set_encrypted_payment_id_to_tx_extra_nonce(payment_id):
 
 
 async def remove_field_from_tx_extra(extra, mtype):
+    """
+    Removes extra field of fiven type from the buffer
+    Reserializes with skipping the given mtype.
+    :param extra:
+    :param mtype:
+    :return:
+    """
     if len(extra) == 0:
         return []
 
-    extras = []
     reader = xmrserialize.MemoryReaderWriter(extra)
     writer = xmrserialize.MemoryReaderWriter()
     ar_read = xmrserialize.Archive(reader, False)
@@ -168,6 +182,12 @@ async def remove_field_from_tx_extra(extra, mtype):
 
 
 def add_extra_nonce_to_tx_extra(extra, extra_nonce):
+    """
+    Appends nonce extra to the extra buffer
+    :param extra:
+    :param extra_nonce:
+    :return:
+    """
     if len(extra_nonce) > 255:
         raise ValueError('Nonce could be 255 bytes max')
     extra += b'\x02' + len(extra_nonce).to_bytes(1, byteorder='big') + extra_nonce
@@ -198,11 +218,25 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
 
 
 def generate_key_derivation(pub_key, priv_key):
+    """
+    Generates derivation priv_key * pub_key.
+    Simple ECDH.
+    :param pub_key:
+    :param priv_key:
+    :return:
+    """
     return crypto.encodepoint(
         crypto.generate_key_derivation(crypto.decodepoint(pub_key), priv_key))
 
 
 def derive_subaddress_public_key(pub_key, derivation, output_index):
+    """
+    Derives subaddress public spend key address.
+    :param pub_key:
+    :param derivation:
+    :param output_index:
+    :return:
+    """
     return crypto.encodepoint(
         crypto.derive_subaddress_public_key(crypto.decodepoint(pub_key),
                                             crypto.decodepoint(derivation),
@@ -210,6 +244,17 @@ def derive_subaddress_public_key(pub_key, derivation, output_index):
 
 
 def is_out_to_acc_precomp(subaddresses, out_key, derivation, additional_derivations, output_index):
+    """
+    Searches subaddresses for the computed subaddress_spendkey.
+    If found, returns (major, minor), derivation.
+
+    :param subaddresses:
+    :param out_key:
+    :param derivation:
+    :param additional_derivations:
+    :param output_index:
+    :return:
+    """
     subaddress_spendkey = derive_subaddress_public_key(out_key, derivation, output_index)
     if subaddress_spendkey in subaddresses:
         return subaddresses[subaddress_spendkey], derivation
@@ -225,7 +270,17 @@ def is_out_to_acc_precomp(subaddresses, out_key, derivation, additional_derivati
     return None
 
 
-def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output_index, received_index, in_ephemeral, ki):
+def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output_index, received_index):
+    """
+    Generates UTXO spending key and key image.
+
+    :param ack:
+    :param out_key:
+    :param recv_derivation:
+    :param real_output_index:
+    :param received_index:
+    :return:
+    """
     if ack.spend_key_private == 0:
         raise ValueError('Watch-only wallet not supported')
 
@@ -253,7 +308,19 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     return scalar_step2, ki
 
 
-def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, additional_tx_public_keys, real_output_index, in_ephemeral, ki):
+def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, additional_tx_public_keys, real_output_index):
+    """
+    Generates UTXO spending key and key image.
+    Supports subaddresses.
+
+    :param creds:
+    :param subaddresses:
+    :param out_key:
+    :param tx_public_key:
+    :param additional_tx_public_keys:
+    :param real_output_index:
+    :return:
+    """
     recv_derivation = generate_key_derivation(tx_public_key, creds.view_key_private)
 
     additional_recv_derivations = []
@@ -262,6 +329,6 @@ def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, addit
 
     subaddr_recv_info = is_out_to_acc_precomp(subaddresses, out_key, recv_derivation, additional_recv_derivations, real_output_index)
 
-    derv = generate_key_image_helper_precomp(creds, out_key, subaddr_recv_info[1], real_output_index, subaddr_recv_info[0], in_ephemeral, ki)
+    derv = generate_key_image_helper_precomp(creds, out_key, subaddr_recv_info[1], real_output_index, subaddr_recv_info[0])
     return derv
 
