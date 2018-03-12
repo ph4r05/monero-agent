@@ -8,6 +8,7 @@ from Crypto.Random import random as rand
 from mnero import mnemonic  # making 25 word mnemonic to remember your keys
 import binascii  # conversion between hex, int, and binary. Also for the crc32 thing
 from mnero import ed25519  # Bernsteins python ed25519 code from cr.yp.to
+from mnero import ed25519ietf
 
 from mnero.mininero import b, q, l
 from mnero.ed25519 import d
@@ -49,10 +50,9 @@ fe_A = 486662
 fe_ma = -486662
 fe_ma2 = -1 * fe_A * fe_A
 
-# fe_fffb1 = [0xfe1c4201,0xffda5d4d,0xfe71a455,0xff45c954,0xff465013,0xfffb19e4,0x00e29ba1,0xff62e415,0xfefdad62,0xfff9c7f0]
-
 # k.<a> = FiniteField(2**255-19, 'a')
 # A = fe_A * a
+# Monero C-values: ed25519.radix255(fe_fffb1)
 fe_fffb1 = 0x018e04102529e4e8df563ac8be04e61c2e6bfb5746d58c72dd58968acde3bdff   # sqrt(-2 * A * (A + 2))
 fe_fffb2 = 0x32f9e1f5fba5d3096e2bae483fe9a041ae21fcb9fba908202d219b7c9f83650d   # sqrt( 2 * A * (A + 2))
 fe_fffb3 = 0x18b5eef2eb3df710476ab9bfc0f25d12bfdb00b15a69bdd6a7e48278e8cfd387   # sqrt(-sqrt(-1*a) * A * (A + 2))
@@ -201,7 +201,7 @@ def conv_ext_to_xy(P):
     :param P:
     :return:
     """
-    (x, y, z, t) = P
+    x, y, z = P[0], P[1], P[2]
     zi = inv(z)
     x = (x * zi) % q
     y = (y * zi) % q
@@ -303,9 +303,13 @@ def check_ed25519point(P):
 
 
 def ge_scalarmult(a, A):
-    #so I guess given any point A, and an integer a, this computes aA
-    #so the seecond arguement is definitely an EC point
-    # from http://cr.yp.to/highspeed/naclcrypto-20090310.pdf
+    """
+    a*A
+    http://cr.yp.to/highspeed/naclcrypto-20090310.pdf
+    :param a: scalar
+    :param A: point
+    :return:
+    """
     # "Alice's secret key a is a uniform random 32-byte string then
     #clampC(a) is a uniform random Curve25519 secret key
     #i.e. n, where n/8 is a uniform random integer between
@@ -314,7 +318,6 @@ def ge_scalarmult(a, A):
     #so that means, ge_scalarmult is not actually doing scalar mult
     #clamping makes the secret be between 2^251 and 2^252
     #and should really be done
-    #print(toPoint(A))
     check_ed25519point(A)
     return ed25519.scalarmult(A, a)
 
@@ -443,18 +446,70 @@ def derive_secret_key(derivation, output_index, base):
     return base + scalar
 
 
-def hash_to_ec(key):
+def hash_to_ec(buf):
     """
-    H_p(data)
+    H_p(buf)
 
-    https://archive.is/o/yfINb/https://github.com/ShenNoether/ge_fromfe_writeup/blob/master/ge_fromfe.pdf
+    https://github.com/monero-project/research-lab/blob/master/whitepaper/ge_fromfe_writeup/ge_fromfe.pdf
     http://archive.is/yfINb
     :param key:
     :return:
     """
-    h = hash_to_scalar(key, len(key))
-    point = ge_scalarmult_base(h)
-    return ge_mul8(point)
+    u = decodeint(cn_fast_hash(buf)) % q
+    A = 486662
+    sqrtm1 = ed25519.sqroot(-1)
+
+    w = (2 * u * u + 1) % q
+    xp = (w * w - 2 * A * A * u * u) % q
+
+    # like sqrt (w / x) although may have to check signs..
+    # so, note that if a squareroot exists, then clearly a square exists..
+    rx = ed25519.expmod(w * ed25519.inv(xp), (q + 3) // 8, q)
+    # rx is ok.
+
+    x = rx * rx * (w * w - 2 * A * A * u * u) % q
+
+    y = (2 * u * u + 1 - x) % q  # w - x, if y is zero, then x = w
+
+    negative = False
+    if y != 0:
+        y = (w + x) % q  # checking if you got the negative square root.
+        if y != 0:
+            negative = True
+
+        else:
+            rx = rx * -1 * ed25519.sqroot(-2 * A * (A + 2)) % q
+            negative = False
+    else:
+        # y was 0..
+        rx = (rx * -1 * ed25519.sqroot(2 * A * (A + 2))) % q
+
+    if not negative:
+        rx = (rx * u) % q
+        z = (-2 * A * u * u) % q
+        sign = 0
+
+    else:
+        z = -1 * A
+        x = x * sqrtm1 % q  # ..
+        y = (w - x) % q
+        if (y != 0):
+            rx = rx * ed25519.sqroot(-1 * sqrtm1 * A * (A + 2)) % q
+        else:
+            rx = rx * -1 * ed25519.sqroot(sqrtm1 * A * (A + 2)) % q
+        sign = 1
+
+    # setsign
+    if (rx % 2) != sign:
+        rx = - (rx) % q
+
+    rz = (z + w) % q
+    ry = (z - w) % q
+    rx = rx * rz % q
+
+    P = conv_ext_to_xy([rx, ry, rz])
+    P8 = ge_scalarmult(8, P)
+    return P8
 
 
 def generate_key_image(public_key, secret_key):
