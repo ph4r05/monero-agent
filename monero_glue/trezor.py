@@ -15,10 +15,10 @@ class WalletCreds(object):
     """
     def __init__(self, view_key_private=None, spend_key_private=None, view_key_public=None, spend_key_public=None, address=None):
         self.view_key_private = view_key_private
-        self.view_key_public = None
+        self.view_key_public = view_key_public
         self.spend_key_private = spend_key_private
-        self.spend_key_public = None
-        self.address = None
+        self.spend_key_public = spend_key_public
+        self.address = address
 
     @classmethod
     def new_wallet(cls, priv_view_key, priv_spend_key):
