@@ -27,6 +27,16 @@ class Basetest(aiounittest.AsyncTestCase):
     def test_base(self):
         mininero.b58encode(b'123')
 
+    def test_ed_crypto(self):
+        sqr = crypto.fe_expmod(crypto.fe_sqrtm1, 2)
+        self.assertEqual(sqr, crypto.fe_mod(-1))
+        self.assertEqual(crypto.fe_A, crypto.fe_mod(2 * (1 - crypto.d) * crypto.inv(1 + crypto.d)))
+
+        self.assertEqual(crypto.fe_expmod(crypto.fe_fffb1, 2), crypto.fe_mod(-2 * crypto.fe_A * (crypto.fe_A+2)))
+        self.assertEqual(crypto.fe_expmod(crypto.fe_fffb2, 2), crypto.fe_mod( 2 * crypto.fe_A * (crypto.fe_A+2)))
+        self.assertEqual(crypto.fe_expmod(crypto.fe_fffb3, 2), crypto.fe_mod(-crypto.fe_sqrtm1 * crypto.fe_A * (crypto.fe_A+2)))
+        self.assertEqual(crypto.fe_expmod(crypto.fe_fffb4, 2), crypto.fe_mod( crypto.fe_sqrtm1 * crypto.fe_A * (crypto.fe_A+2)))
+
     def test_cn_fast_hash(self):
         inp = bytes(
             [0x25, 0x9e, 0xf2, 0xab, 0xa8, 0xfe, 0xb4, 0x73, 0xcf, 0x39, 0x05, 0x8a, 0x0f, 0xe3, 0x0b, 0x9f, 0xf6, 0xd2,
