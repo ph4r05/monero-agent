@@ -37,6 +37,18 @@ def sc_check(key):
     return 0
 
 
+def check_ed25519point(P):
+    """
+    Simple check if the point has exactly 2 coordinates
+    :param P:
+    :return:
+    """
+    if not isinstance(P, (list, tuple)) or len(P) != 2:
+        raise ValueError('P is not a ed25519 point')
+    if not ed25519.isoncurve(P):
+        raise ValueError('P is not on ed25519 curve')
+
+
 def ge_scalarmult(a, A):
     #so I guess given any point A, and an integer a, this computes aA
     #so the seecond arguement is definitely an EC point
@@ -50,6 +62,7 @@ def ge_scalarmult(a, A):
     #clamping makes the secret be between 2^251 and 2^252
     #and should really be done
     #print(toPoint(A))
+    check_ed25519point(A)
     return ed25519.scalarmult(A, a)
 
 
@@ -131,6 +144,8 @@ def derivation_to_scalar(derivation, output_index):
 def derive_public_key(derivation, output_index, base):
     if ge_frombytes_vartime(base) != 0: #check some conditions on the point
         raise ValueError("derive pub key bad point")
+    check_ed25519point(base)
+
     point1 = base
     scalar = derivation_to_scalar(derivation, output_index)
     point2 = ge_scalarmult_base(scalar)
@@ -183,6 +198,7 @@ def generate_key_image(public_key, secret_key):
 
 
 def derive_subaddress_public_key(out_key, derivation, output_index):
+    check_ed25519point(out_key)
     scalar = derivation_to_scalar(derivation, output_index)
     point2 = ge_scalarmult_base(scalar)
     point4 = ed25519.edwards_Minus(out_key, point2)
