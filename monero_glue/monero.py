@@ -6,6 +6,7 @@ from . import common as common
 from . import crypto
 from mnero import ed25519
 import base64
+import struct
 
 
 class TsxData(xmrserialize.MessageType):
@@ -176,6 +177,25 @@ def add_extra_nonce_to_tx_extra(extra, extra_nonce):
 
 async def encrypt_payment_id_with_tsx(extra, extra_fields):
     pass
+    # TODO: implement this...
+
+
+def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
+    """
+    Builds subaddress secret key from the subaddress index
+    :param secret_key:
+    :param index:
+    :param major:
+    :param minor:
+    :return:
+    """
+    if index:
+        major = index.major
+        minor = index.minor
+    prefix = b'SubAddr'
+    buffer = bytearray(len(prefix) + 32 + 4 + 4)
+    struct.pack_into('7s32BLL', buffer, 0, prefix, ed25519.encodeint(secret_key), major, minor)
+    return crypto.hash_to_scalar(buffer)
 
 
 def generate_key_derivation(pub_key, priv_key):
