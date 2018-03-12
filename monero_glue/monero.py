@@ -5,6 +5,7 @@ from monero_serialize import xmrtypes, xmrserialize
 from . import common as common
 from . import crypto
 from mnero import ed25519
+import base64
 
 
 class TsxData(xmrserialize.MessageType):
@@ -175,3 +176,26 @@ def add_extra_nonce_to_tx_extra(extra, extra_nonce):
 
 async def encrypt_payment_id_with_tsx(extra, extra_fields):
     pass
+
+
+def generate_key_derivation(pub_key, priv_key):
+    return ed25519.encodepoint(
+        crypto.generate_key_derivation(ed25519.decodepointcheck(pub_key), priv_key))
+
+
+def derive_subaddress_public_key(pub_key, derivation, output_index):
+    return ed25519.encodepoint(
+        crypto.derive_subaddress_public_key(ed25519.decodepointcheck(pub_key),
+                                            ed25519.decodepointcheck(derivation),
+                                            output_index))
+
+
+def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, additional_tx_public_keys, real_output_index, in_ephemeral, ki):
+    recv_derivation = generate_key_derivation(tx_public_key, creds.view_key_private)
+    print(base64.b16encode(recv_derivation))
+
+    additional_recv_derivations = []
+    for add_pub_key in additional_tx_public_keys:
+        additional_recv_derivations.append(generate_key_derivation(add_pub_key, creds.view_key_private))
+
+

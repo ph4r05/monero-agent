@@ -124,7 +124,7 @@ def derivation_to_scalar(derivation, output_index):
     # output index (for the one time keys )
     # in order to get an int, so we can do ge_mult_scalar
     # buf = s_comm(d = derivation, o = output_index)
-    buf2 = struct.pack('64sl', derivation, output_index)
+    buf2 = struct.pack('64sl', ed25519.encodepoint(derivation), output_index)
     return hash_to_scalar(buf2, len(buf2))
 
 
@@ -180,4 +180,14 @@ def generate_key_image(public_key, secret_key):
     point = hash_to_ec(public_key)
     point2 = ge_scalarmult(secret_key, point)
     return point2
+
+
+def derive_subaddress_public_key(out_key, derivation, output_index):
+    scalar = derivation_to_scalar(derivation, output_index)
+    point2 = ge_scalarmult_base(scalar)
+    point4 = ed25519.edwards_Minus(out_key, point2)
+    return point4
+
+
+
 
