@@ -4,7 +4,6 @@ from mnero import mininero
 from monero_serialize import xmrtypes, xmrserialize
 from . import common as common
 from . import crypto
-from mnero import ed25519
 import base64
 import struct
 
@@ -139,7 +138,7 @@ def get_destination_view_key_pub(destinations, change_addr=None):
 
 def encrypt_payment_id(payment_id, public_key, secret_key):
     derivation_p = crypto.generate_key_derivation(public_key, secret_key)
-    derivation = ed25519.encodepoint(derivation_p)
+    derivation = crypto.encodepoint(derivation_p)
     derivation += b'\x8b'
     hash = mininero.cn_fast_hash(derivation)
     for i in range(8):
@@ -194,19 +193,19 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
         minor = index.minor
     prefix = b'SubAddr'
     buffer = bytearray(len(prefix) + 32 + 4 + 4)
-    struct.pack_into('7s32BLL', buffer, 0, prefix, ed25519.encodeint(secret_key), major, minor)
+    struct.pack_into('7s32BLL', buffer, 0, prefix, crypto.encodeint(secret_key), major, minor)
     return crypto.hash_to_scalar(buffer)
 
 
 def generate_key_derivation(pub_key, priv_key):
-    return ed25519.encodepoint(
-        crypto.generate_key_derivation(ed25519.decodepointcheck(pub_key), priv_key))
+    return crypto.encodepoint(
+        crypto.generate_key_derivation(crypto.decodepoint(pub_key), priv_key))
 
 
 def derive_subaddress_public_key(pub_key, derivation, output_index):
-    return ed25519.encodepoint(
-        crypto.derive_subaddress_public_key(ed25519.decodepointcheck(pub_key),
-                                            ed25519.decodepointcheck(derivation),
+    return crypto.encodepoint(
+        crypto.derive_subaddress_public_key(crypto.decodepoint(pub_key),
+                                            crypto.decodepoint(derivation),
                                             output_index))
 
 
@@ -231,7 +230,7 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
         raise ValueError('Watch-only wallet not supported')
 
     # derive secret key with subaddress - step 1: original CN derivation
-    scalar_step1 = crypto.derive_secret_key(ed25519.decodepointcheck(recv_derivation), real_output_index, ack.spend_key_private)
+    scalar_step1 = crypto.derive_secret_key(crypto.decodepoint(recv_derivation), real_output_index, ack.spend_key_private)
 
     # step 2: add Hs(SubAddr || a || index_major || index_minor)
     subaddr_sk = None
@@ -245,7 +244,7 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     # TODO: multisig here
     # ...
 
-    pub_ver = ed25519.encodepoint(crypto.scalarmult_base(scalar_step2))
+    pub_ver = crypto.encodepoint(crypto.scalarmult_base(scalar_step2))
 
     if pub_ver != out_key:
         raise ValueError('key image helper precomp: given output pubkey doesn\'t match the derived one')
@@ -256,7 +255,6 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
 
 def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, additional_tx_public_keys, real_output_index, in_ephemeral, ki):
     recv_derivation = generate_key_derivation(tx_public_key, creds.view_key_private)
-    print(base64.b16encode(recv_derivation))
 
     additional_recv_derivations = []
     for add_pub_key in additional_tx_public_keys:

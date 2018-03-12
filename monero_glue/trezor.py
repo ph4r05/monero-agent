@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import binascii
 
-from mnero import mininero, ed25519
+from mnero import mininero
 from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses, addr_to_hash
 from . import monero, crypto
