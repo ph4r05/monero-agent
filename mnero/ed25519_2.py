@@ -26,6 +26,8 @@ inputs, and its memory access patterns may also depend on the inputs.
 This opens it to timing and cache side-channel attacks which can
 disclose data to an attacker.  We rely on Python's long-integer
 arithmetic, so we cannot handle secrets without risking their disclosure.
+
+https://github.com/pyca/ed25519/blob/master/LICENSE
 """
 
 import hashlib
