@@ -137,6 +137,7 @@ def derivation_to_scalar(derivation, output_index):
     # output index (for the one time keys )
     # in order to get an int, so we can do ge_mult_scalar
     # buf = s_comm(d = derivation, o = output_index)
+    check_ed25519point(derivation)
     buf2 = struct.pack('64sl', ed25519.encodepoint(derivation), output_index)
     return hash_to_scalar(buf2, len(buf2))
 
