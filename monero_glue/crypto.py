@@ -13,14 +13,29 @@ import struct
 
 from mnero.mininero import b, q, l, public_key, scalarmult_simple
 
-from mnero import mininero
+from mnero import mininero, keccak2
 from monero_serialize import xmrtypes, xmrserialize
 from . import common as common
 
 
+def cn_fast_hash(buff):
+    kc2 = keccak2.Keccak256()
+    kc2.update(buff)
+    return kc2.digest()
+
+
+def b2d(arr):
+    s = 0
+    i = 0
+    for a in arr:
+        s = s + a * 2 ** i
+        i += 1
+    return s
+
+
 def random_scalar():
-    tmp = rand.getrandbits(64 * 8) # 8 bits to a byte ...
-    tmp = sc_reduce(tmp) #-> turns 64 to 32 (note sure why don't just gt 32 in first place ... )
+    tmp = rand.getrandbits(64 * 8)  # 8 bits to a byte ...
+    tmp = sc_reduce(tmp)  # -> turns 64 to 32 (note sure why don't just gt 32 in first place ... )
     return tmp
 
 
@@ -28,7 +43,8 @@ def hash_to_scalar(data, length=None):
     #this one is H_s(P)
     #relies on cn_fast_hash and sc_reduce32 (which makes an int smaller)
     #the input here is not necessarily a 64 byte thing, and that's why sc_reduce32
-    res = mininero.hexToInt(mininero.cn_fast_hash(data[:length] if length else data))
+    # res = mininero.hexToInt(mininero.cn_fast_hash(binascii.hexlify(data[:length] if length else data)))
+    res = b2d(cn_fast_hash(data[:length] if length else data))
     return sc_reduce32(res)
 
 
