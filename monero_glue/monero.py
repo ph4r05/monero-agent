@@ -245,7 +245,7 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     # TODO: multisig here
     # ...
 
-    pub_ver = ed25519.encodepoint(crypto.ge_scalarmult_base(scalar_step2))
+    pub_ver = ed25519.encodepoint(crypto.scalarmult_base(scalar_step2))
 
     if pub_ver != out_key:
         raise ValueError('key image helper precomp: given output pubkey doesn\'t match the derived one')
