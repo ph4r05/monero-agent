@@ -93,15 +93,6 @@ def decodeint(x):
     return ed25519.decodeint(x)
 
 
-def decodepoint(P):
-    """
-
-    :param P:
-    :return:
-    """
-    return ed25519.decodepointcheck(P)
-
-
 def encodeint(x):
     """
     Encodeint
@@ -111,9 +102,18 @@ def encodeint(x):
     return ed25519.encodeint(x)
 
 
+def decodepoint(P):
+    """
+    Decodes point bit representation to the point representation
+    :param P:
+    :return:
+    """
+    return ed25519.decodepointcheck(P)
+
+
 def encodepoint(P):
     """
-    Point encode
+    Encodes point to the bit representation
     :param P:
     :return:
     """
@@ -140,6 +140,11 @@ def expmod(b, e, m):
 
 
 def inv(z):
+    """
+    Modular inversion from edd25519ietf.py
+    :param z:
+    :return:
+    """
     """$= z^{-1} \mod q$, for z != 0"""
     # Adapted from curve25519_athlon.c in djb's Curve25519.
     z2 = z * z % q                                # 2
@@ -157,6 +162,11 @@ def inv(z):
 
 
 def encodepoint_ext(P):
+    """
+    Encodes point in extended coordinates form (x,y,z,t) to the bit representation
+    :param P:
+    :return:
+    """
     (x, y, z, t) = P
     zi = inv(z)
     x = (x * zi) % q
@@ -171,6 +181,11 @@ def encodepoint_ext(P):
 
 
 def isoncurve_ext(P):
+    """
+    Tests if P is on Ed25519
+    :param P:
+    :return:
+    """
     (x, y, z, t) = P
     return (z % q != 0 and
             x*y % q == z*t % q and
@@ -178,6 +193,11 @@ def isoncurve_ext(P):
 
 
 def decodepoint_ext(s):
+    """
+    Decodes point representation to the extended coordinates (x,y,z,t) point representation
+    :param s:
+    :return:
+    """
     x,y = decodepoint(s)
     P = (x, y, 1, (x*y) % q)
     if not isoncurve_ext(P):
@@ -244,7 +264,7 @@ def public_key(sk):
     :param sk:
     :return:
     """
-    return ed25519.encodepoint(ed25519.scalarmultbase(sk))
+    return encodepoint(scalarmult_base(sk))
 
 
 def scalarmult_base(a):
