@@ -9,6 +9,7 @@ from mnero import mnemonic  # making 25 word mnemonic to remember your keys
 import binascii  # conversion between hex, int, and binary. Also for the crc32 thing
 from mnero import ed25519  # Bernsteins python ed25519 code from cr.yp.to
 from mnero import ed25519ietf
+from mnero import ed25519_2
 
 from mnero.mininero import b, q, l
 from mnero.ed25519 import d
@@ -58,6 +59,10 @@ fe_fffb2 = 0x32f9e1f5fba5d3096e2bae483fe9a041ae21fcb9fba908202d219b7c9f83650d   
 fe_fffb3 = 0x18b5eef2eb3df710476ab9bfc0f25d12bfdb00b15a69bdd6a7e48278e8cfd387   # sqrt(-sqrt(-1*a) * A * (A + 2))
 fe_fffb4 = 0x1a43f3031067dbf926c0f4887ef7432eee46fc08a13f4a49853d1903b6b39186   # sqrt( sqrt(-1*a) * A * (A + 2))
 
+REPR_XY = 0
+REPR_EXT = 1
+POINT_REPR = REPR_EXT
+
 
 def fe_mod(a):
     return a % q
@@ -102,7 +107,7 @@ def encodeint(x):
     return ed25519.encodeint(x)
 
 
-def decodepoint(P):
+def decodepoint_xy(P):
     """
     Decodes point bit representation to the point representation
     :param P:
@@ -111,7 +116,7 @@ def decodepoint(P):
     return ed25519.decodepointcheck(P)
 
 
-def encodepoint(P):
+def encodepoint_xy(P):
     """
     Encodes point to the bit representation
     :param P:
@@ -198,7 +203,7 @@ def decodepoint_ext(s):
     :param s:
     :return:
     """
-    x,y = decodepoint(s)
+    x,y = ed25519.decodepoint(s)
     P = (x, y, 1, (x*y) % q)
     if not isoncurve_ext(P):
         raise ValueError("decoding point that is not on curve")
@@ -218,6 +223,7 @@ def conv_xy_to_ext(P):
 def conv_ext_to_xy(P):
     """
     Converts extended representation to x,y
+    Accepts also projective representation.
     :param P:
     :return:
     """
@@ -257,6 +263,102 @@ def conv_p1p1_to_ext(P):
     return x0*t0 % q, y0*z0 % q, z0*t0 % q, x0*y0 % q
 
 
+def invert_ext(P):
+    """
+    Inverts extended point coordinate
+    :param P:
+    :return:
+    """
+    return -1*P[0] % q, P[1], P[2], -1*P[3] % q
+
+
+def check_ext(P):
+    """
+    Check format of the Ext point
+    :param P:
+    :return:
+    """
+    if not isinstance(P, (list, tuple)) or len(P) != 4:
+        raise ValueError('P is not a ed25519 ext point')
+
+
+def check_xy(P):
+    """
+    Check format of the xy point
+    :param P:
+    :return:
+    """
+    if not isinstance(P, (list, tuple)) or len(P) != 2:
+        raise ValueError('P is not a ed25519 ext point')
+
+
+def point_sub_ext(A, B):
+    """
+    Subtracts,  A - B points in ext coords
+    :param A:
+    :param B:
+    :return:
+    """
+    return ed25519_2.edwards_add(A, invert_ext(B))
+
+
+#
+# Repr
+#
+
+idd = lambda x: x
+decodepoint = idd
+encodepoint = idd
+
+conv_to_xy = idd
+conv_to_ext = idd
+conv_from_xy = idd
+conv_from_ext = idd
+
+isoncurve = idd
+check_point_fmt = idd
+
+scalarmult_base = idd
+scalarmult = lambda x, y: y
+point_add = lambda x, y: y
+point_sub = lambda x, y: y
+
+
+def setup_repr(repr):
+    """
+    Configures point representation
+    :param repr:
+    :return:
+    """
+    global decodepoint, encodepoint, conv_to_xy, conv_to_ext, conv_from_xy, conv_from_ext, \
+        isoncurve, check_point_fmt, scalarmult_base, scalarmult, \
+        point_add, point_sub
+
+    decodepoint = decodepoint_xy if repr == REPR_XY else decodepoint_ext
+    encodepoint = encodepoint_xy if repr == REPR_XY else encodepoint_ext
+
+    conv_to_xy = idd if repr == REPR_XY else conv_ext_to_xy
+    conv_to_ext = conv_xy_to_ext if repr == REPR_XY else idd
+
+    conv_from_xy = idd if repr == REPR_XY else conv_xy_to_ext
+    conv_from_ext = conv_ext_to_xy if repr == REPR_XY else idd
+
+    isoncurve = ed25519.isoncurve if repr == REPR_XY else isoncurve_ext
+    check_point_fmt = check_xy if repr == REPR_XY else check_ext
+
+    scalarmult_base = ed25519.scalarmultbase if repr == REPR_XY else ed25519_2.scalarmult_B
+    scalarmult = ed25519.scalarmult if repr == REPR_XY else ed25519_2.scalarmult
+    point_add = ed25519.edwards if repr == REPR_XY else ed25519_2.edwards_add
+    point_sub = ed25519.edwards_Minus if repr == REPR_XY else point_sub_ext
+
+
+setup_repr(POINT_REPR)
+
+#
+# Repr invariant
+#
+
+
 def public_key(sk):
     """
     Creates public key from the private key (integer scalar)
@@ -265,15 +367,6 @@ def public_key(sk):
     :return:
     """
     return encodepoint(scalarmult_base(sk))
-
-
-def scalarmult_base(a):
-    """
-    Raw direct scalarmult
-    :param a:
-    :return:
-    """
-    return ed25519.scalarmultbase(a)
 
 
 def cn_fast_hash(buff):
@@ -301,7 +394,7 @@ def hash_to_scalar(data, length=None):
     :return:
     """
     hash = cn_fast_hash(data[:length] if length else data)
-    res = ed25519.decodeint(hash)
+    res = decodeint(hash)
     return sc_reduce32(res)
 
 
@@ -316,9 +409,8 @@ def check_ed25519point(P):
     :param P:
     :return:
     """
-    if not isinstance(P, (list, tuple)) or len(P) != 2:
-        raise ValueError('P is not a ed25519 point')
-    if not ed25519.isoncurve(P):
+    check_point_fmt(P)
+    if not isoncurve(P):
         raise ValueError('P is not on ed25519 curve')
 
 
@@ -339,7 +431,7 @@ def ge_scalarmult(a, A):
     #clamping makes the secret be between 2^251 and 2^252
     #and should really be done
     check_ed25519point(A)
-    return ed25519.scalarmult(A, a)
+    return scalarmult(A, a)
 
 
 def ge_mul8(P):
@@ -374,7 +466,7 @@ def ge_scalarmult_base(a):
     #it will return h = a*B, where B is ed25519 bp (x,4/5)
     #and a = a[0] + 256a[1] + ... + 256^31 a[31]
     #it assumes that a[31 <= 127 already
-    return ed25519.scalarmultbase(8*a)
+    return scalarmult_base(8*a)
     #return ge_scalarmult(8*a, BASEPOINT)
 
 
@@ -418,7 +510,7 @@ def derivation_to_scalar(derivation, output_index):
     :return:
     """
     check_ed25519point(derivation)
-    buf2 = ed25519.encodepoint(derivation) + xmrserialize.dump_uvarint_b(output_index)
+    buf2 = encodepoint(derivation) + xmrserialize.dump_uvarint_b(output_index)
     return hash_to_scalar(buf2, len(buf2))
 
 
@@ -429,10 +521,10 @@ def derive_public_key(derivation, output_index, base):
 
     point1 = base
     scalar = derivation_to_scalar(derivation, output_index)
-    point2 = ed25519.scalarmultbase(scalar)
+    point2 = scalarmult_base(scalar)
     point3 = point2  # I think the cached is just for the sake of adding
     # because the CN code adds using the monty curve
-    point4 = ed25519.edwards(point1, point3)
+    point4 = point_add(point1, point3)
     return point4
 
 
@@ -445,11 +537,11 @@ def sc_sub(aa, bb):
 
 
 def sc_isnonzero(c):
-    return (c % l != 0)
+    return c % l != 0
 
 
 def sc_mulsub(aa, bb, cc):
-    return (cc - aa * bb ) % l
+    return (cc - aa * bb) % l
 
 
 def derive_secret_key(derivation, output_index, base):
@@ -498,7 +590,7 @@ def hash_to_ec(buf):
             negative = True
 
         else:
-            rx = rx * -1 * ed25519.sqroot(-2 * A * (A + 2)) % q
+            rx = rx * -1 * ed25519.sqroot(-2 * A * (A + 2)) % q  # TODO: use constants
             negative = False
     else:
         # y was 0..
@@ -526,8 +618,12 @@ def hash_to_ec(buf):
     rz = (z + w) % q
     ry = (z - w) % q
     rx = rx * rz % q
+    rt = 1
 
-    P = conv_ext_to_xy([rx, ry, rz])
+    if POINT_REPR == REPR_EXT:
+        rt = (rx * ry % q) * inv(rz)
+
+    P = conv_from_ext([rx, ry, rz, rt])
     P8 = ge_scalarmult(8, P)
     return P8
 
@@ -556,8 +652,8 @@ def derive_subaddress_public_key(out_key, derivation, output_index):
     """
     check_ed25519point(out_key)
     scalar = derivation_to_scalar(derivation, output_index)
-    point2 = ed25519.scalarmultbase(scalar)
-    point4 = ed25519.edwards_Minus(out_key, point2)
+    point2 = scalarmult_base(scalar)
+    point4 = point_sub(out_key, point2)
     return point4
 
 
