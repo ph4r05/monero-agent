@@ -3,6 +3,8 @@
 from mnero import mininero
 from monero_serialize import xmrtypes, xmrserialize
 from . import common as common
+from . import crypto
+from mnero import ed25519
 
 
 class TsxData(xmrserialize.MessageType):
@@ -133,3 +135,43 @@ def get_destination_view_key_pub(destinations, change_addr=None):
     return addr.m_view_public_key
 
 
+def encrypt_payment_id(payment_id, public_key, secret_key):
+    derivation_p = crypto.generate_key_derivation(public_key, secret_key)
+    derivation = ed25519.encodepoint(derivation_p)
+    derivation += b'\x8b'
+    hash = mininero.cn_fast_hash(derivation)
+    for i in range(8):
+        payment_id[i] ^= hash[i]
+    return payment_id
+
+
+def set_encrypted_payment_id_to_tx_extra_nonce(payment_id):
+    return b'\x01' + payment_id
+
+
+async def remove_field_from_tx_extra(extra, mtype):
+    if len(extra) == 0:
+        return []
+
+    extras = []
+    reader = xmrserialize.MemoryReaderWriter(extra)
+    writer = xmrserialize.MemoryReaderWriter()
+    ar_read = xmrserialize.Archive(reader, False)
+    ar_write = xmrserialize.Archive(writer, True)
+    while len(reader.buffer) > 0:
+        c_extras = await ar_read.variant(elem_type=xmrtypes.TxExtraField)
+        if not isinstance(c_extras, mtype):
+            await ar_write.variant(c_extras, elem_type=xmrtypes.TxExtraField)
+
+    return writer.buffer
+
+
+def add_extra_nonce_to_tx_extra(extra, extra_nonce):
+    if len(extra_nonce) > 255:
+        raise ValueError('Nonce could be 255 bytes max')
+    extra += b'\x02' + len(extra_nonce).to_bytes(1, byteorder='big') + extra_nonce
+    return extra
+
+
+async def encrypt_payment_id_with_tsx(extra, extra_fields):
+    pass
