@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 import binascii
 
-from mnero import mininero
+from mnero import mininero, ed25519
 from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses, addr_to_hash
-from . import monero
+from . import monero, crypto
 from . import common as common
 
 
@@ -45,7 +45,7 @@ class Trezor(object):
 
     async def init_transaction(self, tsx_data: TsxData):
         self.tsx_ctr += 1
-        self.tsx_obj = TTransaction()
+        self.tsx_obj = TTransaction(self)
         self.tsx_obj.init_transaction(tsx_data)
 
         # Generate master key H(TsxData || r || c_tsx)
@@ -56,6 +56,15 @@ class Trezor(object):
         await xmrserialize.dump_uvarint(writer, self.tsx_ctr)
         self.key_master = writer.get_digest()
         self.key_hmac = common.keccak_hash(b'hmac' + self.key_master)
+
+    async def precompute_subaddr(self, account, indices):
+        """
+        Precomputes subaddresses for account (major) and list of indices (minors)
+        :param account:
+        :param indices:
+        :return:
+        """
+        self.tsx_obj.precompute_subaddr(account, indices)
 
     async def set_tsx_input(self, src_entr):
         """
@@ -70,7 +79,8 @@ class TTransaction(object):
     """
     Transaction builder
     """
-    def __init__(self):
+    def __init__(self, trezor=None):
+        self.trezor = trezor
         self.r = None  # txkey
         self.r_pub = None
         self.tsx_data = None
@@ -80,6 +90,7 @@ class TTransaction(object):
         self.additional_tx_keys = []
         self.inp_idx = -1
         self.summary_inputs_money = 0
+        self.subaddresses = {}
 
     def gen_r(self):
         self.r = mininero.randomScalar()
@@ -98,6 +109,26 @@ class TTransaction(object):
 
         # TODO: extra processing, payment id
         # ...
+
+    def precompute_subaddr(self, account, indices):
+        """
+        Precomputes subaddresses for account (major) and list of indices (minors)
+        :param account:
+        :param indices:
+        :return:
+        """
+        pkeys = []
+        for idx in indices:
+            if account == 0 and idx == 0:
+                pkeys.append(self.trezor.creds.spend_key_public)
+                self.subaddresses[self.trezor.creds.spend_key_public] = (0,0)
+                continue
+
+            m = monero.get_subaddress_secret_key(self.trezor.creds.view_key_private, major=account, minor=idx)
+            pub = mininero.public_key(m)
+            pkeys.append(pub)
+            self.subaddresses[pub] = (account, indices)
+
 
     def set_input(self, src_entr):
         """
