@@ -1,17 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import hashlib  # for signatures
 import math
 from Crypto.Random import random as rand
-from mnero import Keccak  # cn_fast_hash
 from mnero import mnemonic  # making 25 word mnemonic to remember your keys
 import binascii  # conversion between hex, int, and binary. Also for the crc32 thing
 from mnero import ed25519  # Bernsteins python ed25519 code from cr.yp.to
-from mnero import ed25519ietf  # https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-02
-import zlib
-import struct
 
-from mnero.mininero import b, q, l, public_key, scalarmult_simple
+from mnero.mininero import b, q, l
 
 from mnero import mininero, keccak2
 from monero_serialize import xmrtypes, xmrserialize
@@ -63,19 +58,34 @@ def encodepoint(P):
     return ed25519.encodepoint(P)
 
 
+def public_key(sk):
+    """
+    Creates public key from the private key (integer scalar)
+    Returns encoded point
+    :param sk:
+    :return:
+    """
+    return ed25519.encodepoint(ed25519.scalarmultbase(sk))
+
+
+def scalarmult_base(a):
+    """
+    Raw direct scalarmult
+    :param a:
+    :return:
+    """
+    return ed25519.scalarmultbase(a)
+
+
 def cn_fast_hash(buff):
+    """
+    Keccak 256, original one (before changes made in SHA3 standard)
+    :param buff:
+    :return:
+    """
     kc2 = keccak2.Keccak256()
     kc2.update(buff)
     return kc2.digest()
-
-
-def b2d(arr):
-    s = 0
-    i = 0
-    for a in arr:
-        s = s + a * 2 ** i
-        i += 1
-    return s
 
 
 def random_scalar():
@@ -85,10 +95,12 @@ def random_scalar():
 
 
 def hash_to_scalar(data, length=None):
-    #this one is H_s(P)
-    #relies on cn_fast_hash and sc_reduce32 (which makes an int smaller)
-    #the input here is not necessarily a 64 byte thing, and that's why sc_reduce32
-    # res = mininero.hexToInt(mininero.cn_fast_hash(binascii.hexlify(data[:length] if length else data)))
+    """
+    H_s(P)
+    :param data:
+    :param length:
+    :return:
+    """
     hash = cn_fast_hash(data[:length] if length else data)
     res = ed25519.decodeint(hash)
     return sc_reduce32(res)
@@ -219,11 +231,11 @@ def derive_public_key(derivation, output_index, base):
 
 
 def sc_add(aa, bb):
-    return (aa + bb ) % l
+    return (aa + bb) % l
 
 
 def sc_sub(aa, bb):
-    return (aa - bb ) % l
+    return (aa - bb) % l
 
 
 def sc_isnonzero(c):
