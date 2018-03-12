@@ -11,10 +11,9 @@ from mnero import ed25519  # Bernsteins python ed25519 code from cr.yp.to
 from mnero import ed25519ietf
 from mnero import ed25519_2
 
-from mnero.mininero import b, q, l
-from mnero.ed25519 import d
+from mnero.ed25519 import b, q, l, d
 
-from mnero import mininero, keccak2
+from mnero import keccak2
 from monero_serialize import xmrtypes, xmrserialize
 from . import common as common
 
