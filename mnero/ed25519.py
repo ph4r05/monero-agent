@@ -149,10 +149,7 @@ def decodepointcheck(s):
   x = xrecover(y)
   if x & 1 != bit(s,b-1): x = q-x
   P = [x,y]
-  #print("actually checking if it's on curve!")
-  if not isoncurve(P): 
-      #print("not on curve")
-      quit() 
+  if not isoncurve(P):
       raise Exception("decoding point that is not on curve")
   return P
 
