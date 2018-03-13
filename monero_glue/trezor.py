@@ -92,7 +92,9 @@ class TTransaction(object):
         self.additional_tx_keys = []
         self.inp_idx = -1
         self.summary_inputs_money = 0
+        self.input_secrets = []
         self.subaddresses = {}
+        self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
 
     def gen_r(self):
         """
@@ -149,9 +151,21 @@ class TTransaction(object):
         self.summary_inputs_money += src_entr.amount
 
         out_key = src_entr.outputs[src_entr.real_output][1].dest
-        monero.generate_key_image_helper(self.trezor.creds, self.subaddresses, out_key,
-                                         src_entr.real_out_tx_key, src_entr.real_out_additional_tx_keys,
-                                         src_entr.real_output_in_tx_index)
+        secs = monero.generate_key_image_helper(self.trezor.creds, self.subaddresses, out_key,
+                                                src_entr.real_out_tx_key, src_entr.real_out_additional_tx_keys,
+                                                src_entr.real_output_in_tx_index)
+        self.input_secrets.append(secs)
+
+        xi, ki, di = secs
+
+        # Construct tx.vin
+        vini = xmrtypes.TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki))
+        vini.key_offsets = [x[0] for x in src_entr.outputs]
+        vini.key_offsets = monero.absolute_output_offsets_to_relative(vini.key_offsets)
+        self.tx.vin.append(vini)
+
+
+
 
 
 

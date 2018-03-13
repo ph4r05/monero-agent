@@ -114,6 +114,21 @@ def get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce):
     return extra_nonce[1:]
 
 
+def absolute_output_offsets_to_relative(off):
+    """
+    Relative offsets, prev + cur = next.
+    Helps with varint encoding size.
+    :param off:
+    :return:
+    """
+    if len(off) == 0:
+        return off
+    res = sorted(off)
+    for i in range(len(off)-1, 0, -1):
+        res[i] -= res[i-1]
+    return res
+
+
 def get_destination_view_key_pub(destinations, change_addr=None):
     """
     Returns destination address public view key
@@ -331,6 +346,6 @@ def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, addit
 
     subaddr_recv_info = is_out_to_acc_precomp(subaddresses, out_key, recv_derivation, additional_recv_derivations, real_output_index)
 
-    derv = generate_key_image_helper_precomp(creds, out_key, subaddr_recv_info[1], real_output_index, subaddr_recv_info[0])
-    return derv
+    xi, ki = generate_key_image_helper_precomp(creds, out_key, subaddr_recv_info[1], real_output_index, subaddr_recv_info[0])
+    return xi, ki, recv_derivation
 
