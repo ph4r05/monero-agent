@@ -312,7 +312,7 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
     :param cols:
     :return:
     """
-    Ip = []
+    Ip = key_vector(dsRows)
     rv.II = key_vector(dsRows)
     alpha = key_vector(rows)
     aG = key_vector(rows)
