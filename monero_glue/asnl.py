@@ -96,15 +96,15 @@ def ver_asnl(P1, P2, L1, s2, s):
     LHS = crypto.scalarmult_base(0)
     RHS = crypto.scalarmult_base(s)
     for j in range(0, n):
-        c2 = crypto.hash_to_scalar(L1[j])
+        c2 = crypto.hash_to_scalar(crypto.encodepoint(L1[j]))
         L2 = crypto.point_add(crypto.scalarmult_base(s2[j]), crypto.scalarmult(P2[j], c2))
         LHS = crypto.point_add(LHS, L1[j])
-        c1 = crypto.hash_to_scalar(L2)
+        c1 = crypto.hash_to_scalar(crypto.encodepoint(L2))
         RHS = crypto.point_add(RHS, crypto.scalarmult(P1[j], c1))
 
-    if LHS == RHS:
-        return 0
+    if crypto.point_eq(LHS, RHS):
+        return 1
     else:
-        logger.warning('Didn\'t verify L1: %s, L1p: %s' % (LHS, RHS))
-        return -1
+        logger.warning('Didn\'t verify L1: %s, L1p: %s' % (crypto.encodepoint(LHS), crypto.encodepoint(RHS)))
+        return 0
 
