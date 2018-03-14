@@ -23,38 +23,6 @@ class AgentTest(aiounittest.AsyncTestCase):
     def __init__(self, *args, **kwargs):
         super(AgentTest, self).__init__(*args, **kwargs)
 
-    async def test_tx_sign_simple(self):
-        """
-        Testing tx signature, simple, multiple inputs
-        :return:
-        """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns01.txt'))
-        unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
-
-        reader = xmrserialize.MemoryReaderWriter(bytearray(unsigned_tx))
-        ar = xmrserialize.Archive(reader, False)
-        unsig = xmrtypes.UnsignedTxSet()
-        await ar.message(unsig)
-
-        tagent = self.init_agent()
-        await tagent.transfer_unsigned(unsig)
-
-    async def test_tx_sign(self):
-        """
-        Testing tx signature, one input. non-simple RCT
-        :return:
-        """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns02.txt'))
-        unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
-
-        reader = xmrserialize.MemoryReaderWriter(bytearray(unsigned_tx))
-        ar = xmrserialize.Archive(reader, False)
-        unsig = xmrtypes.UnsignedTxSet()
-        await ar.message(unsig)
-
-        tagent = self.init_agent()
-        await tagent.transfer_unsigned(unsig)
-
     async def test_tx_prefix(self):
         return
         url = 'http://localhost:48084/json_rpc'
