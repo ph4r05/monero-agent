@@ -45,6 +45,7 @@ class Trezor(object):
     async def init_transaction(self, tsx_data: TsxData):
         self.tsx_ctr += 1
         self.tsx_obj = TTransaction(self)
+        self.tsx_obj.creds = self.creds
         await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
 
     async def precompute_subaddr(self, account, indices):
@@ -85,7 +86,8 @@ class TTransaction(object):
     Transaction builder
     """
     def __init__(self, trezor=None):
-        self.trezor = trezor
+        self.trezor = trezor  # type: Trezor
+        self.creds = None  # type: WalletCreds
         self.key_master = None
         self.key_hmac = None
 
