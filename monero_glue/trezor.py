@@ -285,13 +285,14 @@ class TTransaction(object):
             deriv_priv = additional_txkey if dst_entr.is_subaddress and self.need_additional_txkeys else self.r
             derivation = monero.generate_key_derivation(self.creds.view_key_public, deriv_priv)
 
+        amount_key = crypto.derivation_to_scalar(derivation, self.out_idx)
         tx_out_key = crypto.derive_public_key(derivation, self.out_idx, crypto.decodepoint(dst_entr.addr.m_spend_public_key))
         tk = xmrtypes.TxoutToKey(key=crypto.encodepoint(tx_out_key))
         tx_out = xmrtypes.TxOut(amount=dst_entr.amount, target=tk)
         self.tx.vout.append(tx_out)
         self.summary_outs_money += dst_entr.amount
 
-        self.output_secrets.append((derivation, ))
+        self.output_secrets.append((derivation, amount_key))
 
         # Last output?
         if self.out_idx + 1 == len(self.tsx_data.outputs):
