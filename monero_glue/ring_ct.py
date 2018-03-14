@@ -259,7 +259,7 @@ def ecdh_encode(unmasked, receiver_pk=None, derivation=None):
         derivation = crypto.encodepoint(crypto.scalarmult(receiver_pk, esk))
 
     sharedSec1 = crypto.hash_to_scalar(derivation)
-    sharedSec2 = crypto.hash_to_scalar(sharedSec1)
+    sharedSec2 = crypto.hash_to_scalar(crypto.encodeint(sharedSec1))
 
     rv.mask = crypto.sc_add(unmasked.mask, sharedSec1)
     rv.amount = crypto.sc_add(unmasked.amount, sharedSec2)
@@ -281,7 +281,7 @@ def ecdh_decode(masked, receiver_sk=None, derivation=None):
         derivation = crypto.scalarmult(masked.senderPk, receiver_sk)
 
     sharedSec1 = crypto.hash_to_scalar(derivation)
-    sharedSec2 = crypto.hash_to_scalar(sharedSec1)
+    sharedSec2 = crypto.hash_to_scalar(crypto.encodeint(sharedSec1))
 
     rv.mask = crypto.sc_sub(masked.mask, sharedSec1)
     rv.amount = crypto.sc_sub(masked.amount, sharedSec2)
