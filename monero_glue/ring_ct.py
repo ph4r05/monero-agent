@@ -18,24 +18,30 @@ ATOMS = 64
 
 class ctkey(object):
     __slots__ = ['dest', 'mask']
-    
+
+
 def ctkeyV(rows):
     return [ctkey() for i in range(0, rows)]
-    
+
+
 class ecdhTuple(object):
-    __slots__ = ['mask', 'amount','senderPk'] 
-    
+    __slots__ = ['mask', 'amount', 'senderPk']
+
+
 class asnlSig(object):
-    __slots__ = ['L1', 's2','s'] 
-    
+    __slots__ = ['L1', 's2', 's']
+
+
 class mgSig(object):
-    __slots__ = ['ss', 'cc','II']     
-    
+    __slots__ = ['ss', 'cc', 'II']
+
+
 class rangeSig(object):
     __slots__ = ['asig', 'Ci']         
-    
+
+
 class rctSig(object):
-    __slots__ = ['rangeSigs', 'MG', 'mixRing', 'ecdhInfo','outPk']
+    __slots__ = ['rangeSigs', 'MG', 'mixRing', 'ecdhInfo', 'outPk']
     
 
 def gen_H_for_ct():
