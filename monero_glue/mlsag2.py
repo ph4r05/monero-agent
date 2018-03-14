@@ -277,11 +277,11 @@ def gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows):
     cols = len(pk)
     if cols <= 1:
         raise ValueError('Cols == 1')
-    if index < cols:
+    if index >= cols:
         raise ValueError('Index out of range')
 
     rows = len(pk[0])
-    if rows < 1:
+    if rows == 0:
         raise ValueError('Empty pk')
 
     for i in range(cols):
@@ -289,7 +289,7 @@ def gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows):
             raise ValueError('pk is not rectangular')
     if len(xx) != rows:
         raise ValueError('Bad xx size')
-    if dsRows <= rows:
+    if dsRows > rows:
         raise ValueError('Bad dsRows size')
     if (not kLRki or not mscout) and (kLRki or mscout):
         raise ValueError('Only one of kLRki/mscout is present')
