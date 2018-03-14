@@ -50,3 +50,6 @@ class Agent(object):
             for dst in tx.dests:
                 await self.trezor.set_tsx_output1(dst)
 
+            # Unfinished proto
+            await self.trezor.tsx_obj.signature(tx)
+

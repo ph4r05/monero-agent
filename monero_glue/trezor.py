@@ -39,7 +39,7 @@ class Trezor(object):
     """
     def __init__(self):
         self.tsx_ctr = 0
-        self.tsx_obj = None
+        self.tsx_obj = None  # type: TTransaction
         self.creds = None  # type: WalletCreds
 
     async def init_transaction(self, tsx_data: TsxData):
@@ -98,6 +98,7 @@ class TTransaction(object):
         self.need_additional_txkeys = False
         self.use_bulletproof = False
         self.use_rct = True
+        self.use_simple_rct = False
         self.additional_tx_keys = []
         self.additional_tx_public_keys = []
         self.inp_idx = -1
@@ -105,9 +106,11 @@ class TTransaction(object):
         self.summary_inputs_money = 0
         self.summary_outs_money = 0
         self.input_secrets = []
+        self.output_secrets = []
         self.subaddresses = {}
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
         self.source_permutation = []  # sorted by key images
+        self.tx_prefix_hash = None
 
     def gen_r(self):
         """
@@ -141,6 +144,7 @@ class TTransaction(object):
 
         # Extra processing, payment id
         self.tx.version = 2
+        self.tx.unlock_time = 0
         await self.process_payment_id()
         await self.compute_hmac_keys(tsx_ctr)
 
@@ -246,6 +250,8 @@ class TTransaction(object):
         self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
         monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
 
+        self.use_simple_rct = self.inp_idx > 0
+
     async def set_out1(self, dst_entr):
         """
         Set destination entry
@@ -280,10 +286,12 @@ class TTransaction(object):
             derivation = monero.generate_key_derivation(self.creds.view_key_public, deriv_priv)
 
         tx_out_key = crypto.derive_public_key(derivation, self.out_idx, crypto.decodepoint(dst_entr.addr.m_spend_public_key))
-        tk = xmrtypes.TxoutToKey(key=tx_out_key)
+        tk = xmrtypes.TxoutToKey(key=crypto.encodepoint(tx_out_key))
         tx_out = xmrtypes.TxOut(amount=dst_entr.amount, target=tk)
         self.tx.vout.append(tx_out)
         self.summary_outs_money += dst_entr.amount
+
+        self.output_secrets.append((derivation, ))
 
         # Last output?
         if self.out_idx + 1 == len(self.tsx_data.outputs):
@@ -301,4 +309,131 @@ class TTransaction(object):
         if self.summary_outs_money > self.summary_inputs_money:
             raise ValueError('Transaction inputs money (%s) less than outputs money (%s)'
                              % (self.summary_inputs_money, self.summary_outs_money))
+
+    async def signature(self, tx):
+        """
+        Computes the signature
+        TODO: implement according to the protocol
+
+        :param tx: const data
+        :type tx: xmrtypes.TxConstructionData
+        :return:
+        """
+        amount_in = 0
+        inamounts = []
+
+        index = []
+        in_sk = []  # type: list[xmrtypes.CtKey]
+
+        # TODO: iterative?
+        for idx in self.source_permutation:
+            src = tx.sources[idx]
+            amount_in += src.amount
+            inamounts.append(src.amount)
+            index.append(src.real_output)
+            in_sk.append(xmrtypes.CtKey(dest=self.input_secrets[idx][0], mask=src.mask))
+
+        # TODO: iterative?
+        destinations = []
+        outamounts = []
+        amount_out = 0
+        for idx, dst in enumerate(tx.dests):
+            destinations.append(crypto.decodepoint(self.tx.vout[idx].target.key))
+            outamounts.append(self.tx.vout[idx].amount)
+            amount_out += self.tx.vout[idx].amount
+
+        if self.use_simple_rct:
+            mix_ring = [[] for _ in range(self.inp_idx + 1)]
+            for idx in self.source_permutation:
+                src = tx.sources[idx]
+                mix_ring[idx] = []
+                for idx2, out in enumerate(src.outputs):
+                    mix_ring[idx].append(out[1])
+
+        else:
+            n_total_outs = len(tx.sources[0].outputs)
+            mix_ring = [[] for _ in range(n_total_outs)]
+            for idx in range(n_total_outs):
+                mix_ring[idx] = []
+                for idx2 in self.source_permutation:
+                    src = tx.sources[idx2]
+                    mix_ring[idx].append(src.outputs[idx][1])
+
+        if not self.use_simple_rct and amount_in > amount_out:
+            outamounts.append(amount_in - amount_out)
+
+        # Hide amounts
+        self.zero_out_amounts(tx)
+
+        # Tx prefix hash
+        await self.compute_tx_prefix_hash()
+
+        # Signature
+        if self.use_simple_rct:
+            await self.gen_rct_simple(in_sk, destinations, inamounts, outamounts, amount_in - amount_out, mix_ring, None, None, None, index, None, self.use_bulletproof)
+        else:
+            pass
+
+        print('sigsig')
+
+    def zero_out_amounts(self, tx):
+        """
+        Zero out all amounts to mask rct outputs, real amounts are now encrypted
+        :return:
+        """
+        for idx, inx in enumerate(self.tx.vin):
+            if tx.sources[self.source_permutation[idx]].rct:
+                inx.amount = 0
+
+        for out in self.tx.vout:
+            out.amount = 0
+
+    async def compute_tx_prefix_hash(self):
+        """
+        Computes tx prefix hash
+        :return:
+        """
+        writer = common.get_keccak_writer()
+        ar1 = xmrserialize.Archive(writer, True)
+        await ar1.message(self.tx, msg_type=xmrtypes.TransactionPrefix)
+        self.tx_prefix_hash = writer.get_digest()
+
+    async def gen_rct_simple(self, in_sk, destinations, inamounts, outamounts, txn_fee, mix_ring, amount_keys, kLRki, msout, index, out_sk, bulletproof):
+        if len(inamounts) == 0:
+            raise ValueError("Empty inamounts")
+        if len(inamounts) != len(in_sk):
+            raise ValueError("Different number of inamounts/inSk")
+        if len(outamounts) != len(destinations):
+            raise ValueError("Different number of amounts/destinations")
+        if len(amount_keys) != len(destinations):
+            raise ValueError("Different number of amount_keys/destinations")
+        if len(index) != len(in_sk):
+            raise ValueError("Different number of index/inSk")
+        if len(mix_ring) != len(in_sk):
+            raise ValueError("Different number of mixRing/inSk")
+        for idx in range(len(mix_ring)):
+            if index[idx] >= mix_ring[idx]:
+                raise ValueError('Bad index into mixRing')
+
+        rv = xmrtypes.RctSig()
+        rv.type = xmrtypes.RctType.SimpleBulletproof if self.use_bulletproof else xmrtypes.RctType.Simple
+        rv.message = self.tx_prefix_hash
+        rv.outPk = [None]*len(destinations)
+
+        if self.use_bulletproof:
+            rv.p.bulletproofs = [None]*len(destinations)
+        else:
+            rv.p.rangeSigs = [None]*len(destinations)
+        rv.ecdhInfo = [None]*len(destinations)
+
+        # Output processing
+        for idx in range(len(destinations)):
+            rv.outPk[idx] = xmrtypes.CtKey(dest=destinations[idx])
+
+            # rangeproof
+            if self.use_bulletproof:
+                raise ValueError('Bulletproof not yet supported')
+            else:
+
+                pass
 
