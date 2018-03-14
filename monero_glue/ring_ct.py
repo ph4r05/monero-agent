@@ -32,10 +32,6 @@ class mgSig(object):
     __slots__ = ['ss', 'cc', 'II']
 
 
-class rangeSig(object):
-    __slots__ = ['asig', 'Ci']         
-
-
 class rctSig(object):
     __slots__ = ['rangeSigs', 'MG', 'mixRing', 'ecdhInfo', 'outPk']
 
@@ -103,7 +99,7 @@ def prove_range(amount):
     A = asnlSig()
     A.L1, A.s2, A.s = asnl.gen_asnl(ai, Ci, CiH, bb)
     
-    R = rangeSig()
+    R = xmrtypes.RangeSig()
     R.asig = A
     R.Ci = Ci
     
