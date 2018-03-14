@@ -371,7 +371,7 @@ class TTransaction(object):
 
         # Signature
         if self.use_simple_rct:
-            await self.gen_rct_simple(in_sk, destinations, inamounts, outamounts, amount_in - amount_out, mix_ring, None, None, index, None, self.use_bulletproof)
+            await self.gen_rct_simple(in_sk, destinations, inamounts, outamounts, amount_in - amount_out, mix_ring, None, None, index, None)
         else:
             pass
 
@@ -399,7 +399,22 @@ class TTransaction(object):
         await ar1.message(self.tx, msg_type=xmrtypes.TransactionPrefix)
         self.tx_prefix_hash = writer.get_digest()
 
-    async def gen_rct_simple(self, in_sk, destinations, inamounts, outamounts, txn_fee, mix_ring, kLRki, msout, index, out_sk, bulletproof):
+    async def gen_rct_simple(self, in_sk, destinations, inamounts, outamounts, txn_fee, mix_ring, kLRki, msout, index, out_sk):
+        """
+        Generate simple RCT signature.
+
+        :param in_sk:
+        :param destinations:
+        :param inamounts:
+        :param outamounts:
+        :param txn_fee:
+        :param mix_ring:
+        :param kLRki:
+        :param msout:
+        :param index:
+        :param out_sk:
+        :return:
+        """
         if len(inamounts) == 0:
             raise ValueError("Empty inamounts")
         if len(inamounts) != len(in_sk):
