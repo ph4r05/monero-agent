@@ -10,7 +10,7 @@ from . import crypto
 logger = logging.getLogger(__name__)
 
 
-def keyVector(rows):
+def key_vector(rows):
     """
     Empty key vector
     :param rows:
@@ -19,7 +19,7 @@ def keyVector(rows):
     return [None] * rows
 
 
-def keyMatrix(rows, cols):
+def key_matrix(rows, cols):
     """
     first index is columns (so slightly backward from math)
     :param rows:
@@ -28,11 +28,11 @@ def keyMatrix(rows, cols):
     """
     rv = [None] * cols
     for i in range(0, cols):
-        rv[i] = keyVector(rows)
+        rv[i] = key_vector(rows)
     return rv
 
 
-def hashKeyVector(v):
+def hash_key_vector(v):
     """
     Hashes key vector
     :param v:
@@ -41,7 +41,7 @@ def hashKeyVector(v):
     return [crypto.hash_to_ec(vi) for vi in v]
 
 
-def vScalarMultBase(v):
+def scalar_mult_base_vector(v):
     """
     Creates vector of points from scalars
     :param v:
@@ -50,7 +50,7 @@ def vScalarMultBase(v):
     return [crypto.scalarmult_base(a) for a in v]
 
 
-def keyImageV(x):
+def key_image_vector(x):
     """
     Takes as input a keyvector, returns the keyimage-vector
     :param x:
@@ -59,7 +59,7 @@ def keyImageV(x):
     return [crypto.scalarmult(crypto.hash_to_ec(crypto.scalarmult_base(xx)), xx) for xx in x]
 
 
-def skvGen(n):
+def scalar_gen_vector(n):
     """
     Generates vector of scalars
     :param n:
@@ -68,16 +68,16 @@ def skvGen(n):
     return [crypto.random_scalar() for i in range(0, n)]
 
 
-def skmGen(r, c):
+def scalar_gen_matrix(r, c):
     """
     Generates matrix of scalars
     :param r:
     :param c:
     :return:
     """
-    rv = keyMatrix(r, c)
+    rv = key_matrix(r, c)
     for i in range(0, c):
-        rv[i] = skvGen(r)
+        rv[i] = scalar_gen_vector(r)
     return rv
 
 
@@ -110,28 +110,28 @@ def MLSAG_Gen(pk, xx, index):
     logger.debug("Generating MG sig of size %s x %s" % (rows, cols))
     logger.debug("index is: %s, %s" % (index, pk[index]))
     c = [None] * cols
-    alpha = skvGen(rows)
-    I = keyImageV(xx)
-    L = keyMatrix(rows, cols)
-    R = keyMatrix(rows, cols)
-    s = keyMatrix(rows, cols)
+    alpha = scalar_gen_vector(rows)
+    I = key_image_vector(xx)
+    L = key_matrix(rows, cols)
+    R = key_matrix(rows, cols)
+    s = key_matrix(rows, cols)
 
     m = ''.join(pk[0])
     for i in range(1, cols):
         m = m + ''.join(pk[i])
 
     L[index] = [crypto.scalarmult_base(aa) for aa in alpha]  # L = aG
-    Hi = hashKeyVector(pk[index])
+    Hi = hash_key_vector(pk[index])
     R[index] = [crypto.scalarmult(Hi[ii], alpha[ii]) for ii in range(0, rows)]  # R = aI
     oldi = index
     i = (index + 1) % cols
     c[i] = crypto.cn_fast_hash(m+''.join(L[oldi]) + ''.join(R[oldi]))
     
     while i != index:
-        s[i] = skvGen(rows)
+        s[i] = scalar_gen_vector(rows)
         L[i] = [add_keys1(s[i][j], c[i], pk[i][j]) for j in range(0, rows)]
 
-        Hi = hashKeyVector(pk[i])
+        Hi = hash_key_vector(pk[i])
         R[i] = [add_keys2( s[i][j], Hi[j], c[i], I[j]) for j in range(0, rows)]
         oldi = i
         i = (i + 1) % cols
@@ -147,8 +147,8 @@ def MLSAG_Ver(pk, I, c0, s ):
     logger.debug("verifying MG sig of dimensions %s x %s" % (rows, cols))
     c = [None] * (cols + 1)
     c[0] = c0
-    L = keyMatrix(rows, cols)
-    R = keyMatrix(rows, cols)
+    L = key_matrix(rows, cols)
+    R = key_matrix(rows, cols)
     m = ''.join(pk[0])
     for i in range(1, cols):
         m = m + ''.join(pk[i])
@@ -156,7 +156,7 @@ def MLSAG_Ver(pk, I, c0, s ):
     while i < cols:
         L[i] = [add_keys1(s[i][j], c[i], pk[i][j]) for j in range(0, rows)]
 
-        Hi = hashKeyVector(pk[i])
+        Hi = hash_key_vector(pk[i])
         R[i] = [add_keys2( s[i][j], Hi[j], c[i], I[j]) for j in range(0, rows)]
 
         oldi = i
