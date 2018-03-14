@@ -265,12 +265,12 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
     hasher = hasher_message(message)
 
     for i in range(dsRows):
-        hasher.update(pk[index][i])
+        hasher.update(crypto.encodepoint(pk[index][i]))
         if kLRki:
             alpha[i] = kLRki.k
             rv.II[i] = kLRki.ki
-            hasher.update(kLRki.L)
-            hasher.update(kLRki.R)
+            hasher.update(crypto.encodepoint(kLRki.L))
+            hasher.update(crypto.encodepoint(kLRki.R))
 
         else:
             Hi = crypto.hash_to_ec(pk[index][i])  # TODO: check, previously hashToPoint
@@ -278,16 +278,16 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
             aG[i] = crypto.scalarmult_base(alpha[i])
             aHP[i] = crypto.scalarmult(Hi, alpha[i])
             rv.II[i] = crypto.scalarmult(Hi, xx[i])
-            hasher.update(aG[i])
-            hasher.update(aHP[i])
+            hasher.update(crypto.encodepoint(aG[i]))
+            hasher.update(crypto.encodepoint(aHP[i]))
 
         Ip[i] = crypto.precomp(rv.II[i])
 
     for i in range(dsRows, rows):
         alpha[i] = crypto.random_scalar()
         aG[i] = crypto.scalarmult_base(alpha[i])
-        hasher.update(pk[index][i])
-        hasher.update(aG[i])
+        hasher.update(crypto.encodepoint(pk[index][i]))
+        hasher.update(crypto.encodepoint(aG[i]))
 
     c_old = hasher.digest()
     c_old = crypto.sc_reduce32(crypto.decodeint(c_old))
@@ -324,16 +324,16 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
 
         for j in range(dsRows):
             L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
-            Hi = crypto.hash_to_ec(pk[i][j])  # TODO: check, previously hashToPoint
+            Hi = crypto.hash_to_ec(crypto.encodepoint(pk[i][j]))  # TODO: check, previously hashToPoint
             R = add_keys2(rv.ss[i][j], Hi, c_old, Ip[j])
-            hasher.update(pk[i][j])
-            hasher.update(L)
-            hasher.update(R)
+            hasher.update(crypto.encodepoint(pk[i][j]))
+            hasher.update(crypto.encodepoint(L))
+            hasher.update(crypto.encodepoint(R))
 
         for j in range(dsRows, rows):
             L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
-            hasher.update(pk[i][j])
-            hasher.update(L)
+            hasher.update(crypto.encodepoint(pk[i][j]))
+            hasher.update(crypto.encodepoint(L))
 
         c = crypto.sc_reduce32(crypto.decodeint(hasher.digest()))
         c_old = c
@@ -409,17 +409,16 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
         hasher = hasher_message(message)
         for j in range(dsRows):
             L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
-            Hi = crypto.hash_to_ec(pk[i][j])  # TODO: check, previously hashToPoint
+            Hi = crypto.hash_to_ec(crypto.encodepoint(pk[i][j]))  # TODO: check, previously hashToPoint
             R = add_keys2(rv.ss[i][j], Hi, c_old, Ip[j])
-            hasher.update(pk[i][j])
-            hasher.update(L)
-            hasher.update(R)
+            hasher.update(crypto.encodepoint(pk[i][j]))
+            hasher.update(crypto.encodepoint(L))
+            hasher.update(crypto.encodepoint(R))
 
-        ii = 0
         for j in range(dsRows, rows):
             L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
-            hasher.update(pk[i][j])
-            hasher.update(L)
+            hasher.update(crypto.encodepoint(pk[i][j]))
+            hasher.update(crypto.encodepoint(L))
 
         c = crypto.sc_reduce32(crypto.decodeint(hasher.digest()))
         c_old = c
