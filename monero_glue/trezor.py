@@ -332,7 +332,7 @@ class TTransaction(object):
             amount_in += src.amount
             inamounts.append(src.amount)
             index.append(src.real_output)
-            in_sk.append(xmrtypes.CtKey(dest=self.input_secrets[idx][0], mask=src.mask))
+            in_sk.append(xmrtypes.CtKey(dest=self.input_secrets[idx][0], mask=crypto.decodeint(src.mask)))
 
         # TODO: iterative?
         destinations = []
