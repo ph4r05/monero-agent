@@ -213,7 +213,7 @@ def decodepoint_ext(s):
     :param s:
     :return:
     """
-    x,y = ed25519.decodepoint(s)
+    x,y = ed25519.decodepointcheck(s)
     P = (x, y, 1, (x*y) % q)
     if not isoncurve_ext(P):
         raise ValueError("decoding point that is not on curve")
