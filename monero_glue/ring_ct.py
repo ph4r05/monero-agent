@@ -4,21 +4,19 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import Crypto.Random.random as rand
+import logging
 
 from monero_serialize import xmrtypes, xmrserialize
 from . import common
 from . import crypto
 from . import asnl
-
-from mnero import mininero
-from mnero import MLSAG2
-from mnero import PaperWallet
-from mnero import Ecdh
+from . import mlsag2
 
 
+logger = logging.getLogger(__name__)
 ATOMS = 64
 
-#implementing some types 
+
 class ctkey(object):
     __slots__ = ['dest', 'mask']
     
@@ -40,34 +38,32 @@ class rangeSig(object):
 class rctSig(object):
     __slots__ = ['rangeSigs', 'MG', 'mixRing', 'ecdhInfo','outPk']
     
-def ctskpkGen(amount):
-    sk = ctkey()
-    pk = ctkey()
-    sk.dest, pk.dest = PaperWallet.skpkGen()
-    sk.mask, pk.mask = PaperWallet.skpkGen()
-    am = mininero.intToHex(amount)
-    aH = mininero.scalarmultKey(getHForCT(), am)
-    pk.mask = mininero.addKeys(pk.mask, aH)
-    return sk, pk
-    
-def getHForCT():
-    #return "8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94"
-    A = mininero.publicFromInt(1)
-    H = mininero.hashToPointCN(A)
-    #Translator.hexToC(H) 
-    #print(H)
+
+def gen_H_for_ct():
+    """
+    Returns point H
+    8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94
+    :return:
+    """
+    A = crypto.public_key(1)
+    H = crypto.hash_to_ec(A)
     return H
-    
-def getH2ForCT():
-    A = mininero.publicFromInt(1)
-    HPow2 = mininero.hashToPointCN(A)
-    two = mininero.intToHex(2)
+
+
+def gen_Hpow_for_ct():
+    """
+    Returns powers of point H
+    :return:
+    """
+    A = crypto.public_key(1)
+    HPow2 = crypto.hash_to_ec(A)
+    two = crypto.encodeint(2)
     H2 = [None] * ATOMS
     for i in range(0, ATOMS):
-        #Translator.hexToCComma(HPow2) 
         H2[i] = HPow2
-        HPow2 = mininero.scalarmultKey(HPow2, two)
+        HPow2 = crypto.scalarmult(HPow2, two)
     return H2
+
     
 def d2b(n, digits):
     b = [0] * digits
@@ -78,6 +74,7 @@ def d2b(n, digits):
         n >>= 1
     return b 
 
+
 def b2d(binArray):
     s = 0
     i = 0
@@ -86,40 +83,47 @@ def b2d(binArray):
         i+= 1
     return s
 
-def sumCi(Cis):
-    CSum = mininero.identity()
+
+def sum_Ci(Cis):
+    """
+    Sums points
+    :param Cis:
+    :return:
+    """
+    CSum = crypto.identity()
     for i in Cis:
-        CSum = mininero.addKeys(CSum, i)
+        CSum = crypto.point_add(CSum, i)
     return CSum
-    
-    #proveRange and verRange
-	#proveRange gives C, and mask such that \sumCi = C
-	#   c.f. http:#eprint.iacr.org/2015/1098 section 5.1
-	#   and Ci is a commitment to either 0 or 2^i, i=0,...,63
-	#   thus this proves that "amount" is in [0, 2^ATOMS]
-	#   mask is a such that C = aG + bH, and b = amount
-	#verRange verifies that \sum Ci = C and that each Ci is a commitment to 0 or 2^i
-    #"prove" returns a rangeSig (list) containing a list [L1, s2, s] and a key64 list [C0, C1, ..., C64] of keys, it also returns C = sum(Ci) and mask, which in the c++ version are returned by reference
-    #inputs key C, key mask, number amount
-    #"ver" returns true or false, and inputs a key, and a rangesig list "as"
-def proveRange(amount):
-    bb = d2b(amount, ATOMS) #gives binary form of bb in "digits" binary digits
-    print("amount, amount in binary", amount, bb)
+
+
+def prove_range(amount):
+    """
+    Gives C, and mask such that \sumCi = C
+    c.f. http:#eprint.iacr.org/2015/1098 section 5.1
+
+    Ci is a commitment to either 0 or 2^i, i=0,...,63
+    thus this proves that "amount" is in [0, 2^ATOMS]
+    mask is a such that C = aG + bH, and b = amount
+    :param amount:
+    :return:
+    """
+    bb = d2b(amount, ATOMS)  # gives binary form of bb in "digits" binary digits
+    logger.info("amount, amount in binary %s %s" % (amount, bb))
     ai = [None] * len(bb)
     Ci = [None] * len(bb)
-    CiH = [None] * len(bb) #this is like Ci - 2^i H
-    H2 = getH2ForCT()
-    a = mininero.sc_0()
+    CiH = [None] * len(bb)  # this is like Ci - 2^i H
+    H2 = gen_Hpow_for_ct()
+    a = 0
     ii = [None] * len(bb)
     indi = [None] * len(bb)
     for i in range(0, ATOMS):
-        ai[i] = PaperWallet.skGen()
-        a = mininero.addScalars(a, ai[i]) #creating the total mask since you have to pass this to receiver...
+        ai[i] = crypto.random_scalar()
+        a = crypto.sc_add(a, ai[i])  # creating the total mask since you have to pass this to receiver...
         if bb[i] == 0:
-            Ci[i] =  mininero.scalarmultBase(ai[i])
+            Ci[i] = crypto.scalarmult_base(ai[i])
         if bb[i] == 1:
-            Ci[i] = mininero.addKeys(mininero.scalarmultBase(ai[i]), H2[i])
-        CiH[i] = mininero.subKeys(Ci[i], H2[i])
+            Ci[i] = crypto.point_add(crypto.scalarmult_base(ai[i]), H2[i])
+        CiH[i] = crypto.point_sub(Ci[i], H2[i])
         
     A = asnlSig()
     A.L1, A.s2, A.s = asnl.GenASNL(ai, Ci, CiH, bb)
@@ -129,96 +133,130 @@ def proveRange(amount):
     R.Ci = Ci
     
     mask = a
-    C = sumCi(Ci)
+    C = sum_Ci(Ci)
     return C, mask, R
-        
-def verRange(Ci, ags):
+
+
+def ver_range(Ci, ags):
+    """
+    Verifies that \sum Ci = C and that each Ci is a commitment to 0 or 2^i
+    :param Ci:
+    :param ags:
+    :return:
+    """
     n = ATOMS
     CiH = [None] * n
-    H2 = getH2ForCT()
+    C_tmp = crypto.identity()
+    H2 = gen_Hpow_for_ct()
     for i in range(0, n):
-        CiH[i] = mininero.subKeys(ags.Ci[i], H2[i])
+        CiH[i] = crypto.point_sub(ags.Ci[i], H2[i])
+        C_tmp = crypto.point_add(C_tmp, ags.Ci[i])
+
+    if crypto.point_eq(C_tmp, Ci):
+        return 0
+
     return asnl.VerASNL(ags.Ci, CiH, ags.asig.L1, ags.asig.s2, ags.asig.s)
-    
-#Ring-ct MG sigs
-#Prove: 
+
+
+# Ring-ct MG sigs
+# Prove:
 #   c.f. http:#eprint.iacr.org/2015/1098 section 4. definition 10. 
 #   This does the MG sig on the "dest" part of the given key matrix, and 
 #   the last row is the sum of input commitments from that column - sum output commitments
 #   this shows that sum inputs = sum outputs
-#Ver:    
+# Ver:
 #   verifies the above sig is created corretly
-def proveRctMG(pubs, inSk, outSk, outPk, index):
-    #pubs is a matrix of ctkeys [P, C] 
-    #inSk is the keyvector of [x, mask] secret keys
-    #outMasks is a keyvector of masks for outputs
-    #outPk is a list of output ctkeys [P, C]
-    #index is secret index of where you are signing (integer)
-    #returns a list (mgsig) [ss, cc, II] where ss is keymatrix, cc is key, II is keyVector of keyimages
-    
-    #so we are calling MLSAG2.MLSAG_Gen from here, we need a keymatrix made from pubs
-    #we also need a keyvector made from inSk
-    rows = len(pubs[0])
-    cols = len(pubs)
-    print("rows in mg", rows)
-    print("cols in mg", cols)
-    M = MLSAG2.keyMatrix(rows + 1, cols) #just a simple way to initialize a keymatrix, doesn't need to be random..
-    sk = MLSAG2.keyVector(rows + 1)
-    
-    for j in range(0, cols):
-        M[j][rows] = mininero.identity()
-    sk[rows] = mininero.sc_0()
-    for i in range(0, rows): 
-        sk[i] = inSk[i].dest #get the destination part
-        sk[rows] = mininero.sc_add_keys(sk[rows], inSk[i].mask) #add commitment part
-        for j in range(0, cols):
-            M[j][i] = pubs[j][i].dest # get the destination part
-            M[j][rows] = mininero.addKeys(M[j][rows], pubs[j][i].mask) #add commitment part
-    #next need to subtract the commitment part of all outputs..
-    for j in range(0, len(outSk)):
-        sk[rows] = mininero.sc_sub_keys(sk[rows], outSk[j].mask)
-        for i in range(0, len(outPk)):
-            M[j][rows] = mininero.subKeys(M[j][rows], outPk[i].mask) # subtract commitment part
-    MG = mgSig()
-    MG.II, MG.cc, MG.ss = MLSAG2.MLSAG_Gen(M, sk, index)
-    
-    return MG #mgSig
-        
-def verRctMG(MG, pubs, outPk):
-    #mg is an mgsig (list [ss, cc, II] of keymatrix ss, keyvector II and key cc]
-    #pubs is a matrix of ctkeys [P, C]
-    #outPk is a list of output ctkeys [P, C] for the transaction
-    #returns true or false
-    rows = len(pubs[0])
-    cols = len(pubs)
-    M = MLSAG2.keyMatrix(rows + 1, cols) #just a simple way to initialize a keymatrix, doesn't need to be random..
-    for j in range(0, cols):
-        M[j][rows] = mininero.identity()
-    for i in range(0, rows): 
-        for j in range(0, cols):
-            M[j][i] = pubs[j][i].dest # get the destination part
-            M[j][rows] = mininero.addKeys(M[j][rows], pubs[j][i].mask) #add commitment part
-    #next need to subtract the commitment part of all outputs..
-    for j in range(0, cols):
-        for i in range(0, len(outPk)):
-            M[j][rows] = mininero.subKeys(M[j][rows], outPk[i].mask) # subtract commitment part        
-    return MLSAG2.MLSAG_Ver(M, MG.II, MG.cc, MG.ss)
 
-#These functions get keys from blockchain
-#replace these when connecting blockchain
-#getKeyFromBlockchain grabs a key from the blockchain at "reference_index" to mix with
-#populateFromBlockchain creates a keymatrix with "mixin" columns and one of the columns is inPk
-#   the return value are the key matrix, and the index where inPk was put (random). 
+
+def prove_rct_mg(pubs, inSk, outSk, outPk, index):
+    """
+    c.f. http:#eprint.iacr.org/2015/1098 section 4. definition 10.
+
+    :param pubs: matrix of ctkeys [P, C]
+    :param inSk: keyvector of [x, mask] secret keys
+    :param outSk: keyvector of masks for outputs
+    :param outPk: list of output ctkeys [P, C]
+    :param index: secret index of where you are signing (integer)
+    :return: list (mgsig) [ss, cc, II] where ss is keymatrix, cc is key, II is keyVector of keyimages
+    """
+
+    # So we are calling MLSAG2.MLSAG_Gen from here, we need a keymatrix made from pubs
+    # We also need a keyvector made from inSk
+
+    rows = len(pubs[0])
+    cols = len(pubs)
+    M = mlsag2.key_matrix(rows + 1, cols) # just a simple way to initialize a keymatrix, doesn't need to be random.
+    sk = mlsag2.key_vector(rows + 1)
+    
+    for j in range(0, cols):
+        M[j][rows] = crypto.identity()
+    sk[rows] = 0
+
+    for i in range(0, rows): 
+        sk[i] = inSk[i].dest  # get the destination part
+        sk[rows] = crypto.sc_add(sk[rows], inSk[i].mask)  # add commitment part
+        for j in range(0, cols):
+            M[j][i] = pubs[j][i].dest  # get the destination part
+            M[j][rows] = crypto.point_add(M[j][rows], pubs[j][i].mask)  # add commitment part
+
+    # next need to subtract the commitment part of all outputs..
+    for j in range(0, len(outSk)):
+        sk[rows] = crypto.sc_sub(sk[rows], outSk[j].mask)
+        for i in range(0, len(outPk)):
+            M[j][rows] = crypto.point_sub(M[j][rows], outPk[i].mask)  # subtract commitment part
+
+    MG = mgSig()
+    MG.II, MG.cc, MG.ss = mlsag2.MLSAG_Gen(M, sk, index)
+    
+    return MG  # mgSig
+
+
+def verify_rct_mg(MG, pubs, outPk):
+    """
+    Verifies MG
+    :param MG: an mgsig (list [ss, cc, II] of keymatrix ss, keyvector II and key cc]
+    :param pubs: matrix of ctkeys [P, C]
+    :param outPk: list of output ctkeys [P, C] for the transaction
+    :return: true or false
+    """
+    rows = len(pubs[0])
+    cols = len(pubs)
+    M = mlsag2.key_matrix(rows + 1, cols)  # just a simple way to initialize a keymatrix, doesn't need to be random..
+    for j in range(0, cols):
+        M[j][rows] = crypto.identity()
+
+    for i in range(0, rows): 
+        for j in range(0, cols):
+            M[j][i] = pubs[j][i].dest  # get the destination part
+            M[j][rows] = crypto.point_add(M[j][rows], pubs[j][i].mask)  # add commitment part
+
+    # next need to subtract the commitment part of all outputs..
+    for j in range(0, cols):
+        for i in range(0, len(outPk)):
+            M[j][rows] = crypto.point_sub(M[j][rows], outPk[i].mask)  # subtract commitment part
+    return mlsag2.MLSAG_Ver(M, MG.II, MG.cc, MG.ss)
+
+
 def getKeyFromBlockchain(reference_index):
-    #returns a ctkey a (randomly)
+    """
+    Returns a ctkey a (randomly)
+    :param reference_index:
+    :return:
+    """
     rv = ctkey()
-    rv.dest = PaperWallet.pkGen()
-    rv.mask = PaperWallet.pkGen()
+    rv.dest = crypto.public_key(crypto.random_scalar())
+    rv.mask = crypto.public_key(crypto.random_scalar())
     return rv
-        
+
+
 def populateFromBlockchain(inPk, mixin):
-    #returns a ckKeyMatrix with your public input keys at "index" which is the second returned parameter. 
-    #the returned ctkeyMatrix will have number of columns = mixin
+    """
+    Returns a ckKeyMatrix with your public input keys at "index" which is the second returned parameter.
+    The returned ctkeyMatrix will have number of columns = mixin
+    :param inPk:
+    :param mixin:
+    :return:
+    """
     rv = [None] * mixin
     index = rand.getrandbits(mixin - 1)
     blockchainsize = 10000
@@ -229,58 +267,70 @@ def populateFromBlockchain(inPk, mixin):
             rv[j] = inPk
     return rv, index
     
-    
-    
-#Elliptic Curve Diffie Helman: encodes and decodes the amount b and mask a
-# where C= aG + bH    
-def ecdhEncode(unmasked, receiverPk):    
-    rv = ecdhTuple()
-    #compute shared secret
-    esk, rv.senderPk =  PaperWallet.skpkGen()
-    sharedSec1 = mininero.cn_fast_hash(mininero.scalarmultKey(receiverPk, esk));
-    sharedSec2 = mininero.cn_fast_hash(sharedSec1)
-    #encode
-    rv.mask = mininero.sc_add_keys(unmasked.mask, sharedSec1)
-    rv.amount = mininero.sc_add_keys(unmasked.amount, sharedSec1)
-    return rv
-    
-def ecdhDecode(masked, receiverSk):
-    rv = ecdhTuple()
-    #compute shared secret
-    sharedSec1 = mininero.cn_fast_hash(mininero.scalarmultKey(masked.senderPk, receiverSk))
-    sharedSec2 = mininero.cn_fast_hash(sharedSec1)
-    #encode
-    rv.mask = mininero.sc_sub_keys(masked.mask, sharedSec1)
-    rv.amount = mininero.sc_sub_keys(masked.amount, sharedSec1)
-    return rv
-    
-#RingCT protocol
-#genRct: 
-#   creates an rctSig with all data necessary to verify the rangeProofs and that the signer owns one of the
-#   columns that are claimed as inputs, and that the sum of inputs  = sum of outputs.
-#   Also contains masked "amount" and "mask" so the receiver can see how much they received
-#verRct:
-#   verifies that all signatures (rangeProogs, MG sig, sum inputs = outputs) are correct
-#decodeRct: (c.f. http:#eprint.iacr.org/2015/1098 section 5.1.1)
-#   uses the attached ecdh info to find the amounts represented by each output commitment 
-#   must know the destination private key to find the correct amount, else will return a random number
 
-def genRct(inSk, inPk, destinations, amounts, mixin):
-    #inputs:
-    #inSk is signers secret ctkeyvector 
-    #inPk is signers public ctkeyvector 
-    #destinations is a keyvector of output addresses 
-    #amounts is a list of amounts corresponding to above output addresses
-    #mixin is an integer which is the desired mixin 
-    #outputs:
-    #rctSig is a list [ rangesigs, MG, mixRing, ecdhInfo, outPk] 
-    #rangesigs is a list of one rangeproof for each output
-    #MG is the mgsig [ss, cc, II] 
-    #mixRing is a ctkeyMatrix 
-    #ecdhInfo is a list of masks / amounts for each output
-    #outPk is a vector of ctkeys (since we have computed the commitment for each amount)
+def ecdh_encode(unmasked, receiverPk):
+    """
+    Elliptic Curve Diffie Helman: encodes and decodes the amount b and mask a
+    where C= aG + bH
+    :param unmasked:
+    :param receiverPk:
+    :return:
+    """
+    rv = ecdhTuple()
+    esk = crypto.random_scalar()
+    rv.senderPk = crypto.scalarmult_base(esk)
+    sharedSec1 = crypto.hash_to_scalar(crypto.encodepoint(crypto.scalarmult(receiverPk, esk)))
+    sharedSec2 = crypto.hash_to_scalar(sharedSec1)
+
+    rv.mask = crypto.sc_add(unmasked.mask, sharedSec1)
+    rv.amount = crypto.sc_add(unmasked.amount, sharedSec2)
+    return rv
+
+    
+def ecdh_decode(masked, receiverSk):
+    """
+    Elliptic Curve Diffie Helman: encodes and decodes the amount b and mask a
+    where C= aG + bH
+    :param masked:
+    :param receiverSk:
+    :return:
+    """
+    rv = ecdhTuple()
+
+    sharedSec1 = crypto.hash_to_scalar(crypto.scalarmult(masked.senderPk, receiverSk))
+    sharedSec2 = crypto.hash_to_scalar(sharedSec1)
+
+    rv.mask = crypto.sc_sub(masked.mask, sharedSec1)
+    rv.amount = crypto.sc_sub(masked.amount, sharedSec2)
+    return rv
+
+#
+# RingCT protocol
+#
+
+
+def gen_rct(inSk, inPk, destinations, amounts, mixin):
+    """
+    RingCT
+    Creates an rctSig with all data necessary to verify the rangeProofs and that the signer owns one of the
+    columns that are claimed as inputs, and that the sum of inputs  = sum of outputs.
+    Also contains masked "amount" and "mask" so the receiver can see how much they received
+
+    Outputs:
+        - rangesigs is a list of one rangeproof for each output
+        - MG is the mgsig [ss, cc, II]
+        - mixRing is a ctkeyMatrix
+        - ecdhInfo is a list of masks / amounts for each output
+        - outPk is a vector of ctkeys (since we have computed the commitment for each amount)
+    :param inSk:  signers secret ctkeyvector
+    :param inPk:  signers public ctkeyvector
+    :param destinations: keyvector of output addresses
+    :param amounts: list of amounts corresponding to above output addresses
+    :param mixin: an integer which is the desired mixin
+    :return: [rangesigs, MG, mixRing, ecdhInfo, outPk]
+    """
     rv = rctSig()
-    rv.outPk = ctkeyV( len(destinations))
+    rv.outPk = ctkeyV(len(destinations))
     rv.rangeSigs = [None] * len(destinations)
     outSk = ctkeyV(len(destinations))
     rv.ecdhInfo = [None] * len(destinations)
@@ -288,54 +338,56 @@ def genRct(inSk, inPk, destinations, amounts, mixin):
         rv.ecdhInfo[i] = ecdhTuple()
         rv.outPk[i] = ctkey()
         rv.outPk[i].dest = destinations[i]
-        rv.outPk[i].mask, outSk[i].mask, rv.rangeSigs[i] = proveRange(amounts[i])
+        rv.outPk[i].mask, outSk[i].mask, rv.rangeSigs[i] = prove_range(amounts[i])
         #do ecdhinfo encode / decode 
         rv.ecdhInfo[i].mask = outSk[i].mask
-        rv.ecdhInfo[i].amount = mininero.intToHex(amounts[i])
-        rv.ecdhInfo[i] = ecdhEncode(rv.ecdhInfo[i], destinations[i])
+        rv.ecdhInfo[i].amount = crypto.encodeint(amounts[i])
+        rv.ecdhInfo[i] = ecdh_encode(rv.ecdhInfo[i], destinations[i])
     rv.mixRing, index = populateFromBlockchain(inPk, mixin)
-    rv.MG = proveRctMG(rv.mixRing, inSk, outSk, rv.outPk, index)
+    rv.MG = prove_rct_mg(rv.mixRing, inSk, outSk, rv.outPk, index)
     return rv
+
             
-def verRct(rv):
-    #inputs:
-    #rv is a list [rangesigs, MG, mixRing, ecdhInfo, outPk] 
-    #rangesigs is a list of one rangeproof for each output
-    #MG is the mgsig [ss, cc, II] 
-    #mixRing is a ctkeyMatrix 
-    #ecdhInfo is a list of masks / amounts for each output
-    #outPk is a vector of ctkeys (since we have computed the commitment for each amount)    
-    #outputs: 
-    #true or false
+def ver_rct(rv):
+    """
+    Verifies that all signatures (rangeProogs, MG sig, sum inputs = outputs) are correct
+
+    Inputs:
+        - rangesigs is a list of one rangeproof for each output
+        - MG is the mgsig [ss, cc, II]
+        - mixRing is a ctkeyMatrix
+        - ecdhInfo is a list of masks / amounts for each output
+        - outPk is a vector of ctkeys (since we have computed the commitment for each amount)
+    :param rv: [rangesigs, MG, mixRing, ecdhInfo, outPk]
+    :return: true / false
+    """
     rvb = True 
     tmp = True 
     for i in range(0, len(rv.outPk)): 
-        tmp = verRange(rv.outPk[i].mask, rv.rangeSigs[i])
-        print(tmp)
+        tmp = ver_range(rv.outPk[i].mask, rv.rangeSigs[i])
         rvb = rvb and tmp
-    mgVerd = verRctMG(rv.MG, rv.mixRing, rv.outPk)
-    print(mgVerd)
-    return (rvb and mgVerd)
+    mgVerd = verify_rct_mg(rv.MG, rv.mixRing, rv.outPk)
+    return rvb and mgVerd
 
-def decodeRct(rv, sk, i):
-    #inputs:
-    #rctSig is a list [ rangesigs, MG, mixRing, ecdhInfo, outPk] 
-    #rangesigs is a list of one rangeproof for each output
-    #MG is the mgsig [ss, cc, II] 
-    #mixRing is a ctkeyMatrix 
-    #ecdhInfo is a list of masks / amounts for each output
-    #outPk is a vector of ctkeys (since we have computed the commitment for each amount)    
-    #sk is the secret key of the receiver
-    #i is the index of the receiver in the rctSig (in case of multiple destinations)
-    #outputs: 
-    #the amount received
-    decodedTuple = ecdhDecode(rv.ecdhInfo[i], sk)
+
+def decode_rct(rv, sk, i):
+    """
+    c.f. http:#eprint.iacr.org/2015/1098 section 5.1.1
+    Uses the attached ecdh info to find the amounts represented by each output commitment
+    must know the destination private key to find the correct amount, else will return a random number
+
+    :param rv:
+    :param sk:
+    :param i:
+    :return:
+    """
+    decodedTuple = ecdh_decode(rv.ecdhInfo[i], sk)
     mask = decodedTuple.mask
     amount = decodedTuple.amount
     C = rv.outPk[i].mask
-    H = getHForCT()
-    Ctmp = mininero.addKeys(mininero.scalarmultBase(mask), mininero.scalarmultKey(H, amount))
-    if (mininero.subKeys(C, Ctmp) != mininero.identity()): 
-        print("warning, amount decoded incorrectly, will be unable to spend")
-    return mininero.hexToInt(amount)
-        
+    H = gen_H_for_ct()
+    Ctmp = crypto.point_add(crypto.scalarmult_base(mask), crypto.scalarmult(H, amount))
+    if not crypto.point_eq(crypto.point_sub(C, Ctmp), crypto.identity()):
+        logger.warning("warning, amount decoded incorrectly, will be unable to spend")
+    return amount
+
