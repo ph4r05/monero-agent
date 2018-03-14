@@ -405,7 +405,7 @@ def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, addit
 async def get_pre_mlsag_hash(rv):
     """
     Generates final message for the Ring CT signature
-    # TODO: incremental hashing
+    
     :param rv:
     :type rv: xmrtypes.RctSig
     :return:
