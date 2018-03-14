@@ -114,6 +114,15 @@ def get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce):
     return extra_nonce[1:]
 
 
+def set_payment_id_to_tx_extra_nonce(payment_id):
+    """
+    Sets payment ID to the extra
+    :param payment_id:
+    :return:
+    """
+    return b'\x00' + payment_id
+
+
 def absolute_output_offsets_to_relative(off):
     """
     Relative offsets, prev + cur = next.
