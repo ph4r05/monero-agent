@@ -24,10 +24,6 @@ class ecdhTuple(object):
     __slots__ = ['mask', 'amount', 'senderPk']
 
 
-class asnlSig(object):
-    __slots__ = ['L1', 's2', 's']
-
-
 class mgSig(object):
     __slots__ = ['ss', 'cc', 'II']
 
@@ -95,9 +91,9 @@ def prove_range(amount):
         if bb[i] == 1:
             Ci[i] = crypto.point_add(crypto.scalarmult_base(ai[i]), H2[i])
         CiH[i] = crypto.point_sub(Ci[i], H2[i])
-        
-    A = asnlSig()
-    A.L1, A.s2, A.s = asnl.gen_asnl(ai, Ci, CiH, bb)
+
+    A = xmrtypes.BoroSig()
+    A.s0, A.s1, A.ee = asnl.gen_asnl(ai, Ci, CiH, bb)
     
     R = xmrtypes.RangeSig()
     R.asig = A
@@ -126,7 +122,7 @@ def ver_range(Ci, ags):
     if not crypto.point_eq(C_tmp, Ci):
         return 0
 
-    return asnl.ver_asnl(ags.Ci, CiH, ags.asig.L1, ags.asig.s2, ags.asig.s)
+    return asnl.ver_asnl(ags.Ci, CiH, ags.asig.s0, ags.asig.s1, ags.asig.ee)
 
 
 # Ring-ct MG sigs
