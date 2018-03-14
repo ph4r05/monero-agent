@@ -6,6 +6,7 @@
 
 import logging
 from . import crypto
+from monero_serialize import xmrtypes
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,16 @@ def add_keys2(a, A, b, B):
 
 def gen_mlsag(pk, xx, index):
     """
-    Generate MLSAG
+    Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
+
+    These are aka MG signatutes in earlier drafts of the ring ct paper
+    c.f. http://eprint.iacr.org/2015/1098 section 2.
+    keyImageV just does I[i] = xx[i] * Hash(xx[i] * G) for each i
+
+    Gen creates a signature which proves that for some column in the keymatrix "pk"
+       the signer knows a secret key for each row in that column
+    Ver verifies that the MG sig was created correctly
+
     :param pk:
     :param xx:
     :param index:
@@ -130,16 +140,17 @@ def gen_mlsag(pk, xx, index):
     L[index] = [crypto.scalarmult_base(aa) for aa in alpha]  # L = aG
     Hi = hash_key_vector(pk[index])
     R[index] = [crypto.scalarmult(Hi[ii], alpha[ii]) for ii in range(0, rows)]  # R = aI
+    
     oldi = index
     i = (index + 1) % cols
     c[i] = crypto.cn_fast_hash(m+''.join(L[oldi]) + ''.join(R[oldi]))
-    
+
     while i != index:
         s[i] = scalar_gen_vector(rows)
         L[i] = [add_keys1(s[i][j], c[i], pk[i][j]) for j in range(0, rows)]
 
         Hi = hash_key_vector(pk[i])
-        R[i] = [add_keys2( s[i][j], Hi[j], c[i], I[j]) for j in range(0, rows)]
+        R[i] = [add_keys2(s[i][j], Hi[j], c[i], I[j]) for j in range(0, rows)]
         oldi = i
         i = (i + 1) % cols
         c[i] = crypto.cn_fast_hash(m+''.join(L[oldi]) + ''.join(R[oldi]))
@@ -164,9 +175,11 @@ def ver_mlsag(pk, I, c0, s):
     c[0] = c0
     L = key_matrix(rows, cols)
     R = key_matrix(rows, cols)
+    
     m = ''.join(pk[0])
     for i in range(1, cols):
         m = m + ''.join(pk[i])
+
     i = 0
     while i < cols:
         L[i] = [add_keys1(s[i][j], c[i], pk[i][j]) for j in range(0, rows)]
