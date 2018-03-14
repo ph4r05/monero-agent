@@ -16,12 +16,8 @@ logger = logging.getLogger(__name__)
 ATOMS = 64
 
 
-class ctkey(object):
-    __slots__ = ['dest', 'mask']
-
-
 def ctkeyV(rows):
-    return [ctkey() for i in range(0, rows)]
+    return [xmrtypes.CtKey() for i in range(0, rows)]
 
 
 class ecdhTuple(object):
@@ -110,7 +106,7 @@ def prove_range(amount):
     thus this proves that "amount" is in [0, 2^ATOMS]
     mask is a such that C = aG + bH, and b = amount
     :param amount:
-    :return:
+    :return: sumCi, mask, RangeSig
     """
     bb = d2b(amount, ATOMS)  # gives binary form of bb in "digits" binary digits
     logger.info("amount, amount in binary %s %s" % (amount, bb))
@@ -248,7 +244,7 @@ def getKeyFromBlockchain(reference_index):
     :param reference_index:
     :return:
     """
-    rv = ctkey()
+    rv = xmrtypes.CtKey()
     rv.dest = crypto.public_key(crypto.random_scalar())
     rv.mask = crypto.public_key(crypto.random_scalar())
     return rv
@@ -273,18 +269,22 @@ def populateFromBlockchain(inPk, mixin):
     return rv, index
     
 
-def ecdh_encode(unmasked, receiverPk):
+def ecdh_encode(unmasked, receiver_pk=None, derivation=None):
     """
-    Elliptic Curve Diffie Helman: encodes and decodes the amount b and mask a
+    Elliptic Curve Diffie-Helman: encodes and decodes the amount b and mask a
     where C= aG + bH
     :param unmasked:
-    :param receiverPk:
+    :param receiver_pk:
+    :param derivation:
     :return:
     """
-    rv = ecdhTuple()
-    esk = crypto.random_scalar()
-    rv.senderPk = crypto.scalarmult_base(esk)
-    sharedSec1 = crypto.hash_to_scalar(crypto.encodepoint(crypto.scalarmult(receiverPk, esk)))
+    rv = xmrtypes.EcdhTuple()
+    if derivation is None:
+        esk = crypto.random_scalar()
+        rv.senderPk = crypto.scalarmult_base(esk)
+        derivation = crypto.encodepoint(crypto.scalarmult(receiver_pk, esk))
+
+    sharedSec1 = crypto.hash_to_scalar(derivation)
     sharedSec2 = crypto.hash_to_scalar(sharedSec1)
 
     rv.mask = crypto.sc_add(unmasked.mask, sharedSec1)
@@ -292,17 +292,21 @@ def ecdh_encode(unmasked, receiverPk):
     return rv
 
     
-def ecdh_decode(masked, receiverSk):
+def ecdh_decode(masked, receiver_sk=None, derivation=None):
     """
-    Elliptic Curve Diffie Helman: encodes and decodes the amount b and mask a
+    Elliptic Curve Diffie-Helman: encodes and decodes the amount b and mask a
     where C= aG + bH
     :param masked:
-    :param receiverSk:
+    :param receiver_sk:
+    :param derivation:
     :return:
     """
-    rv = ecdhTuple()
+    rv = xmrtypes.EcdhTuple()
 
-    sharedSec1 = crypto.hash_to_scalar(crypto.scalarmult(masked.senderPk, receiverSk))
+    if derivation is None:
+        derivation = crypto.scalarmult(masked.senderPk, receiver_sk)
+
+    sharedSec1 = crypto.hash_to_scalar(derivation)
     sharedSec2 = crypto.hash_to_scalar(sharedSec1)
 
     rv.mask = crypto.sc_sub(masked.mask, sharedSec1)
@@ -340,8 +344,8 @@ def gen_rct(inSk, inPk, destinations, amounts, mixin):
     outSk = ctkeyV(len(destinations))
     rv.ecdhInfo = [None] * len(destinations)
     for i in range(0, len(destinations)):
-        rv.ecdhInfo[i] = ecdhTuple()
-        rv.outPk[i] = ctkey()
+        rv.ecdhInfo[i] = xmrtypes.EcdhTuple()
+        rv.outPk[i] = xmrtypes.CtKey()
         rv.outPk[i].dest = destinations[i]
         rv.outPk[i].mask, outSk[i].mask, rv.rangeSigs[i] = prove_range(amounts[i])
         #do ecdhinfo encode / decode 
