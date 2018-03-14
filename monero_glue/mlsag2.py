@@ -428,8 +428,102 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
     return c == 0
 
 
+def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn_fee_key):
+    """
+    c.f. http://eprint.iacr.org/2015/1098 section 4. definition 10.
+    This does the MG sig on the "dest" part of the given key matrix, and
+    the last row is the sum of input commitments from that column - sum output commitments
+    this shows that sum inputs = sum outputs
+    :param message:
+    :param pubs:
+    :param in_sk:
+    :param out_sk:
+    :param out_pk:
+    :param kLRki:
+    :param mscout:
+    :param index:
+    :param txn_fee_key:
+    :return:
+    """
+    cols = len(pubs)
+    if cols == 0:
+        raise ValueError('Empty pubs')
+    rows = len(pubs[0])
+    if rows == 0:
+        raise ValueError('Empty pub row')
+    for i in range(cols):
+        if len(pubs[i]) != rows:
+            raise ValueError('pub is not rectangular')
+
+    if len(in_sk) != rows:
+        raise ValueError('Bad inSk size')
+    if len(out_sk) != len(out_pk):
+        raise ValueError('Bad outsk/putpk size')
+    if (not kLRki or not mscout) and (kLRki and mscout):
+        raise ValueError('Only one of kLRki/mscout is present')
+
+    sk = key_vector(rows + 1)
+    M = key_matrix(rows + 1, cols)
+    for i in range(rows + 1):
+        sk[i] = 0
+
+    for i in range(cols):
+        M[i][rows] = crypto.identity()
+        for j in range(rows):
+            M[i][j] = pubs[i][j].dest
+            M[i][rows] = crypto.point_add(M[i][rows], pubs[i][j].mask)
+
+    sk[rows] = 0
+    for j in range(rows):
+        sk[j] = in_sk[j].dest
+        sk[rows] = crypto.sc_add(sk[rows], in_sk[j].mask)  # add masks in last row
+
+    for i in range(cols):
+        for j in range(len(out_pk)):
+            M[i][rows] = crypto.point_sub(M[i][rows], out_pk[j].mask)  # subtract output Ci's in last row
+
+        # Subtract txn fee output in last row
+        M[i][rows] = crypto.point_sub(M[i][rows], txn_fee_key)
+
+    for j in range(len(out_pk)):
+        sk[rows] = crypto.sc_sub(sk[rows], out_sk[j].mask)  # subtract output masks in last row
+
+    return gen_mlsag_ext(message, M, sk, kLRki, mscout, index, rows)
 
 
+def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
+    """
+    Simple version for when we assume only
+        post rct inputs
+        here pubs is a vector of (P, C) length mixin
+    :param message:
+    :param pubs:
+    :param in_sk:
+    :param a:
+    :param cout:
+    :param kLRki:
+    :param mscout: lambda accepting c
+    :param index:
+    :return:
+    """
+    rows = 1
+    cols = len(pubs)
+    if cols == 0:
+        raise ValueError('Empty pubs')
+    if (not kLRki or not mscout) and (kLRki and mscout):
+        raise ValueError('Only one of kLRki/mscout is present')
+
+    sk = key_vector(rows + 1)
+    M = key_matrix(rows + 1, cols)
+
+    sk[0] = in_sk.dest
+    sk[1] = crypto.sc_sub(in_sk.mask, a)
+
+    for i in range(cols):
+        M[i][0] = pubs[i].dest
+        M[i][1] = crypto.point_sub(pubs[i].mask, cout)
+
+    return gen_mlsag_ext(message, M, sk, kLRki, mscout, index, rows)
 
 
 
