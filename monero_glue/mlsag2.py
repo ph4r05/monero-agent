@@ -105,6 +105,13 @@ def add_keys2(a, A, b, B):
 
 
 def gen_mlsag(pk, xx, index):
+    """
+    Generate MLSAG
+    :param pk:
+    :param xx:
+    :param index:
+    :return:
+    """
     rows = len(xx)
     cols = len(pk)
     logger.debug("Generating MG sig of size %s x %s" % (rows, cols))
@@ -142,6 +149,14 @@ def gen_mlsag(pk, xx, index):
 
 
 def ver_mlsag(pk, I, c0, s):
+    """
+    Verify MLSAG
+    :param pk:
+    :param I:
+    :param c0:
+    :param s:
+    :return:
+    """
     rows = len(pk[0])
     cols = len(pk)
     logger.debug("verifying MG sig of dimensions %s x %s" % (rows, cols))
