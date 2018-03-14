@@ -62,14 +62,14 @@ class Trezor(object):
         :type src_entr: xmrtypes.TxSourceEntry
         :return:
         """
-        self.tsx_obj.set_input(src_entr)
+        await self.tsx_obj.set_input(src_entr)
 
     async def tsx_inputs_done(self):
         """
         All inputs set
         :return:
         """
-        self.tsx_obj.tsx_inputs_done()
+        await self.tsx_obj.tsx_inputs_done()
 
     async def set_tsx_output1(self, dst_entr):
         """
@@ -92,7 +92,7 @@ class TTransaction(object):
         self.r = None  # txkey
         self.r_pub = None
 
-        self.tsx_data = None
+        self.tsx_data = None  # type: monero.TsxData
         self.need_additional_txkeys = False
         self.use_bulletproof = False
         self.use_rct = True
@@ -102,6 +102,7 @@ class TTransaction(object):
         self.input_secrets = []
         self.subaddresses = {}
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
+        self.source_permutation = []  # sorted by key images
 
     def gen_r(self):
         """
@@ -109,7 +110,7 @@ class TTransaction(object):
         :return:
         """
         self.r = crypto.random_scalar()
-        self.r_pub = crypto.public_key(self.r)
+        self.r_pub = crypto.scalarmult_base(self.r)
 
     async def init_transaction(self, tsx_data, tsx_ctr):
         """
@@ -123,7 +124,12 @@ class TTransaction(object):
 
         # Additional keys
         class_res = classify_subaddresses(tsx_data.outputs, tsx_data.change_dts.addr if tsx_data.change_dts else None)
-        num_stdaddresses, num_subaddresses, _ = class_res
+        num_stdaddresses, num_subaddresses, single_dest_subaddress = class_res
+
+        # if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
+        if num_stdaddresses == 0 and num_subaddresses == 1:
+            self.r_pub = crypto.scalarmult(single_dest_subaddress.m_spend_public_key, self.r)
+
         self.need_additional_txkeys = num_subaddresses > 0 and (num_stdaddresses > 0 or num_subaddresses > 1)
         if self.need_additional_txkeys:
             self.additional_tx_keys.append(crypto.random_scalar())
@@ -183,7 +189,7 @@ class TTransaction(object):
             pub = crypto.encodepoint(crypto.scalarmult_base(m))
             self.subaddresses[pub] = (account, indices)
 
-    def set_input(self, src_entr):
+    async def set_input(self, src_entr):
         """
         :param src_entr:
         :type src_entr: xmrtypes.TxSourceEntry
@@ -197,12 +203,12 @@ class TTransaction(object):
         out_key = crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].dest)
         tx_key = crypto.decodepoint(src_entr.real_out_tx_key)
         additional_keys = [crypto.decodepoint(x) for x in src_entr.real_out_additional_tx_keys]
+
         secs = monero.generate_key_image_helper(self.trezor.creds, self.subaddresses, out_key,
                                                 tx_key,
                                                 additional_keys,
                                                 src_entr.real_output_in_tx_index)
         self.input_secrets.append(secs)
-
         xi, ki, di = secs
 
         # Construct tx.vin
@@ -216,12 +222,24 @@ class TTransaction(object):
 
         return vini
 
-    def tsx_inputs_done(self):
+    async def tsx_inputs_done(self):
         """
         All inputs set
         :return:
         """
-        pass
+
+        # Sort tx.in by key image
+        self.source_permutation = list(range(self.inp_idx+1))
+        self.source_permutation.sort(key=lambda x: self.tx.vin[x].k_image)
+
+        def swapper(x, y):
+            self.tx.vin[x], self.tx.vin[y] = self.tx.vin[y], self.tx.vin[x]
+
+        common.apply_permutation(self.source_permutation, swapper)
+
+        # Set public key to the extra
+        self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
+        monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
 
     def set_out1(self, dest_entr):
         """

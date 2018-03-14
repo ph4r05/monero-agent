@@ -16,6 +16,7 @@ class TsxData(xmrserialize.MessageType):
     TsxData, initial input to the transaction processing.
     Serialization structure for easy hashing.
     """
+    __slots__ = ['payment_id', 'outputs', 'change_dts']
     FIELDS = [
         ('payment_id', xmrserialize.BlobType),
         ('outputs', xmrserialize.ContainerType, xmrtypes.TxDestinationEntry),
@@ -242,6 +243,17 @@ def add_extra_nonce_to_tx_extra(extra, extra_nonce):
         raise ValueError('Nonce could be 255 bytes max')
     extra += b'\x02' + len(extra_nonce).to_bytes(1, byteorder='big') + extra_nonce
     return extra
+
+
+def add_tx_pub_key_to_extra(tx_extra, pub_key):
+    """
+    Adds public key to the extra
+    :param tx_extra:
+    :param pub_key:
+    :return:
+    """
+    tx_extra.append(b'\x01')
+    tx_extra.extend(crypto.encodepoint(pub_key))
 
 
 def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):

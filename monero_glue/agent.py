@@ -45,6 +45,7 @@ class Agent(object):
             # Set transaction inputs
             for src in tx.sources:
                 await self.trezor.set_tsx_input(src)
+            await self.trezor.tsx_inputs_done()
 
             for dst in tx.dests:
                 await self.trezor.set_tsx_output1(dst)
