@@ -11,11 +11,21 @@ logger = logging.getLogger(__name__)
 
 
 def keyVector(rows):
+    """
+    Empty key vector
+    :param rows:
+    :return:
+    """
     return [None] * rows
 
 
 def keyMatrix(rows, cols):
-    # first index is columns (so slightly backward from math)
+    """
+    first index is columns (so slightly backward from math)
+    :param rows:
+    :param cols:
+    :return:
+    """
     rv = [None] * cols
     for i in range(0, cols):
         rv[i] = keyVector(rows)
@@ -23,23 +33,48 @@ def keyMatrix(rows, cols):
 
 
 def hashKeyVector(v):
+    """
+    Hashes key vector
+    :param v:
+    :return:
+    """
     return [crypto.hash_to_ec(vi) for vi in v]
 
 
 def vScalarMultBase(v):
+    """
+    Creates vector of points from scalars
+    :param v:
+    :return:
+    """
     return [crypto.scalarmult_base(a) for a in v]
 
 
 def keyImageV(x):
-    # takes as input a keyvector, returns the keyimage-vector
+    """
+    Takes as input a keyvector, returns the keyimage-vector
+    :param x:
+    :return:
+    """
     return [crypto.scalarmult(crypto.hash_to_ec(crypto.scalarmult_base(xx)), xx) for xx in x]
 
 
 def skvGen(n):
+    """
+    Generates vector of scalars
+    :param n:
+    :return:
+    """
     return [crypto.random_scalar() for i in range(0, n)]
 
 
 def skmGen(r, c):
+    """
+    Generates matrix of scalars
+    :param r:
+    :param c:
+    :return:
+    """
     rv = keyMatrix(r, c)
     for i in range(0, c):
         rv[i] = skvGen(r)
