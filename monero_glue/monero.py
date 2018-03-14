@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from mnero import mininero
 from monero_serialize import xmrtypes, xmrserialize
 from . import common as common
 from . import crypto
+from . import b58
+import binascii
 import base64
 import struct
 
@@ -29,6 +30,14 @@ class TsxData(xmrserialize.MessageType):
         self.outputs = outputs if outputs else []  # type: list[xmrtypes.TxDestinationEntry]
 
 
+def net_version():
+    """
+    Network version bytes
+    :return:
+    """
+    return b'12'
+
+
 def addr_to_hash(addr: xmrtypes.AccountPublicAddress):
     """
     Creates hashable address representation
@@ -36,6 +45,20 @@ def addr_to_hash(addr: xmrtypes.AccountPublicAddress):
     :return:
     """
     return bytes(addr.m_spend_public_key + addr.m_view_public_key)
+
+
+def encode_addr(version, spend_pub, view_pub):
+    """
+    Encodes public keys as versions
+    :param version:
+    :param spendP:
+    :param viewP:
+    :return:
+    """
+    buf = version + spend_pub + view_pub
+    h = crypto.cn_fast_hash(buf)
+    buf = buf + binascii.hexlify(h[0:8])
+    return b58.b58encode(buf)
 
 
 def classify_subaddresses(tx_dests, change_addr : xmrtypes.AccountPublicAddress):
@@ -174,7 +197,7 @@ def encrypt_payment_id(payment_id, public_key, secret_key):
     derivation_p = crypto.generate_key_derivation(public_key, secret_key)
     derivation = crypto.encodepoint(derivation_p)
     derivation += b'\x8b'
-    hash = mininero.cn_fast_hash(derivation)
+    hash = crypto.cn_fast_hash(derivation)
     for i in range(8):
         payment_id[i] ^= hash[i]
     return payment_id

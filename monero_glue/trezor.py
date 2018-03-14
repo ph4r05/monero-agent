@@ -4,7 +4,6 @@
 
 import binascii
 
-from mnero import mininero
 from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses, addr_to_hash
 from . import monero, crypto
@@ -26,9 +25,9 @@ class WalletCreds(object):
     def new_wallet(cls, priv_view_key, priv_spend_key):
         pub_view_key = crypto.scalarmult_base(priv_view_key)
         pub_spend_key = crypto.scalarmult_base(priv_spend_key)
-        addr = mininero.encode_addr(mininero.netVersion(),
-                                    binascii.hexlify(crypto.encodepoint(pub_spend_key)),
-                                    binascii.hexlify(crypto.encodepoint(pub_view_key)))
+        addr = monero.encode_addr(monero.net_version(),
+                                  binascii.hexlify(crypto.encodepoint(pub_spend_key)),
+                                  binascii.hexlify(crypto.encodepoint(pub_view_key)))
         return cls(view_key_private=priv_view_key, spend_key_private=priv_spend_key,
                    view_key_public=pub_view_key, spend_key_public=pub_spend_key,
                    address=addr)
@@ -76,6 +75,14 @@ class Trezor(object):
         """
         self.tsx_obj.set_input(src_entr)
 
+    async def set_tsx_output1(self, dst_entr):
+        """
+        :param src_entr
+        :type src_entr: xmrtypes.TxDestinationEntry
+        :return:
+        """
+        self.tsx_obj.set_out1(dst_entr)
+
 
 class TTransaction(object):
     """
@@ -118,10 +125,18 @@ class TTransaction(object):
         num_stdaddresses, num_subaddresses, _ = class_res
         self.need_additional_txkeys = num_subaddresses > 0 and (num_stdaddresses > 0 or num_subaddresses > 1)
         if self.need_additional_txkeys:
-            self.additional_tx_keys.append(mininero.randomScalar())
+            self.additional_tx_keys.append(crypto.random_scalar())
 
-        # TODO: extra processing, payment id
-        # ...
+        # Extra processing, payment id
+        self.tx.version = 2
+        self.process_payment_id()
+
+    def process_payment_id(self):
+        """
+        Payment id -> extra
+        :return:
+        """
+
 
     def precompute_subaddr(self, account, indices):
         """
@@ -168,6 +183,20 @@ class TTransaction(object):
         vini.key_offsets = [x[0] for x in src_entr.outputs]
         vini.key_offsets = monero.absolute_output_offsets_to_relative(vini.key_offsets)
         self.tx.vin.append(vini)
+
+        hmac_vini = common.keccak_hash(self.trezor.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
+        # TODO: HMAC(T_in,i || I_in, vin_i)
+
+        return vini
+
+    def set_out1(self, dest_entr):
+        """
+        Set destination entry
+        :param src_entr
+        :type src_entr: xmrtypes.TxDestinationEntry
+        :return:
+        """
+        # if dest_entr.amount <= 0 and tx.version <= 1: pass
 
 
 

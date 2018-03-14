@@ -11,7 +11,6 @@ import asyncio
 import aiounittest
 import binascii
 
-from mnero import mininero
 import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
 from monero_glue import trezor, monero, common, crypto

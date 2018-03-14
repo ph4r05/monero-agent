@@ -3,7 +3,6 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 
-from mnero import mininero
 from monero_serialize import xmrtypes, xmrserialize, protobuf as xproto
 import hashlib
 import functools
