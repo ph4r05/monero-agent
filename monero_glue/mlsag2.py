@@ -526,7 +526,65 @@ def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
     return gen_mlsag_ext(message, M, sk, kLRki, mscout, index, rows)
 
 
+def ver_rct_mg(mg, pubs, out_pk, txn_fee_key, message):
+    """
+    Verifies the above sig is created corretly
+    :param mg:
+    :param pubs:
+    :param out_pk:
+    :param txn_fee_key:
+    :param message:
+    :return:
+    """
+    cols = len(pubs)
+    if cols == 0:
+        raise ValueError('Empty pubs')
+    rows = len(pubs[0])
+    if rows == 0:
+        raise ValueError('Empty pubs[0]')
+    for i in range(cols):
+        if len(pubs[i]) != rows:
+            raise ValueError('pubs is not rectangular')
 
+    M = key_matrix(rows + 1, cols)
+    for i in range(cols):
+        M[i][rows] = crypto.identity()
+
+    for j in range(rows):
+        for i in range(cols):
+            M[i][j] = pubs[i][j].dest
+            M[i][rows] = crypto.point_add(M[i][rows], pubs[i][j].mask)  # add Ci in last row
+
+    for i in range(cols):
+        for j in range(len(out_pk)):
+            M[i][rows] = crypto.point_sub(M[i][rows], out_pk[j].mask)  # subtract output Ci's in last row
+
+        # subtract txn fee output in last row
+        M[i][rows] = crypto.point_sub(M[i][rows], M[i][rows], txn_fee_key)
+
+    return ver_mlsag_ext(message, M, mg, rows)
+
+
+def ver_rct_mg_simple(message, mg, pubs, C):
+    """
+    Verifies the above sig is created corretly
+    :param message:
+    :param mg:
+    :param pubs:
+    :param C:
+    :return:
+    """
+    rows = 1
+    cols = len(pubs)
+    if cols == 0:
+        raise ValueError('Empty pubs')
+
+    M = key_matrix(rows + 1, cols)
+    for i in range(cols):
+        M[i][0] = pubs[i].dest
+        M[i][1] = crypto.point_sub(pubs[i].mask, C)
+
+    return ver_mlsag_ext(message, M, mg, rows)
 
 
 
