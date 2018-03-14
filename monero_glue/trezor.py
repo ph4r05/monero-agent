@@ -503,4 +503,5 @@ class TTransaction(object):
         else:
             rv.pseudoOuts = pseudo_outs
 
+        full_message = await monero.get_pre_mlsag_hash(rv)
 
