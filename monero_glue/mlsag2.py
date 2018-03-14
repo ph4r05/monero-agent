@@ -194,11 +194,9 @@ def ver_mlsag(pk, I, c0, s):
     return c0 == c[cols]
 
 
-def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
+def gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows):
     """
-    Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
-
-    :param message:
+    Conditions check for gen_mlsag_ext.
     :param pk:
     :param xx:
     :param kLRki:
@@ -228,6 +226,23 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
         raise ValueError('Only one of kLRki/mscout is present')
     if kLRki and dsRows != 1:
         raise ValueError('Multisig requires exactly 1 dsRows')
+    return rows, cols
+
+
+def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
+    """
+    Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
+
+    :param message:
+    :param pk:
+    :param xx:
+    :param kLRki:
+    :param mscout:
+    :param index:
+    :param dsRows:
+    :return:
+    """
+    rows, cols = gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows)
 
     rv = xmrtypes.MgSig()
     c, c_old, L, R, Hi = 0, 0, None, None, None
@@ -257,7 +272,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
             to_hash[3 * i + 3] = aHP[i]
             rv.II[i] = crypto.scalarmult(Hi, xx[i])
 
-        Ip[i].k = crypto.precomp(rv.II[i])
+        Ip[i] = crypto.precomp(rv.II[i])
 
     nds_rows = 3 * dsRows
     ii = 0
@@ -279,7 +294,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
         for j in range(dsRows):
             L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
             Hi = crypto.hash_to_ec(pk[i][j])  # TODO: check, previously hashToPoint
-            R = add_keys2(rv.ss[i][j], Hi, c_old, Ip[j].k)
+            R = add_keys2(rv.ss[i][j], Hi, c_old, Ip[j])
             to_hash[3 * j + 1] = pk[i][j]
             to_hash[3 * j + 2] = L
             to_hash[3 * j + 3] = R
@@ -300,7 +315,90 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
 
     for j in range(rows):
         rv.ss[index][j] = crypto.sc_mulsub(c, xx[j], alpha[j])
+
+    if mscout:
+        mscout(c)
     return rv
+
+
+def ver_mlsag_assert(pk, rv, dsRows):
+    """
+    Initial params verification for ver_mlsag
+    :param pk:
+    :param rv:
+    :param dsRows:
+    :return:
+    """
+    cols = len(pk)
+    if cols < 2:
+        raise ValueError('Error! What is c if cols = 1!')
+
+    rows = len(pk[0])
+    if rows < 1:
+        raise ValueError('Empty pk')
+
+    for i in range(cols):
+        if len(pk[i]) != rows:
+            raise ValueError('pk is not rectangular')
+
+    if len(rv.II) != dsRows:
+        raise ValueError('Bad II size')
+    if len(rv.ss) != cols:
+        raise ValueError('Bad rv.ss size')
+    for i in range(cols):
+        if len(rv.ss[i]) == rows:
+            raise ValueError('rv.ss is not rectangular')
+    if dsRows <= rows:
+        raise ValueError('Bad dsRows value')
+
+    return rows, cols
+
+
+def ver_mlsag_ext(message, pk, rv, dsRows):
+    """
+    Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
+    c.f. http://eprint.iacr.org/2015/1098 section 2.
+    keyImageV just does I[i] = xx[i] * Hash(xx[i] * G) for each i
+
+    :param message:
+    :param pk:
+    :param rv:
+    :param dsRows:
+    :return:
+    """
+    rows, cols = ver_mlsag_assert(pk, rv, dsRows)
+    c, L, R, Hi = 0, None, None, None
+    c_old = rv.cc
+
+    Ip = key_vector(dsRows)
+    for i in range(dsRows):
+        Ip[i] = crypto.precomp(rv.II[i])
+
+    nds_rows = 3 * dsRows
+    to_hash = key_vector(1 + 3 * dsRows + 2 * (rows - dsRows))
+    to_hash[0] = message
+    i = 0
+    while i < cols:
+        for j in range(dsRows):
+            L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
+            Hi = crypto.hash_to_ec(pk[i][j])  # TODO: check, previously hashToPoint
+            R = add_keys2(rv.ss[i][j], Hi, c_old, Ip[j])
+            to_hash[3 * j + 1] = pk[i][j]
+            to_hash[3 * j + 2] = L
+            to_hash[3 * j + 3] = R
+
+        ii = 0
+        for j in range(dsRows, rows):
+            L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
+            to_hash[nds_rows + 2 * ii + 1] = pk[i][j]
+            to_hash[nds_rows + 2 * ii + 1] = L
+
+        c = crypto.hash_to_scalar(to_hash)  # TODO: vector of bytes to hash
+        c_old = c
+        i += 1
+
+    c = crypto.sc_sub(c_old, rv.cc)
+    return c == 0
 
 
 
