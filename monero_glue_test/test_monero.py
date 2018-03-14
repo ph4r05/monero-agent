@@ -22,6 +22,13 @@ class MoneroTest(aiounittest.AsyncTestCase):
     def __init__(self, *args, **kwargs):
         super(MoneroTest, self).__init__(*args, **kwargs)
 
+    def test_wallet_addr(self):
+        addr = monero.encode_addr(
+            monero.net_version(),
+            binascii.unhexlify(b'3bec484c5d7f0246af520aab550452b5b6013733feabebd681c4a60d457b7fc1'),
+            binascii.unhexlify(b'2d5918e31d3c003da3c778592c07b398ad6f961a67082a75fd49394d51e69bbe'))
+        self.assertEqual(addr, b'43tpGG9PKbwCpjRvNLn1jwXPpnacw2uVUcszAtgmDiVcZK4VgHwjJT9BJz1WGF9eMxSYASp8yNMkuLjeQfWqJn3CNWdWfzV')
+
     def test_derive_subaddress_public_key(self):
         out_key = crypto.decodepoint(bytes(
             [0xf4, 0xef, 0xc2, 0x9d, 0xa4, 0xcc, 0xd6, 0xbc, 0x6e, 0x81, 0xf5, 0x2a, 0x6f, 0x47, 0xb2, 0x95, 0x29, 0x66,
