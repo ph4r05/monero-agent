@@ -78,7 +78,7 @@ class Trezor(object):
         :type src_entr: xmrtypes.TxDestinationEntry
         :return:
         """
-        self.tsx_obj.set_out1(dst_entr)
+        await self.tsx_obj.set_out1(dst_entr)
 
 
 class TTransaction(object):
@@ -99,8 +99,11 @@ class TTransaction(object):
         self.use_bulletproof = False
         self.use_rct = True
         self.additional_tx_keys = []
+        self.additional_tx_public_keys = []
         self.inp_idx = -1
+        self.out_idx = -1
         self.summary_inputs_money = 0
+        self.summary_outs_money = 0
         self.input_secrets = []
         self.subaddresses = {}
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
@@ -130,7 +133,7 @@ class TTransaction(object):
 
         # if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
         if num_stdaddresses == 0 and num_subaddresses == 1:
-            self.r_pub = crypto.scalarmult(single_dest_subaddress.m_spend_public_key, self.r)
+            self.r_pub = crypto.ge_scalarmult(self.r, single_dest_subaddress.m_spend_public_key)
 
         self.need_additional_txkeys = num_subaddresses > 0 and (num_stdaddresses > 0 or num_subaddresses > 1)
         if self.need_additional_txkeys:
@@ -243,17 +246,59 @@ class TTransaction(object):
         self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
         monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
 
-    def set_out1(self, dest_entr):
+    async def set_out1(self, dst_entr):
         """
         Set destination entry
         :param src_entr
         :type src_entr: xmrtypes.TxDestinationEntry
         :return:
         """
-        # if dest_entr.amount <= 0 and tx.version <= 1: pass
+        self.out_idx += 1
+        change_addr = self.tsx_data.change_dts.addr if self.tsx_data.change_dts else None
 
+        if dst_entr.amount <= 0 and self.tx.version <= 1:
+            raise ValueError('Destination with wrong amount: %s' % dst_entr.amount)
 
+        additional_txkey = None
+        if self.need_additional_txkeys:
+            if dst_entr.is_subaddress:
+                additional_txkey = crypto.ge_scalarmult(self.additional_tx_keys[self.out_idx],
+                                                        crypto.decodepoint(dst_entr.addr.m_spend_public_key))
+            else:
+                additional_txkey = crypto.ge_scalarmult_base(self.additional_tx_keys[self.out_idx])
 
+        if self.need_additional_txkeys:
+            self.additional_tx_public_keys.append(additional_txkey)
 
+        if change_addr and dst_entr.addr == change_addr:
+            # sending change to yourself; derivation = a*R
+            derivation = monero.generate_key_derivation(self.r_pub, self.creds.view_key_private)
 
+        else:
+            # sending to the recipient; derivation = r*A (or s*C in the subaddress scheme)
+            deriv_priv = additional_txkey if dst_entr.is_subaddress and self.need_additional_txkeys else self.r
+            derivation = monero.generate_key_derivation(self.creds.view_key_public, deriv_priv)
+
+        tx_out_key = crypto.derive_public_key(derivation, self.out_idx, crypto.decodepoint(dst_entr.addr.m_spend_public_key))
+        tk = xmrtypes.TxoutToKey(key=tx_out_key)
+        tx_out = xmrtypes.TxOut(amount=dst_entr.amount, target=tk)
+        self.tx.vout.append(tx_out)
+        self.summary_outs_money += dst_entr.amount
+
+        # Last output?
+        if self.out_idx + 1 == len(self.tsx_data.outputs):
+            await self.all_out1_set()
+
+    async def all_out1_set(self):
+        """
+        All out1 set phase
+        :return:
+        """
+        self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraAdditionalPubKeys)
+        if self.need_additional_txkeys:
+            await monero.add_additional_tx_pub_keys_to_extra(self.tx.extra, self.additional_tx_public_keys)
+
+        if self.summary_outs_money > self.summary_inputs_money:
+            raise ValueError('Transaction inputs money (%s) less than outputs money (%s)'
+                             % (self.summary_inputs_money, self.summary_outs_money))
 
