@@ -430,7 +430,7 @@ class TTransaction(object):
         rv.ecdhInfo = [None]*len(destinations)
 
         # Output processing
-        sumout = crypto.identity()
+        sumout = 0
         for idx in range(len(destinations)):
             rv.outPk[idx] = xmrtypes.CtKey(dest=destinations[idx])
             C, mask, rsig = None, 0, None
@@ -449,8 +449,10 @@ class TTransaction(object):
 
             # ECDH masking
             amount_key = crypto.encodeint(self.output_secrets[idx][1])
-            rv.ecdhInfo[idx] = xmrtypes.EcdhTuple(mask=mask, amount=crypto.encodeint(outamounts[idx]))
+            rv.ecdhInfo[idx] = xmrtypes.EcdhTuple(mask=mask, amount=outamounts[idx])
             rv.ecdhInfo[idx] = ring_ct.ecdh_encode(rv.ecdhInfo[idx], derivation=amount_key)
+            rv.ecdhInfo[idx].mask = crypto.encodeint(rv.ecdhInfo[idx].mask)
+            rv.ecdhInfo[idx].amount = crypto.encodeint(rv.ecdhInfo[idx].amount)
 
         rv.txnFee = txn_fee
         rv.mixRing = mix_ring
@@ -465,8 +467,12 @@ class TTransaction(object):
             sumpouts = crypto.sc_add(sumpouts, a[idx])
             pseudo_outs[idx] = crypto.gen_c(a[idx], inamounts[idx])
 
-        a[-1] = crypto.sc_sub(sumout, sumpouts)
+        a.append(crypto.sc_sub(sumout, sumpouts))
         pseudo_outs[-1] = crypto.gen_c(a[-1], inamounts[-1])
 
+        if self.use_bulletproof:
+            rv.p.pseudoOuts = pseudo_outs
+        else:
+            rv.pseudoOuts = pseudo_outs
 
 
