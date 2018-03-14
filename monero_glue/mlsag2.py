@@ -106,6 +106,63 @@ def add_keys2(a, A, b, B):
     return crypto.point_add(crypto.scalarmult(A, a), crypto.scalarmult(B, b))
 
 
+def decode_points(vct):
+    """
+    Decodes vector of points
+    :param vct:
+    :return:
+    """
+    return [crypto.decodepoint(x) for x in vct]
+
+
+def copy_ct_key(ct):
+    """
+    Ct key copy
+    :param ct:
+    :return:
+    """
+    return xmrtypes.CtKey(mask=ct.mask, dest=ct.dest)
+
+
+def copy_ct_keys(vct):
+    """
+    Copy of the CtKey vector
+    :param vct:
+    :return:
+    """
+    return [copy_ct_key(x) for x in vct]
+
+
+def decode_ct_keys_points(vct, copy=False):
+    """
+    Decodes CtKeys vector as points
+    :param vct:
+    :param copy:
+    :return:
+    """
+    rvct = copy_ct_keys(vct) if copy else vct
+    for i in range(len(rvct)):
+        rvct[i].mask = crypto.decodepoint(rvct[i].mask)
+        rvct[i].dest = crypto.decodepoint(rvct[i].dest)
+    return rvct
+
+
+def decode_ct_keys_matrix_points(mxt, copy=False):
+    """
+    Decodes CtKeys matrix as points
+    :param vct:
+    :param copy:
+    :return:
+    """
+    rmxt = key_matrix(len(mxt), len(mxt[0])) if copy else mxt
+    for i in range(len(mxt)):
+        cur = decode_ct_keys_points(mxt[i], copy)
+        if copy:
+            rmxt[i] = cur
+
+    return rmxt
+
+
 def gen_mlsag(pk, xx, index):
     """
     Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
