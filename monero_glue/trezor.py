@@ -422,7 +422,6 @@ class TTransaction(object):
         rv = xmrtypes.RctSig()
         rv.p = xmrtypes.RctSigPrunable()
 
-        rv.type = xmrtypes.RctType.SimpleBulletproof if self.use_bulletproof else xmrtypes.RctType.Simple
         rv.message = self.tx_prefix_hash
         rv.outPk = [None] * len(destinations)
 
@@ -497,6 +496,7 @@ class TTransaction(object):
             raise ValueError('Only one of kLRki/mscout is present')
 
         rv, sumout, out_sk = await self.gen_rct_header(destinations, amounts)
+        rv.type = xmrtypes.RctType.FullBulletproof if self.use_bulletproof else xmrtypes.RctType.Full
 
         if len(amounts) > len(destinations):
             rv.txnFee = amounts[len(destinations)]
@@ -548,6 +548,7 @@ class TTransaction(object):
                 raise ValueError('Bad index into mixRing')
 
         rv, sumout, out_sk = await self.gen_rct_header(destinations, outamounts)
+        rv.type = xmrtypes.RctType.SimpleBulletproof if self.use_bulletproof else xmrtypes.RctType.Simple
         rv.txnFee = txn_fee
         rv.mixRing = mix_ring
 
