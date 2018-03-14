@@ -10,13 +10,10 @@ import requests
 import asyncio
 import aiounittest
 import binascii
-import pkg_resources
 
-from mnero import mininero
 import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
 from monero_glue import trezor, monero, common, crypto, agent
-from mnero import keccak2
 import zlib
 
 

@@ -10,9 +10,7 @@ import pkg_resources
 import asyncio
 import aiounittest
 
-from mnero import mininero
-from mnero import PaperWallet as pw
-from mnero import mnemonic
+
 from mnero import ed25519
 
 
@@ -21,13 +19,6 @@ class Basetest(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(Basetest, self).__init__(*args, **kwargs)
-
-    def test_base(self):
-        """
-        Simple b58 encode test
-        :return:
-        """
-        self.assertIsNotNone(mininero.b58encode(b'1234567890'))
 
     def test_ed25519(self):
         """
@@ -80,44 +71,6 @@ class Basetest(unittest.TestCase):
              0x4a, 0x2a, 0x4c, 0xe9, 0x84, 0x0c, 0xf2, 0xff, 0x7c, 0x31, 0x83, 0xda, 0x89, 0x53])
 
         self.assertEqual(res_h, exp_mul)
-
-    def test_pw(self):
-        """
-        Paper wallet test
-        :return:
-        """
-        while True:
-            sk = pw.skGen()
-            vk = mininero.getViewMM(sk)  # note this is the sc_reduced version..
-            worked = 1
-
-            try:
-                mininero.toPoint(vk)
-            except:
-                worked = 0
-                print("bad vk")
-
-            if vk == mininero.sc_reduce_key(vk) and worked == 1:  # already reduced
-                break
-
-        self.assertIsNotNone(sk)
-        self.assertIsNotNone(vk)
-        self.assertTrue(len(sk) > 10)
-        self.assertTrue(len(vk) > 10)
-
-        pk = mininero.publicFromSecret(sk)
-        pvk = mininero.publicFromSecret(vk)
-        self.assertIsNotNone(pk)
-        self.assertIsNotNone(pvk)
-
-        addr = mininero.getAddrMM(sk)
-        self.assertIsNotNone(addr)
-        self.assertTrue(len(addr) > 10)
-
-        wl = mnemonic.mn_encode(sk)
-        cks = mininero.electrumChecksum(wl)
-        self.assertIsNotNone(wl)
-        self.assertIsNotNone(cks)
 
 
 if __name__ == "__main__":
