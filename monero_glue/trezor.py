@@ -6,7 +6,7 @@ import binascii
 
 from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses, addr_to_hash
-from . import monero, crypto
+from . import monero, crypto, ring_ct
 from . import common as common
 
 
@@ -417,6 +417,8 @@ class TTransaction(object):
                 raise ValueError('Bad index into mixRing')
 
         rv = xmrtypes.RctSig()
+        rv.p = xmrtypes.RctSigPrunable()
+
         rv.type = xmrtypes.RctType.SimpleBulletproof if self.use_bulletproof else xmrtypes.RctType.Simple
         rv.message = self.tx_prefix_hash
         rv.outPk = [None]*len(destinations)
@@ -428,13 +430,43 @@ class TTransaction(object):
         rv.ecdhInfo = [None]*len(destinations)
 
         # Output processing
+        sumout = crypto.identity()
         for idx in range(len(destinations)):
             rv.outPk[idx] = xmrtypes.CtKey(dest=destinations[idx])
+            C, mask, rsig = None, 0, None
 
-            # rangeproof
+            # Rangeproof
             if self.use_bulletproof:
                 raise ValueError('Bulletproof not yet supported')
-            else:
 
-                pass
+            else:
+                C, mask, rsig = ring_ct.prove_range(outamounts[idx])
+                if __debug__:
+                    assert ring_ct.ver_range(C, rsig)
+
+            # Mask sum
+            sumout = crypto.sc_add(sumout, mask)
+
+            # ECDH masking
+            amount_key = crypto.encodeint(self.output_secrets[idx][1])
+            rv.ecdhInfo[idx] = xmrtypes.EcdhTuple(mask=mask, amount=crypto.encodeint(outamounts[idx]))
+            rv.ecdhInfo[idx] = ring_ct.ecdh_encode(rv.ecdhInfo[idx], derivation=amount_key)
+
+        rv.txnFee = txn_fee
+        rv.mixRing = mix_ring
+
+        # Pseudooutputs
+        pseudo_outs = [None] * len(inamounts)
+        rv.p.MGs = [None] * len(inamounts)
+        sumpouts = 0
+        a = []
+        for idx in range(len(inamounts)-1):
+            a.append(crypto.random_scalar())
+            sumpouts = crypto.sc_add(sumpouts, a[idx])
+            pseudo_outs[idx] = crypto.gen_c(a[idx], inamounts[idx])
+
+        a[-1] = crypto.sc_sub(sumout, sumpouts)
+        pseudo_outs[-1] = crypto.gen_c(a[-1], inamounts[-1])
+
+
 
