@@ -24,10 +24,6 @@ class ecdhTuple(object):
     __slots__ = ['mask', 'amount', 'senderPk']
 
 
-class mgSig(object):
-    __slots__ = ['ss', 'cc', 'II']
-
-
 class rctSig(object):
     __slots__ = ['rangeSigs', 'MG', 'mixRing', 'ecdhInfo', 'outPk']
 
@@ -172,7 +168,7 @@ def prove_rct_mg(pubs, inSk, outSk, outPk, index):
         for i in range(0, len(outPk)):
             M[j][rows] = crypto.point_sub(M[j][rows], outPk[i].mask)  # subtract commitment part
 
-    MG = mgSig()
+    MG = xmrtypes.MgSig()
     MG.II, MG.cc, MG.ss = mlsag2.gen_mlsag(M, sk, index)
     
     return MG  # mgSig
