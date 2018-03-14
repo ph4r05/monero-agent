@@ -169,7 +169,7 @@ def get_destination_view_key_pub(destinations, change_addr=None):
     :param change_addr:
     :return:
     """
-    addr = xmrtypes.AccountPublicAddress(m_spend_public_key=[0]*32, m_view_public_key=[0]*32)
+    addr = xmrtypes.AccountPublicAddress(m_spend_public_key=crypto.NULL_KEY_ENC, m_view_public_key=crypto.NULL_KEY_ENC)
     count = 0
     for dest in destinations:
         if dest.amount == 0:
@@ -198,9 +198,10 @@ def encrypt_payment_id(payment_id, public_key, secret_key):
     derivation = crypto.encodepoint(derivation_p)
     derivation += b'\x8b'
     hash = crypto.cn_fast_hash(derivation)
+    pm_copy = bytearray(payment_id)
     for i in range(8):
-        payment_id[i] ^= hash[i]
-    return payment_id
+        pm_copy[i] ^= hash[i]
+    return pm_copy
 
 
 def set_encrypted_payment_id_to_tx_extra_nonce(payment_id):
@@ -241,11 +242,6 @@ def add_extra_nonce_to_tx_extra(extra, extra_nonce):
         raise ValueError('Nonce could be 255 bytes max')
     extra += b'\x02' + len(extra_nonce).to_bytes(1, byteorder='big') + extra_nonce
     return extra
-
-
-async def encrypt_payment_id_with_tsx(extra, extra_fields):
-    pass
-    # TODO: implement this...
 
 
 def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):

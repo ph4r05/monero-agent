@@ -68,6 +68,7 @@ class Basetest(aiounittest.AsyncTestCase):
         unsig = xmrtypes.UnsignedTxSet()
         await ar.message(unsig)
 
+        # Initialize trezor wallet
         trez = trezor.Trezor()
         trez.creds = trezor.WalletCreds.new_wallet(
             priv_view_key=crypto.b16_to_scalar(b'4ce88c168e0f5f8d6524f712d5f8d7d83233b1e7a2a60b5aba5206cc0ea2bc08'),

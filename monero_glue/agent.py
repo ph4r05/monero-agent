@@ -26,6 +26,7 @@ class Agent(object):
 
     async def transfer_unsigned(self, unsig):
         for tx in unsig.txes:
+            payment_id = []
             extras = await monero.parse_extra_fields(tx.extra)
             extra_nonce = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraNonce)
             if extra_nonce and monero.has_encrypted_payment_id(extra_nonce.nonce):

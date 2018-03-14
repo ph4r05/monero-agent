@@ -40,23 +40,12 @@ class Trezor(object):
     def __init__(self):
         self.tsx_ctr = 0
         self.tsx_obj = None
-        self.key_master = None
-        self.key_hmac = None
         self.creds = None  # type: WalletCreds
 
     async def init_transaction(self, tsx_data: TsxData):
         self.tsx_ctr += 1
         self.tsx_obj = TTransaction(self)
-        self.tsx_obj.init_transaction(tsx_data)
-
-        # Generate master key H(TsxData || r || c_tsx)
-        writer = common.get_keccak_writer()
-        ar1 = xmrserialize.Archive(writer, True)
-        await ar1.message(tsx_data)
-        await xmrserialize.dump_uvarint(writer, self.tsx_obj.r)
-        await xmrserialize.dump_uvarint(writer, self.tsx_ctr)
-        self.key_master = writer.get_digest()
-        self.key_hmac = common.keccak_hash(b'hmac' + self.key_master)
+        await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
 
     async def precompute_subaddr(self, account, indices):
         """
@@ -75,6 +64,13 @@ class Trezor(object):
         """
         self.tsx_obj.set_input(src_entr)
 
+    async def tsx_inputs_done(self):
+        """
+        All inputs set
+        :return:
+        """
+        self.tsx_obj.tsx_inputs_done()
+
     async def set_tsx_output1(self, dst_entr):
         """
         :param src_entr
@@ -90,8 +86,12 @@ class TTransaction(object):
     """
     def __init__(self, trezor=None):
         self.trezor = trezor
+        self.key_master = None
+        self.key_hmac = None
+
         self.r = None  # txkey
         self.r_pub = None
+
         self.tsx_data = None
         self.need_additional_txkeys = False
         self.use_bulletproof = False
@@ -111,10 +111,11 @@ class TTransaction(object):
         self.r = crypto.random_scalar()
         self.r_pub = crypto.public_key(self.r)
 
-    def init_transaction(self, tsx_data):
+    async def init_transaction(self, tsx_data, tsx_ctr):
         """
         Initializes a new transaction.
         :param tsx_data:
+        :param tsx_ctr:
         :return:
         """
         self.tsx_data = tsx_data
@@ -129,14 +130,40 @@ class TTransaction(object):
 
         # Extra processing, payment id
         self.tx.version = 2
-        self.process_payment_id()
+        await self.process_payment_id()
+        await self.compute_hmac_keys(tsx_ctr)
 
-    def process_payment_id(self):
+    async def process_payment_id(self):
         """
         Payment id -> extra
         :return:
         """
+        if self.tsx_data.payment_id is None or len(self.tsx_data.payment_id) == 0:
+            return
 
+        change_addr = self.tsx_data.change_dts.addr if self.tsx_data.change_dts else None
+        view_key_pub_enc = monero.get_destination_view_key_pub(self.tsx_data.outputs, change_addr)
+        if view_key_pub_enc == crypto.NULL_KEY_ENC:
+            raise ValueError('Destinations have to have exactly one output to support encrypted payment ids')
+
+        view_key_pub = crypto.decodepoint(view_key_pub_enc)
+        payment_id_encr = monero.encrypt_payment_id(self.tsx_data.payment_id, view_key_pub, self.r)
+
+        extra_nonce = monero.set_encrypted_payment_id_to_tx_extra_nonce(payment_id_encr)
+        self.tx.extra = monero.add_extra_nonce_to_tx_extra([], extra_nonce)
+
+    async def compute_hmac_keys(self, tsx_ctr):
+        """
+        Generate master key H(TsxData || r || c_tsx)
+        :return:
+        """
+        writer = common.get_keccak_writer()
+        ar1 = xmrserialize.Archive(writer, True)
+        await ar1.message(self.tsx_data)
+        await xmrserialize.dump_uvarint(writer, self.r)
+        await xmrserialize.dump_uvarint(writer, tsx_ctr)
+        self.key_master = writer.get_digest()
+        self.key_hmac = common.keccak_hash(b'hmac' + self.key_master)
 
     def precompute_subaddr(self, account, indices):
         """
@@ -184,10 +211,17 @@ class TTransaction(object):
         vini.key_offsets = monero.absolute_output_offsets_to_relative(vini.key_offsets)
         self.tx.vin.append(vini)
 
-        hmac_vini = common.keccak_hash(self.trezor.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
+        hmac_vini = common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
         # TODO: HMAC(T_in,i || I_in, vin_i)
 
         return vini
+
+    def tsx_inputs_done(self):
+        """
+        All inputs set
+        :return:
+        """
+        pass
 
     def set_out1(self, dest_entr):
         """
