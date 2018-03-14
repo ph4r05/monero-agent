@@ -310,6 +310,31 @@ def point_sub_ext(A, B):
     return ed25519_2.edwards_add(A, invert_ext(B))
 
 
+def point_eq_ext(P, Q):
+    """
+    Point equivalence, extended coordinates
+    x1 / z1 == x2 / z2  <==>  x1 * z2 == x2 * z1
+    :param P:
+    :param Q:
+    :return:
+    """
+    if (P[0] * Q[2] - Q[0] * P[2]) % q != 0:
+        return False
+    if (P[1] * Q[2] - Q[1] * P[2]) % q != 0:
+        return False
+    return True
+
+
+def point_eq_xy(P, Q):
+    """
+    Point equivalence
+    :param P:
+    :param Q:
+    :return:
+    """
+    return P == Q
+
+
 #
 # Repr
 #
@@ -330,6 +355,7 @@ scalarmult_base = idd
 scalarmult = lambda x, y: y
 point_add = lambda x, y: y
 point_sub = lambda x, y: y
+point_eq = lambda x, y: y
 
 
 def setup_repr(repr):
@@ -340,7 +366,7 @@ def setup_repr(repr):
     """
     global decodepoint, encodepoint, conv_to_xy, conv_to_ext, conv_from_xy, conv_from_ext, \
         isoncurve, check_point_fmt, scalarmult_base, scalarmult, \
-        point_add, point_sub
+        point_add, point_sub, point_eq
 
     decodepoint = decodepoint_xy if repr == REPR_XY else decodepoint_ext
     encodepoint = encodepoint_xy if repr == REPR_XY else encodepoint_ext
@@ -358,6 +384,7 @@ def setup_repr(repr):
     scalarmult = ed25519.scalarmult if repr == REPR_XY else ed25519_2.scalarmult
     point_add = ed25519.edwards if repr == REPR_XY else ed25519_2.edwards_add
     point_sub = ed25519.edwards_Minus if repr == REPR_XY else point_sub_ext
+    point_eq = point_eq_xy if repr == REPR_XY else point_eq_ext
 
 
 setup_repr(POINT_REPR)
