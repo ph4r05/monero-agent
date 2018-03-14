@@ -56,7 +56,7 @@ def gen_Hpow_for_ct():
     """
     A = crypto.public_key(1)
     HPow2 = crypto.hash_to_ec(A)
-    two = crypto.encodeint(2)
+    two = 2
     H2 = [None] * ATOMS
     for i in range(0, ATOMS):
         H2[i] = HPow2
@@ -151,7 +151,7 @@ def ver_range(Ci, ags):
         CiH[i] = crypto.point_sub(ags.Ci[i], H2[i])
         C_tmp = crypto.point_add(C_tmp, ags.Ci[i])
 
-    if crypto.point_eq(C_tmp, Ci):
+    if not crypto.point_eq(C_tmp, Ci):
         return 0
 
     return asnl.ver_asnl(ags.Ci, CiH, ags.asig.L1, ags.asig.s2, ags.asig.s)
