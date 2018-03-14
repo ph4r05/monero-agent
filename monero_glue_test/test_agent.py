@@ -18,11 +18,11 @@ from monero_glue import trezor, monero, common, crypto, agent
 from mnero import keccak2
 
 
-class Basetest(aiounittest.AsyncTestCase):
+class AgentTest(aiounittest.AsyncTestCase):
     """Simple tests"""
 
     def __init__(self, *args, **kwargs):
-        super(Basetest, self).__init__(*args, **kwargs)
+        super(AgentTest, self).__init__(*args, **kwargs)
 
     async def test_tx_prefix(self):
         url = 'http://localhost:48084/json_rpc'

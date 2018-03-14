@@ -18,11 +18,11 @@ from monero_glue import trezor, monero, common, crypto, agent
 from mnero import keccak2
 
 
-class Basetest(aiounittest.AsyncTestCase):
+class MoneroTest(aiounittest.AsyncTestCase):
     """Simple tests"""
 
     def __init__(self, *args, **kwargs):
-        super(Basetest, self).__init__(*args, **kwargs)
+        super(MoneroTest, self).__init__(*args, **kwargs)
 
     def test_derive_subaddress_public_key(self):
         out_key = crypto.decodepoint(bytes(
