@@ -484,7 +484,7 @@ def sc_isnonzero(c):
 
 
 def sc_mulsub(aa, bb, cc):
-    return (cc - aa * bb) % l
+    return (aa - bb * cc) % l
 
 
 def ge_scalarmult(a, A):
