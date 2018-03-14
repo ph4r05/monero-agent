@@ -7,7 +7,6 @@ import Crypto.Random.random as rand
 import logging
 
 from monero_serialize import xmrtypes, xmrserialize
-from . import common
 from . import crypto
 from . import asnl
 from . import mlsag2
@@ -126,7 +125,7 @@ def prove_range(amount):
         CiH[i] = crypto.point_sub(Ci[i], H2[i])
         
     A = asnlSig()
-    A.L1, A.s2, A.s = asnl.GenASNL(ai, Ci, CiH, bb)
+    A.L1, A.s2, A.s = asnl.gen_asnl(ai, Ci, CiH, bb)
     
     R = rangeSig()
     R.asig = A
@@ -155,7 +154,7 @@ def ver_range(Ci, ags):
     if crypto.point_eq(C_tmp, Ci):
         return 0
 
-    return asnl.VerASNL(ags.Ci, CiH, ags.asig.L1, ags.asig.s2, ags.asig.s)
+    return asnl.ver_asnl(ags.Ci, CiH, ags.asig.L1, ags.asig.s2, ags.asig.s)
 
 
 # Ring-ct MG sigs
@@ -206,7 +205,7 @@ def prove_rct_mg(pubs, inSk, outSk, outPk, index):
             M[j][rows] = crypto.point_sub(M[j][rows], outPk[i].mask)  # subtract commitment part
 
     MG = mgSig()
-    MG.II, MG.cc, MG.ss = mlsag2.MLSAG_Gen(M, sk, index)
+    MG.II, MG.cc, MG.ss = mlsag2.gen_mlsag(M, sk, index)
     
     return MG  # mgSig
 
@@ -234,7 +233,7 @@ def verify_rct_mg(MG, pubs, outPk):
     for j in range(0, cols):
         for i in range(0, len(outPk)):
             M[j][rows] = crypto.point_sub(M[j][rows], outPk[i].mask)  # subtract commitment part
-    return mlsag2.MLSAG_Ver(M, MG.II, MG.cc, MG.ss)
+    return mlsag2.ver_mlsag(M, MG.II, MG.cc, MG.ss)
 
 
 def getKeyFromBlockchain(reference_index):

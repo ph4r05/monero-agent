@@ -104,7 +104,7 @@ def add_keys2(a, A, b, B):
     return crypto.point_add(crypto.scalarmult(A, a), crypto.scalarmult(B, b))
 
 
-def MLSAG_Gen(pk, xx, index):
+def gen_mlsag(pk, xx, index):
     rows = len(xx)
     cols = len(pk)
     logger.debug("Generating MG sig of size %s x %s" % (rows, cols))
@@ -141,7 +141,7 @@ def MLSAG_Gen(pk, xx, index):
     return I, c[0], s
 
 
-def MLSAG_Ver(pk, I, c0, s ):
+def ver_mlsag(pk, I, c0, s):
     rows = len(pk[0])
     cols = len(pk)
     logger.debug("verifying MG sig of dimensions %s x %s" % (rows, cols))
