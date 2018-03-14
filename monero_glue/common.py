@@ -4,6 +4,7 @@
 
 
 from monero_serialize import xmrtypes, xmrserialize, protobuf as xproto
+from mnero import keccak2
 import hashlib
 import functools
 
@@ -41,7 +42,7 @@ def get_keccak():
     Simple keccak 256
     :return:
     """
-    return hashlib.sha3_256()
+    return keccak2.Keccak256()
 
 
 def keccak_hash(inp):
