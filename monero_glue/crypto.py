@@ -723,5 +723,29 @@ def derive_subaddress_public_key(out_key, derivation, output_index):
     return point4
 
 
+def gen_H():
+    """
+    Returns point H
+    8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94
+    :return:
+    """
+    A = public_key(1)
+    H = hash_to_ec(A)
+    return H
+
+
+def gen_Hpow(size):
+    """
+    Returns powers of point H
+    :return:
+    """
+    A = public_key(1)
+    HPow2 = hash_to_ec(A)
+    two = 2
+    H2 = [None] * size
+    for i in range(0, size):
+        H2[i] = HPow2
+        HPow2 = scalarmult(HPow2, two)
+    return H2
 
 

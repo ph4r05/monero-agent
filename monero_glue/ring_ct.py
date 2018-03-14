@@ -38,32 +38,6 @@ class rangeSig(object):
 
 class rctSig(object):
     __slots__ = ['rangeSigs', 'MG', 'mixRing', 'ecdhInfo', 'outPk']
-    
-
-def gen_H_for_ct():
-    """
-    Returns point H
-    8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94
-    :return:
-    """
-    A = crypto.public_key(1)
-    H = crypto.hash_to_ec(A)
-    return H
-
-
-def gen_Hpow_for_ct():
-    """
-    Returns powers of point H
-    :return:
-    """
-    A = crypto.public_key(1)
-    HPow2 = crypto.hash_to_ec(A)
-    two = 2
-    H2 = [None] * ATOMS
-    for i in range(0, ATOMS):
-        H2[i] = HPow2
-        HPow2 = crypto.scalarmult(HPow2, two)
-    return H2
 
     
 def d2b(n, digits):
@@ -113,7 +87,7 @@ def prove_range(amount):
     ai = [None] * len(bb)
     Ci = [None] * len(bb)
     CiH = [None] * len(bb)  # this is like Ci - 2^i H
-    H2 = gen_Hpow_for_ct()
+    H2 = crypto.gen_Hpow(ATOMS)
     a = 0
     ii = [None] * len(bb)
     indi = [None] * len(bb)
@@ -148,7 +122,7 @@ def ver_range(Ci, ags):
     n = ATOMS
     CiH = [None] * n
     C_tmp = crypto.identity()
-    H2 = gen_Hpow_for_ct()
+    H2 = crypto.gen_Hpow(ATOMS)
     for i in range(0, n):
         CiH[i] = crypto.point_sub(ags.Ci[i], H2[i])
         C_tmp = crypto.point_add(C_tmp, ags.Ci[i])
@@ -394,7 +368,7 @@ def decode_rct(rv, sk, i):
     mask = decodedTuple.mask
     amount = decodedTuple.amount
     C = rv.outPk[i].mask
-    H = gen_H_for_ct()
+    H = crypto.gen_H()
     Ctmp = crypto.point_add(crypto.scalarmult_base(mask), crypto.scalarmult(H, amount))
     if not crypto.point_eq(crypto.point_sub(C, Ctmp), crypto.identity()):
         logger.warning("warning, amount decoded incorrectly, will be unable to spend")
