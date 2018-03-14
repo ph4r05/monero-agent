@@ -529,6 +529,15 @@ def ge_scalarmult_base(a):
     return scalarmult_base(8*a)
 
 
+def scalarmult_h(a):
+    """
+    Returns aH
+    :param a:
+    :return:
+    """
+    return scalarmult(gen_H(), a)
+
+
 def identity():
     """
     Identity point
@@ -748,4 +757,16 @@ def gen_Hpow(size):
         HPow2 = scalarmult(HPow2, two)
     return H2
 
+
+def gen_c(a, amount):
+    """
+    Generates Pedersen commitment
+    C = aG + bH
+
+    :param a:
+    :param amount:
+    :return:
+    """
+    aG = scalarmult_base(a)
+    return point_add(aG, scalarmult_h(amount))
 
