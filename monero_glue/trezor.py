@@ -460,7 +460,7 @@ class TTransaction(object):
             # Mask sum
             rv.outPk[idx].mask = crypto.encodeint(mask)
             sumout = crypto.sc_add(sumout, mask)
-            out_sk[idx] = mask
+            out_sk[idx] = xmrtypes.CtKey(mask=mask)
 
             # ECDH masking
             amount_key = crypto.encodeint(self.output_secrets[idx][1])
