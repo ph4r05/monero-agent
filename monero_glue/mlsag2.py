@@ -356,7 +356,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
     Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
 
     :param message:
-    :param pk:
+    :param pk: matrix of points, point form (not encoded)
     :param xx:
     :param kLRki:
     :param mscout:
@@ -448,7 +448,7 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
     keyImageV just does I[i] = xx[i] * Hash(xx[i] * G) for each i
 
     :param message:
-    :param pk:
+    :param pk: matrix of EC points, point form.
     :param rv:
     :param dsRows:
     :return:
@@ -492,7 +492,7 @@ def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn
     the last row is the sum of input commitments from that column - sum output commitments
     this shows that sum inputs = sum outputs
     :param message:
-    :param pubs:
+    :param pubs: matrix of CtKeys. points are encoded.
     :param in_sk:
     :param out_sk:
     :param out_pk:
@@ -527,8 +527,8 @@ def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn
     for i in range(cols):
         M[i][rows] = crypto.identity()
         for j in range(rows):
-            M[i][j] = pubs[i][j].dest
-            M[i][rows] = crypto.point_add(M[i][rows], pubs[i][j].mask)
+            M[i][j] = crypto.decodepoint(pubs[i][j].dest)
+            M[i][rows] = crypto.point_add(M[i][rows], crypto.decodepoint(pubs[i][j].mask))
 
     sk[rows] = 0
     for j in range(rows):
@@ -554,10 +554,10 @@ def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
         post rct inputs
         here pubs is a vector of (P, C) length mixin
     :param message:
-    :param pubs:
-    :param in_sk:
+    :param pubs: vector of CtKeys, public, point values, encoded form
+    :param in_sk: CtKey, private
     :param a:
-    :param cout:
+    :param cout: point, decoded
     :param kLRki:
     :param mscout: lambda accepting c
     :param index:
@@ -577,8 +577,8 @@ def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
     sk[1] = crypto.sc_sub(in_sk.mask, a)
 
     for i in range(cols):
-        M[i][0] = pubs[i].dest
-        M[i][1] = crypto.point_sub(pubs[i].mask, cout)
+        M[i][0] = crypto.decodepoint(pubs[i].dest)
+        M[i][1] = crypto.point_sub(crypto.decodepoint(pubs[i].mask), cout)
 
     return gen_mlsag_ext(message, M, sk, kLRki, mscout, index, rows)
 
@@ -587,7 +587,7 @@ def ver_rct_mg(mg, pubs, out_pk, txn_fee_key, message):
     """
     Verifies the above sig is created corretly
     :param mg:
-    :param pubs:
+    :param pubs: matrix of EC points, encoded
     :param out_pk:
     :param txn_fee_key:
     :param message:
@@ -609,8 +609,8 @@ def ver_rct_mg(mg, pubs, out_pk, txn_fee_key, message):
 
     for j in range(rows):
         for i in range(cols):
-            M[i][j] = pubs[i][j].dest
-            M[i][rows] = crypto.point_add(M[i][rows], pubs[i][j].mask)  # add Ci in last row
+            M[i][j] = crypto.decodepoint(pubs[i][j].dest)
+            M[i][rows] = crypto.point_add(M[i][rows], crypto.decodepoint(pubs[i][j].mask))  # add Ci in last row
 
     for i in range(cols):
         for j in range(len(out_pk)):
@@ -627,7 +627,7 @@ def ver_rct_mg_simple(message, mg, pubs, C):
     Verifies the above sig is created corretly
     :param message:
     :param mg:
-    :param pubs:
+    :param pubs: vector of points, encoded
     :param C:
     :return:
     """
@@ -638,8 +638,8 @@ def ver_rct_mg_simple(message, mg, pubs, C):
 
     M = key_matrix(rows + 1, cols)
     for i in range(cols):
-        M[i][0] = pubs[i].dest
-        M[i][1] = crypto.point_sub(pubs[i].mask, C)
+        M[i][0] = crypto.decodepoint(pubs[i].dest)
+        M[i][1] = crypto.point_sub(crypto.decodepoint(pubs[i].mask), C)
 
     return ver_mlsag_ext(message, M, mg, rows)
 
