@@ -687,7 +687,7 @@ def hash_to_ec(buf):
 def generate_key_image(public_key, secret_key):
     """
     Key image: H_p(pub_key) * secret_key
-    :param public_key:
+    :param public_key: encoded point
     :param secret_key:
     :return:
     """

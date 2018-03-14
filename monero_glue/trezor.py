@@ -24,11 +24,11 @@ class WalletCreds(object):
 
     @classmethod
     def new_wallet(cls, priv_view_key, priv_spend_key):
-        pub_view_key = mininero.public_key(priv_view_key)
-        pub_spend_key = mininero.public_key(priv_spend_key)
+        pub_view_key = crypto.scalarmult_base(priv_view_key)
+        pub_spend_key = crypto.scalarmult_base(priv_spend_key)
         addr = mininero.encode_addr(mininero.netVersion(),
-                                    binascii.hexlify(pub_spend_key),
-                                    binascii.hexlify(pub_view_key))
+                                    binascii.hexlify(crypto.encodepoint(pub_spend_key)),
+                                    binascii.hexlify(crypto.encodepoint(pub_view_key)))
         return cls(view_key_private=priv_view_key, spend_key_private=priv_spend_key,
                    view_key_public=pub_view_key, spend_key_public=pub_spend_key,
                    address=addr)
@@ -126,17 +126,19 @@ class TTransaction(object):
     def precompute_subaddr(self, account, indices):
         """
         Precomputes subaddresses for account (major) and list of indices (minors)
+        Subaddresses have to be stored in encoded form - unique representation.
+        Single point can have multiple extended coordinates representation - would not match during subaddress search.
         :param account:
         :param indices:
         :return:
         """
         for idx in indices:
             if account == 0 and idx == 0:
-                self.subaddresses[self.trezor.creds.spend_key_public] = (0,0)
+                self.subaddresses[crypto.encodepoint(self.trezor.creds.spend_key_public)] = (0,0)
                 continue
 
             m = monero.get_subaddress_secret_key(self.trezor.creds.view_key_private, major=account, minor=idx)
-            pub = mininero.public_key(m)
+            pub = crypto.encodepoint(crypto.scalarmult_base(m))
             self.subaddresses[pub] = (account, indices)
 
     def set_input(self, src_entr):
@@ -150,9 +152,12 @@ class TTransaction(object):
             raise ValueError('real_output index %s bigger than output_keys.size()' % (src_entr.real_output, len(src_entr.outputs)))
         self.summary_inputs_money += src_entr.amount
 
-        out_key = src_entr.outputs[src_entr.real_output][1].dest
+        out_key = crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].dest)
+        tx_key = crypto.decodepoint(src_entr.real_out_tx_key)
+        additional_keys = [crypto.decodepoint(x) for x in src_entr.real_out_additional_tx_keys]
         secs = monero.generate_key_image_helper(self.trezor.creds, self.subaddresses, out_key,
-                                                src_entr.real_out_tx_key, src_entr.real_out_additional_tx_keys,
+                                                tx_key,
+                                                additional_keys,
                                                 src_entr.real_output_in_tx_index)
         self.input_secrets.append(secs)
 

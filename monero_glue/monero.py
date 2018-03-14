@@ -251,8 +251,7 @@ def generate_key_derivation(pub_key, priv_key):
     :param priv_key:
     :return:
     """
-    return crypto.encodepoint(
-        crypto.generate_key_derivation(crypto.decodepoint(pub_key), priv_key))
+    return crypto.generate_key_derivation(pub_key, priv_key)
 
 
 def derive_subaddress_public_key(pub_key, derivation, output_index):
@@ -263,10 +262,7 @@ def derive_subaddress_public_key(pub_key, derivation, output_index):
     :param output_index:
     :return:
     """
-    return crypto.encodepoint(
-        crypto.derive_subaddress_public_key(crypto.decodepoint(pub_key),
-                                            crypto.decodepoint(derivation),
-                                            output_index))
+    return crypto.derive_subaddress_public_key(pub_key, derivation, output_index)
 
 
 def is_out_to_acc_precomp(subaddresses, out_key, derivation, additional_derivations, output_index):
@@ -281,7 +277,7 @@ def is_out_to_acc_precomp(subaddresses, out_key, derivation, additional_derivati
     :param output_index:
     :return:
     """
-    subaddress_spendkey = derive_subaddress_public_key(out_key, derivation, output_index)
+    subaddress_spendkey = crypto.encodepoint(derive_subaddress_public_key(out_key, derivation, output_index))
     if subaddress_spendkey in subaddresses:
         return subaddresses[subaddress_spendkey], derivation
 
@@ -290,6 +286,7 @@ def is_out_to_acc_precomp(subaddresses, out_key, derivation, additional_derivati
             raise ValueError('Wrong number of additional derivations')
 
         subaddress_spendkey = derive_subaddress_public_key(out_key, additional_derivations[output_index], output_index)
+        subaddress_spendkey = crypto.encodepoint(subaddress_spendkey)
         if subaddress_spendkey in subaddresses:
             return subaddresses[subaddress_spendkey], additional_derivations[output_index]
 
@@ -311,7 +308,7 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
         raise ValueError('Watch-only wallet not supported')
 
     # derive secret key with subaddress - step 1: original CN derivation
-    scalar_step1 = crypto.derive_secret_key(crypto.decodepoint(recv_derivation), real_output_index, ack.spend_key_private)
+    scalar_step1 = crypto.derive_secret_key(recv_derivation, real_output_index, ack.spend_key_private)
 
     # step 2: add Hs(SubAddr || a || index_major || index_minor)
     subaddr_sk = None
@@ -325,12 +322,12 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     # TODO: multisig here
     # ...
 
-    pub_ver = crypto.encodepoint(crypto.scalarmult_base(scalar_step2))
+    pub_ver = crypto.scalarmult_base(scalar_step2)
 
-    if pub_ver != out_key:
+    if not crypto.point_eq(pub_ver, out_key):
         raise ValueError('key image helper precomp: given output pubkey doesn\'t match the derived one')
 
-    ki = crypto.generate_key_image(pub_ver, scalar_step2)
+    ki = crypto.generate_key_image(crypto.encodepoint(pub_ver), scalar_step2)
     return scalar_step2, ki
 
 
