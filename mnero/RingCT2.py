@@ -2,7 +2,6 @@ from . import mininero
 from . import MLSAG2
 from . import PaperWallet
 from . import ASNL as AggregateSchnorr
-from . import Ecdh
 import Crypto.Random.random as rand
 
 #set 8 atoms, since python is super slow on my laptop - normally this is 64 (note these range sigs are going pretty fast in the c++ version)
