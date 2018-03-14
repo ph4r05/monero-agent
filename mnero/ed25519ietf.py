@@ -27,7 +27,7 @@
 #either expressed or implied, of the FreeBSD Project.
 
 import hashlib
-from . import mininero
+from . import ed25519
 
 def sha512(s):
     return hashlib.sha512(s).digest()
@@ -124,14 +124,14 @@ def point_compress(P):
     zinv = modp_inv(P[2])
     x = P[0] * zinv % p
     y = P[1] * zinv % p
-    return mininero.intToHex(y | ((x & 1) << 255))
+    return ed25519.encodeint(y | ((x & 1) << 255))
 
 
 def point_decompress(s):
     #if len(s) != 32:
         #raise Exception("Invalid input length for decompression")
     #y = int.from_bytes(s, "little")
-    y = mininero.hexToInt(s)
+    y = ed25519.decodeint(s)
     sign = y >> 255
     y &= (1 << 255) - 1
 
