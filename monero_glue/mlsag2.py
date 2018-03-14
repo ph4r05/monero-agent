@@ -5,6 +5,7 @@
 # see https://eprint.iacr.org/2015/1098.pdf
 
 import logging
+from . import common
 from . import crypto
 from monero_serialize import xmrtypes
 
@@ -194,6 +195,17 @@ def ver_mlsag(pk, I, c0, s):
     return c0 == c[cols]
 
 
+def hasher_message(message):
+    """
+    Returns incremental hasher for MLSAG
+    :param message:
+    :return:
+    """
+    ctx = common.HashWrapper(common.get_keccak())
+    ctx.update(message)
+    return ctx
+
+
 def gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows):
     """
     Conditions check for gen_mlsag_ext.
@@ -249,38 +261,36 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
     aG = key_vector(rows)
     rv.ss = key_matrix(rows, cols)
     aHP = key_vector(dsRows)
-    to_hash = key_vector(1 + 3 * dsRows + 2 * (rows - dsRows))
-    to_hash[0] = message
+
+    hasher = hasher_message(message)
 
     for i in range(dsRows):
-        to_hash[3 * i + 1] = pk[index][i]
+        hasher.update(pk[index][i])
         if kLRki:
             alpha[i] = kLRki.k
-            to_hash[3 * i + 2] = kLRki.L
-            to_hash[3 * i + 3] = kLRki.R
             rv.II[i] = kLRki.ki
+            hasher.update(kLRki.L)
+            hasher.update(kLRki.R)
 
         else:
             Hi = crypto.hash_to_ec(pk[index][i])  # TODO: check, previously hashToPoint
             alpha[i] = crypto.random_scalar()
             aG[i] = crypto.scalarmult_base(alpha[i])
             aHP[i] = crypto.scalarmult(Hi, alpha[i])
-            to_hash[3 * i + 2] = aG[i]
-            to_hash[3 * i + 3] = aHP[i]
             rv.II[i] = crypto.scalarmult(Hi, xx[i])
+            hasher.update(aG[i])
+            hasher.update(aHP[i])
 
         Ip[i] = crypto.precomp(rv.II[i])
 
-    nds_rows = 3 * dsRows
-    ii = 0
     for i in range(dsRows, rows):
         alpha[i] = crypto.random_scalar()
         aG[i] = crypto.scalarmult_base(alpha[i])
-        to_hash[nds_rows + 2 * ii + 1] = pk[index][i]
-        to_hash[nds_rows + 2 * ii + 2] = aG[i]
-        ii += 1
+        hasher.update(pk[index][i])
+        hasher.update(aG[i])
 
-    c_old = crypto.hash_to_scalar(to_hash)  # TODO: vector of bytes to hash
+    c_old = hasher.digest()
+    c_old = crypto.sc_reduce32(crypto.decodeint(c_old))
     return c_old, Ip, alpha
 
 
@@ -302,11 +312,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
     rv = xmrtypes.MgSig()
     c, c_old, L, R, Hi = 0, 0, None, None, None
 
-    to_hash = key_vector(1 + 3 * dsRows + 2 * (rows - dsRows))
-    to_hash[0] = message
-
     c_old, Ip, alpha = gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols)
-    nds_rows = 3 * dsRows
 
     i = (index + 1) % cols
     if i == 0:
@@ -314,23 +320,22 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
 
     while i != index:
         rv.ss[i] = scalar_gen_vector(rows)
+        hasher = hasher_message(message)
 
         for j in range(dsRows):
             L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
             Hi = crypto.hash_to_ec(pk[i][j])  # TODO: check, previously hashToPoint
             R = add_keys2(rv.ss[i][j], Hi, c_old, Ip[j])
-            to_hash[3 * j + 1] = pk[i][j]
-            to_hash[3 * j + 2] = L
-            to_hash[3 * j + 3] = R
+            hasher.update(pk[i][j])
+            hasher.update(L)
+            hasher.update(R)
 
-        ii = 0
         for j in range(dsRows, rows):
             L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
-            to_hash[nds_rows + 2 * ii + 1] = pk[i][j]
-            to_hash[nds_rows + 2 * ii + 2] = L
-            ii += 1
+            hasher.update(pk[i][j])
+            hasher.update(L)
 
-        c = crypto.hash_to_scalar(to_hash)  # TODO: vector of bytes to hash
+        c = crypto.sc_reduce32(crypto.decodeint(hasher.digest()))
         c_old = c
         i = (i + 1) % cols
 
@@ -399,26 +404,24 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
     for i in range(dsRows):
         Ip[i] = crypto.precomp(rv.II[i])
 
-    nds_rows = 3 * dsRows
-    to_hash = key_vector(1 + 3 * dsRows + 2 * (rows - dsRows))
-    to_hash[0] = message
     i = 0
     while i < cols:
+        hasher = hasher_message(message)
         for j in range(dsRows):
             L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
             Hi = crypto.hash_to_ec(pk[i][j])  # TODO: check, previously hashToPoint
             R = add_keys2(rv.ss[i][j], Hi, c_old, Ip[j])
-            to_hash[3 * j + 1] = pk[i][j]
-            to_hash[3 * j + 2] = L
-            to_hash[3 * j + 3] = R
+            hasher.update(pk[i][j])
+            hasher.update(L)
+            hasher.update(R)
 
         ii = 0
         for j in range(dsRows, rows):
             L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
-            to_hash[nds_rows + 2 * ii + 1] = pk[i][j]
-            to_hash[nds_rows + 2 * ii + 1] = L
+            hasher.update(pk[i][j])
+            hasher.update(L)
 
-        c = crypto.hash_to_scalar(to_hash)  # TODO: vector of bytes to hash
+        c = crypto.sc_reduce32(crypto.decodeint(hasher.digest()))
         c_old = c
         i += 1
 
