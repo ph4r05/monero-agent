@@ -229,23 +229,20 @@ def gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows):
     return rows, cols
 
 
-def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
+def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
     """
-    Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
-
+    MLSAG precomputation, kLRki
     :param message:
+    :param rv:
     :param pk:
     :param xx:
     :param kLRki:
-    :param mscout:
     :param index:
     :param dsRows:
+    :param rows:
+    :param cols:
     :return:
     """
-    rows, cols = gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows)
-
-    rv = xmrtypes.MgSig()
-    c, c_old, L, R, Hi = 0, 0, None, None, None
     Ip = []
     rv.II = key_vector(dsRows)
     alpha = key_vector(rows)
@@ -284,6 +281,33 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
         ii += 1
 
     c_old = crypto.hash_to_scalar(to_hash)  # TODO: vector of bytes to hash
+    return c_old, Ip, alpha
+
+
+def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
+    """
+    Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
+
+    :param message:
+    :param pk:
+    :param xx:
+    :param kLRki:
+    :param mscout:
+    :param index:
+    :param dsRows:
+    :return:
+    """
+    rows, cols = gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows)
+
+    rv = xmrtypes.MgSig()
+    c, c_old, L, R, Hi = 0, 0, None, None, None
+
+    to_hash = key_vector(1 + 3 * dsRows + 2 * (rows - dsRows))
+    to_hash[0] = message
+
+    c_old, Ip, alpha = gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols)
+    nds_rows = 3 * dsRows
+
     i = (index + 1) % cols
     if i == 0:
         rv.cc = c_old
@@ -318,6 +342,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
 
     if mscout:
         mscout(c)
+
     return rv
 
 
