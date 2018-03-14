@@ -371,7 +371,7 @@ class TTransaction(object):
 
         # Signature
         if self.use_simple_rct:
-            await self.gen_rct_simple(in_sk, destinations, inamounts, outamounts, amount_in - amount_out, mix_ring, None, None, None, index, None, self.use_bulletproof)
+            await self.gen_rct_simple(in_sk, destinations, inamounts, outamounts, amount_in - amount_out, mix_ring, None, None, index, None, self.use_bulletproof)
         else:
             pass
 
@@ -399,21 +399,21 @@ class TTransaction(object):
         await ar1.message(self.tx, msg_type=xmrtypes.TransactionPrefix)
         self.tx_prefix_hash = writer.get_digest()
 
-    async def gen_rct_simple(self, in_sk, destinations, inamounts, outamounts, txn_fee, mix_ring, amount_keys, kLRki, msout, index, out_sk, bulletproof):
+    async def gen_rct_simple(self, in_sk, destinations, inamounts, outamounts, txn_fee, mix_ring, kLRki, msout, index, out_sk, bulletproof):
         if len(inamounts) == 0:
             raise ValueError("Empty inamounts")
         if len(inamounts) != len(in_sk):
             raise ValueError("Different number of inamounts/inSk")
         if len(outamounts) != len(destinations):
             raise ValueError("Different number of amounts/destinations")
-        if len(amount_keys) != len(destinations):
+        if len(self.output_secrets) != len(destinations):
             raise ValueError("Different number of amount_keys/destinations")
         if len(index) != len(in_sk):
             raise ValueError("Different number of index/inSk")
         if len(mix_ring) != len(in_sk):
             raise ValueError("Different number of mixRing/inSk")
         for idx in range(len(mix_ring)):
-            if index[idx] >= mix_ring[idx]:
+            if index[idx] >= len(mix_ring[idx]):
                 raise ValueError('Bad index into mixRing')
 
         rv = xmrtypes.RctSig()
