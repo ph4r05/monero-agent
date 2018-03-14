@@ -422,7 +422,7 @@ def random_scalar():
     Generates random scalar (secret key)
     :return:
     """
-    return 8 * (rand.getrandbits(64 * 8)) % l
+    return sc_reduce32(8 * (rand.getrandbits(64 * 8)))
 
 
 def hash_to_scalar(data, length=None):
