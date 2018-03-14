@@ -330,7 +330,7 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
             hasher.update(crypto.encodepoint(kLRki.R))
 
         else:
-            Hi = crypto.hash_to_ec(pk[index][i])  # TODO: check, previously hashToPoint
+            Hi = crypto.hash_to_ec(crypto.encodepoint(pk[index][i]))  # TODO: check, previously hashToPoint
             alpha[i] = crypto.random_scalar()
             aG[i] = crypto.scalarmult_base(alpha[i])
             aHP[i] = crypto.scalarmult(Hi, alpha[i])
