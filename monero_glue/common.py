@@ -63,4 +63,21 @@ def get_keccak_writer(sub_writer=None):
     return xproto.AHashWriter(HashWrapper(get_keccak()), sub_writer=sub_writer)
 
 
+def apply_permutation(permutation, swapper):
+    """
+    Apply permutation from idx. Used for in-place permutation application with swapper.
+    Ported from Monero.
+    :param permutation:
+    :param swapper: function(x,y)
+    :return:
+    """
+    perm = list(permutation)
+    for i in range(len(perm)):
+        current = i
+        while i != perm[current]:
+            nxt = perm[current]
+            swapper(current, nxt)
+            perm[current] = current
+            current = nxt
+        perm[current] = current
 
