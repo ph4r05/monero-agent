@@ -34,7 +34,13 @@ class AgentTest(aiounittest.AsyncTestCase):
         unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns01.txt'))
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
 
-        await self.tx_sign(unsigned_tx)
+        reader = xmrserialize.MemoryReaderWriter(bytearray(unsigned_tx))
+        ar = xmrserialize.Archive(reader, False)
+        unsig = xmrtypes.UnsignedTxSet()
+        await ar.message(unsig)
+
+        tagent = self.init_agent()
+        await tagent.transfer_unsigned(unsig)
 
     async def test_tx_sign(self):
         """
@@ -43,14 +49,7 @@ class AgentTest(aiounittest.AsyncTestCase):
         """
         unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns02.txt'))
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
-        await self.tx_sign(unsigned_tx)
 
-    async def tx_sign(self, unsigned_tx):
-        """
-        Tx sign test with given unsigned transaction data
-        :param unsigned_tx:
-        :return:
-        """
         reader = xmrserialize.MemoryReaderWriter(bytearray(unsigned_tx))
         ar = xmrserialize.Archive(reader, False)
         unsig = xmrtypes.UnsignedTxSet()
@@ -58,6 +57,56 @@ class AgentTest(aiounittest.AsyncTestCase):
 
         tagent = self.init_agent()
         await tagent.transfer_unsigned(unsig)
+
+    async def test_tx_prefix(self):
+        return
+        url = 'http://localhost:48084/json_rpc'
+        req = {
+            "jsonrpc": "2.0", "id": "0", "method": "transfer_unsigned", "params":
+                {
+                    "destinations":
+                        [{
+                            "amount": 384500000000,
+                            "address": "9twQxUpHzXrQLnph1ZNFQgdxZZyGhKRLfaNv7EEgWc1f3LQPSZR7BP4ZZn4oH7kAbX3kCd4oDYHg6hE541rQTKtHB7ufnmk"
+                        }],
+                    "account_index": 0,
+                    "subaddr_indices": [],
+                    "priority": 5,
+                    "mixin": 2,
+                    "unlock_time": 0,
+                    "payment_id": "deadc0dedeadc0d1",
+                    "get_tx_keys": True,
+                    "do_not_relay": True,
+                    "get_tx_hex": True,
+                    "get_tx_metadata": True
+                }
+        }
+
+        resp = requests.post(url, json=req)
+        js = resp.json()
+
+        # Transaction parsing
+        blobs = js['result']['tx_blob_list']
+        tx_blob = blobs[0]
+        tx_unsigned = js['result']['tx_unsigned']
+
+        tsx_bin = base64.b16decode(tx_blob, True)
+        reader = xmrserialize.MemoryReaderWriter(bytearray(tsx_bin))
+        ar = xmrserialize.Archive(reader, False)
+        msg = xmrtypes.Transaction()
+        await ar.message(msg)
+
+        # Unsigned transaction parsing
+        tsx_unsigned_bin = base64.b16decode(tx_unsigned, True)
+        reader = xmrserialize.MemoryReaderWriter(bytearray(tsx_unsigned_bin))
+        ar = xmrserialize.Archive(reader, False)
+        unsig = xmrtypes.UnsignedTxSet()
+        await ar.message(unsig)
+
+        tagent = self.init_agent()
+        await tagent.transfer_unsigned(unsig)
+
+        print('Done')
 
     def get_creds(self):
         """
