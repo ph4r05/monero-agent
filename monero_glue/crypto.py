@@ -529,6 +529,14 @@ def ge_scalarmult_base(a):
     return scalarmult_base(8*a)
 
 
+def identity():
+    """
+    Identity point
+    :return:
+    """
+    return scalarmult_base(0)
+
+
 def ge_frombytes_vartime(key):
     """
     https://www.imperialviolet.org/2013/12/25/elligator.html
