@@ -193,3 +193,122 @@ def ver_mlsag(pk, I, c0, s):
 
     return c0 == c[cols]
 
+
+def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
+    """
+    Multilayered Spontaneous Anonymous Group Signatures (MLSAG signatures)
+
+    :param message:
+    :param pk:
+    :param xx:
+    :param kLRki:
+    :param mscout:
+    :param index:
+    :param dsRows:
+    :return:
+    """
+    cols = len(pk)
+    if cols <= 1:
+        raise ValueError('Cols == 1')
+    if index < cols:
+        raise ValueError('Index out of range')
+
+    rows = len(pk[0])
+    if rows < 1:
+        raise ValueError('Empty pk')
+
+    for i in range(cols):
+        if len(pk[i]) != rows:
+            raise ValueError('pk is not rectangular')
+    if len(xx) != rows:
+        raise ValueError('Bad xx size')
+    if dsRows <= rows:
+        raise ValueError('Bad dsRows size')
+    if (not kLRki or not mscout) and (kLRki or mscout):
+        raise ValueError('Only one of kLRki/mscout is present')
+    if kLRki and dsRows != 1:
+        raise ValueError('Multisig requires exactly 1 dsRows')
+
+    rv = xmrtypes.MgSig()
+    c, c_old, L, R, Hi = 0, 0, None, None, None
+    Ip = []
+    rv.II = key_vector(dsRows)
+    alpha = key_vector(rows)
+    aG = key_vector(rows)
+    rv.ss = key_matrix(rows, cols)
+    aHP = key_vector(dsRows)
+    to_hash = key_vector(1 + 3 * dsRows + 2 * (rows - dsRows))
+    to_hash[0] = message
+
+    for i in range(dsRows):
+        to_hash[3 * i + 1] = pk[index][i]
+        if kLRki:
+            alpha[i] = kLRki.k
+            to_hash[3 * i + 2] = kLRki.L
+            to_hash[3 * i + 3] = kLRki.R
+            rv.II[i] = kLRki.ki
+
+        else:
+            Hi = crypto.hash_to_ec(pk[index][i])  # TODO: check, previously hashToPoint
+            alpha[i] = crypto.random_scalar()
+            aG[i] = crypto.scalarmult_base(alpha[i])
+            aHP[i] = crypto.scalarmult(Hi, alpha[i])
+            to_hash[3 * i + 2] = aG[i]
+            to_hash[3 * i + 3] = aHP[i]
+            rv.II[i] = crypto.scalarmult(Hi, xx[i])
+
+        Ip[i].k = crypto.precomp(rv.II[i])
+
+    nds_rows = 3 * dsRows
+    ii = 0
+    for i in range(dsRows, rows):
+        alpha[i] = crypto.random_scalar()
+        aG[i] = crypto.scalarmult_base(alpha[i])
+        to_hash[nds_rows + 2 * ii + 1] = pk[index][i]
+        to_hash[nds_rows + 2 * ii + 2] = aG[i]
+        ii += 1
+
+    c_old = crypto.hash_to_scalar(to_hash)  # TODO: vector of bytes to hash
+    i = (index + 1) % cols
+    if i == 0:
+        rv.cc = c_old
+
+    while i != index:
+        rv.ss[i] = scalar_gen_vector(rows)
+
+        for j in range(dsRows):
+            L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
+            Hi = crypto.hash_to_ec(pk[i][j])  # TODO: check, previously hashToPoint
+            R = add_keys2(rv.ss[i][j], Hi, c_old, Ip[j].k)
+            to_hash[3 * j + 1] = pk[i][j]
+            to_hash[3 * j + 2] = L
+            to_hash[3 * j + 3] = R
+
+        ii = 0
+        for j in range(dsRows, rows):
+            L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
+            to_hash[nds_rows + 2 * ii + 1] = pk[i][j]
+            to_hash[nds_rows + 2 * ii + 2] = L
+            ii += 1
+
+        c = crypto.hash_to_scalar(to_hash)  # TODO: vector of bytes to hash
+        c_old = c
+        i = (i + 1) % cols
+
+        if i == 0:
+            rv.cc = c_old
+
+    for j in range(rows):
+        rv.ss[index][j] = crypto.sc_mulsub(c, xx[j], alpha[j])
+    return rv
+
+
+
+
+
+
+
+
+
+
+
