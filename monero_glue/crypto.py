@@ -563,6 +563,15 @@ def ge_frombytes_vartime(key):
     return 0
 
 
+def precomp(point):
+    """
+    Precomputation placeholder
+    :param point:
+    :return:
+    """
+    return point
+
+
 def generate_key_derivation(key1, key2):
     """
     Key derivation: 8*(key2*key1)
