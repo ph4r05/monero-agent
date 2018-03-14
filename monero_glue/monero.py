@@ -6,6 +6,7 @@ from monero_serialize import xmrtypes, xmrserialize
 from . import common as common
 from . import crypto
 from . import b58
+from . import b58_mnr
 import binascii
 import base64
 import struct
@@ -36,7 +37,7 @@ def net_version():
     Network version bytes
     :return:
     """
-    return b'12'
+    return b'\x12'
 
 
 def addr_to_hash(addr: xmrtypes.AccountPublicAddress):
@@ -58,8 +59,8 @@ def encode_addr(version, spend_pub, view_pub):
     """
     buf = version + spend_pub + view_pub
     h = crypto.cn_fast_hash(buf)
-    buf = buf + binascii.hexlify(h[0:8])
-    return b58.b58encode(buf)
+    buf = binascii.hexlify(buf + h[0:4])
+    return b58_mnr.b58encode(buf)
 
 
 def classify_subaddresses(tx_dests, change_addr : xmrtypes.AccountPublicAddress):

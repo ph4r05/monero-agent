@@ -26,8 +26,8 @@ class WalletCreds(object):
         pub_view_key = crypto.scalarmult_base(priv_view_key)
         pub_spend_key = crypto.scalarmult_base(priv_spend_key)
         addr = monero.encode_addr(monero.net_version(),
-                                  binascii.hexlify(crypto.encodepoint(pub_spend_key)),
-                                  binascii.hexlify(crypto.encodepoint(pub_view_key)))
+                                  crypto.encodepoint(pub_spend_key),
+                                  crypto.encodepoint(pub_view_key))
         return cls(view_key_private=priv_view_key, spend_key_private=priv_spend_key,
                    view_key_public=pub_view_key, spend_key_public=pub_spend_key,
                    address=addr)
