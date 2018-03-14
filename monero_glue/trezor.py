@@ -432,7 +432,7 @@ class TTransaction(object):
         # Output processing
         sumout = 0
         for idx in range(len(destinations)):
-            rv.outPk[idx] = xmrtypes.CtKey(dest=destinations[idx])
+            rv.outPk[idx] = xmrtypes.CtKey(dest=crypto.encodepoint(destinations[idx]))
             C, mask, rsig = None, 0, None
 
             # Rangeproof
@@ -441,10 +441,21 @@ class TTransaction(object):
 
             else:
                 C, mask, rsig = ring_ct.prove_range(outamounts[idx])
+                rv.p.rangeSigs[idx] = rsig
                 if __debug__:
                     assert ring_ct.ver_range(C, rsig)
 
+                # Recoding to structure
+                for i in range(len(rsig.Ci)):
+                    rsig.Ci[i] = crypto.encodepoint(rsig.Ci[i])
+                for i in range(len(rsig.asig.s0)):
+                    rsig.asig.s0[i] = crypto.encodepoint(rsig.asig.s0[i])
+                for i in range(len(rsig.asig.s1)):
+                    rsig.asig.s1[i] = crypto.encodeint(rsig.asig.s1[i])
+                rsig.asig.ee = crypto.encodeint(rsig.asig.ee)
+
             # Mask sum
+            rv.outPk[idx].mask = crypto.encodeint(mask)
             sumout = crypto.sc_add(sumout, mask)
 
             # ECDH masking
@@ -469,6 +480,8 @@ class TTransaction(object):
 
         a.append(crypto.sc_sub(sumout, sumpouts))
         pseudo_outs[-1] = crypto.gen_c(a[-1], inamounts[-1])
+        for i in range(len(pseudo_outs)):
+            pseudo_outs[i] = crypto.encodepoint(pseudo_outs[i])
 
         if self.use_bulletproof:
             rv.p.pseudoOuts = pseudo_outs
