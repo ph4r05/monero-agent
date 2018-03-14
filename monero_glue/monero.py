@@ -252,7 +252,7 @@ def add_tx_pub_key_to_extra(tx_extra, pub_key):
     :param pub_key:
     :return:
     """
-    tx_extra.append(b'\x01')
+    tx_extra.append(1)  # TX_EXTRA_TAG_PUBKEY
     tx_extra.extend(crypto.encodepoint(pub_key))
 
 
