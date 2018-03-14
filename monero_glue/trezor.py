@@ -6,7 +6,7 @@ import binascii
 
 from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses, addr_to_hash
-from . import monero, crypto, ring_ct
+from . import monero, crypto, ring_ct, mlsag2
 from . import common as common
 
 
@@ -371,11 +371,22 @@ class TTransaction(object):
 
         # Signature
         if self.use_simple_rct:
-            await self.gen_rct_simple(in_sk, destinations, inamounts, outamounts, amount_in - amount_out, mix_ring, None, None, index, None)
+            rv = await self.gen_rct_simple(in_sk, destinations, inamounts, outamounts, amount_in - amount_out, mix_ring, None, None, index)
         else:
-            pass
+            rv = await self.gen_rct(in_sk, destinations, outamounts, mix_ring, None, None, tx.sources[0].real_output)
 
-        print('sigsig')
+        # Recode for serialization
+        rv = await self.rct_recode(rv)
+        self.tx.signatures = []
+        self.tx.rct_signatures = rv
+        del rv
+
+        # Serialize response
+        writer = xmrserialize.MemoryReaderWriter()
+        ar1 = xmrserialize.Archive(writer, True)
+        await ar1.message(self.tx, msg_type=xmrtypes.Transaction)
+
+        return writer.buffer
 
     def zero_out_amounts(self, tx):
         """
@@ -399,7 +410,112 @@ class TTransaction(object):
         await ar1.message(self.tx, msg_type=xmrtypes.TransactionPrefix)
         self.tx_prefix_hash = writer.get_digest()
 
-    async def gen_rct_simple(self, in_sk, destinations, inamounts, outamounts, txn_fee, mix_ring, kLRki, msout, index, out_sk):
+    async def gen_rct_header(self, destinations, outamounts):
+        """
+        Initializes RV RctSig structure, processes outputs, computes range proofs, ecdh info masking.
+        Common to gen_rct and gen_rct_simple.
+
+        :param destinations:
+        :param outamounts:
+        :return:
+        """
+        rv = xmrtypes.RctSig()
+        rv.p = xmrtypes.RctSigPrunable()
+
+        rv.type = xmrtypes.RctType.SimpleBulletproof if self.use_bulletproof else xmrtypes.RctType.Simple
+        rv.message = self.tx_prefix_hash
+        rv.outPk = [None] * len(destinations)
+
+        if self.use_bulletproof:
+            rv.p.bulletproofs = [None] * len(destinations)
+        else:
+            rv.p.rangeSigs = [None] * len(destinations)
+        rv.ecdhInfo = [None] * len(destinations)
+
+        # Output processing
+        sumout = 0
+        out_sk = [None] * len(destinations)
+        for idx in range(len(destinations)):
+            rv.outPk[idx] = xmrtypes.CtKey(dest=crypto.encodepoint(destinations[idx]))
+            C, mask, rsig = None, 0, None
+
+            # Rangeproof
+            if self.use_bulletproof:
+                raise ValueError('Bulletproof not yet supported')
+
+            else:
+                C, mask, rsig = ring_ct.prove_range(outamounts[idx])
+                rv.p.rangeSigs[idx] = rsig
+                if __debug__:
+                    assert ring_ct.ver_range(C, rsig)
+
+                # Recoding to structure
+                for i in range(len(rsig.Ci)):
+                    rsig.Ci[i] = crypto.encodepoint(rsig.Ci[i])
+                for i in range(len(rsig.asig.s0)):
+                    rsig.asig.s0[i] = crypto.encodepoint(rsig.asig.s0[i])
+                for i in range(len(rsig.asig.s1)):
+                    rsig.asig.s1[i] = crypto.encodeint(rsig.asig.s1[i])
+                rsig.asig.ee = crypto.encodeint(rsig.asig.ee)
+
+            # Mask sum
+            rv.outPk[idx].mask = crypto.encodeint(mask)
+            sumout = crypto.sc_add(sumout, mask)
+            out_sk[idx] = mask
+
+            # ECDH masking
+            amount_key = crypto.encodeint(self.output_secrets[idx][1])
+            rv.ecdhInfo[idx] = xmrtypes.EcdhTuple(mask=mask, amount=outamounts[idx])
+            rv.ecdhInfo[idx] = ring_ct.ecdh_encode(rv.ecdhInfo[idx], derivation=amount_key)
+            rv.ecdhInfo[idx].mask = crypto.encodeint(rv.ecdhInfo[idx].mask)
+            rv.ecdhInfo[idx].amount = crypto.encodeint(rv.ecdhInfo[idx].amount)
+        return rv, sumout, out_sk
+
+    async def gen_rct(self, in_sk, destinations, amounts, mix_ring, kLRki, msout, index):
+        """
+
+        :param in_sk:
+        :param destinations:
+        :param amounts:
+        :param mix_ring:
+        :param kLRki:
+        :param msout:
+        :param index:
+        :param out_sk:
+        :return:
+        """
+        if len(amounts) != len(destinations) and len(amounts) != len(destinations) + 1:
+            raise ValueError('Different number of amounts/destinations')
+        if len(self.output_secrets) != len(destinations):
+            raise ValueError('Different number of amount_keys/destinations')
+        if index >= len(mix_ring):
+            raise ValueError('Bad index into mix ring')
+        for n in range(len(mix_ring)):
+            if len(mix_ring[n]) != len(in_sk):
+                raise ValueError('Bad mixring size')
+        if (not kLRki or not msout) and (kLRki or msout):
+            raise ValueError('Only one of kLRki/mscout is present')
+
+        rv, sumout, out_sk = await self.gen_rct_header(destinations, amounts)
+
+        if len(amounts) > len(destinations):
+            rv.txnFee = amounts[len(destinations)]
+        else:
+            rv.txnFee = 0
+
+        txn_fee_key = crypto.scalarmult_h(rv.txnFee)
+        rv.mixRing = mix_ring
+        # TODO: msout multisig
+
+        full_message = await monero.get_pre_mlsag_hash(rv)
+        rv.p.MGs = [
+            mlsag2.prove_rct_mg(full_message,
+                                rv.mixRing,
+                                in_sk, out_sk, rv.outPk, kLRki, None, index, txn_fee_key)
+        ]
+        return rv
+
+    async def gen_rct_simple(self, in_sk, destinations, inamounts, outamounts, txn_fee, mix_ring, kLRki, msout, index):
         """
         Generate simple RCT signature.
 
@@ -431,55 +547,7 @@ class TTransaction(object):
             if index[idx] >= len(mix_ring[idx]):
                 raise ValueError('Bad index into mixRing')
 
-        rv = xmrtypes.RctSig()
-        rv.p = xmrtypes.RctSigPrunable()
-
-        rv.type = xmrtypes.RctType.SimpleBulletproof if self.use_bulletproof else xmrtypes.RctType.Simple
-        rv.message = self.tx_prefix_hash
-        rv.outPk = [None]*len(destinations)
-
-        if self.use_bulletproof:
-            rv.p.bulletproofs = [None]*len(destinations)
-        else:
-            rv.p.rangeSigs = [None]*len(destinations)
-        rv.ecdhInfo = [None]*len(destinations)
-
-        # Output processing
-        sumout = 0
-        for idx in range(len(destinations)):
-            rv.outPk[idx] = xmrtypes.CtKey(dest=crypto.encodepoint(destinations[idx]))
-            C, mask, rsig = None, 0, None
-
-            # Rangeproof
-            if self.use_bulletproof:
-                raise ValueError('Bulletproof not yet supported')
-
-            else:
-                C, mask, rsig = ring_ct.prove_range(outamounts[idx])
-                rv.p.rangeSigs[idx] = rsig
-                if __debug__:
-                    assert ring_ct.ver_range(C, rsig)
-
-                # Recoding to structure
-                for i in range(len(rsig.Ci)):
-                    rsig.Ci[i] = crypto.encodepoint(rsig.Ci[i])
-                for i in range(len(rsig.asig.s0)):
-                    rsig.asig.s0[i] = crypto.encodepoint(rsig.asig.s0[i])
-                for i in range(len(rsig.asig.s1)):
-                    rsig.asig.s1[i] = crypto.encodeint(rsig.asig.s1[i])
-                rsig.asig.ee = crypto.encodeint(rsig.asig.ee)
-
-            # Mask sum
-            rv.outPk[idx].mask = crypto.encodeint(mask)
-            sumout = crypto.sc_add(sumout, mask)
-
-            # ECDH masking
-            amount_key = crypto.encodeint(self.output_secrets[idx][1])
-            rv.ecdhInfo[idx] = xmrtypes.EcdhTuple(mask=mask, amount=outamounts[idx])
-            rv.ecdhInfo[idx] = ring_ct.ecdh_encode(rv.ecdhInfo[idx], derivation=amount_key)
-            rv.ecdhInfo[idx].mask = crypto.encodeint(rv.ecdhInfo[idx].mask)
-            rv.ecdhInfo[idx].amount = crypto.encodeint(rv.ecdhInfo[idx].amount)
-
+        rv, sumout, out_sk = await self.gen_rct_header(destinations, outamounts)
         rv.txnFee = txn_fee
         rv.mixRing = mix_ring
 
@@ -495,13 +563,38 @@ class TTransaction(object):
 
         a.append(crypto.sc_sub(sumout, sumpouts))
         pseudo_outs[-1] = crypto.gen_c(a[-1], inamounts[-1])
-        for i in range(len(pseudo_outs)):
-            pseudo_outs[i] = crypto.encodepoint(pseudo_outs[i])
 
         if self.use_bulletproof:
-            rv.p.pseudoOuts = pseudo_outs
+            rv.p.pseudoOuts = [crypto.encodepoint(x) for x in pseudo_outs]
         else:
-            rv.pseudoOuts = pseudo_outs
+            rv.pseudoOuts = [crypto.encodepoint(x) for x in pseudo_outs]
 
         full_message = await monero.get_pre_mlsag_hash(rv)
+
+        # TODO: msout multisig
+        for i in range(len(inamounts)):
+            rv.p.MGs[i] = mlsag2.prove_rct_mg_simple(
+                full_message,
+                rv.mixRing[i],
+                in_sk[i], a[i],
+                pseudo_outs[i],
+                kLRki[i] if kLRki else None, None, index[i])
+
+        return rv
+
+    async def rct_recode(self, rv):
+        """
+        Recodes RCT MGs signatures from raw forms to bytearrays so it works with serialization
+        :param rv:
+        :return:
+        """
+        mgs = rv.p.MGs
+        for idx in range(len(mgs)):
+            mgs[idx].cc = crypto.encodeint(mgs[idx].cc)
+
+            for i in range(len(mgs[idx].ss)):
+                for j in range(len(mgs[idx].ss[i])):
+                    mgs[idx].ss[i][j] = crypto.encodeint(mgs[idx].ss[i][j])
+        return rv
+
 
