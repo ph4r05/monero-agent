@@ -275,6 +275,8 @@ async def add_additional_tx_pub_keys_to_extra(tx_extra, additional_pub_keys):
 def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
     """
     Builds subaddress secret key from the subaddress index
+    Hs(SubAddr || a || index_major || index_minor)
+
     :param secret_key:
     :param index:
     :param major:

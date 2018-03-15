@@ -635,7 +635,7 @@ def derive_secret_key(derivation, output_index, base):
     :param base:
     :return:
     """
-    if sc_check(base) !=0:
+    if sc_check(base) != 0:
         raise ValueError("cs_check in derive_secret_key")
     scalar = derivation_to_scalar(derivation, output_index)
     return base + scalar
@@ -713,7 +713,7 @@ def hash_to_ec(buf):
 
 def generate_key_image(public_key, secret_key):
     """
-    Key image: H_p(pub_key) * secret_key
+    Key image: secret_key * H_p(pub_key)
     :param public_key: encoded point
     :param secret_key:
     :return:
