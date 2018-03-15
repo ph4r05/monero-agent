@@ -157,11 +157,12 @@ def expmod(b, e, m):
 def inv(z):
     """
     Modular inversion from edd25519ietf.py
+    $= z^{-1} \mod q$, for z != 0
+
+    Adapted from curve25519_athlon.c in djb's Curve25519.
     :param z:
     :return:
     """
-    """$= z^{-1} \mod q$, for z != 0"""
-    # Adapted from curve25519_athlon.c in djb's Curve25519.
     z2 = z * z % q                                # 2
     z9 = pow2(z2, 2) * z % q                      # 9
     z11 = z9 * z2 % q                             # 11
@@ -422,7 +423,7 @@ def random_scalar():
     Generates random scalar (secret key)
     :return:
     """
-    return sc_reduce32(8 * (rand.getrandbits(64 * 8)))
+    return sc_reduce32(rand.getrandbits(64 * 8))
 
 
 def hash_to_scalar(data, length=None):
@@ -450,11 +451,11 @@ def check_ed25519point(P):
 
 def sc_check(key):
     """
-    TODO: Implement secret key check
+    sc_check is not relevant for long-integer scalar representation.
     :param key:
     :return:
     """
-    return 0
+    return 0 if key > 0 else 1
 
 
 def sc_reduce32(data):
@@ -463,7 +464,7 @@ def sc_reduce32(data):
     except it is assumed that your input s is alread in the form:
     s[0]+256*s[1]+...+256^31*s[31] = s
 
-    And the rest is just reducing mod l,
+    And the rest is reducing mod l,
     so basically take a 32 byte input, and reduce modulo the prime.
     :param data:
     :return:
@@ -472,18 +473,42 @@ def sc_reduce32(data):
 
 
 def sc_add(aa, bb):
+    """
+    Scalar addition
+    :param aa:
+    :param bb:
+    :return:
+    """
     return (aa + bb) % l
 
 
 def sc_sub(aa, bb):
+    """
+    Scalar subtraction
+    :param aa:
+    :param bb:
+    :return:
+    """
     return (aa - bb) % l
 
 
 def sc_isnonzero(c):
+    """
+    Returns true if scalar is non-zero
+    :param c:
+    :return:
+    """
     return c % l != 0
 
 
 def sc_mulsub(aa, bb, cc):
+    """
+    (aa - bb * cc) % l
+    :param aa:
+    :param bb:
+    :param cc:
+    :return:
+    """
     return (aa - bb * cc) % l
 
 
@@ -495,14 +520,13 @@ def ge_scalarmult(a, A):
     :param A: point
     :return:
     """
-    # "Alice's secret key a is a uniform random 32-byte string then
-    #clampC(a) is a uniform random Curve25519 secret key
-    #i.e. n, where n/8 is a uniform random integer between
-    #2^251 and 2^252-1
-    #Alice's public key is n/Q compressed to the x-coordinate
-    #so that means, ge_scalarmult is not actually doing scalar mult
-    #clamping makes the secret be between 2^251 and 2^252
-    #and should really be done
+    # Alice's secret key a is a uniform random 32-byte string then
+    # clampC(a) is a uniform random Curve25519 secret key
+    # i.e. n, where n/8 is a uniform random integer between
+    # 2^251 and 2^252-1
+    # Alice's public key is n/Q compressed to the x-coordinate
+    # so that means, ge_scalarmult is not actually doing scalar mult
+    # clamping makes the secret be between 2^251 and 2^252 and should really be done
     check_ed25519point(A)
     return scalarmult(A, a)
 
@@ -688,7 +712,7 @@ def hash_to_ec(buf):
         z = -1 * A
         x = x * fe_sqrtm1 % q  # ..
         y = (w - x) % q
-        if (y != 0):
+        if y != 0:
             rx = rx * fe_fffb3 % q
         else:
             rx = rx * -1 * fe_fffb4 % q
