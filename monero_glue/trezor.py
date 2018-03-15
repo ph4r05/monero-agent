@@ -321,18 +321,22 @@ class TTransaction(object):
         :return:
         """
         amount_in = 0
-        inamounts = []
-
-        index = []
-        in_sk = []  # type: list[xmrtypes.CtKey]
+        inamounts = [None] * len(self.source_permutation)
+        index = [None] * len(self.source_permutation)
+        in_sk = [None] * len(self.source_permutation)  # type: list[xmrtypes.CtKey]
 
         # TODO: iterative?
-        for idx in self.source_permutation:
+        for i in range(len(self.source_permutation)):
+            idx = self.source_permutation[i]
             src = tx.sources[idx]
             amount_in += src.amount
-            inamounts.append(src.amount)
-            index.append(src.real_output)
-            in_sk.append(xmrtypes.CtKey(dest=self.input_secrets[idx][0], mask=crypto.decodeint(src.mask)))
+            inamounts[i] = src.amount
+            index[i] = src.real_output
+            in_sk[i] = xmrtypes.CtKey(dest=self.input_secrets[idx][0], mask=crypto.decodeint(src.mask))
+            # TODO: kLRki
+            if __debug__:
+                assert crypto.point_eq(crypto.decodepoint(src.outputs[src.real_output][1].dest),
+                                       crypto.scalarmult_base(in_sk[i].dest))
 
         # TODO: iterative?
         destinations = []
@@ -344,19 +348,20 @@ class TTransaction(object):
             amount_out += self.tx.vout[idx].amount
 
         if self.use_simple_rct:
-            mix_ring = [[] for _ in range(self.inp_idx + 1)]
-            for idx in self.source_permutation:
-                src = tx.sources[idx]
-                mix_ring[idx] = []
+            mix_ring = [None] * (self.inp_idx + 1)
+            for i in range(len(self.source_permutation)):
+                src = tx.sources[self.source_permutation[i]]
+                mix_ring[i] = []
                 for idx2, out in enumerate(src.outputs):
-                    mix_ring[idx].append(out[1])
+                    mix_ring[i].append(out[1])
 
         else:
             n_total_outs = len(tx.sources[0].outputs)
-            mix_ring = [[] for _ in range(n_total_outs)]
+            mix_ring = [None] * n_total_outs
             for idx in range(n_total_outs):
                 mix_ring[idx] = []
-                for idx2 in self.source_permutation:
+                for i in range(len(self.source_permutation)):
+                    idx2 = self.source_permutation[i]
                     src = tx.sources[idx2]
                     mix_ring[idx].append(src.outputs[idx][1])
 
