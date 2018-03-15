@@ -367,7 +367,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
     rows, cols = gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows)
 
     rv = xmrtypes.MgSig()
-    c, c_old, L, R, Hi = 0, 0, None, None, None
+    c, L, R, Hi = 0, None, None, None
 
     c_old, Ip, alpha = gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols)
 
@@ -400,7 +400,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
             rv.cc = c_old
 
     for j in range(rows):
-        rv.ss[index][j] = crypto.sc_mulsub(c, xx[j], alpha[j])
+        rv.ss[index][j] = crypto.sc_mulsub(alpha[j], c, xx[j])  # sc_mulsub in original does c-ab
 
     if mscout:
         mscout(c)
@@ -454,7 +454,6 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
     :return:
     """
     rows, cols = ver_mlsag_assert(pk, rv, dsRows)
-    c, L, R, Hi = 0, None, None, None
     c_old = rv.cc
 
     Ip = key_vector(dsRows)
@@ -463,6 +462,7 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
 
     i = 0
     while i < cols:
+        c = 0
         hasher = hasher_message(message)
         for j in range(dsRows):
             L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
@@ -482,7 +482,7 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
         i += 1
 
     c = crypto.sc_sub(c_old, rv.cc)
-    return c == 0
+    return not crypto.sc_isnonzero(c)
 
 
 def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn_fee_key):
