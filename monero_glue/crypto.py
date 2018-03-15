@@ -653,7 +653,6 @@ def hash_to_ec(buf):
     """
     u = decodeint(cn_fast_hash(buf)) % q
     A = 486662
-    sqrtm1 = ed25519.sqroot(-1)
 
     w = (2 * u * u + 1) % q
     xp = (w * w - 2 * A * A * u * u) % q
@@ -687,7 +686,7 @@ def hash_to_ec(buf):
 
     else:
         z = -1 * A
-        x = x * sqrtm1 % q  # ..
+        x = x * fe_sqrtm1 % q  # ..
         y = (w - x) % q
         if (y != 0):
             rx = rx * fe_fffb3 % q
