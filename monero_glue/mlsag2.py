@@ -421,7 +421,7 @@ def ver_mlsag_assert(pk, rv, dsRows):
         raise ValueError('Error! What is c if cols = 1!')
 
     rows = len(pk[0])
-    if rows < 1:
+    if rows == 0:
         raise ValueError('Empty pk')
 
     for i in range(cols):
@@ -433,9 +433,9 @@ def ver_mlsag_assert(pk, rv, dsRows):
     if len(rv.ss) != cols:
         raise ValueError('Bad rv.ss size')
     for i in range(cols):
-        if len(rv.ss[i]) == rows:
+        if len(rv.ss[i]) != rows:
             raise ValueError('rv.ss is not rectangular')
-    if dsRows <= rows:
+    if dsRows > rows:
         raise ValueError('Bad dsRows value')
 
     return rows, cols
