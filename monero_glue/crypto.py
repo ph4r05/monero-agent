@@ -746,9 +746,8 @@ def gen_H():
     8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94
     :return:
     """
-    A = public_key(1)
-    H = hash_to_ec(A)
-    return H
+    h = cn_fast_hash(encodepoint(scalarmult_base(1)))
+    return scalarmult(decodepoint(h), 8)
 
 
 def gen_Hpow(size):
