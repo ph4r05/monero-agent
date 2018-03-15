@@ -334,9 +334,13 @@ class TTransaction(object):
             index[i] = src.real_output
             in_sk[i] = xmrtypes.CtKey(dest=self.input_secrets[idx][0], mask=crypto.decodeint(src.mask))
             # TODO: kLRki
+
+            # private key correctness test
             if __debug__:
                 assert crypto.point_eq(crypto.decodepoint(src.outputs[src.real_output][1].dest),
                                        crypto.scalarmult_base(in_sk[i].dest))
+                assert crypto.point_eq(crypto.decodepoint(src.outputs[src.real_output][1].mask),
+                                       crypto.gen_c(in_sk[i].mask, inamounts[i]))
 
         # TODO: iterative?
         destinations = []
@@ -361,8 +365,7 @@ class TTransaction(object):
             for idx in range(n_total_outs):
                 mix_ring[idx] = []
                 for i in range(len(self.source_permutation)):
-                    idx2 = self.source_permutation[i]
-                    src = tx.sources[idx2]
+                    src = tx.sources[self.source_permutation[i]]
                     mix_ring[idx].append(src.outputs[idx][1])
 
         if not self.use_simple_rct and amount_in > amount_out:
@@ -585,6 +588,9 @@ class TTransaction(object):
                 in_sk[i], a[i],
                 pseudo_outs[i],
                 kLRki[i] if kLRki else None, None, index[i])
+
+            if __debug__:
+                assert mlsag2.ver_rct_mg_simple(full_message, rv.p.MGs[i], rv.mixRing[i], pseudo_outs[i])
 
         return rv
 
