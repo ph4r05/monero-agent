@@ -704,9 +704,9 @@ def hash_to_ec(buf):
     rt = 1
 
     if POINT_REPR == REPR_EXT:
-        rt = (rx * ry % q) * inv(rz)
+        rt = ((rx * ry % q) * inv(rz)) % q
 
-    P = conv_from_ext([rx, ry, rz, rt])
+    P = conv_from_ext((rx, ry, rz, rt))
     P8 = ge_scalarmult(8, P)
     return P8
 
