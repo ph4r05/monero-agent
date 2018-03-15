@@ -252,6 +252,12 @@ def ver_mlsag(pk, I, c0, s):
     return c0 == c[cols]
 
 
+#
+# Optimized versions with incremental hashing,
+# Simple and full variants for Monero
+#
+
+
 def hasher_message(message):
     """
     Returns incremental hasher for MLSAG
@@ -300,7 +306,7 @@ def gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows):
 
 def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
     """
-    MLSAG precomputation, kLRki
+    MLSAG computation - the part with secret keys
     :param message:
     :param rv:
     :param pk:
@@ -642,7 +648,4 @@ def ver_rct_mg_simple(message, mg, pubs, C):
         M[i][1] = crypto.point_sub(crypto.decodepoint(pubs[i].mask), C)
 
     return ver_mlsag_ext(message, M, mg, rows)
-
-
-
 

@@ -15,18 +15,6 @@ from . import mlsag2
 logger = logging.getLogger(__name__)
 ATOMS = 64
 
-
-def ctkeyV(rows):
-    return [xmrtypes.CtKey() for i in range(0, rows)]
-
-
-class ecdhTuple(object):
-    __slots__ = ['mask', 'amount', 'senderPk']
-
-
-class rctSig(object):
-    __slots__ = ['rangeSigs', 'MG', 'mixRing', 'ecdhInfo', 'outPk']
-
     
 def d2b(n, digits):
     b = [0] * digits
@@ -36,15 +24,6 @@ def d2b(n, digits):
         i = i + 1
         n >>= 1
     return b 
-
-
-def b2d(binArray):
-    s = 0
-    i = 0
-    for a in binArray:
-        s = s + a * 2 ** i   
-        i+= 1
-    return s
 
 
 def sum_Ci(Cis):
@@ -77,8 +56,6 @@ def prove_range(amount):
     CiH = [None] * len(bb)  # this is like Ci - 2^i H
     H2 = crypto.gen_Hpow(ATOMS)
     a = 0
-    ii = [None] * len(bb)
-    indi = [None] * len(bb)
     for i in range(0, ATOMS):
         ai[i] = crypto.random_scalar()
         a = crypto.sc_add(a, ai[i])  # creating the total mask since you have to pass this to receiver...
@@ -131,106 +108,6 @@ def ver_range(Ci, ags):
 #   verifies the above sig is created corretly
 
 
-def prove_rct_mg(pubs, inSk, outSk, outPk, index):
-    """
-    c.f. http:#eprint.iacr.org/2015/1098 section 4. definition 10.
-
-    :param pubs: matrix of ctkeys [P, C]
-    :param inSk: keyvector of [x, mask] secret keys
-    :param outSk: keyvector of masks for outputs
-    :param outPk: list of output ctkeys [P, C]
-    :param index: secret index of where you are signing (integer)
-    :return: list (mgsig) [ss, cc, II] where ss is keymatrix, cc is key, II is keyVector of keyimages
-    """
-
-    # So we are calling MLSAG2.MLSAG_Gen from here, we need a keymatrix made from pubs
-    # We also need a keyvector made from inSk
-
-    rows = len(pubs[0])
-    cols = len(pubs)
-    M = mlsag2.key_matrix(rows + 1, cols) # just a simple way to initialize a keymatrix, doesn't need to be random.
-    sk = mlsag2.key_vector(rows + 1)
-    
-    for j in range(0, cols):
-        M[j][rows] = crypto.identity()
-    sk[rows] = 0
-
-    for i in range(0, rows): 
-        sk[i] = inSk[i].dest  # get the destination part
-        sk[rows] = crypto.sc_add(sk[rows], inSk[i].mask)  # add commitment part
-        for j in range(0, cols):
-            M[j][i] = pubs[j][i].dest  # get the destination part
-            M[j][rows] = crypto.point_add(M[j][rows], pubs[j][i].mask)  # add commitment part
-
-    # next need to subtract the commitment part of all outputs..
-    for j in range(0, len(outSk)):
-        sk[rows] = crypto.sc_sub(sk[rows], outSk[j].mask)
-        for i in range(0, len(outPk)):
-            M[j][rows] = crypto.point_sub(M[j][rows], outPk[i].mask)  # subtract commitment part
-
-    MG = xmrtypes.MgSig()
-    MG.II, MG.cc, MG.ss = mlsag2.gen_mlsag(M, sk, index)
-    
-    return MG  # mgSig
-
-
-def verify_rct_mg(MG, pubs, outPk):
-    """
-    Verifies MG
-    :param MG: an mgsig (list [ss, cc, II] of keymatrix ss, keyvector II and key cc]
-    :param pubs: matrix of ctkeys [P, C]
-    :param outPk: list of output ctkeys [P, C] for the transaction
-    :return: true or false
-    """
-    rows = len(pubs[0])
-    cols = len(pubs)
-    M = mlsag2.key_matrix(rows + 1, cols)  # just a simple way to initialize a keymatrix, doesn't need to be random..
-    for j in range(0, cols):
-        M[j][rows] = crypto.identity()
-
-    for i in range(0, rows): 
-        for j in range(0, cols):
-            M[j][i] = pubs[j][i].dest  # get the destination part
-            M[j][rows] = crypto.point_add(M[j][rows], pubs[j][i].mask)  # add commitment part
-
-    # next need to subtract the commitment part of all outputs..
-    for j in range(0, cols):
-        for i in range(0, len(outPk)):
-            M[j][rows] = crypto.point_sub(M[j][rows], outPk[i].mask)  # subtract commitment part
-    return mlsag2.ver_mlsag(M, MG.II, MG.cc, MG.ss)
-
-
-def getKeyFromBlockchain(reference_index):
-    """
-    Returns a ctkey a (randomly)
-    :param reference_index:
-    :return:
-    """
-    rv = xmrtypes.CtKey()
-    rv.dest = crypto.public_key(crypto.random_scalar())
-    rv.mask = crypto.public_key(crypto.random_scalar())
-    return rv
-
-
-def populateFromBlockchain(inPk, mixin):
-    """
-    Returns a ckKeyMatrix with your public input keys at "index" which is the second returned parameter.
-    The returned ctkeyMatrix will have number of columns = mixin
-    :param inPk:
-    :param mixin:
-    :return:
-    """
-    rv = [None] * mixin
-    index = rand.getrandbits(mixin - 1)
-    blockchainsize = 10000
-    for j in range(0, mixin):
-        if j != index:
-            rv[j] = [getKeyFromBlockchain(rand.getrandbits(blockchainsize)) for i in range(0, len(inPk))]
-        else: 
-            rv[j] = inPk
-    return rv, index
-    
-
 def ecdh_encode(unmasked, receiver_pk=None, derivation=None):
     """
     Elliptic Curve Diffie-Helman: encodes and decodes the amount b and mask a
@@ -280,45 +157,6 @@ def ecdh_decode(masked, receiver_sk=None, derivation=None):
 #
 
 
-def gen_rct(inSk, inPk, destinations, amounts, mixin):
-    """
-    RingCT
-    Creates an rctSig with all data necessary to verify the rangeProofs and that the signer owns one of the
-    columns that are claimed as inputs, and that the sum of inputs  = sum of outputs.
-    Also contains masked "amount" and "mask" so the receiver can see how much they received
-
-    Outputs:
-        - rangesigs is a list of one rangeproof for each output
-        - MG is the mgsig [ss, cc, II]
-        - mixRing is a ctkeyMatrix
-        - ecdhInfo is a list of masks / amounts for each output
-        - outPk is a vector of ctkeys (since we have computed the commitment for each amount)
-    :param inSk:  signers secret ctkeyvector
-    :param inPk:  signers public ctkeyvector
-    :param destinations: keyvector of output addresses
-    :param amounts: list of amounts corresponding to above output addresses
-    :param mixin: an integer which is the desired mixin
-    :return: [rangesigs, MG, mixRing, ecdhInfo, outPk]
-    """
-    rv = rctSig()
-    rv.outPk = ctkeyV(len(destinations))
-    rv.rangeSigs = [None] * len(destinations)
-    outSk = ctkeyV(len(destinations))
-    rv.ecdhInfo = [None] * len(destinations)
-    for i in range(0, len(destinations)):
-        rv.ecdhInfo[i] = xmrtypes.EcdhTuple()
-        rv.outPk[i] = xmrtypes.CtKey()
-        rv.outPk[i].dest = destinations[i]
-        rv.outPk[i].mask, outSk[i].mask, rv.rangeSigs[i] = prove_range(amounts[i])
-        #do ecdhinfo encode / decode 
-        rv.ecdhInfo[i].mask = outSk[i].mask
-        rv.ecdhInfo[i].amount = crypto.encodeint(amounts[i])
-        rv.ecdhInfo[i] = ecdh_encode(rv.ecdhInfo[i], destinations[i])
-    rv.mixRing, index = populateFromBlockchain(inPk, mixin)
-    rv.MG = prove_rct_mg(rv.mixRing, inSk, outSk, rv.outPk, index)
-    return rv
-
-            
 def ver_rct(rv):
     """
     Verifies that all signatures (rangeProogs, MG sig, sum inputs = outputs) are correct
