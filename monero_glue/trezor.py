@@ -455,6 +455,9 @@ class TTransaction(object):
                 rv.p.rangeSigs[idx] = rsig
                 if __debug__:
                     assert ring_ct.ver_range(C, rsig)
+                    assert crypto.point_eq(C, crypto.point_add(
+                        crypto.scalarmult_base(mask),
+                        crypto.scalarmult_h(outamounts[idx])))
 
                 # Recoding to structure
                 for i in range(len(rsig.Ci)):
@@ -466,7 +469,7 @@ class TTransaction(object):
                 rsig.asig.ee = crypto.encodeint(rsig.asig.ee)
 
             # Mask sum
-            rv.outPk[idx].mask = crypto.encodeint(mask)
+            rv.outPk[idx].mask = crypto.encodepoint(C)
             sumout = crypto.sc_add(sumout, mask)
             out_sk[idx] = xmrtypes.CtKey(mask=mask)
 
@@ -521,6 +524,9 @@ class TTransaction(object):
                                 rv.mixRing,
                                 in_sk, out_sk, rv.outPk, kLRki, None, index, txn_fee_key)
         ]
+
+        if __debug__:
+            assert mlsag2.ver_rct_mg(rv.p.MGs[0], rv.mixRing, rv.outPk, txn_fee_key, full_message)
         return rv
 
     async def gen_rct_simple(self, in_sk, destinations, inamounts, outamounts, txn_fee, mix_ring, kLRki, msout, index):

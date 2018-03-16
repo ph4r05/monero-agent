@@ -543,7 +543,7 @@ def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn
 
     for i in range(cols):
         for j in range(len(out_pk)):
-            M[i][rows] = crypto.point_sub(M[i][rows], out_pk[j].mask)  # subtract output Ci's in last row
+            M[i][rows] = crypto.point_sub(M[i][rows], crypto.decodepoint(out_pk[j].mask))  # subtract output Ci's in last row
 
         # Subtract txn fee output in last row
         M[i][rows] = crypto.point_sub(M[i][rows], txn_fee_key)
@@ -620,10 +620,10 @@ def ver_rct_mg(mg, pubs, out_pk, txn_fee_key, message):
 
     for i in range(cols):
         for j in range(len(out_pk)):
-            M[i][rows] = crypto.point_sub(M[i][rows], out_pk[j].mask)  # subtract output Ci's in last row
+            M[i][rows] = crypto.point_sub(M[i][rows], crypto.decodepoint(out_pk[j].mask))  # subtract output Ci's in last row
 
         # subtract txn fee output in last row
-        M[i][rows] = crypto.point_sub(M[i][rows], M[i][rows], txn_fee_key)
+        M[i][rows] = crypto.point_sub(M[i][rows], txn_fee_key)
 
     return ver_mlsag_ext(message, M, mg, rows)
 
