@@ -25,6 +25,7 @@ class Agent(object):
         self.trezor = trezor
 
     async def transfer_unsigned(self, unsig):
+        txes = []
         for tx in unsig.txes:
             payment_id = []
             extras = await monero.parse_extra_fields(tx.extra)
@@ -52,5 +53,8 @@ class Agent(object):
                 await self.trezor.set_tsx_output1(dst)
 
             # Unfinished proto
-            await self.trezor.tsx_obj.signature(tx)
+            buf = await self.trezor.tsx_obj.signature(tx)
+            txes.append(buf)
+        return txes
+
 
