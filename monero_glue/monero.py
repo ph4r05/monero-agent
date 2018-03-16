@@ -483,3 +483,45 @@ async def get_pre_mlsag_hash(rv):
     kc_master.update(c_hash)
     return kc_master.digest()
 
+
+def copy_ecdh(ecdh):
+    """
+    Clones ECDH tuple
+    :param ecdh:
+    :return:
+    """
+    return xmrtypes.EcdhTuple(mask=ecdh.mask, amount=ecdh.amount)
+
+
+def recode_ecdh(ecdh, encode=True):
+    """
+    In-place ecdhtuple recoding
+    :param ecdh:
+    :param encode: if true encodes to byte representation, otherwise decodes from byte representation
+    :return:
+    """
+    recode_int = crypto.encodeint if encode else crypto.decodeint
+    ecdh.mask = recode_int(ecdh.mask)
+    ecdh.amount = recode_int(ecdh.amount)
+    return ecdh
+
+
+def recode_rangesig(rsig, encode=True):
+    """
+    In - place rsig recoding
+    :param rsig:
+    :param encode: if true encodes to byte representation, otherwise decodes from byte representation
+    :return:
+    """
+    recode_int = crypto.encodeint if encode else crypto.decodeint
+    recode_point = crypto.encodepoint if encode else crypto.decodepoint
+
+    for i in range(len(rsig.Ci)):
+        rsig.Ci[i] = recode_point(rsig.Ci[i])
+    for i in range(len(rsig.asig.s0)):
+        rsig.asig.s0[i] = recode_point(rsig.asig.s0[i])
+    for i in range(len(rsig.asig.s1)):
+        rsig.asig.s1[i] = recode_int(rsig.asig.s1[i])
+    rsig.asig.ee = recode_int(rsig.asig.ee)
+    return rsig
+

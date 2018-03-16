@@ -464,13 +464,7 @@ class TTransaction(object):
                         crypto.scalarmult_h(outamounts[idx])))
 
                 # Recoding to structure
-                for i in range(len(rsig.Ci)):
-                    rsig.Ci[i] = crypto.encodepoint(rsig.Ci[i])
-                for i in range(len(rsig.asig.s0)):
-                    rsig.asig.s0[i] = crypto.encodepoint(rsig.asig.s0[i])
-                for i in range(len(rsig.asig.s1)):
-                    rsig.asig.s1[i] = crypto.encodeint(rsig.asig.s1[i])
-                rsig.asig.ee = crypto.encodeint(rsig.asig.ee)
+                monero.recode_rangesig(rsig, encode=True)
 
             # Mask sum
             rv.outPk[idx].mask = crypto.encodepoint(C)
@@ -481,8 +475,8 @@ class TTransaction(object):
             amount_key = crypto.encodeint(self.output_secrets[idx][0])
             rv.ecdhInfo[idx] = xmrtypes.EcdhTuple(mask=mask, amount=outamounts[idx])
             rv.ecdhInfo[idx] = ring_ct.ecdh_encode(rv.ecdhInfo[idx], derivation=amount_key)
-            rv.ecdhInfo[idx].mask = crypto.encodeint(rv.ecdhInfo[idx].mask)
-            rv.ecdhInfo[idx].amount = crypto.encodeint(rv.ecdhInfo[idx].amount)
+            monero.recode_ecdh(rv.ecdhInfo[idx], encode=True)
+
         return rv, sumout, out_sk
 
     async def gen_rct(self, in_sk, destinations, amounts, mix_ring, kLRki, msout, index):
