@@ -416,6 +416,18 @@ def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, addit
     return xi, ki, recv_derivation
 
 
+async def get_transaction_prefix_hash(tx):
+    """
+    Computes transaction prefix in one step
+    :param tx:
+    :return:
+    """
+    writer = common.get_keccak_writer()
+    ar1 = xmrserialize.Archive(writer, True)
+    await ar1.message(tx, msg_type=xmrtypes.TransactionPrefix)
+    return writer.get_digest()
+
+
 async def get_pre_mlsag_hash(rv):
     """
     Generates final message for the Ring CT signature

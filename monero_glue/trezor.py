@@ -419,10 +419,7 @@ class TTransaction(object):
         Computes tx prefix hash
         :return:
         """
-        writer = common.get_keccak_writer()
-        ar1 = xmrserialize.Archive(writer, True)
-        await ar1.message(self.tx, msg_type=xmrtypes.TransactionPrefix)
-        self.tx_prefix_hash = writer.get_digest()
+        return monero.get_transaction_prefix_hash(self.tx)
 
     async def gen_rct_header(self, destinations, outamounts):
         """
