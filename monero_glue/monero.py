@@ -407,7 +407,7 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     if received_index == (0, 0):
         scalar_step2 = scalar_step1
     else:
-        subaddr_sk = get_subaddress_secret_key(ack.view_key_private, received_index)
+        subaddr_sk = get_subaddress_secret_key(ack.view_key_private, major=received_index[0], minor=received_index[1])
         scalar_step2 = crypto.sc_add(scalar_step1, subaddr_sk)
 
     # TODO: multisig here
