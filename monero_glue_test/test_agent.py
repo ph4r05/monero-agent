@@ -42,6 +42,15 @@ class AgentTest(aiounittest.AsyncTestCase):
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
         await self.tx_sign(unsigned_tx)
 
+    async def test_tx_sign_sub_dest(self):
+        """
+        Testing tx signature, one input. non-simple RCT
+        :return:
+        """
+        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns03.txt'))
+        unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
+        await self.tx_sign(unsigned_tx)
+
     async def tx_sign(self, unsigned_tx):
         """
         Tx sign test with given unsigned transaction data
