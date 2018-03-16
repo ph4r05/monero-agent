@@ -390,7 +390,7 @@ class TTransaction(object):
             rv = await self.gen_rct(in_sk, destinations, outamounts, mix_ring, None, None, tx.sources[0].real_output)
 
         # Recode for serialization
-        rv = await self.rct_recode(rv)
+        rv = monero.recode_rct(rv, encode=True)
         self.tx.signatures = []
         self.tx.rct_signatures = rv
         del rv
@@ -600,19 +600,5 @@ class TTransaction(object):
 
         return rv
 
-    async def rct_recode(self, rv):
-        """
-        Recodes RCT MGs signatures from raw forms to bytearrays so it works with serialization
-        :param rv:
-        :return:
-        """
-        mgs = rv.p.MGs
-        for idx in range(len(mgs)):
-            mgs[idx].cc = crypto.encodeint(mgs[idx].cc)
-
-            for i in range(len(mgs[idx].ss)):
-                for j in range(len(mgs[idx].ss[i])):
-                    mgs[idx].ss[i][j] = crypto.encodeint(mgs[idx].ss[i][j])
-        return rv
 
 
