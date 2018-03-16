@@ -140,7 +140,8 @@ class TTransaction(object):
 
         self.need_additional_txkeys = num_subaddresses > 0 and (num_stdaddresses > 0 or num_subaddresses > 1)
         if self.need_additional_txkeys:
-            self.additional_tx_keys.append(crypto.random_scalar())
+            for _ in range(len(tsx_data.outputs)):
+                self.additional_tx_keys.append(crypto.random_scalar())
 
         # Extra processing, payment id
         self.tx.version = 2
