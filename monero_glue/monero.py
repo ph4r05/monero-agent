@@ -314,15 +314,31 @@ def generate_key_derivation(pub_key, priv_key):
     return crypto.generate_key_derivation(pub_key, priv_key)
 
 
-def derive_subaddress_public_key(pub_key, derivation, output_index):
+def derive_subaddress_public_key(out_key, derivation, output_index):
     """
-    Derives subaddress public spend key address.
-    :param pub_key:
+    out_key - H_s(derivation || varint(output_index))G
+    :param out_key:
     :param derivation:
     :param output_index:
     :return:
     """
-    return crypto.derive_subaddress_public_key(pub_key, derivation, output_index)
+    crypto.check_ed25519point(out_key)
+    scalar = crypto.derivation_to_scalar(derivation, output_index)
+    point2 = crypto.scalarmult_base(scalar)
+    point4 = crypto.point_sub(out_key, point2)
+    return point4
+
+
+def generate_key_image(public_key, secret_key):
+    """
+    Key image: secret_key * H_p(pub_key)
+    :param public_key: encoded point
+    :param secret_key:
+    :return:
+    """
+    point = crypto.hash_to_ec(public_key)
+    point2 = crypto.ge_scalarmult(secret_key, point)
+    return point2
 
 
 def is_out_to_acc_precomp(subaddresses, out_key, derivation, additional_derivations, output_index):
@@ -387,7 +403,7 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     if not crypto.point_eq(pub_ver, out_key):
         raise ValueError('key image helper precomp: given output pubkey doesn\'t match the derived one')
 
-    ki = crypto.generate_key_image(crypto.encodepoint(pub_ver), scalar_step2)
+    ki = generate_key_image(crypto.encodepoint(pub_ver), scalar_step2)
     return scalar_step2, ki
 
 

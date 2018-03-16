@@ -754,35 +754,6 @@ def hash_to_ec(buf):
     return P8
 
 
-def generate_key_image(public_key, secret_key):
-    """
-    Key image: secret_key * H_p(pub_key)
-    :param public_key: encoded point
-    :param secret_key:
-    :return:
-    """
-    if sc_check(secret_key) != 0:
-        raise ValueError("sc check error in key image")
-    point = hash_to_ec(public_key)
-    point2 = ge_scalarmult(secret_key, point)
-    return point2
-
-
-def derive_subaddress_public_key(out_key, derivation, output_index):
-    """
-    out_key - H_s(derivation || varint(output_index))G
-    :param out_key:
-    :param derivation:
-    :param output_index:
-    :return:
-    """
-    check_ed25519point(out_key)
-    scalar = derivation_to_scalar(derivation, output_index)
-    point2 = scalarmult_base(scalar)
-    point4 = point_sub(out_key, point2)
-    return point4
-
-
 def gen_H():
     """
     Returns point H
