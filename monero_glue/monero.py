@@ -277,6 +277,16 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
     Builds subaddress secret key from the subaddress index
     Hs(SubAddr || a || index_major || index_minor)
 
+    TODO: handle endianity in the index
+    C-code simply does: memcpy(data + sizeof(prefix) + sizeof(crypto::secret_key), &index, sizeof(subaddress_index));
+    Where the index has the following form:
+
+    struct subaddress_index {
+        uint32_t major;
+        uint32_t minor;
+    }
+
+    https://docs.python.org/3/library/struct.html#byte-order-size-and-alignment
     :param secret_key:
     :param index:
     :param major:
