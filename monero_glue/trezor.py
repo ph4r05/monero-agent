@@ -228,7 +228,7 @@ class TTransaction(object):
         self.tx.vin.append(vini)
 
         hmac_vini = common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
-        # TODO: HMAC(T_in,i || I_in, vin_i)
+        # TODO: HMAC(T_in,i || vin_i)
 
         return vini
 
@@ -302,6 +302,7 @@ class TTransaction(object):
     async def all_out1_set(self):
         """
         All out1 set phase
+        Adds additional public keys to the tx.extra
         :return:
         """
         self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraAdditionalPubKeys)
