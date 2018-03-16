@@ -419,7 +419,7 @@ class TTransaction(object):
         Computes tx prefix hash
         :return:
         """
-        return monero.get_transaction_prefix_hash(self.tx)
+        return await monero.get_transaction_prefix_hash(self.tx)
 
     async def gen_rct_header(self, destinations, outamounts):
         """
