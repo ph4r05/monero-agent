@@ -287,8 +287,8 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
         major = index.major
         minor = index.minor
     prefix = b'SubAddr'
-    buffer = bytearray(len(prefix) + 32 + 4 + 4)
-    struct.pack_into('7s32BLL', buffer, 0, prefix, crypto.encodeint(secret_key), major, minor)
+    buffer = bytearray(len(prefix) + 1 + 32 + 4 + 4)
+    struct.pack_into('=7sb32sLL', buffer, 0, prefix, 0, crypto.encodeint(secret_key), major, minor)
     return crypto.hash_to_scalar(buffer)
 
 
