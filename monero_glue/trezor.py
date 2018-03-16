@@ -193,12 +193,14 @@ class TTransaction(object):
         """
         for idx in indices:
             if account == 0 and idx == 0:
-                self.subaddresses[crypto.encodepoint(self.trezor.creds.spend_key_public)] = (0,0)
+                self.subaddresses[crypto.encodepoint(self.trezor.creds.spend_key_public)] = (0, 0)
                 continue
 
-            m = monero.get_subaddress_secret_key(self.trezor.creds.view_key_private, major=account, minor=idx)
-            pub = crypto.encodepoint(crypto.scalarmult_base(m))
-            self.subaddresses[pub] = (account, indices)
+            pub = monero.get_subaddress_spend_public_key(self.trezor.creds.view_key_private,
+                                                         self.trezor.creds.spend_key_public,
+                                                         major=account, minor=idx)
+            pub = crypto.encodepoint(pub)
+            self.subaddresses[pub] = (account, idx)
 
     async def set_input(self, src_entr):
         """

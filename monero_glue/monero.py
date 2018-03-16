@@ -303,6 +303,21 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
     return crypto.hash_to_scalar(buffer)
 
 
+def get_subaddress_spend_public_key(view_private, spend_public, major, minor):
+    """
+    Generates subaddress spend public key
+    :param view_private:
+    :param spend_public:
+    :param major:
+    :param minor:
+    :return:
+    """
+    m = get_subaddress_secret_key(view_private, major=major, minor=minor)
+    M = crypto.scalarmult_base(m)
+    D = crypto.point_add(spend_public, M)
+    return D
+
+
 def generate_key_derivation(pub_key, priv_key):
     """
     Generates derivation priv_key * pub_key.
