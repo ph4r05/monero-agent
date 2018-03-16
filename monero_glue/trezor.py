@@ -218,8 +218,8 @@ class TTransaction(object):
                                                 tx_key,
                                                 additional_keys,
                                                 src_entr.real_output_in_tx_index)
-        self.input_secrets.append(secs)
         xi, ki, di = secs
+        self.input_secrets.append((xi, ))
 
         # Construct tx.vin
         vini = xmrtypes.TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki))
@@ -293,7 +293,7 @@ class TTransaction(object):
         self.tx.vout.append(tx_out)
         self.summary_outs_money += dst_entr.amount
 
-        self.output_secrets.append((derivation, amount_key))
+        self.output_secrets.append((amount_key, ))
 
         # Last output?
         if self.out_idx + 1 == len(self.tsx_data.outputs):
@@ -475,7 +475,7 @@ class TTransaction(object):
             out_sk[idx] = xmrtypes.CtKey(mask=mask)
 
             # ECDH masking
-            amount_key = crypto.encodeint(self.output_secrets[idx][1])
+            amount_key = crypto.encodeint(self.output_secrets[idx][0])
             rv.ecdhInfo[idx] = xmrtypes.EcdhTuple(mask=mask, amount=outamounts[idx])
             rv.ecdhInfo[idx] = ring_ct.ecdh_encode(rv.ecdhInfo[idx], derivation=amount_key)
             rv.ecdhInfo[idx].mask = crypto.encodeint(rv.ecdhInfo[idx].mask)
