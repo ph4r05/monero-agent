@@ -183,6 +183,7 @@ def encodepoint_ext(P):
     :param P:
     :return:
     """
+    check_ed25519point(P)
     (x, y, z, t) = P
     zi = inv(z)
     x = (x * zi) % q
@@ -280,6 +281,7 @@ def invert_ext(P):
     :param P:
     :return:
     """
+    check_ed25519point(P)
     return -1*P[0] % q, P[1], P[2], -1*P[3] % q
 
 
@@ -310,6 +312,7 @@ def point_sub_ext(A, B):
     :param B:
     :return:
     """
+    check_ed25519point(A)
     return ed25519_2.edwards_add(A, invert_ext(B))
 
 
@@ -321,6 +324,8 @@ def point_eq_ext(P, Q):
     :param Q:
     :return:
     """
+    check_ed25519point(P)
+    check_ed25519point(Q)
     if (P[0] * Q[2] - Q[0] * P[2]) % q != 0:
         return False
     if (P[1] * Q[2] - Q[1] * P[2]) % q != 0:
@@ -335,6 +340,8 @@ def point_eq_xy(P, Q):
     :param Q:
     :return:
     """
+    check_ed25519point(P)
+    check_ed25519point(Q)
     return P == Q
 
 
@@ -537,6 +544,7 @@ def ge_mul8(P):
     :param P:
     :return:
     """
+    check_ed25519point(P)
     return ge_scalarmult(8, P)
 
 
@@ -610,6 +618,7 @@ def generate_key_derivation(key1, key2):
     if ge_frombytes_vartime(key1) != 0:
         raise ValueError("didn't pass curve checks in keyder")
 
+    check_ed25519point(key1)
     point = key1
     point2 = ge_scalarmult(key2, point)
     point3 = ge_mul8(point2)  # This has to do with n==0 mod 8 by dedfinition, c.f. the top paragraph of page 5 of http://cr.yp.to/ecdh/curve25519-20060209.pdf
