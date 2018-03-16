@@ -779,13 +779,11 @@ def gen_Hpow(size):
     Returns powers of point H
     :return:
     """
-    A = public_key(1)
-    HPow2 = hash_to_ec(A)
-    two = 2
+    HPow2 = gen_H()
     H2 = [None] * size
     for i in range(0, size):
         H2[i] = HPow2
-        HPow2 = scalarmult(HPow2, two)
+        HPow2 = scalarmult(HPow2, 2)
     return H2
 
 
