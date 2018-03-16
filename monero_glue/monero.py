@@ -264,12 +264,12 @@ async def add_additional_tx_pub_keys_to_extra(tx_extra, additional_pub_keys):
     :param additional_pub_keys:
     :return:
     """
-    pubs_msg = xmrtypes.TxExtraAdditionalPubKeys(data=additional_pub_keys)
+    pubs_msg = xmrtypes.TxExtraAdditionalPubKeys(data=[crypto.encodepoint(x) for x in additional_pub_keys])
 
     rw = xmrserialize.MemoryReaderWriter()
     ar = xmrserialize.Archive(rw, True)
     await ar.message(pubs_msg)
-    tx_extra.extend(pubs_msg)
+    tx_extra.extend(rw.buffer)
 
 
 def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
