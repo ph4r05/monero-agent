@@ -41,6 +41,16 @@ class RingCtTest(aiounittest.AsyncTestCase):
         res = ring_ct.ver_range(proof[0], rsig)
         self.assertTrue(res)
 
+    def test_range_proof_old(self):
+        proof = ring_ct.prove_range(0, use_asnl=True)
+        res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True)
+        self.assertTrue(res)
+
+    def test_range_proof2_old(self):
+        proof = ring_ct.prove_range(123456789, use_asnl=True)
+        res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True)
+        self.assertTrue(res)
+
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover

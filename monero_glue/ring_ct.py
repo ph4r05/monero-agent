@@ -38,7 +38,7 @@ def sum_Ci(Cis):
     return CSum
 
 
-def prove_range(amount):
+def prove_range(amount, use_asnl=False):
     """
     Gives C, and mask such that \sumCi = C
     c.f. http:#eprint.iacr.org/2015/1098 section 5.1
@@ -47,6 +47,7 @@ def prove_range(amount):
     thus this proves that "amount" is in [0, 2^ATOMS]
     mask is a such that C = aG + bH, and b = amount
     :param amount:
+    :param use_asnl: use ASNL, used before Borromean
     :return: sumCi, mask, RangeSig
     """
     bb = d2b(amount, ATOMS)  # gives binary form of bb in "digits" binary digits
@@ -66,22 +67,26 @@ def prove_range(amount):
         CiH[i] = crypto.point_sub(Ci[i], H2[i])
 
     A = xmrtypes.BoroSig()
-    A.s0, A.s1, A.ee = asnl.gen_asnl(ai, Ci, CiH, bb)
+
+    if use_asnl:
+        A.s0, A.s1, A.ee = asnl.gen_asnl(ai, Ci, CiH, bb)
+    else:
+        A.s0, A.s1, A.ee = mlsag2.gen_borromean(ai, Ci, CiH, bb)
     
     R = xmrtypes.RangeSig()
     R.asig = A
     R.Ci = Ci
-    
-    mask = a
+
     C = sum_Ci(Ci)
-    return C, mask, R
+    return C, a, R
 
 
-def ver_range(Ci, ags):
+def ver_range(Ci, ags, use_asnl=False):
     """
     Verifies that \sum Ci = C and that each Ci is a commitment to 0 or 2^i
     :param Ci:
     :param ags:
+    :param use_asnl: use ASNL, used before Borromean
     :return:
     """
     n = ATOMS
@@ -95,7 +100,12 @@ def ver_range(Ci, ags):
     if not crypto.point_eq(C_tmp, Ci):
         return 0
 
-    return asnl.ver_asnl(ags.Ci, CiH, ags.asig.s0, ags.asig.s1, ags.asig.ee)
+    if use_asnl:
+        return asnl.ver_asnl(ags.Ci, CiH, ags.asig.s0, ags.asig.s1, ags.asig.ee)
+    else:
+        return mlsag2.ver_borromean(ags.Ci, CiH, ags.asig.s0, ags.asig.s1, ags.asig.ee)
+
+
 
 
 # Ring-ct MG sigs

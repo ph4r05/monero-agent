@@ -519,7 +519,7 @@ def recode_rangesig(rsig, encode=True):
     for i in range(len(rsig.Ci)):
         rsig.Ci[i] = recode_point(rsig.Ci[i])
     for i in range(len(rsig.asig.s0)):
-        rsig.asig.s0[i] = recode_point(rsig.asig.s0[i])
+        rsig.asig.s0[i] = recode_int(rsig.asig.s0[i])
     for i in range(len(rsig.asig.s1)):
         rsig.asig.s1[i] = recode_int(rsig.asig.s1[i])
     rsig.asig.ee = recode_int(rsig.asig.ee)
