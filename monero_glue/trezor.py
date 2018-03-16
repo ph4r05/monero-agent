@@ -489,6 +489,8 @@ class TTransaction(object):
 
     async def gen_rct(self, in_sk, destinations, amounts, mix_ring, kLRki, msout, index):
         """
+        Full ring CT signature.
+        Used when there is only one input transaction to spend.
 
         :param in_sk:
         :param destinations:
