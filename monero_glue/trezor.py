@@ -145,7 +145,7 @@ class TTransaction(object):
 
         # Extra processing, payment id
         self.tx.version = 2
-        self.tx.unlock_time = 0
+        self.tx.unlock_time = tsx_data.unlock_time
         await self.process_payment_id()
         await self.compute_hmac_keys(tsx_ctr)
 
