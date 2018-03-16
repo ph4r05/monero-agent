@@ -508,6 +508,16 @@ def sc_isnonzero(c):
     return c % l != 0
 
 
+def sc_eq(a, b):
+    """
+    Returns true if scalars are equal
+    :param a:
+    :param b:
+    :return:
+    """
+    return (a - b) % l == 0
+
+
 def sc_mulsub(aa, bb, cc):
     """
     (aa - bb * cc) % l

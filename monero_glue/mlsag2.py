@@ -12,6 +12,15 @@ from monero_serialize import xmrtypes
 logger = logging.getLogger(__name__)
 
 
+def key_zero_vector(rows):
+    """
+    Empty key vector
+    :param rows:
+    :return:
+    """
+    return [0] * rows
+
+
 def key_vector(rows):
     """
     Empty key vector
@@ -250,6 +259,80 @@ def ver_mlsag(pk, I, c0, s):
         c[i] = crypto.cn_fast_hash(m+''.join(L[oldi]) + ''.join(R[oldi]))
 
     return c0 == c[cols]
+
+
+#
+# Borromean signatures for range proofs
+#
+
+
+def gen_borromean(x, P1, P2, indices):
+    """
+    Generates Borromean signature for range proofs.
+    :return:
+    """
+    n = len(P1)
+    L = [key_vector(n), key_vector(n)]
+    alpha = key_zero_vector(n)
+
+    s0 = key_zero_vector(n)
+    s1 = key_zero_vector(n)
+
+    for ii in range(n):
+        naught = indices[ii]
+        prime = (indices[ii] + 1) % 2
+        alpha[ii] = crypto.random_scalar()
+        L[naught][ii] = crypto.scalarmult_base(alpha[ii])
+        if naught == 0:
+            s1[ii] = crypto.random_scalar()
+            c = crypto.hash_to_scalar(crypto.encodepoint(L[naught][ii]))
+            L[prime][ii] = add_keys1(s1[ii], c, P2[ii])
+
+    kck = common.get_keccak()
+    for ii in range(n):
+        kck.update(crypto.encodepoint(L[1][ii]))
+
+    # ee = crypto.hash_to_scalar(L[1])
+    ee = crypto.sc_reduce32(crypto.decodeint(kck.digest()))
+
+    for jj in range(n):
+        if not indices[jj]:
+            s0[jj] = crypto.sc_mulsub(alpha[jj], x[jj], ee)
+        else:
+            s0[jj] = crypto.random_scalar()
+            LL = add_keys1(s0[jj], ee, P1[jj])
+            cc = crypto.hash_to_scalar(crypto.encodepoint(LL))
+            s1[jj] = crypto.sc_mulsub(alpha[jj], x[jj], cc)
+
+    return s0, s1, ee
+
+
+def ver_borromean(P1, P2, s0, s1, ee):
+    """
+    Verify range proof signature, Borromean
+    (c.f. gmax/andytoshi's paper)
+    :param P1:
+    :param P2:
+    :param s0:
+    :param s1:
+    :param ee:
+    :return:
+    """
+    n = len(P1)
+    Lv1 = key_vector(n)
+    for ii in range(n):
+        LL = add_keys1(s0[ii], ee, P1[ii])
+        chash = crypto.hash_to_scalar(crypto.encodepoint(LL))
+        Lv1[ii] = add_keys1(s1[ii], chash, P2[ii])
+
+    kck = common.get_keccak()
+    for ii in range(n):
+        kck.update(crypto.encodepoint(Lv1[ii]))
+
+    # ee_computed = crypto.hash_to_scalar(crypto.encodepoint(Lv1))
+    ee_computed = crypto.sc_reduce32(crypto.decodeint(kck.digest()))
+
+    return crypto.sc_eq(ee_computed, ee)
 
 
 #
