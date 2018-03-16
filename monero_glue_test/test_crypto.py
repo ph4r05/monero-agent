@@ -66,9 +66,12 @@ class CryptoTest(aiounittest.AsyncTestCase):
     def test_h_pow(self):
         hp = crypto.gen_Hpow(10)
         self.assertEqual(crypto.encodepoint(hp[0]), crypto.encodepoint(crypto.gen_H()))
-        self.assertEqual(crypto.encodepoint(hp[1]), crypto.encodepoint(crypto.scalarmult(crypto.gen_H(), 2)))
-        self.assertEqual(crypto.encodepoint(hp[2]), crypto.encodepoint(crypto.scalarmult(crypto.gen_H(), 4)))
-        self.assertEqual(crypto.encodepoint(hp[3]), crypto.encodepoint(crypto.scalarmult(crypto.gen_H(), 8)))
+        for i in range(1, 10):
+            crypto.check_ed25519point(hp[i])
+            self.assertEqual(
+                crypto.encodepoint(hp[i]),
+                crypto.encodepoint(crypto.scalarmult(crypto.gen_H(), 2**i)))
+
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
