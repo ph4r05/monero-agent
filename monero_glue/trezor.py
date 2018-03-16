@@ -290,7 +290,7 @@ class TTransaction(object):
         else:
             # sending to the recipient; derivation = r*A (or s*C in the subaddress scheme)
             deriv_priv = self.additional_tx_keys[self.out_idx] if dst_entr.is_subaddress and self.need_additional_txkeys else self.r
-            derivation = monero.generate_key_derivation(self.creds.view_key_public, deriv_priv)
+            derivation = monero.generate_key_derivation(crypto.decodepoint(dst_entr.addr.m_view_public_key), deriv_priv)
 
         amount_key = crypto.derivation_to_scalar(derivation, self.out_idx)
         tx_out_key = crypto.derive_public_key(derivation, self.out_idx, crypto.decodepoint(dst_entr.addr.m_spend_public_key))
