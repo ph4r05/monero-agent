@@ -27,6 +27,20 @@ class RingCtTest(aiounittest.AsyncTestCase):
         res = ring_ct.ver_range(proof[0], proof[2])
         self.assertTrue(res)
 
+    def test_range_proof2(self):
+        proof = ring_ct.prove_range(123456789)
+        res = ring_ct.ver_range(proof[0], proof[2])
+        self.assertTrue(res)
+
+    def test_range_proof3(self):
+        proof = ring_ct.prove_range(123456789)
+        rsig = proof[2]
+
+        monero.recode_rangesig(rsig, encode=True)
+        monero.recode_rangesig(rsig, encode=False)
+        res = ring_ct.ver_range(proof[0], rsig)
+        self.assertTrue(res)
+
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
