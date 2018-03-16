@@ -105,6 +105,7 @@ class TTransaction(object):
         self.out_idx = -1
         self.summary_inputs_money = 0
         self.summary_outs_money = 0
+        self.input_rcts = []
         self.input_secrets = []
         self.output_secrets = []
         self.subaddresses = {}
@@ -220,6 +221,7 @@ class TTransaction(object):
                                                 src_entr.real_output_in_tx_index)
         xi, ki, di = secs
         self.input_secrets.append((xi, ))
+        self.input_rcts.append(src_entr.rct)
 
         # Construct tx.vin
         vini = xmrtypes.TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki))
@@ -244,6 +246,8 @@ class TTransaction(object):
 
         def swapper(x, y):
             self.tx.vin[x], self.tx.vin[y] = self.tx.vin[y], self.tx.vin[x]
+            self.input_secrets[x], self.input_secrets[y] = self.input_secrets[y], self.input_secrets[x]
+            self.input_rcts[x], self.input_rcts[y] = self.input_rcts[y], self.input_rcts[x]
 
         common.apply_permutation(self.source_permutation, swapper)
 
@@ -334,7 +338,7 @@ class TTransaction(object):
             amount_in += src.amount
             inamounts[i] = src.amount
             index[i] = src.real_output
-            in_sk[i] = xmrtypes.CtKey(dest=self.input_secrets[idx][0], mask=crypto.decodeint(src.mask))
+            in_sk[i] = xmrtypes.CtKey(dest=self.input_secrets[i][0], mask=crypto.decodeint(src.mask))
             # TODO: kLRki
 
             # private key correctness test
@@ -374,7 +378,7 @@ class TTransaction(object):
             outamounts.append(amount_in - amount_out)
 
         # Hide amounts
-        self.zero_out_amounts(tx)
+        self.zero_out_amounts()
 
         # Tx prefix hash
         await self.compute_tx_prefix_hash()
@@ -398,13 +402,13 @@ class TTransaction(object):
 
         return writer.buffer
 
-    def zero_out_amounts(self, tx):
+    def zero_out_amounts(self):
         """
         Zero out all amounts to mask rct outputs, real amounts are now encrypted
         :return:
         """
         for idx, inx in enumerate(self.tx.vin):
-            if tx.sources[self.source_permutation[idx]].rct:
+            if self.input_rcts[idx]:
                 inx.amount = 0
 
         for out in self.tx.vout:
