@@ -568,7 +568,7 @@ def ge_scalarmult_base(a):
     :param a:
     :return:
     """
-    return scalarmult_base(8*a)
+    return scalarmult_base(a)
 
 
 def scalarmult_h(a):
