@@ -525,3 +525,30 @@ def recode_rangesig(rsig, encode=True):
     rsig.asig.ee = recode_int(rsig.asig.ee)
     return rsig
 
+
+def expand_transaction(tx):
+    """
+    Expands transaction - recomputes fields not serialized.
+    Recomputes only II, does not have access to the blockchain to get public keys for inputs
+    for mix ring reconstruction.
+
+    :param tx:
+    :return:
+    """
+    rv = tx.rct_signatures
+    if rv.type in [xmrtypes.RctType.Full, xmrtypes.RctType.FullBulletproof]:
+        rv.p.MGs[0].II = [None] * len(tx.vin)
+        for n in range(len(tx.vin)):
+            rv.p.MGs[0].II[n] = tx.vin[n].k_image
+
+    elif rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.SimpleBulletproof]:
+        if len(rv.p.MGs) != len(tx.vin):
+            raise ValueError('Bad MGs size')
+        for n in range(len(tx.vin)):
+            rv.p.MGs[n].II = [tx.vin[n].k_image]
+
+    else:
+        raise ValueError('Unsupported rct tx type %s' % rv.type)
+
+    return tx
+
