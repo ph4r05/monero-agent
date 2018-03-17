@@ -568,6 +568,7 @@ def ge_scalarmult_base(a):
     :param a:
     :return:
     """
+    a = sc_reduce32(a)
     return scalarmult_base(a)
 
 
@@ -629,8 +630,7 @@ def generate_key_derivation(key1, key2):
         raise ValueError("didn't pass curve checks in keyder")
 
     check_ed25519point(key1)
-    point = key1
-    point2 = ge_scalarmult(key2, point)
+    point2 = ge_scalarmult(key2, key1)
     point3 = ge_mul8(point2)  # This has to do with n==0 mod 8 by dedfinition, c.f. the top paragraph of page 5 of http://cr.yp.to/ecdh/curve25519-20060209.pdf
     # and also c.f. middle of page 8 in same document (Bernstein)
     return point3
@@ -661,12 +661,9 @@ def derive_public_key(derivation, output_index, base):
         raise ValueError("derive pub key bad point")
     check_ed25519point(base)
 
-    point1 = base
     scalar = derivation_to_scalar(derivation, output_index)
     point2 = scalarmult_base(scalar)
-    point3 = point2  # I think the cached is just for the sake of adding
-    # because the CN code adds using the monty curve
-    point4 = point_add(point1, point3)
+    point4 = point_add(base, point2)
     return point4
 
 
@@ -750,7 +747,7 @@ def hash_to_ec(buf):
         rt = ((rx * ry % q) * inv(rz)) % q
 
     P = conv_from_ext((rx, ry, rz, rt))
-    P8 = ge_scalarmult(8, P)
+    P8 = scalarmult(P, 8)
     return P8
 
 
