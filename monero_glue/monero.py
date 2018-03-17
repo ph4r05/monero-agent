@@ -269,7 +269,9 @@ async def add_additional_tx_pub_keys_to_extra(tx_extra, additional_pub_keys):
 
     rw = xmrserialize.MemoryReaderWriter()
     ar = xmrserialize.Archive(rw, True)
-    await ar.message(pubs_msg)
+
+    # format: variant_tag (0x4) | array len varint | 32B | 32B | ...
+    await ar.variant(pubs_msg, xmrtypes.TxExtraField)
     tx_extra.extend(rw.buffer)
 
 
