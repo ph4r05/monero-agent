@@ -272,7 +272,6 @@ class TTransaction(object):
         if dst_entr.amount <= 0 and self.tx.version <= 1:
             raise ValueError('Destination with wrong amount: %s' % dst_entr.amount)
 
-        additional_txkey = None
         if self.need_additional_txkeys:
             if dst_entr.is_subaddress:
                 additional_txkey = crypto.ge_scalarmult(self.additional_tx_keys[self.out_idx],
@@ -280,7 +279,6 @@ class TTransaction(object):
             else:
                 additional_txkey = crypto.ge_scalarmult_base(self.additional_tx_keys[self.out_idx])
 
-        if self.need_additional_txkeys:
             self.additional_tx_public_keys.append(additional_txkey)
 
         if change_addr and dst_entr.addr == change_addr:
