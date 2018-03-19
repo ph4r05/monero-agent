@@ -31,6 +31,8 @@ class RingCtTest(aiounittest.AsyncTestCase):
         proof = ring_ct.prove_range(123456789)
         res = ring_ct.ver_range(proof[0], proof[2])
         self.assertTrue(res)
+        res = ring_ct.ver_range(crypto.point_add(proof[0], crypto.scalarmult_base(4)), proof[2])
+        self.assertFalse(res)
 
     def test_range_proof3(self):
         proof = ring_ct.prove_range(123456789)
@@ -50,6 +52,8 @@ class RingCtTest(aiounittest.AsyncTestCase):
         proof = ring_ct.prove_range(123456789, use_asnl=True)
         res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True)
         self.assertTrue(res)
+        res = ring_ct.ver_range(crypto.point_add(proof[0], crypto.scalarmult_base(4)), proof[2], use_asnl=True)
+        self.assertFalse(res)
 
 
 if __name__ == "__main__":
