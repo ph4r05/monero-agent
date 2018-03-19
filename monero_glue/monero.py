@@ -308,7 +308,7 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
 
 def get_subaddress_spend_public_key(view_private, spend_public, major, minor):
     """
-    Generates subaddress spend public key
+    Generates subaddress spend public key D_{major, minor}
     :param view_private:
     :param spend_public:
     :param major:
