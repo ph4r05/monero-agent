@@ -260,7 +260,7 @@ class TTransaction(object):
         common.apply_permutation(self.source_permutation, swapper)
 
         # Set public key to the extra
-        self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
+        # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
         monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
 
         self.use_simple_rct = self.inp_idx > 0
@@ -406,7 +406,7 @@ class TTransaction(object):
         ar1 = xmrserialize.Archive(writer, True)
         await ar1.message(self.tx, msg_type=xmrtypes.Transaction)
 
-        return writer.buffer
+        return bytes(writer.buffer)
 
     def zero_out_amounts(self):
         """
