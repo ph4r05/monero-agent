@@ -231,10 +231,16 @@ class TTransaction(object):
         vini.key_offsets = monero.absolute_output_offsets_to_relative(vini.key_offsets)
         self.tx.vin.append(vini)
 
-        hmac_vini = common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
-        # TODO: HMAC(T_in,i || vin_i)
+        # HMAC(T_in,i || vin_i)
+        kwriter = common.get_keccak_writer()
+        ar = xmrserialize.Archive(kwriter, True)
+        await ar.message(src_entr, xmrtypes.TxSourceEntry)
+        await ar.message(vini, xmrtypes.TxinToKey)
 
-        return vini
+        hmac_vini = common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
+        common.compute_hmac(hmac_vini, kwriter.get_digest())
+
+        return vini,
 
     async def tsx_inputs_done(self):
         """
