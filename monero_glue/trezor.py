@@ -46,7 +46,7 @@ class Trezor(object):
         self.tsx_ctr += 1
         self.tsx_obj = TTransaction(self)
         self.tsx_obj.creds = self.creds
-        await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
+        return await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
 
     async def precompute_subaddr(self, account, indices):
         """
@@ -55,7 +55,7 @@ class Trezor(object):
         :param indices:
         :return:
         """
-        self.tsx_obj.precompute_subaddr(account, indices)
+        return self.tsx_obj.precompute_subaddr(account, indices)
 
     async def set_tsx_input(self, src_entr):
         """
@@ -63,14 +63,14 @@ class Trezor(object):
         :type src_entr: xmrtypes.TxSourceEntry
         :return:
         """
-        await self.tsx_obj.set_input(src_entr)
+        return await self.tsx_obj.set_input(src_entr)
 
     async def tsx_inputs_done(self):
         """
         All inputs set
         :return:
         """
-        await self.tsx_obj.tsx_inputs_done()
+        return await self.tsx_obj.tsx_inputs_done()
 
     async def set_tsx_output1(self, dst_entr):
         """
@@ -78,7 +78,7 @@ class Trezor(object):
         :type src_entr: xmrtypes.TxDestinationEntry
         :return:
         """
-        await self.tsx_obj.set_out1(dst_entr)
+        return await self.tsx_obj.set_out1(dst_entr)
 
 
 class TTransaction(object):
