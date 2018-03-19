@@ -6,14 +6,15 @@ import random
 import base64
 import unittest
 import pkg_resources
-import requests
+import os
+import json
 import asyncio
 import aiounittest
 import binascii
 
 import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor, monero, common, crypto, agent
+from monero_glue import trezor, monero, common, crypto, agent, ring_ct, mlsag2
 
 
 class MoneroTest(aiounittest.AsyncTestCase):
@@ -55,6 +56,78 @@ class MoneroTest(aiounittest.AsyncTestCase):
         pkey_comp = crypto.derive_public_key(crypto.decodepoint(derivation), 0, crypto.decodepoint(base))
         self.assertEqual(pkey_ex, crypto.encodepoint(pkey_comp))
 
+    async def test_node_transaction(self):
+        tx_j = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_01.json'))
+        tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_01_plain.txt'))
+        tx_u_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_01_uns.txt'))
+        tx_js = json.loads(tx_j)
+
+        reader = xmrserialize.MemoryReaderWriter(bytearray(binascii.unhexlify(tx_c)))
+        ar = xmrserialize.Archive(reader, False)
+        tx = xmrtypes.Transaction()
+        await ar.message(tx)
+
+        reader = xmrserialize.MemoryReaderWriter(bytearray(binascii.unhexlify(tx_u_c)))
+        ar = xmrserialize.Archive(reader, False)
+        uns = xmrtypes.UnsignedTxSet()
+        await ar.message(uns)
+
+        # Test message hash computation
+        tx_prefix_hash = await monero.get_transaction_prefix_hash(tx)
+        message = binascii.unhexlify(tx_js['tx_prefix_hash'])
+        self.assertEqual(tx_prefix_hash, message)
+
+        # RingCT, range sigs, hash
+        rv = tx.rct_signatures
+        rv.message = message
+        rv.mixRing = self.mixring(tx_js)
+        digest = await monero.get_pre_mlsag_hash(rv)
+        full_message = binascii.unhexlify(tx_js['pre_mlsag_hash'])
+        self.assertEqual(digest, full_message)
+
+        # Recompute missing data
+        monero.expand_transaction(tx)
+
+        # Unmask ECDH data, check range proofs
+        for i in range(len(tx_js['amount_keys'])):
+            ecdh = monero.copy_ecdh(rv.ecdhInfo[i])
+            monero.recode_ecdh(ecdh, encode=False)
+
+            ecdh = ring_ct.ecdh_decode(ecdh, derivation=binascii.unhexlify(tx_js['amount_keys'][i]))
+            self.assertEqual(ecdh.amount, tx_js['outamounts'][i])
+            self.assertEqual(ecdh.mask, crypto.decodeint(binascii.unhexlify(tx_js['outSk'][i])[32:]))
+
+            C = crypto.decodepoint(rv.outPk[i].mask)
+            rsig = rv.p.rangeSigs[i]
+            monero.recode_rangesig(rsig, encode=False)
+
+            res = ring_ct.ver_range(C, rsig)
+            self.assertTrue(res)
+
+        is_simple = len(tx.vin) > 1
+        monero.recode_rct(rv, encode=False)
+
+        if is_simple:
+            for index in range(len(rv.p.MGs)):
+                pseudo_out = crypto.decodepoint(binascii.unhexlify(tx_js['tx']['rct_signatures']['pseudoOuts'][index]))
+                r = mlsag2.ver_rct_mg_simple(full_message, rv.p.MGs[index], rv.mixRing[index], pseudo_out)
+                self.assertTrue(r)
+
+        else:
+            txn_fee_key = crypto.scalarmult_h(rv.txnFee)
+            r = mlsag2.ver_rct_mg(rv.p.MGs[0], rv.mixRing, rv.outPk, crypto.decodepoint(txn_fee_key), digest)
+            self.assertTrue(r)
+
+    def mixring(self, js):
+        mxr = []
+        mx = js['mixRing']
+        for i in range(len(mx)):
+            mxr.append([])
+            for j in range(len(mx[i])):
+                dt = binascii.unhexlify(mx[i][j])
+                mxr[i].append(xmrtypes.CtKey(dest=dt[:32], mask=dt[32:]))
+        return mxr
+    
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
