@@ -237,10 +237,10 @@ class TTransaction(object):
         await ar.message(src_entr, xmrtypes.TxSourceEntry)
         await ar.message(vini, xmrtypes.TxinToKey)
 
-        hmac_vini = common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
-        common.compute_hmac(hmac_vini, kwriter.get_digest())
+        hmac_key_vini = common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
+        hmac_vini = common.compute_hmac(hmac_key_vini, kwriter.get_digest())
 
-        return vini,
+        return vini, hmac_vini
 
     async def tsx_inputs_done(self):
         """
