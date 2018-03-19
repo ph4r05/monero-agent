@@ -17,16 +17,30 @@ from monero_glue import trezor, monero, common, crypto
 from mnero import keccak2
 
 
+class TData(object):
+    """
+    Agent transaction-scoped data
+    """
+    def __init__(self):
+        self.tsx_data = None  # type: monero.TsxData
+        self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
+        self.tx_in_hmacs = []
+        self.source_permutation = []
+
+
 class Agent(object):
     """
     Glue agent, running on host
     """
     def __init__(self, trezor):
         self.trezor = trezor
+        self.ct = None  # type: TData
 
     async def transfer_unsigned(self, unsig):
         txes = []
         for tx in unsig.txes:
+            self.ct = TData()
+
             payment_id = []
             extras = await monero.parse_extra_fields(tx.extra)
             extra_nonce = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraNonce)
@@ -40,14 +54,19 @@ class Agent(object):
             tsx_data.unlock_time = tx.unlock_time
             tsx_data.outputs = tx.dests
             tsx_data.change_dts = tx.change_dts
+
+            self.ct.tsx_data = tsx_data
             await self.trezor.init_transaction(tsx_data)
 
             # Subaddresses
             await self.trezor.precompute_subaddr(tx.subaddr_account, tx.subaddr_indices)
 
             # Set transaction inputs
-            for src in tx.sources:
-                await self.trezor.set_tsx_input(src)
+            for idx, src in enumerate(tx.sources):
+                vini, vini_hmac = await self.trezor.set_tsx_input(src)
+                self.ct.tx.vin.append(vini)
+                self.ct.tx_in_hmacs.append(vini_hmac)
+
             await self.trezor.tsx_inputs_done()
 
             for dst in tx.dests:
