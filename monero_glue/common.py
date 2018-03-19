@@ -6,6 +6,7 @@
 from monero_serialize import xmrtypes, xmrserialize, protobuf as xproto
 from mnero import keccak2
 import hashlib
+import hmac
 import functools
 
 
@@ -62,6 +63,37 @@ def get_keccak_writer(sub_writer=None):
     :return:
     """
     return xproto.AHashWriter(HashWrapper(get_keccak()), sub_writer=sub_writer)
+
+
+def get_hmac(key, msg=None):
+    """
+    Returns HMAC object (uses Keccak256)
+    :param key:
+    :param msg:
+    :return:
+    """
+    return hmac.new(key, msg=msg, digestmod=get_keccak)
+
+
+def compute_hmac(key, msg=None):
+    """
+    Computes and returns HMAC of the msg using Keccak256
+    :param key:
+    :param msg:
+    :return:
+    """
+    h = hmac.new(key, msg=msg, digestmod=get_keccak)
+    return h.digest()
+
+
+def ct_equal(a, b):
+    """
+    Constant time a,b comparisson
+    :param a:
+    :param b:
+    :return:
+    """
+    return hmac.compare_digest(a, b)
 
 
 def check_permutation(permutation):
