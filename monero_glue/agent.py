@@ -35,6 +35,7 @@ class Agent(object):
 
             # Init transaction
             tsx_data = trezor.TsxData()
+            tsx_data.version = 1
             tsx_data.payment_id = payment_id
             tsx_data.unlock_time = tx.unlock_time
             tsx_data.outputs = tx.dests

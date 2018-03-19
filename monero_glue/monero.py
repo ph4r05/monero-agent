@@ -17,8 +17,9 @@ class TsxData(xmrserialize.MessageType):
     TsxData, initial input to the transaction processing.
     Serialization structure for easy hashing.
     """
-    __slots__ = ['payment_id', 'unlock_time', 'outputs', 'change_dts']
+    __slots__ = ['version', 'payment_id', 'unlock_time', 'outputs', 'change_dts']
     FIELDS = [
+        ('version', xmrserialize.UVarintType),
         ('payment_id', xmrserialize.BlobType),
         ('unlock_time', xmrserialize.UVarintType),
         ('outputs', xmrserialize.ContainerType, xmrtypes.TxDestinationEntry),
