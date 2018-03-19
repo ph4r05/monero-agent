@@ -64,6 +64,17 @@ def get_keccak_writer(sub_writer=None):
     return xproto.AHashWriter(HashWrapper(get_keccak()), sub_writer=sub_writer)
 
 
+def check_permutation(permutation):
+    """
+    Check permutation sanity
+    :param permutation:
+    :return:
+    """
+    for n in range(len(permutation)):
+        if n not in permutation:
+            raise ValueError('Invalid permutation')
+
+
 def apply_permutation(permutation, swapper):
     """
     Apply permutation from idx. Used for in-place permutation application with swapper.
@@ -72,6 +83,7 @@ def apply_permutation(permutation, swapper):
     :param swapper: function(x,y)
     :return:
     """
+    check_permutation(permutation)
     perm = list(permutation)
     for i in range(len(perm)):
         current = i
