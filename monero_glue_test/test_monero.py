@@ -104,6 +104,9 @@ class MoneroTest(aiounittest.AsyncTestCase):
             res = ring_ct.ver_range(C, rsig)
             self.assertTrue(res)
 
+            res = ring_ct.ver_range(crypto.point_add(C, crypto.scalarmult_base(3)), rsig)
+            self.assertFalse(res)
+
         is_simple = len(tx.vin) > 1
         monero.recode_rct(rv, encode=False)
 
@@ -113,9 +116,15 @@ class MoneroTest(aiounittest.AsyncTestCase):
                 r = mlsag2.ver_rct_mg_simple(full_message, rv.p.MGs[index], rv.mixRing[index], pseudo_out)
                 self.assertTrue(r)
 
+                r = mlsag2.ver_rct_mg_simple(full_message, rv.p.MGs[index], rv.mixRing[index-1], pseudo_out)
+                self.assertFalse(r)
+
         else:
             txn_fee_key = crypto.scalarmult_h(rv.txnFee)
-            r = mlsag2.ver_rct_mg(rv.p.MGs[0], rv.mixRing, rv.outPk, crypto.decodepoint(txn_fee_key), digest)
+            r = mlsag2.ver_rct_mg(rv.p.MGs[0], rv.mixRing, rv.outPk, txn_fee_key, digest)
+            self.assertTrue(r)
+
+            r = mlsag2.ver_rct_mg(rv.p.MGs[0], rv.mixRing, rv.outPk, crypto.scalarmult_h(rv.txnFee-100), digest)
             self.assertTrue(r)
 
     def mixring(self, js):
@@ -127,7 +136,7 @@ class MoneroTest(aiounittest.AsyncTestCase):
                 dt = binascii.unhexlify(mx[i][j])
                 mxr[i].append(xmrtypes.CtKey(dest=dt[:32], mask=dt[32:]))
         return mxr
-    
+
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
