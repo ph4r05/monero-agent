@@ -786,3 +786,13 @@ def gen_c(a, amount):
     aG = scalarmult_base(a)
     return point_add(aG, scalarmult_h(amount))
 
+
+def hmac_point(key, point):
+    """
+    HMAC single point
+    :param key:
+    :param point:
+    :return:
+    """
+    return common.compute_hmac(key, encodepoint(point))
+
