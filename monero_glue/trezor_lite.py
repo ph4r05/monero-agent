@@ -6,7 +6,7 @@ import binascii
 
 from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses, addr_to_hash
-from . import monero, crypto, ring_ct, mlsag2
+from . import monero, crypto, ring_ct, mlsag2, aesgcm
 from . import common as common
 from . import trezor
 
@@ -150,6 +150,28 @@ class TState(object):
             raise ValueError('Illegal state')
         self.s = 10
 
+    def set_pseudo_out(self):
+        if self.s != 10 and self.s != 11:
+            raise ValueError('Illegal state')
+        self.s = 11
+
+    def set_range_proof(self):
+        if self.s != 10 and self.s != 11 and self.s != 12:
+            raise ValueError('Illegal state')
+        self.s = 12
+
+    def set_final_message_done(self):
+        if self.s != 12:
+            raise ValueError('Illegal state')
+        self.s = 13
+
+    def set_signature(self):
+        if self.s != 13 or self.s != 14:
+            raise ValueError('Illegal state')
+        self.s = 14
+
+
+
 
 class TTransaction(object):
     """
@@ -160,6 +182,7 @@ class TTransaction(object):
         self.creds = None  # type: WalletCreds
         self.key_master = None
         self.key_hmac = None
+        self.key_enc = None
 
         self.r = None  # txkey
         self.r_pub = None
@@ -179,13 +202,22 @@ class TTransaction(object):
         self.summary_outs_money = 0
         self.input_rcts = []
         self.input_secrets = []
+        self.input_alphas = []
+        self.input_pseudo_outs = []
         self.output_secrets = []
         self.output_amounts = []
+        self.output_sk = []
+        self.output_pk = []
+        self.output_ecdh = []
+        self.sumout = 0
+        self.sumpouts_alphas = 0
         self.subaddresses = {}
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
         self.source_permutation = []  # sorted by key images
         self.tx_prefix_hasher = common.KeccakArchive()
         self.tx_prefix_hash = None
+        self.full_message_hasher = monero.PreMlsagHasher()
+        self.full_message = None
 
     def gen_r(self):
         """
@@ -255,7 +287,8 @@ class TTransaction(object):
         await xmrserialize.dump_uvarint(writer, self.r)
         await xmrserialize.dump_uvarint(writer, tsx_ctr)
         self.key_master = writer.get_digest()
-        self.key_hmac = common.keccak_hash(b'hmac' + self.key_master)
+        self.key_hmac = common.keccak_2hash(b'hmac' + self.key_master)
+        self.key_enc = common.keccak_2hash(b'enc' + self.key_master)
 
     def precompute_subaddr(self, account, indices):
         """
@@ -285,6 +318,73 @@ class TTransaction(object):
         """
         return self.input_count == 0  # TODO: temporary, all tsx are not in-memory
 
+    def num_inputs(self):
+        """
+        Number of inputs
+        :return:
+        """
+        return self.input_count
+
+    def num_dests(self):
+        """
+        Number of destinations
+        :return:
+        """
+        return len(self.tsx_data.outputs)
+
+    def get_fee(self):
+        """
+        Txn fee
+        :return:
+        """
+        fee = self.summary_inputs_money - self.summary_outs_money
+        return fee if fee > 0 else 0
+
+    def get_rct_type(self):
+        """
+        RCTsig type
+        :return:
+        """
+        if self.use_simple_rct:
+            return xmrtypes.RctType.SimpleBulletproof if self.use_bulletproof else xmrtypes.RctType.Simple
+        else:
+            return xmrtypes.RctType.FullBulletproof if self.use_bulletproof else xmrtypes.RctType.Full
+
+    def init_rct_sig(self):
+        """
+        Initializes RCTsig
+        :return:
+        """
+        num_dest = self.num_dests()
+
+        rv = xmrtypes.RctSig()
+        rv.p = xmrtypes.RctSigPrunable()
+
+        rv.message = self.tx_prefix_hash
+        rv.type = self.get_rct_type()
+
+        if self.use_bulletproof:
+            rv.p.bulletproofs = [None] * num_dest
+        else:
+            rv.p.rangeSigs = [None] * num_dest
+
+        rv.outPk = [None] * num_dest
+        rv.ecdhInfo = [None] * num_dest
+        return rv
+
+    def zero_out_amounts(self):
+        """
+        Zero out all amounts to mask rct outputs, real amounts are now encrypted
+        :return:
+        """
+        if self.in_memory():
+            for idx, inx in enumerate(self.tx.vin):
+                if self.input_rcts[idx]:
+                    inx.amount = 0
+
+        for out in self.tx.vout:
+            out.amount = 0
+
     def inv_input_permutation(self, new_idx):
         """
         Finds inverse of the input permutation O(N)
@@ -302,7 +402,15 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        return common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(idx))
+        return common.keccak_2hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(idx))
+
+    def hmac_key_txin_comm(self, idx):
+        """
+        Input hmac key - commitment
+        :param idx:
+        :return:
+        """
+        return common.keccak_2hash(self.key_hmac + b'txin-comm' + xmrserialize.dump_uvarint_b(idx))
 
     def hmac_key_txout(self, idx):
         """
@@ -310,7 +418,40 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        return common.keccak_hash(self.key_hmac + b'txout' + xmrserialize.dump_uvarint_b(idx))
+        return common.keccak_2hash(self.key_hmac + b'txout' + xmrserialize.dump_uvarint_b(idx))
+
+    def hmac_key_txout_asig(self, idx):
+        """
+        Output hmac key
+        :param idx:
+        :return:
+        """
+        return common.keccak_2hash(self.key_hmac + b'txout-asig' + xmrserialize.dump_uvarint_b(idx))
+
+    def enc_key_txin_alpha(self, idx):
+        """
+        Enc key for alpha
+        :param idx:
+        :return:
+        """
+        return common.keccak_2hash(self.key_enc + b'txin-alpha' + xmrserialize.dump_uvarint_b(idx))
+
+    async def gen_hmac_vini(self, src_entr, vini, idx):
+        """
+        Computes hmac for src entry, vini in the index idx
+        :param src_entr:
+        :param vini:
+        :param idx:
+        :return:
+        """
+        kwriter = common.get_keccak_writer()
+        ar = xmrserialize.Archive(kwriter, True)
+        await ar.message(src_entr, xmrtypes.TxSourceEntry)
+        await ar.message(vini, xmrtypes.TxinToKey)
+
+        hmac_key_vini = self.hmac_key_txin(idx)
+        hmac_vini = common.compute_hmac(hmac_key_vini, kwriter.get_digest())
+        return hmac_vini
 
     async def set_input_cnt(self, inpt_cnt):
         """
@@ -334,6 +475,7 @@ class TTransaction(object):
             raise ValueError('real_output index %s bigger than output_keys.size()' % (src_entr.real_output, len(src_entr.outputs)))
         self.summary_inputs_money += src_entr.amount
 
+        # Secrets derivation
         out_key = crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].dest)
         tx_key = crypto.decodepoint(src_entr.real_out_tx_key)
         additional_keys = [crypto.decodepoint(x) for x in src_entr.real_out_additional_tx_keys]
@@ -343,7 +485,7 @@ class TTransaction(object):
                                                 additional_keys,
                                                 src_entr.real_output_in_tx_index)
         xi, ki, di = secs
-        self.input_secrets.append((xi, ))
+        self.input_secrets.append(xi)
         self.input_rcts.append(src_entr.rct)
 
         # Construct tx.vin
@@ -358,15 +500,24 @@ class TTransaction(object):
             self.tx.vin.append(vini)
 
         # HMAC(T_in,i || vin_i)
-        kwriter = common.get_keccak_writer()
-        ar = xmrserialize.Archive(kwriter, True)
-        await ar.message(src_entr, xmrtypes.TxSourceEntry)
-        await ar.message(vini, xmrtypes.TxinToKey)
+        hmac_vini = await self.gen_hmac_vini(src_entr, vini, self.inp_idx)
 
-        hmac_key_vini = self.hmac_key_txin(self.inp_idx)
-        hmac_vini = common.compute_hmac(hmac_key_vini, kwriter.get_digest())
+        # PseudoOuts commitment, alphas stored to state
+        pseudo_out = None
+        pseudo_out_hmac = None
+        alpha_enc = None
+        if self.use_simple_rct:
+            alpha, pseudo_out = await self.commitment(src_entr.amount)
 
-        return vini, hmac_vini
+            # In full version the alpha is encrypted and passed back for storage
+            if self.in_memory():
+                self.input_alphas.append(alpha)
+                self.input_pseudo_outs.append(pseudo_out)
+            else:
+                pseudo_out_hmac = crypto.hmac_point(self.hmac_key_txin_comm(self.inp_idx), pseudo_out)
+                alpha_enc = aesgcm.encrypt(self.enc_key_txin_alpha(self.inp_idx), crypto.encodeint(alpha))
+
+        return vini, hmac_vini, (pseudo_out, pseudo_out_hmac), alpha_enc
 
     async def tsx_inputs_done_inm(self):
         """
@@ -374,7 +525,7 @@ class TTransaction(object):
         :return:
         """
         # Sort tx.in by key image
-        self.source_permutation = list(range(self.inp_idx + 1))
+        self.source_permutation = list(range(self.input_count))
         self.source_permutation.sort(key=lambda x: self.tx.vin[x].k_image)
 
         def swapper(x, y):
@@ -415,6 +566,9 @@ class TTransaction(object):
         def swapper(x, y):
             self.input_secrets[x], self.input_secrets[y] = self.input_secrets[y], self.input_secrets[x]
             self.input_rcts[x], self.input_rcts[y] = self.input_rcts[y], self.input_rcts[x]
+            if self.in_memory() and self.use_simple_rct:
+                self.input_alphas[x], self.input_alphas[y] = self.input_alphas[y], self.input_alphas[x]
+                self.input_pseudo_outs[x], self.input_pseudo_outs[y] = self.input_pseudo_outs[y], self.input_pseudo_outs[x]
 
         common.apply_permutation(self.source_permutation, swapper)
         self.inp_idx = -1
@@ -430,13 +584,7 @@ class TTransaction(object):
         self.inp_idx += 1
 
         # HMAC(T_in,i || vin_i)
-        kwriter = common.get_keccak_writer()
-        ar = xmrserialize.Archive(kwriter, True)
-        await ar.message(src_entr, xmrtypes.TxSourceEntry)
-        await ar.message(vini, xmrtypes.TxinToKey)
-
-        hmac_key_vini = self.hmac_key_txin(self.inv_input_permutation(self.inp_idx))
-        hmac_vini = common.compute_hmac(hmac_key_vini, kwriter.get_digest())
+        hmac_vini = await self.gen_hmac_vini(src_entr, vini, self.inv_input_permutation(self.inp_idx))
         if not common.ct_equal(hmac_vini, hmac):
             raise ValueError('HMAC is not correct')
 
@@ -446,12 +594,9 @@ class TTransaction(object):
             vini.amount = 0
         self.tx_prefix_hasher.ar.field(vini, xmrtypes.TxInV)
 
-    async def tsx_input_vini_done(self, src_entr, vini, hmac):
+    async def tsx_input_vini_done(self):
         """
-        vini set
-        :param src_entr:
-        :param vini:
-        :param hmac:
+        all vini set
         :return:
         """
         self.state.input_vins_done()
@@ -497,10 +642,10 @@ class TTransaction(object):
         self.tx.vout.append(tx_out)
         self.summary_outs_money += dst_entr.amount
 
-        self.output_secrets.append((amount_key, ))
+        self.output_secrets.append(amount_key)
         self.output_amounts.append(dst_entr.amount)
 
-        # Hmac dest_entr
+        # Hmac dest_entr.
         kwriter = common.get_keccak_writer()
         ar = xmrserialize.Archive(kwriter, True)
         await ar.message(dst_entr, xmrtypes.TxDestinationEntry)
@@ -508,7 +653,19 @@ class TTransaction(object):
 
         hmac_key_vouti = self.hmac_key_txout(self.out_idx)
         hmac_vouti = common.compute_hmac(hmac_key_vouti, kwriter.get_digest())
-        return tx_out, hmac_vouti
+
+        # Range proof, out_pk, ecdh_info
+        rsig, out_pk, ecdh_info = await self.range_proof(self.out_idx)
+        kwriter = common.get_keccak_writer()
+        ar = xmrserialize.Archive(kwriter, True)
+        await ar.message(rsig)
+
+        hmac_key_rsig = self.hmac_key_txout_asig(self.out_idx)
+        hmac_rsig = common.compute_hmac(hmac_key_rsig, kwriter.get_digest())
+        self.output_pk.append(out_pk)
+        self.output_ecdh.append(ecdh_info)
+
+        return tx_out, hmac_vouti, (rsig, hmac_rsig)
 
     async def all_out1_set(self):
         """
@@ -516,8 +673,8 @@ class TTransaction(object):
         Adds additional public keys to the tx.extra
         :return:
         """
-        self.state.set_output()
-        if self.out_idx + 1 != len(self.tsx_data.outputs):
+        self.state.set_output_done()
+        if self.out_idx + 1 != self.num_dests():
             raise ValueError('Invalid out num')
 
         # Set public key to the extra
@@ -539,12 +696,146 @@ class TTransaction(object):
             out.amount = 0
 
         if self.in_memory():
-            self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[0])
-            self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])
-            self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[2])
-        self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[3])
-        self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[4])
+            await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[0])  # version
+            await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])  # unlock_time
+            await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[2])  # vins
+        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[3])  # vouts
+        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[4])  # extra
         self.tx_prefix_hash = self.tx_prefix_hasher.kwriter.get_digest()
+
+        # Init full_message hasher
+        # Hash message, type, fee, pseudoOuts number of elements
+        self.full_message_hasher.init(self.use_simple_rct, self.tx_prefix_hash)
+        self.full_message_hasher.set_type_fee(self.get_rct_type(), self.get_fee())
+
+        if self.in_memory():
+            for idx in range(len(self.input_pseudo_outs)):
+                await self.full_message_hasher.set_pseudo_out(self.input_pseudo_outs[idx])
+        else:
+            self.inp_idx = -1
+
+    async def tsx_mlsag_pseudo_out(self, out):
+        """
+        Pseudo outputs for the final_message hash
+        :return:
+        """
+        self.state.set_pseudo_out()
+        self.inp_idx += 1
+        if self.inp_idx > self.num_inputs():
+            raise ValueError('Too many pseudo inputs')
+
+        pseudo_out, pseudo_out_hmac_provided = out
+        pseudo_out_hmac = crypto.hmac_point(self.hmac_key_txin_comm(self.inp_idx), pseudo_out)
+        if common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
+            raise ValueError('HMAC invalid for pseudo outs')
+
+        await self.full_message_hasher.set_pseudo_out(pseudo_out)
+
+        # Next state transition
+        if self.inp_idx + 1 == self.num_inputs():
+            await self.tsx_mlsag_ecdh_info()
+            await self.tsx_mlsag_out_pk()
+            await self.full_message_hasher.rctsig_base_done()
+            self.out_idx = -1
+
+    async def tsx_mlsag_ecdh_info(self):
+        """
+        ecdh info to the hash
+        :return:
+        """
+        if self.num_dests() != len(self.output_ecdh):
+            raise ValueError('Invalid number of ecdh')
+
+        for ecdh in self.output_ecdh:
+            await self.full_message_hasher.set_ecdh(ecdh)
+
+    async def tsx_mlsag_out_pk(self):
+        """
+        Out pk to the hash
+        :return:
+        """
+        if self.num_dests() != len(self.output_pk):
+            raise ValueError('Invalid number of ecdh')
+
+        for out in self.output_pk:
+            await self.full_message_hasher.set_out_pk(out)
+
+    async def tsx_mlsag_rangeproof(self, range_proof):
+        """
+        Range proof to the hash
+        :param range_proof:
+        :return:
+        """
+        self.state.set_range_proof()
+        self.out_idx += 1
+
+        if self.inp_idx + 1 != self.num_inputs():
+            raise ValueError('Invalid ins')
+        if self.out_idx + 1 > self.num_dests():
+            raise ValueError('Invalid outs')
+
+        rsig, hmac_rsig = range_proof
+
+        kwriter = common.get_keccak_writer()
+        ar = xmrserialize.Archive(kwriter, True)
+        await ar.message(rsig)
+
+        hmac_key_rsig = self.hmac_key_txout_asig(self.out_idx)
+        hmac_rsig_comp = common.compute_hmac(hmac_key_rsig, kwriter.get_digest())
+        if common.ct_equal(hmac_rsig, hmac_rsig_comp):
+            raise ValueError('HMAC invalid for rsig')
+
+        await self.full_message_hasher.rsig_val(rsig, bulletproof=self.use_bulletproof)
+
+        # Next state transition
+        if self.out_idx + 1 == self.num_dests():
+            self.full_message = await self.full_message_hasher.get_digest()
+            self.state.set_final_message_done()
+            self.inp_idx = -1
+
+    async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
+        """
+        Generates a signature for one input
+        :param src:
+        :type src: xmrtypes.TxSourceEntry
+        :return:
+        """
+        self.state.set_signature()
+        self.inp_idx += 1
+        if self.inp_idx + 1 > self.num_inputs():
+            raise ValueError('Invalid ins')
+        if not self.in_memory() and alpha is None:
+            raise ValueError('Inconsistent')
+        if not self.in_memory() and pseudo_out[0] is None:
+            raise ValueError('Inconsistent')
+
+        inv_idx = self.inv_input_permutation(self.inp_idx)
+
+        # Check HMAC of all inputs
+        hmac_vini_comp = await self.gen_hmac_vini(src_entr, vini, inv_idx)
+        if not common.ct_equal(hmac_vini_comp, hmac_vini):
+            raise ValueError('HMAC is not correct')
+
+        if not self.in_memory():
+            pseudo_out_hmac = crypto.hmac_point(self.hmac_key_txin_comm(inv_idx), pseudo_out[0])
+            if not common.ct_equal(pseudo_out_hmac, pseudo_out[1]):
+                raise ValueError('HMAC is not correct')
+
+            alpha_c = aesgcm.decrypt(self.enc_key_txin_alpha(inv_idx), alpha[0], alpha[1], alpha[2])
+            pseudo_out_c = pseudo_out[0]
+
+        else:
+            alpha_c = self.input_alphas[self.inp_idx]
+            pseudo_out_c = self.input_pseudo_outs[self.inp_idx]
+
+        # RCT signature
+        if self.use_simple_rct:
+            pass
+
+        else:
+            pass
+        
+
 
     async def signature(self, tx):
         """
@@ -555,6 +846,18 @@ class TTransaction(object):
         :type tx: xmrtypes.TxConstructionData
         :return:
         """
+        # TODO: in mem / full rct? -> In memory comp.
+
+
+        # TODO: iterative?
+        destinations = []
+        outamounts = []
+        amount_out = 0
+        for idx, dst in enumerate(tx.dests):
+            destinations.append(crypto.decodepoint(self.tx.vout[idx].target.key))
+            outamounts.append(self.output_amounts[idx].amount)
+            amount_out += self.output_amounts[idx].amount
+
         amount_in = 0
         inamounts = [None] * len(self.source_permutation)
         index = [None] * len(self.source_permutation)
@@ -567,7 +870,7 @@ class TTransaction(object):
             amount_in += src.amount
             inamounts[i] = src.amount
             index[i] = src.real_output
-            in_sk[i] = xmrtypes.CtKey(dest=self.input_secrets[i][0], mask=crypto.decodeint(src.mask))
+            in_sk[i] = xmrtypes.CtKey(dest=self.input_secrets[i], mask=crypto.decodeint(src.mask))
             # TODO: kLRki
 
             # private key correctness test
@@ -577,17 +880,8 @@ class TTransaction(object):
                 assert crypto.point_eq(crypto.decodepoint(src.outputs[src.real_output][1].mask),
                                        crypto.gen_c(in_sk[i].mask, inamounts[i]))
 
-        # TODO: iterative?
-        destinations = []
-        outamounts = []
-        amount_out = 0
-        for idx, dst in enumerate(tx.dests):
-            destinations.append(crypto.decodepoint(self.tx.vout[idx].target.key))
-            outamounts.append(self.tx.vout[idx].amount)
-            amount_out += self.tx.vout[idx].amount
-
         if self.use_simple_rct:
-            mix_ring = [None] * (self.inp_idx + 1)
+            mix_ring = [None] * (self.num_inputs() + 1)
             for i in range(len(self.source_permutation)):
                 src = tx.sources[self.source_permutation[i]]
                 mix_ring[i] = []
@@ -605,12 +899,6 @@ class TTransaction(object):
 
         if not self.use_simple_rct and amount_in > amount_out:
             outamounts.append(amount_in - amount_out)
-
-        # Hide amounts
-        self.zero_out_amounts()
-
-        # Tx prefix hash
-        await self.compute_tx_prefix_hash()
 
         # Signature
         if self.use_simple_rct:
@@ -631,82 +919,82 @@ class TTransaction(object):
 
         return bytes(writer.buffer)
 
-    def zero_out_amounts(self):
+    async def commitment(self, in_amount):
         """
-        Zero out all amounts to mask rct outputs, real amounts are now encrypted
+        Computes Pedersen commitment - pseudo outs
+        Here is slight deviation from the original protocol.
+        We want that \sum Alpha = \sum A_{i,j} where A_{i,j} is a mask from range proof for output i, bit j.
+
+        Previously this was computed in such a way that Alpha_{last} = \sum A{i,j} - \sum_{i=0}^{last-1} Alpha
+        But we would prefer to compute commitment before range proofs so alphas are generated completely randomly
+        and the last A mask is computed in this special way.
+        Returns pseudo_out
         :return:
         """
-        for idx, inx in enumerate(self.tx.vin):
-            if self.input_rcts[idx]:
-                inx.amount = 0
+        alpha = crypto.random_scalar()
+        self.sumpouts_alphas = crypto.sc_add(self.sumpouts_alphas, alpha)
+        return alpha, crypto.gen_c(alpha, in_amount)
 
-        for out in self.tx.vout:
-            out.amount = 0
-
-    async def compute_tx_prefix_hash(self):
+    async def range_proof(self, idx):
         """
-        Computes tx prefix hash
+        Computes rangeproof and related information - out_sk, out_pk, ecdh_info
+
+        :param idx:
         :return:
         """
-        self.tx_prefix_hash = await monero.get_transaction_prefix_hash(self.tx)
-        return self.tx_prefix_hash
+        out_pk = xmrtypes.CtKey(dest=self.tx.vout[idx].target.key)
+        is_last = idx + 1 == self.num_dests()
+        last_mask = None if not is_last or self.use_simple_rct else crypto.sc_sub(self.sumpouts_alphas, self.sumout)
 
-    async def gen_rct_header(self, destinations, outamounts):
+        C, mask, rsig = None, 0, None
+
+        # Rangeproof
+        if self.use_bulletproof:
+            raise ValueError('Bulletproof not yet supported')
+
+        else:
+            C, mask, rsig = ring_ct.prove_range(self.output_amounts[idx], last_mask)
+
+            if __debug__:
+                assert ring_ct.ver_range(C, rsig)
+                assert crypto.point_eq(C, crypto.point_add(
+                    crypto.scalarmult_base(mask),
+                    crypto.scalarmult_h(self.output_amounts[idx])))
+
+            # Recoding to structure
+            monero.recode_rangesig(rsig, encode=True)
+
+        # Mask sum
+        out_pk.mask = crypto.encodepoint(C)
+        self.sumout = crypto.sc_add(self.sumout, mask)
+        self.output_sk.append(xmrtypes.CtKey(mask=mask))
+
+        # ECDH masking
+        amount_key = crypto.encodeint(self.output_secrets[idx])
+        ecdh_info = xmrtypes.EcdhTuple(mask=mask, amount=self.output_amounts[idx])
+        ecdh_info = ring_ct.ecdh_encode(ecdh_info, derivation=amount_key)
+        monero.recode_ecdh(ecdh_info, encode=True)
+        return rsig, out_pk, ecdh_info
+
+    async def gen_rct_header(self):
         """
         Initializes RV RctSig structure, processes outputs, computes range proofs, ecdh info masking.
         Common to gen_rct and gen_rct_simple.
 
-        :param destinations:
-        :param outamounts:
         :return:
         """
-        rv = xmrtypes.RctSig()
-        rv.p = xmrtypes.RctSigPrunable()
-
-        rv.message = self.tx_prefix_hash
-        rv.outPk = [None] * len(destinations)
-
-        if self.use_bulletproof:
-            rv.p.bulletproofs = [None] * len(destinations)
-        else:
-            rv.p.rangeSigs = [None] * len(destinations)
-        rv.ecdhInfo = [None] * len(destinations)
+        num_dest = self.num_dests()
+        rv = self.init_rct_sig()
 
         # Output processing
-        sumout = 0
-        out_sk = [None] * len(destinations)
-        for idx in range(len(destinations)):
-            rv.outPk[idx] = xmrtypes.CtKey(dest=crypto.encodepoint(destinations[idx]))
-            C, mask, rsig = None, 0, None
+        for idx in range(num_dest):
+            rsig, out_pk, ecdh_info = await self.range_proof(idx)
 
-            # Rangeproof
-            if self.use_bulletproof:
-                raise ValueError('Bulletproof not yet supported')
+            rv.outPk[idx] = out_pk
+            rv.p.rangeSigs[idx] = rsig
+            rv.ecdhInfo[idx] = ecdh_info
 
-            else:
-                C, mask, rsig = ring_ct.prove_range(outamounts[idx])
-                rv.p.rangeSigs[idx] = rsig
-                if __debug__:
-                    assert ring_ct.ver_range(C, rsig)
-                    assert crypto.point_eq(C, crypto.point_add(
-                        crypto.scalarmult_base(mask),
-                        crypto.scalarmult_h(outamounts[idx])))
-
-                # Recoding to structure
-                monero.recode_rangesig(rsig, encode=True)
-
-            # Mask sum
-            rv.outPk[idx].mask = crypto.encodepoint(C)
-            sumout = crypto.sc_add(sumout, mask)
-            out_sk[idx] = xmrtypes.CtKey(mask=mask)
-
-            # ECDH masking
-            amount_key = crypto.encodeint(self.output_secrets[idx][0])
-            rv.ecdhInfo[idx] = xmrtypes.EcdhTuple(mask=mask, amount=outamounts[idx])
-            rv.ecdhInfo[idx] = ring_ct.ecdh_encode(rv.ecdhInfo[idx], derivation=amount_key)
-            monero.recode_ecdh(rv.ecdhInfo[idx], encode=True)
-
-        return rv, sumout, out_sk
+        return rv
 
     async def gen_rct(self, in_sk, destinations, amounts, mix_ring, kLRki, msout, index):
         """
@@ -735,7 +1023,7 @@ class TTransaction(object):
         if (not kLRki or not msout) and (kLRki or msout):
             raise ValueError('Only one of kLRki/mscout is present')
 
-        rv, sumout, out_sk = await self.gen_rct_header(destinations, amounts)
+        rv = await self.gen_rct_header(destinations, amounts)
         rv.type = xmrtypes.RctType.FullBulletproof if self.use_bulletproof else xmrtypes.RctType.Full
 
         if len(amounts) > len(destinations):
@@ -751,7 +1039,7 @@ class TTransaction(object):
         rv.p.MGs = [
             mlsag2.prove_rct_mg(full_message,
                                 rv.mixRing,
-                                in_sk, out_sk, rv.outPk, kLRki, None, index, txn_fee_key)
+                                in_sk, self.output_sk, rv.outPk, kLRki, None, index, txn_fee_key)
         ]
 
         if __debug__:
@@ -790,7 +1078,7 @@ class TTransaction(object):
             if index[idx] >= len(mix_ring[idx]):
                 raise ValueError('Bad index into mixRing')
 
-        rv, sumout, out_sk = await self.gen_rct_header(destinations, outamounts)
+        rv = await self.gen_rct_header(destinations, outamounts)
         rv.type = xmrtypes.RctType.SimpleBulletproof if self.use_bulletproof else xmrtypes.RctType.Simple
         rv.txnFee = txn_fee
         rv.mixRing = mix_ring
@@ -798,6 +1086,7 @@ class TTransaction(object):
         # Pseudooutputs
         pseudo_outs = [None] * len(inamounts)
         rv.p.MGs = [None] * len(inamounts)
+
         sumpouts = 0
         a = []
         for idx in range(len(inamounts)-1):
@@ -805,7 +1094,7 @@ class TTransaction(object):
             sumpouts = crypto.sc_add(sumpouts, a[idx])
             pseudo_outs[idx] = crypto.gen_c(a[idx], inamounts[idx])
 
-        a.append(crypto.sc_sub(sumout, sumpouts))
+        a.append(crypto.sc_sub(self.sumout, sumpouts))
         pseudo_outs[-1] = crypto.gen_c(a[-1], inamounts[-1])
 
         if self.use_bulletproof:

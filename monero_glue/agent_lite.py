@@ -26,7 +26,10 @@ class TData(object):
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
         self.tx_in_hmacs = []
         self.tx_out_hmacs = []
+        self.tx_out_rsigs = []
         self.source_permutation = []
+        self.alphas = []
+        self.pseudo_outs = []
 
 
 class Agent(object):
@@ -65,9 +68,11 @@ class Agent(object):
             # Set transaction inputs
             await self.trezor.set_input_count(len(tx.sources))
             for idx, src in enumerate(tx.sources):
-                vini, vini_hmac = await self.trezor.set_tsx_input(src)
+                vini, vini_hmac, pseudo_out, alpha_enc = await self.trezor.set_tsx_input(src)
                 self.ct.tx.vin.append(vini)
                 self.ct.tx_in_hmacs.append(vini_hmac)
+                self.ct.pseudo_outs.append(pseudo_out)
+                self.ct.alphas.append(alpha_enc)
 
             await self.trezor.tsx_inputs_done()
 
@@ -87,9 +92,10 @@ class Agent(object):
                 self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx])
 
             for dst in tx.dests:
-                vouti, vouti_mac = await self.trezor.set_tsx_output1(dst)
+                vouti, vouti_mac, rsig = await self.trezor.set_tsx_output1(dst)
                 self.ct.tx.vout.append(vouti)
                 self.ct.tx_out_hmacs.append(vouti_mac)
+                self.ct.tx_out_rsigs.append(rsig)
 
             await self.trezor.all_out1_set()
 
