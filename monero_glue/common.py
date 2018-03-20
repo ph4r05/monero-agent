@@ -38,6 +38,12 @@ class HashWrapper(object):
         return self.ctx.hexdigest()
 
 
+class KeccakArchive(object):
+    def __init__(self):
+        self.kwriter = get_keccak_writer()
+        self.ar = xmrserialize.Archive(self.kwriter, True)
+
+
 def get_keccak():
     """
     Simple keccak 256
