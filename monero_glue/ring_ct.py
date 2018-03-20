@@ -38,7 +38,7 @@ def sum_Ci(Cis):
     return CSum
 
 
-def prove_range(amount, use_asnl=False):
+def prove_range(amount, last_mask=None, use_asnl=False):
     """
     Gives C, and mask such that \sumCi = C
     c.f. http:#eprint.iacr.org/2015/1098 section 5.1
@@ -47,6 +47,7 @@ def prove_range(amount, use_asnl=False):
     thus this proves that "amount" is in [0, 2^ATOMS]
     mask is a such that C = aG + bH, and b = amount
     :param amount:
+    :param last_mask: ai[ATOMS-1] will be computed as \sum_{i=0}^{ATOMS-2} a_i - last_mask
     :param use_asnl: use ASNL, used before Borromean
     :return: sumCi, mask, RangeSig
     """
@@ -59,6 +60,9 @@ def prove_range(amount, use_asnl=False):
     a = 0
     for i in range(0, ATOMS):
         ai[i] = crypto.random_scalar()
+        if last_mask is not None and i == ATOMS - 1:
+            ai[i] = crypto.sc_sub(a, last_mask)
+
         a = crypto.sc_add(a, ai[i])  # creating the total mask since you have to pass this to receiver...
         if bb[i] == 0:
             Ci[i] = crypto.scalarmult_base(ai[i])
