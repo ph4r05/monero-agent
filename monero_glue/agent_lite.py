@@ -25,6 +25,7 @@ class TData(object):
         self.tsx_data = None  # type: monero.TsxData
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
         self.tx_in_hmacs = []
+        self.tx_out_hmacs = []
         self.source_permutation = []
 
 
@@ -86,7 +87,12 @@ class Agent(object):
                 self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx])
 
             for dst in tx.dests:
-                await self.trezor.set_tsx_output1(dst)
+                vouti, vouti_mac = await self.trezor.set_tsx_output1(dst)
+                self.ct.tx.vout.append(vouti)
+                self.ct.tx_out_hmacs.append(vouti_mac)
+
+            await self.trezor.all_out1_set()
+
 
             # Unfinished proto
             buf = await self.trezor.tsx_obj.signature(tx)

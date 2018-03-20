@@ -86,6 +86,12 @@ class TrezorLite(object):
         """
         return await self.tsx_obj.set_out1(dst_entr)
 
+    async def all_out1_set(self):
+        """
+        :return:
+        """
+        return await self.tsx_obj.all_out1_set()
+
 
 class TState(object):
     """
@@ -134,6 +140,16 @@ class TState(object):
             raise ValueError('Illegal state')
         self.s = 8
 
+    def set_output(self):
+        if ((not self.in_mem and self.s != 7) or (self.in_mem and self.s != 5)) and self.s != 9:
+            raise ValueError('Illegal state')
+        self.s = 9
+
+    def set_output_done(self):
+        if self.s != 9:
+            raise ValueError('Illegal state')
+        self.s = 10
+
 
 class TTransaction(object):
     """
@@ -164,6 +180,7 @@ class TTransaction(object):
         self.input_rcts = []
         self.input_secrets = []
         self.output_secrets = []
+        self.output_amounts = []
         self.subaddresses = {}
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
         self.source_permutation = []  # sorted by key images
@@ -287,6 +304,14 @@ class TTransaction(object):
         """
         return common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(idx))
 
+    def hmac_key_txout(self, idx):
+        """
+        Output hmac key
+        :param idx:
+        :return:
+        """
+        return common.keccak_hash(self.key_hmac + b'txout' + xmrserialize.dump_uvarint_b(idx))
+
     async def set_input_cnt(self, inpt_cnt):
         """
         Sets input count
@@ -325,6 +350,10 @@ class TTransaction(object):
         vini = xmrtypes.TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki))
         vini.key_offsets = [x[0] for x in src_entr.outputs]
         vini.key_offsets = monero.absolute_output_offsets_to_relative(vini.key_offsets)
+
+        if src_entr.rct:
+            vini.amount = 0
+
         if self.in_memory():
             self.tx.vin.append(vini)
 
@@ -354,10 +383,6 @@ class TTransaction(object):
             self.input_rcts[x], self.input_rcts[y] = self.input_rcts[y], self.input_rcts[x]
 
         common.apply_permutation(self.source_permutation, swapper)
-
-        # Set public key to the extra
-        # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
-        monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
 
     async def tsx_inputs_done(self):
         """
@@ -416,6 +441,9 @@ class TTransaction(object):
             raise ValueError('HMAC is not correct')
 
         # Serialize particular input type
+        # Zero-out value during hashing
+        if self.input_rcts[self.inp_idx]:
+            vini.amount = 0
         self.tx_prefix_hasher.ar.field(vini, xmrtypes.TxInV)
 
     async def tsx_input_vini_done(self, src_entr, vini, hmac):
@@ -437,6 +465,7 @@ class TTransaction(object):
         :type src_entr: xmrtypes.TxDestinationEntry
         :return:
         """
+        self.state.set_output()
         self.out_idx += 1
         change_addr = self.tsx_data.change_dts.addr if self.tsx_data.change_dts else None
 
@@ -469,10 +498,17 @@ class TTransaction(object):
         self.summary_outs_money += dst_entr.amount
 
         self.output_secrets.append((amount_key, ))
+        self.output_amounts.append(dst_entr.amount)
 
-        # Last output?
-        if self.out_idx + 1 == len(self.tsx_data.outputs):
-            await self.all_out1_set()
+        # Hmac dest_entr
+        kwriter = common.get_keccak_writer()
+        ar = xmrserialize.Archive(kwriter, True)
+        await ar.message(dst_entr, xmrtypes.TxDestinationEntry)
+        await ar.message(tx_out, xmrtypes.TxOut)
+
+        hmac_key_vouti = self.hmac_key_txout(self.out_idx)
+        hmac_vouti = common.compute_hmac(hmac_key_vouti, kwriter.get_digest())
+        return tx_out, hmac_vouti
 
     async def all_out1_set(self):
         """
@@ -480,13 +516,35 @@ class TTransaction(object):
         Adds additional public keys to the tx.extra
         :return:
         """
-        self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraAdditionalPubKeys)
+        self.state.set_output()
+        if self.out_idx + 1 != len(self.tsx_data.outputs):
+            raise ValueError('Invalid out num')
+
+        # Set public key to the extra
+        # Not needed to remove - extra is clean
+        # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
+        monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
+
+        # Not needed to remove - extra is clean
+        # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraAdditionalPubKeys)
         if self.need_additional_txkeys:
             await monero.add_additional_tx_pub_keys_to_extra(self.tx.extra, self.additional_tx_public_keys)
 
         if self.summary_outs_money > self.summary_inputs_money:
             raise ValueError('Transaction inputs money (%s) less than outputs money (%s)'
                              % (self.summary_inputs_money, self.summary_outs_money))
+
+        # vout hash, zero-out amount
+        for out in self.tx.vout:
+            out.amount = 0
+
+        if self.in_memory():
+            self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[0])
+            self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])
+            self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[2])
+        self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[3])
+        self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[4])
+        self.tx_prefix_hash = self.tx_prefix_hasher.kwriter.get_digest()
 
     async def signature(self, tx):
         """
