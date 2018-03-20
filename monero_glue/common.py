@@ -62,6 +62,15 @@ def keccak_hash(inp):
     return ctx.digest()
 
 
+def keccak_2hash(inp):
+    """
+    Keccak double hashing
+    :param inp:
+    :return:
+    """
+    return keccak_hash(keccak_hash(inp))
+
+
 def get_keccak_writer(sub_writer=None):
     """
     Creates new fresh async Keccak writer
