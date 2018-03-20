@@ -8,39 +8,17 @@ from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses, addr_to_hash
 from . import monero, crypto, ring_ct, mlsag2
 from . import common as common
+from . import trezor
 
 
-class WalletCreds(object):
-    """
-    Stores wallet private keys
-    """
-    def __init__(self, view_key_private=None, spend_key_private=None, view_key_public=None, spend_key_public=None, address=None):
-        self.view_key_private = view_key_private
-        self.view_key_public = view_key_public
-        self.spend_key_private = spend_key_private
-        self.spend_key_public = spend_key_public
-        self.address = address
-
-    @classmethod
-    def new_wallet(cls, priv_view_key, priv_spend_key):
-        pub_view_key = crypto.scalarmult_base(priv_view_key)
-        pub_spend_key = crypto.scalarmult_base(priv_spend_key)
-        addr = monero.encode_addr(monero.net_version(),
-                                  crypto.encodepoint(pub_spend_key),
-                                  crypto.encodepoint(pub_view_key))
-        return cls(view_key_private=priv_view_key, spend_key_private=priv_spend_key,
-                   view_key_public=pub_view_key, spend_key_public=pub_spend_key,
-                   address=addr)
-
-
-class Trezor(object):
+class TrezorLite(object):
     """
     Main Trezor object
     """
     def __init__(self):
         self.tsx_ctr = 0
         self.tsx_obj = None  # type: TTransaction
-        self.creds = None  # type: WalletCreds
+        self.creds = None  # type: trezor.WalletCreds
 
     async def init_transaction(self, tsx_data: TsxData):
         self.tsx_ctr += 1
@@ -57,6 +35,13 @@ class Trezor(object):
         """
         return self.tsx_obj.precompute_subaddr(account, indices)
 
+    async def set_input_count(self, inp_cnt):
+        """
+        :param inp_cnt
+        :return:
+        """
+        return await self.tsx_obj.set_input_cnt(inp_cnt)
+
     async def set_tsx_input(self, src_entr):
         """
         :param src_entr
@@ -72,6 +57,27 @@ class Trezor(object):
         """
         return await self.tsx_obj.tsx_inputs_done()
 
+    async def tsx_inputs_permutation(self, permutation):
+        """
+        All inputs set
+        :return:
+        """
+        return await self.tsx_obj.tsx_inputs_permutation(permutation)
+
+    async def tsx_input_vini(self, *args, **kwargs):
+        """
+        All inputs set
+        :return:
+        """
+        return await self.tsx_obj.tsx_input_vini(*args, **kwargs)
+
+    async def tsx_input_vini_done(self, *args, **kwargs):
+        """
+        All inputs set
+        :return:
+        """
+        return await self.tsx_obj.tsx_input_vini_done(*args, **kwargs)
+
     async def set_tsx_output1(self, dst_entr):
         """
         :param src_entr
@@ -79,6 +85,54 @@ class Trezor(object):
         :return:
         """
         return await self.tsx_obj.set_out1(dst_entr)
+
+
+class TState(object):
+    """
+    Transaction state
+    """
+    def __init__(self):
+        self.s = 0
+        self.in_mem = False
+
+    def init_tsx(self):
+        self.s = 1
+
+    def precomp(self):
+        if self.s != 1:
+            raise ValueError('Illegal state')
+        self.s = 2
+
+    def inp_cnt(self, in_mem):
+        if self.s != 2:
+            raise ValueError('Illegal state')
+        self.s = 3
+        self.in_mem = in_mem
+
+    def input(self):
+        if self.s != 3 and self.s != 4:
+            raise ValueError('Illegal state')
+        self.s = 4
+
+    def input_done(self):
+        if self.s != 4:
+            raise ValueError('Illegal state')
+        self.s = 5
+
+    def input_permutation(self):
+        if self.in_mem or self.s != 5:
+            raise ValueError('Illegal state')
+        self.s = 6
+
+    def input_vins(self):
+        if self.in_mem or (self.s != 6 and self.s != 7):
+            raise ValueError('Illegal state')
+        self.s = 7
+
+    def input_vins_done(self):
+        if self.in_mem or self.s != 7:
+            raise ValueError('Illegal state')
+        self.s = 8
 
 
 class TTransaction(object):
@@ -93,12 +147,14 @@ class TTransaction(object):
 
         self.r = None  # txkey
         self.r_pub = None
+        self.state = TState()
 
         self.tsx_data = None  # type: monero.TsxData
         self.need_additional_txkeys = False
         self.use_bulletproof = False
         self.use_rct = True
         self.use_simple_rct = False
+        self.input_count = 0
         self.additional_tx_keys = []
         self.additional_tx_public_keys = []
         self.inp_idx = -1
@@ -111,6 +167,7 @@ class TTransaction(object):
         self.subaddresses = {}
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
         self.source_permutation = []  # sorted by key images
+        self.tx_prefix_hasher = common.KeccakArchive()
         self.tx_prefix_hash = None
 
     def gen_r(self):
@@ -130,6 +187,7 @@ class TTransaction(object):
         """
         self.tsx_data = tsx_data
         self.gen_r()
+        self.state.init_tsx()
 
         # Additional keys
         class_res = classify_subaddresses(tsx_data.outputs, tsx_data.change_dts.addr if tsx_data.change_dts else None)
@@ -191,6 +249,7 @@ class TTransaction(object):
         :param indices:
         :return:
         """
+        self.state.precomp()
         for idx in indices:
             if account == 0 and idx == 0:
                 self.subaddresses[crypto.encodepoint(self.trezor.creds.spend_key_public)] = (0, 0)
@@ -202,12 +261,49 @@ class TTransaction(object):
             pub = crypto.encodepoint(pub)
             self.subaddresses[pub] = (account, idx)
 
+    def in_memory(self):
+        """
+        Returns true if the input transaction can be processed whole in-memory
+        :return:
+        """
+        return self.input_count == 0  # TODO: temporary, all tsx are not in-memory
+
+    def inv_input_permutation(self, new_idx):
+        """
+        Finds inverse of the input permutation O(N)
+        :param new_idx:
+        :return:
+        """
+        for i in range(len(self.source_permutation)):
+            if self.source_permutation[i] == new_idx:
+                return i
+        raise ValueError('Invalid index / permutation')
+
+    def hmac_key_txin(self, idx):
+        """
+        Input hmac key
+        :param idx:
+        :return:
+        """
+        return common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(idx))
+
+    async def set_input_cnt(self, inpt_cnt):
+        """
+        Sets input count
+        :param inpt_cnt:
+        :return:
+        """
+        self.state.inp_cnt(inpt_cnt > 1)
+        self.input_count = inpt_cnt
+        self.use_simple_rct = inpt_cnt > 1
+
     async def set_input(self, src_entr):
         """
         :param src_entr:
         :type src_entr: xmrtypes.TxSourceEntry
         :return:
         """
+        self.state.input()
         self.inp_idx += 1
         if src_entr.real_output >= len(src_entr.outputs):
             raise ValueError('real_output index %s bigger than output_keys.size()' % (src_entr.real_output, len(src_entr.outputs)))
@@ -229,7 +325,8 @@ class TTransaction(object):
         vini = xmrtypes.TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki))
         vini.key_offsets = [x[0] for x in src_entr.outputs]
         vini.key_offsets = monero.absolute_output_offsets_to_relative(vini.key_offsets)
-        self.tx.vin.append(vini)
+        if self.in_memory():
+            self.tx.vin.append(vini)
 
         # HMAC(T_in,i || vin_i)
         kwriter = common.get_keccak_writer()
@@ -237,19 +334,18 @@ class TTransaction(object):
         await ar.message(src_entr, xmrtypes.TxSourceEntry)
         await ar.message(vini, xmrtypes.TxinToKey)
 
-        hmac_key_vini = common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
+        hmac_key_vini = self.hmac_key_txin(self.inp_idx)
         hmac_vini = common.compute_hmac(hmac_key_vini, kwriter.get_digest())
 
         return vini, hmac_vini
 
-    async def tsx_inputs_done(self):
+    async def tsx_inputs_done_inm(self):
         """
-        All inputs set
+        In-memory post processing
         :return:
         """
-
         # Sort tx.in by key image
-        self.source_permutation = list(range(self.inp_idx+1))
+        self.source_permutation = list(range(self.inp_idx + 1))
         self.source_permutation.sort(key=lambda x: self.tx.vin[x].k_image)
 
         def swapper(x, y):
@@ -263,7 +359,76 @@ class TTransaction(object):
         # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
         monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
 
-        self.use_simple_rct = self.inp_idx > 0
+    async def tsx_inputs_done(self):
+        """
+        All inputs set
+        :return:
+        """
+        self.state.input_done()
+        if self.input_count != self.inp_idx + 1:
+            raise ValueError('Input count mismatch')
+        if self.in_memory():
+            return await self.tsx_inputs_done_inm()
+
+        # Iterative message hash computation
+        self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[0])
+        self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])
+
+        # vins size
+        self.tx_prefix_hasher.ar.container_size(self.input_count, xmrtypes.TransactionPrefix.FIELDS[2][1])
+        return self.r_pub
+
+    async def tsx_inputs_permutation(self, permutation):
+        """
+        Set sort permutation on the inputs - sorted by key image
+        :param permutation:
+        :return:
+        """
+        self.state.input_permutation()
+        self.source_permutation = permutation
+
+        def swapper(x, y):
+            self.input_secrets[x], self.input_secrets[y] = self.input_secrets[y], self.input_secrets[x]
+            self.input_rcts[x], self.input_rcts[y] = self.input_rcts[y], self.input_rcts[x]
+
+        common.apply_permutation(self.source_permutation, swapper)
+        self.inp_idx = -1
+
+    async def tsx_input_vini(self, src_entr, vini, hmac):
+        """
+        Set Vini for message computation
+        :param vini:
+        :param hmac:
+        :return:
+        """
+        self.state.input_vins()
+        self.inp_idx += 1
+
+        # HMAC(T_in,i || vin_i)
+        kwriter = common.get_keccak_writer()
+        ar = xmrserialize.Archive(kwriter, True)
+        await ar.message(src_entr, xmrtypes.TxSourceEntry)
+        await ar.message(vini, xmrtypes.TxinToKey)
+
+        hmac_key_vini = self.hmac_key_txin(self.inv_input_permutation(self.inp_idx))
+        hmac_vini = common.compute_hmac(hmac_key_vini, kwriter.get_digest())
+        if not common.ct_equal(hmac_vini, hmac):
+            raise ValueError('HMAC is not correct')
+
+        # Serialize particular input type
+        self.tx_prefix_hasher.ar.field(vini, xmrtypes.TxInV)
+
+    async def tsx_input_vini_done(self, src_entr, vini, hmac):
+        """
+        vini set
+        :param src_entr:
+        :param vini:
+        :param hmac:
+        :return:
+        """
+        self.state.input_vins_done()
+        if self.inp_idx + 1 != self.input_count:
+            raise ValueError('Invalid number of inputs')
 
     async def set_out1(self, dst_entr):
         """
