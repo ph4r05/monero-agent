@@ -29,17 +29,26 @@ class AgentTest(aiounittest.AsyncTestCase):
         req = {
             "jsonrpc": "2.0", "id": "0", "method": "transfer_unsigned", "params":
                 {
-                    "destinations":
-                        [{
-                            "amount": 384500000000,
-                            "address": "9twQxUpHzXrQLnph1ZNFQgdxZZyGhKRLfaNv7EEgWc1f3LQPSZR7BP4ZZn4oH7kAbX3kCd4oDYHg6hE541rQTKtHB7ufnmk"
-                        }],
+                    "destinations": [
+                        {
+                            "amount": 2110000000000,
+                            "address": "BZZeyHTQYZ9W9KX2M69WWxWat1Z6JQYsi4LjnZxuVTmCbsNxrUyLFbXiZHRwXgBcaESRz8HtHxTDGSCtgxDdEFpQFrKqXoX"
+                        },
+                        {
+                            "amount": 2120000000000,
+                            "address": "BZg53n1EgLJhYDZNCi3VvxXFMdmmgk6HhhFCvvw9sMf1RQFp7LyjGvrNuF7TzukfaGh7Gsin2bEDpUNRv9oc8qSGMKCnktw"
+                        },
+                        {
+                            "amount": 2130000000000,
+                            "address": "9wviCeWe2D8XS82k2ovp5EUYLzBt9pYNW2LXUFsZiv8S3Mt21FZ5qQaAroko1enzw3eGr9qC7X1D7Geoo2RrAotYPwq9Gm8"
+                        },
+                    ],
                     "account_index": 0,
                     "subaddr_indices": [],
                     "priority": 5,
-                    "mixin": 2,
+                    "mixin": 4,
                     "unlock_time": 0,
-                    "payment_id": "deadc0dedeadc0d1",
+                    # "payment_id": "deadc0dedeadc0d1",
                     "get_tx_keys": True,
                     "do_not_relay": True,
                     "get_tx_hex": True,
@@ -69,8 +78,17 @@ class AgentTest(aiounittest.AsyncTestCase):
         await ar.message(unsig)
 
         tagent = self.init_agent()
-        await tagent.transfer_unsigned(unsig)
+        txes = await tagent.transfer_unsigned(unsig)
 
+        resp = requests.post('http://localhost:48081/sendrawtransaction', json={
+            'tx_as_hex': binascii.hexlify(txes[0]).decode('utf8'),
+            'do_not_relay': False,
+        })
+        print(resp)
+
+        print('Txblob: \n %s\n' % tx_blob)
+        print('TxUns: \n %s\n' % tx_unsigned)
+        print('TxMeta: \n %s\n' % js['result']['tx_metadata_list'][0])
         print('Done')
 
     def get_creds(self):
