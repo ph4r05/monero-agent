@@ -7,7 +7,7 @@ version = '0.0.2'
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
-    'monero-serialize>=0.0.6',
+    'monero-serialize>=0.1.0',
     'pycryptodome',
 ]
 
