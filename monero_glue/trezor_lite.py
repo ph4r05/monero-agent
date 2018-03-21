@@ -379,8 +379,6 @@ class TTransaction(object):
         Initializes RCTsig
         :return:
         """
-        num_dest = self.num_dests()
-
         rv = xmrtypes.RctSig()
         rv.p = xmrtypes.RctSigPrunable()
         rv.txnFee = self.get_fee()
@@ -942,12 +940,8 @@ class TTransaction(object):
             for idx2, out in enumerate(src_entr.outputs):
                 mix_ring.append(out[1])
 
-            mg = mlsag2.prove_rct_mg_simple(
-                self.full_message,
-                mix_ring,
-                in_sk, alpha_c,
-                pseudo_out_c,
-                kLRki, None, index)
+            mg = mlsag2.prove_rct_mg_simple(self.full_message, mix_ring,
+                                            in_sk, alpha_c, pseudo_out_c, kLRki, None, index)
 
             if __debug__:
                 assert mlsag2.ver_rct_mg_simple(self.full_message, mg, mix_ring, pseudo_out_c)
@@ -969,5 +963,4 @@ class TTransaction(object):
         # Encode
         mgs = monero.recode_msg([mg])
         return mgs[0]
-
 
