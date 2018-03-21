@@ -20,6 +20,7 @@ Moreover, the code will probably be subject to a major refactoring and cleaning.
 
 ## Roadmap
 
+ - Tests (e.g., check spendablity of funds sent to another address - tx out address check)
  - Multisig
  - Spend proofs
  - Wallet implementation (funds receiving, UTXO mixing)
