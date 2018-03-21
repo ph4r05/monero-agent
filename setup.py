@@ -7,10 +7,8 @@ version = '0.0.2'
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
-    'aiounittest',
     'monero-serialize>=0.0.6',
     'pycryptodome',
-
 ]
 
 dev_extras = [
@@ -18,6 +16,7 @@ dev_extras = [
     'pep8',
     'tox',
     'aiounittest',
+    'requests',
 ]
 
 docs_extras = [
