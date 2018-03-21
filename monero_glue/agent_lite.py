@@ -101,7 +101,8 @@ class Agent(object):
                 self.ct.tx_out_hmacs.append(vouti_mac)
                 self.ct.tx_out_rsigs.append(rsig)
 
-            await self.trezor.all_out1_set()
+            tx_extra = await self.trezor.all_out1_set()
+            self.ct.tx.extra = list(bytearray(tx_extra))
 
             # Pseudo outputs
             for idx in range(len(self.ct.pseudo_outs)):

@@ -781,6 +781,8 @@ class TTransaction(object):
         else:
             self.inp_idx = -1
 
+        return self.tx.extra
+
     async def tsx_mlsag_pseudo_out(self, out):
         """
         Pseudo outputs for the final_message hash
@@ -876,7 +878,7 @@ class TTransaction(object):
             raise ValueError('Inconsistent')
         if not self.in_memory() and pseudo_out[0] is None:
             raise ValueError('Inconsistent')
-        if self.inp_idx > 1 and self.use_simple_rct:
+        if self.inp_idx >= 1 and not self.use_simple_rct:
             raise ValueError('Inconsistent')
 
         inv_idx = self.source_permutation[self.inp_idx]
@@ -913,6 +915,7 @@ class TTransaction(object):
                                    crypto.gen_c(in_sk.mask, src_entr.amount))
 
         # RCT signature
+        mg = None
         if self.use_simple_rct:
             # Simple RingCT
             mix_ring = []
@@ -943,6 +946,8 @@ class TTransaction(object):
             if __debug__:
                 assert mlsag2.ver_rct_mg(mg, mix_ring, self.output_pk, txn_fee_key, self.full_message)
 
-        return mg
+        # Encode
+        mgs = monero.recode_msg([mg])
+        return mgs[0]
 
 
