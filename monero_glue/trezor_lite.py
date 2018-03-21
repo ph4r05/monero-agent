@@ -778,7 +778,9 @@ class TTransaction(object):
             await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[2])  # vins
         await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[3])  # vouts
         await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefixExtraBlob.FIELDS[4])  # extra
+
         self.tx_prefix_hash = self.tx_prefix_hasher.kwriter.get_digest()
+        del self.tx_prefix_hasher
 
         # Init full_message hasher
         # Hash message, type, fee, pseudoOuts number of elements
@@ -878,6 +880,8 @@ class TTransaction(object):
         # Next state transition
         if self.out_idx + 1 == self.num_dests():
             self.full_message = await self.full_message_hasher.get_digest()
+            del self.full_message_hasher
+
             self.state.set_final_message_done()
             self.inp_idx = -1
 
