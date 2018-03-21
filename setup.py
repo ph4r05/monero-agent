@@ -42,7 +42,7 @@ setup(
     version=version,
     description='Monero Agent',
     long_description=long_description,
-    url='https://github.com/ph4r05/monero-glue',
+    url='https://github.com/ph4r05/monero-agent',
     author='Dusan Klinec',
     author_email='dusan.klinec@gmail.com',
     license='CLOSED',
