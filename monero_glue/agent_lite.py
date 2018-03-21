@@ -157,7 +157,7 @@ class Agent(object):
             mlsag_hash = await self.trezor.tsx_mlsag_done()
             mlsag_hash_computed = await monero.get_pre_mlsag_hash(rv)
             if mlsag_hash != mlsag_hash_computed:
-                raise ValueError('Transaction prefix has does not match')
+                raise ValueError('Pre MLSAG hash has does not match')
 
             # Sign each input
             rv.p.MGs = []
