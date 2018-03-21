@@ -161,7 +161,7 @@ class TState(object):
         self.s = 8
 
     def set_output(self):
-        if ((not self.in_mem and self.s != 7) or (self.in_mem and self.s != 5)) and self.s != 9:
+        if ((not self.in_mem and self.s != 7) or (self.in_mem and self.s != 6)) and self.s != 9:
             raise ValueError('Illegal state')
         self.s = 9
 
@@ -457,6 +457,23 @@ class TTransaction(object):
         hmac_vini = common.compute_hmac(hmac_key_vini, kwriter.get_digest())
         return hmac_vini
 
+    async def gen_hmac_vouti(self, dst_entr, tx_out, idx):
+        """
+        Generates HMAC for dst_entr, tx_out
+        :param dst_entr:
+        :param tx_out:
+        :param idx:
+        :return:
+        """
+        kwriter = common.get_keccak_writer()
+        ar = xmrserialize.Archive(kwriter, True)
+        await ar.message(dst_entr, xmrtypes.TxDestinationEntry)
+        await ar.message(tx_out, xmrtypes.TxOut)
+
+        hmac_key_vouti = self.hmac_key_txout(idx)
+        hmac_vouti = common.compute_hmac(hmac_key_vouti, kwriter.get_digest())
+        return hmac_vouti
+
     async def set_input_cnt(self, inpt_cnt):
         """
         Sets input count
@@ -525,18 +542,13 @@ class TTransaction(object):
     async def tsx_inputs_done_inm(self):
         """
         In-memory post processing
-        TODO: fix in memory
+
         :return:
         """
         # Sort tx.in by key image
         self.source_permutation = list(range(self.input_count))
         self.source_permutation.sort(key=lambda x: self.tx.vin[x].k_image)
-
-        def swapper(x, y):
-            self.tx.vin[x], self.tx.vin[y] = self.tx.vin[y], self.tx.vin[x]
-            self.input_secrets[x], self.input_secrets[y] = self.input_secrets[y], self.input_secrets[x]
-
-        common.apply_permutation(self.source_permutation, swapper)
+        await self.tsx_inputs_permutation(self.source_permutation)
 
     async def tsx_inputs_done(self):
         """
@@ -550,11 +562,11 @@ class TTransaction(object):
             return await self.tsx_inputs_done_inm()
 
         # Iterative message hash computation
-        self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[0])
-        self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])
+        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[0])
+        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])
 
         # vins size
-        self.tx_prefix_hasher.ar.container_size(self.input_count, xmrtypes.TransactionPrefix.FIELDS[2][1])
+        await self.tx_prefix_hasher.ar.container_size(self.input_count, xmrtypes.TransactionPrefix.FIELDS[2][1])
         return self.r_pub
 
     async def tsx_inputs_permutation(self, permutation):
@@ -571,6 +583,8 @@ class TTransaction(object):
             if self.in_memory() and self.use_simple_rct:
                 self.input_alphas[x], self.input_alphas[y] = self.input_alphas[y], self.input_alphas[x]
                 self.input_pseudo_outs[x], self.input_pseudo_outs[y] = self.input_pseudo_outs[y], self.input_pseudo_outs[x]
+            if self.in_memory():
+                self.tx.vin[x], self.tx.vin[y] = self.tx.vin[y], self.tx.vin[x]
 
         common.apply_permutation(self.source_permutation, swapper)
         self.inp_idx = -1
@@ -591,7 +605,7 @@ class TTransaction(object):
             raise ValueError('HMAC is not correct')
 
         # Serialize particular input type
-        self.tx_prefix_hasher.ar.field(vini, xmrtypes.TxInV)
+        await self.tx_prefix_hasher.ar.field(vini, xmrtypes.TxInV)
 
     async def tsx_input_vini_done(self):
         """
@@ -627,7 +641,7 @@ class TTransaction(object):
         """
         out_pk = xmrtypes.CtKey(dest=self.tx.vout[idx].target.key)
         is_last = idx + 1 == self.num_dests()
-        last_mask = None if not is_last or self.use_simple_rct else crypto.sc_sub(self.sumpouts_alphas, self.sumout)
+        last_mask = None if not is_last or not self.use_simple_rct else crypto.sc_sub(self.sumpouts_alphas, self.sumout)
 
         C, mask, rsig = None, 0, None
 
@@ -666,7 +680,7 @@ class TTransaction(object):
         :type src_entr: xmrtypes.TxDestinationEntry
         :return:
         """
-        # TODO: tsx data verification. does it match?
+        # TODO: tsxData addr verification. does it match?
         self.state.set_output()
         self.out_idx += 1
         change_addr = self.tsx_data.change_dts.addr if self.tsx_data.change_dts else None
@@ -703,13 +717,7 @@ class TTransaction(object):
         self.output_amounts.append(dst_entr.amount)
 
         # Hmac dest_entr.
-        kwriter = common.get_keccak_writer()
-        ar = xmrserialize.Archive(kwriter, True)
-        await ar.message(dst_entr, xmrtypes.TxDestinationEntry)
-        await ar.message(tx_out, xmrtypes.TxOut)
-
-        hmac_key_vouti = self.hmac_key_txout(self.out_idx)
-        hmac_vouti = common.compute_hmac(hmac_key_vouti, kwriter.get_digest())
+        hmac_vouti = await self.gen_hmac_vouti(dst_entr, tx_out, self.out_idx)
 
         # Range proof, out_pk, ecdh_info
         rsig, out_pk, ecdh_info = await self.range_proof(self.out_idx)
@@ -734,6 +742,10 @@ class TTransaction(object):
         if self.out_idx + 1 != self.num_dests():
             raise ValueError('Invalid out num')
 
+        # Test is \sum Alpha == \sum A
+        if __debug__:
+            assert crypto.sc_eq(self.sumout, self.sumpouts_alphas)
+
         # Set public key to the extra
         # Not needed to remove - extra is clean
         # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
@@ -748,10 +760,7 @@ class TTransaction(object):
             raise ValueError('Transaction inputs money (%s) less than outputs money (%s)'
                              % (self.summary_inputs_money, self.summary_outs_money))
 
-        # vout hash, zero-out amount
-        for out in self.tx.vout:
-            out.amount = 0
-
+        # Hashing transaction prefix
         if self.in_memory():
             await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[0])  # version
             await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])  # unlock_time
@@ -763,7 +772,7 @@ class TTransaction(object):
         # Init full_message hasher
         # Hash message, type, fee, pseudoOuts number of elements
         self.full_message_hasher.init(self.use_simple_rct, self.tx_prefix_hash)
-        self.full_message_hasher.set_type_fee(self.get_rct_type(), self.get_fee())
+        await self.full_message_hasher.set_type_fee(self.get_rct_type(), self.get_fee())
 
         if self.in_memory():
             for idx in range(len(self.input_pseudo_outs)):
@@ -782,8 +791,8 @@ class TTransaction(object):
             raise ValueError('Too many pseudo inputs')
 
         pseudo_out, pseudo_out_hmac_provided = out
-        pseudo_out_hmac = crypto.hmac_point(self.hmac_key_txin_comm(self.inp_idx), pseudo_out)
-        if common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
+        pseudo_out_hmac = crypto.hmac_point(self.hmac_key_txin_comm(self.source_permutation[self.inp_idx]), pseudo_out)
+        if not common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
             raise ValueError('HMAC invalid for pseudo outs')
 
         await self.full_message_hasher.set_pseudo_out(pseudo_out)
@@ -839,7 +848,7 @@ class TTransaction(object):
 
         hmac_key_rsig = self.hmac_key_txout_asig(self.out_idx)
         hmac_rsig_comp = common.compute_hmac(hmac_key_rsig, kwriter.get_digest())
-        if common.ct_equal(hmac_rsig, hmac_rsig_comp):
+        if not common.ct_equal(hmac_rsig, hmac_rsig_comp):
             raise ValueError('HMAC invalid for rsig')
 
         await self.full_message_hasher.rsig_val(rsig, bulletproof=self.use_bulletproof)
