@@ -23,7 +23,7 @@ class TData(object):
     """
     def __init__(self):
         self.tsx_data = None  # type: monero.TsxData
-        self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
+        self.tx = xmrtypes.Transaction(version=2, vin=[], vout=[], extra=[])
         self.tx_in_hmacs = []
         self.tx_out_hmacs = []
         self.tx_out_rsigs = []
@@ -76,6 +76,7 @@ class Agent(object):
             tsx_data.unlock_time = tx.unlock_time
             tsx_data.outputs = tx.dests
             tsx_data.change_dts = tx.change_dts
+            self.ct.tx.unlock_time = tx.unlock_time
 
             self.ct.tsx_data = tsx_data
             await self.trezor.init_transaction(tsx_data)
@@ -138,14 +139,17 @@ class Agent(object):
                     rv.pseudoOuts = [x[0] for x in self.ct.pseudo_outs]
 
             # Range proof
+            rv.p.rangeSigs = []
+            rv.outPk = []
+            rv.ecdhInfo = []
             for idx in range(len(self.ct.tx_out_rsigs)):
                 await self.trezor.tsx_mlsag_rangeproof(self.ct.tx_out_rsigs[idx])
                 rv.p.rangeSigs.append(self.ct.tx_out_rsigs[idx][0])
-                rv.outPk[idx] = self.ct.tx_out_pk[idx]
-                rv.ecdhInfo[idx] = self.ct.tx_out_ecdh[idx]
+                rv.outPk.append(self.ct.tx_out_pk[idx])
+                rv.ecdhInfo.append(self.ct.tx_out_ecdh[idx])
 
             # Sign each input
-            rv.p.MGs = [None] * len(tx.sources)
+            rv.p.MGs = []
             for idx, src in enumerate(tx.sources):
                 mg = await self.trezor.sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
                                                   self.ct.pseudo_outs[idx],

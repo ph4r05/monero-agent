@@ -9,6 +9,7 @@ from .monero import TsxData, classify_subaddresses, addr_to_hash
 from . import monero, crypto, ring_ct, mlsag2, aesgcm
 from . import common as common
 from . import trezor
+from . import debugtools
 
 
 class TrezorLite(object):
@@ -383,17 +384,8 @@ class TTransaction(object):
         rv = xmrtypes.RctSig()
         rv.p = xmrtypes.RctSigPrunable()
         rv.txnFee = self.get_fee()
-
         rv.message = self.tx_prefix_hash
         rv.type = self.get_rct_type()
-
-        if self.use_bulletproof:
-            rv.p.bulletproofs = [None] * num_dest
-        else:
-            rv.p.rangeSigs = [None] * num_dest
-
-        rv.outPk = [None] * num_dest
-        rv.ecdhInfo = [None] * num_dest
         return rv
 
     def inv_input_permutation(self, new_idx):
