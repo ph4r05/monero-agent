@@ -229,7 +229,7 @@ class TTransaction(object):
         self.sumout = 0
         self.sumpouts_alphas = 0
         self.subaddresses = {}
-        self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
+        self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=b'')
         self.source_permutation = []  # sorted by key images
         self.tx_prefix_hasher = common.KeccakArchive()
         self.tx_prefix_hash = None
@@ -291,7 +291,7 @@ class TTransaction(object):
         payment_id_encr = monero.encrypt_payment_id(self.tsx_data.payment_id, view_key_pub, self.r)
 
         extra_nonce = monero.set_encrypted_payment_id_to_tx_extra_nonce(payment_id_encr)
-        self.tx.extra = monero.add_extra_nonce_to_tx_extra([], extra_nonce)
+        self.tx.extra = monero.add_extra_nonce_to_tx_extra(b'', extra_nonce)
 
     async def compute_sec_keys(self, tsx_ctr):
         """
@@ -737,12 +737,12 @@ class TTransaction(object):
         # Set public key to the extra
         # Not needed to remove - extra is clean
         # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
-        monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
+        self.tx.extra = monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
 
         # Not needed to remove - extra is clean
         # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraAdditionalPubKeys)
         if self.need_additional_txkeys:
-            await monero.add_additional_tx_pub_keys_to_extra(self.tx.extra, self.additional_tx_public_keys)
+            self.tx.extra = await monero.add_additional_tx_pub_keys_to_extra(self.tx.extra, self.additional_tx_public_keys)
 
         if self.summary_outs_money > self.summary_inputs_money:
             raise ValueError('Transaction inputs money (%s) less than outputs money (%s)'
@@ -757,7 +757,7 @@ class TTransaction(object):
             await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])  # unlock_time
             await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[2])  # vins
         await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[3])  # vouts
-        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[4])  # extra
+        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefixExtraBlob.FIELDS[4])  # extra
         self.tx_prefix_hash = self.tx_prefix_hasher.kwriter.get_digest()
 
         # Init full_message hasher
