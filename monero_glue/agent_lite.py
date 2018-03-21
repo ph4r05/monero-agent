@@ -27,6 +27,8 @@ class TData(object):
         self.tx_in_hmacs = []
         self.tx_out_hmacs = []
         self.tx_out_rsigs = []
+        self.tx_out_pk = []
+        self.tx_out_ecdh = []
         self.source_permutation = []
         self.alphas = []
         self.pseudo_outs = []
@@ -39,6 +41,22 @@ class Agent(object):
     def __init__(self, trezor):
         self.trezor = trezor  # type: trezor_lite.TrezorLite
         self.ct = None  # type: TData
+
+    def is_simple(self, rv):
+        """
+        True if simpe
+        :param rv:
+        :return:
+        """
+        return rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.SimpleBulletproof]
+
+    def is_bulletproof(self, rv):
+        """
+        True if bulletproof
+        :param rv:
+        :return:
+        """
+        return rv.type in [xmrtypes.RctType.FullBulletproof, xmrtypes.RctType.SimpleBulletproof]
 
     async def transfer_unsigned(self, unsig):
         txes = []
@@ -96,38 +114,56 @@ class Agent(object):
 
             # Set transaction outputs
             for dst in tx.dests:
-                vouti, vouti_mac, rsig = await self.trezor.set_tsx_output1(dst)
+                vouti, vouti_mac, rsig, out_pk, ecdh_info = await self.trezor.set_tsx_output1(dst)
                 self.ct.tx.vout.append(vouti)
                 self.ct.tx_out_hmacs.append(vouti_mac)
                 self.ct.tx_out_rsigs.append(rsig)
+                self.ct.tx_out_pk.append(out_pk)
+                self.ct.tx_out_ecdh.append(ecdh_info)
 
             tx_extra = await self.trezor.all_out1_set()
             self.ct.tx.extra = list(bytearray(tx_extra))
+
+            # RctSig
+            rv = await self.trezor.tsx_gen_rv()
 
             # Pseudo outputs
             for idx in range(len(self.ct.pseudo_outs)):
                 await self.trezor.tsx_mlsag_pseudo_out(self.ct.pseudo_outs[idx])
 
+            if self.is_simple(rv):
+                if self.is_bulletproof(rv):
+                    rv.p.pseudoOuts = [x[0] for x in self.ct.pseudo_outs]
+                else:
+                    rv.pseudoOuts = [x[0] for x in self.ct.pseudo_outs]
+
             # Range proof
             for idx in range(len(self.ct.tx_out_rsigs)):
                 await self.trezor.tsx_mlsag_rangeproof(self.ct.tx_out_rsigs[idx])
+                rv.p.rangeSigs.append(self.ct.tx_out_rsigs[idx][0])
+                rv.outPk[idx] = self.ct.tx_out_pk[idx]
+                rv.ecdhInfo[idx] = self.ct.tx_out_ecdh[idx]
 
             # Sign each input
-            signatures = []
+            rv.p.MGs = [None] * len(tx.sources)
             for idx, src in enumerate(tx.sources):
                 mg = await self.trezor.sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
                                                   self.ct.pseudo_outs[idx],
                                                   self.ct.alphas[idx])
-                signatures.append(mg)
+                rv.p.MGs.append(mg)
 
-            # TODO: build final signature...
+            self.ct.tx.signatures = []
+            self.ct.tx.rct_signatures = rv
+            del rv
 
+            # Serialize response
+            writer = xmrserialize.MemoryReaderWriter()
+            ar1 = xmrserialize.Archive(writer, True)
+            await ar1.message(self.ct.tx, msg_type=xmrtypes.Transaction)
 
+            txes.append(writer.buffer)
+            return bytes(writer.buffer)
 
-
-            # Unfinished proto
-            # buf = await self.trezor.tsx_obj.signature(tx)
-            # txes.append(buf)
         return txes
 
 

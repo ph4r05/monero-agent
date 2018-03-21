@@ -98,6 +98,12 @@ class TrezorLite(object):
         """
         return await self.tsx_obj.tsx_mlsag_pseudo_out(out)
 
+    async def tsx_gen_rv(self):
+        """
+        :return:
+        """
+        return await self.tsx_obj.tsx_gen_rv()
+
     async def tsx_mlsag_rangeproof(self, range_proof):
         """
         :return:
@@ -376,6 +382,7 @@ class TTransaction(object):
 
         rv = xmrtypes.RctSig()
         rv.p = xmrtypes.RctSigPrunable()
+        rv.txnFee = self.get_fee()
 
         rv.message = self.tx_prefix_hash
         rv.type = self.get_rct_type()
@@ -731,7 +738,7 @@ class TTransaction(object):
         self.output_pk.append(out_pk)
         self.output_ecdh.append(ecdh_info)
 
-        return tx_out, hmac_vouti, (rsig, hmac_rsig)
+        return tx_out, hmac_vouti, (rsig, hmac_rsig), out_pk, ecdh_info
 
     async def all_out1_set(self):
         """
@@ -829,6 +836,13 @@ class TTransaction(object):
 
         for out in self.output_pk:
             await self.full_message_hasher.set_out_pk(out)
+
+    async def tsx_gen_rv(self):
+        """
+        Generates RctSig
+        :return:
+        """
+        return self.init_rct_sig()
 
     async def tsx_mlsag_rangeproof(self, range_proof):
         """
