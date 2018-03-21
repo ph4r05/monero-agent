@@ -7,7 +7,7 @@ Supports RingCT signature on the given Transaction Construction Data.
 
 ## Work in progress
 
-This work is still in progress. The project is initial implementation version. 
+This work is still in progress. The project is initial implementation version.
 It may contain bugs and the EC crypto operations are not constant-time as it serves mainly as PoC at the moment.
 
 Moreover, the code will probably be subject to a major refactoring and cleaning.
