@@ -99,4 +99,3 @@ EC point arithmetics can use classic point coordinates $(x, y)$ or extended Edwa
 It takes 64 and 80 B to store tuple of 2 and 4 elements respectively.
 It thus take 184 B and 320 B to store an EC point in the natural form compared to the 65 B byte representation.
 
-
