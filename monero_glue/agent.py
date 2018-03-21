@@ -72,7 +72,7 @@ class Agent(object):
             for dst in tx.dests:
                 await self.trezor.set_tsx_output1(dst)
 
-            # Unfinished proto
+            # One pass protocol, python Monero implementation / port
             buf = await self.trezor.tsx_obj.signature(tx)
             txes.append(buf)
         return txes

@@ -324,8 +324,8 @@ class TTransaction(object):
 
     async def signature(self, tx):
         """
-        Computes the signature
-        TODO: implement according to the protocol
+        Computes the signature in one pass.
+        Implements RingCT in Python.
 
         :param tx: const data
         :type tx: xmrtypes.TxConstructionData
@@ -336,7 +336,6 @@ class TTransaction(object):
         index = [None] * len(self.source_permutation)
         in_sk = [None] * len(self.source_permutation)  # type: list[xmrtypes.CtKey]
 
-        # TODO: iterative?
         for i in range(len(self.source_permutation)):
             idx = self.source_permutation[i]
             src = tx.sources[idx]
@@ -353,7 +352,6 @@ class TTransaction(object):
                 assert crypto.point_eq(crypto.decodepoint(src.outputs[src.real_output][1].mask),
                                        crypto.gen_c(in_sk[i].mask, inamounts[i]))
 
-        # TODO: iterative?
         destinations = []
         outamounts = []
         amount_out = 0
