@@ -52,7 +52,7 @@ class Agent(object):
             tsx_data.version = 1
             tsx_data.payment_id = payment_id
             tsx_data.unlock_time = tx.unlock_time
-            tsx_data.outputs = tx.dests
+            tsx_data.outputs = tx.splitted_dsts
             tsx_data.change_dts = tx.change_dts
 
             self.ct.tsx_data = tsx_data
