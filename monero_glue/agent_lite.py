@@ -165,7 +165,7 @@ class Agent(object):
             ar1 = xmrserialize.Archive(writer, True)
             await ar1.message(self.ct.tx, msg_type=xmrtypes.Transaction)
 
-            txes.append(writer.buffer)
+            txes.append(bytes(writer.buffer))
 
         return txes
 
