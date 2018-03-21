@@ -5,9 +5,6 @@
 import random
 import base64
 import unittest
-import pkg_resources
-import requests
-import asyncio
 import aiounittest
 import binascii
 

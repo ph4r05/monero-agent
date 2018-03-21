@@ -2,18 +2,11 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import random
-import base64
 import unittest
-import pkg_resources
-import requests
-import asyncio
-import aiounittest
-import binascii
 
-import monero_serialize as xmrser
-from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor, monero, common, crypto, agent
+import aiounittest
+
+from monero_glue import crypto
 
 
 class CryptoTest(aiounittest.AsyncTestCase):

@@ -3,15 +3,11 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import os
-import base64
 import unittest
 import pkg_resources
-import requests
-import asyncio
 import aiounittest
 import binascii
 
-import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
 from monero_glue import trezor, trezor_lite, monero, common, crypto, agent_lite
 import zlib

@@ -2,14 +2,9 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import random
-import base64
 import unittest
-import pkg_resources
-import requests
-import asyncio
+
 import aiounittest
-import binascii
 
 
 class Basetest(aiounittest.AsyncTestCase):
