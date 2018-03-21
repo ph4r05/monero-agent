@@ -246,6 +246,17 @@ class TTransaction(object):
         self.full_message_hasher = monero.PreMlsagHasher()
         self.full_message = None
 
+    def assrt(self, condition, msg=None):
+        """
+        Asserts condition
+        :param condition:
+        :param msg:
+        :return:
+        """
+        if condition:
+            return
+        raise ValueError('Assertion error')
+
     def gen_r(self):
         """
         Generates a new transaction key pair.
@@ -709,10 +720,10 @@ class TTransaction(object):
             C, mask, rsig = ring_ct.prove_range(self.output_amounts[idx], last_mask)
 
             if __debug__:
-                assert ring_ct.ver_range(C, rsig)
-                assert crypto.point_eq(C, crypto.point_add(
+                self.assrt(ring_ct.ver_range(C, rsig))
+                self.assrt(crypto.point_eq(C, crypto.point_add(
                     crypto.scalarmult_base(mask),
-                    crypto.scalarmult_h(self.output_amounts[idx])))
+                    crypto.scalarmult_h(self.output_amounts[idx]))))
 
             # Recoding to structure
             monero.recode_rangesig(rsig, encode=True)
@@ -804,8 +815,8 @@ class TTransaction(object):
             raise ValueError('Invalid out num')
 
         # Test is \sum Alpha == \sum A
-        if __debug__ and self.use_simple_rct:
-            assert crypto.sc_eq(self.sumout, self.sumpouts_alphas)
+        if self.use_simple_rct:
+            self.assrt(crypto.sc_eq(self.sumout, self.sumpouts_alphas))
 
         # Set public key to the extra
         # Not needed to remove - extra is clean
@@ -987,11 +998,10 @@ class TTransaction(object):
         # TODO: kLRki
 
         # Private key correctness test
-        if __debug__:
-            assert crypto.point_eq(crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].dest),
-                                   crypto.scalarmult_base(in_sk.dest))
-            assert crypto.point_eq(crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].mask),
-                                   crypto.gen_c(in_sk.mask, src_entr.amount))
+        self.assrt(crypto.point_eq(crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].dest),
+                                   crypto.scalarmult_base(in_sk.dest)))
+        self.assrt(crypto.point_eq(crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].mask),
+                                   crypto.gen_c(in_sk.mask, src_entr.amount)))
 
         # RCT signature
         mg = None
@@ -1005,7 +1015,7 @@ class TTransaction(object):
                                             in_sk, alpha_c, pseudo_out_c, kLRki, None, index)
 
             if __debug__:
-                assert mlsag2.ver_rct_mg_simple(self.full_message, mg, mix_ring, pseudo_out_c)
+                self.assrt(mlsag2.ver_rct_mg_simple(self.full_message, mg, mix_ring, pseudo_out_c))
 
         else:
             # Full RingCt, only one input
@@ -1019,7 +1029,7 @@ class TTransaction(object):
                                      [in_sk], self.output_sk, self.output_pk, kLRki, None, index, txn_fee_key)
 
             if __debug__:
-                assert mlsag2.ver_rct_mg(mg, mix_ring, self.output_pk, txn_fee_key, self.full_message)
+                self.assrt(mlsag2.ver_rct_mg(mg, mix_ring, self.output_pk, txn_fee_key, self.full_message))
 
         # Encode
         mgs = monero.recode_msg([mg])
