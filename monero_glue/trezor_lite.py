@@ -793,7 +793,7 @@ class TTransaction(object):
         else:
             self.inp_idx = -1
 
-        return self.tx.extra
+        return self.tx.extra, self.tx_prefix_hash
 
     async def tsx_mlsag_pseudo_out(self, out):
         """

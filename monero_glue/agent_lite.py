@@ -122,8 +122,13 @@ class Agent(object):
                 self.ct.tx_out_pk.append(out_pk)
                 self.ct.tx_out_ecdh.append(ecdh_info)
 
-            tx_extra = await self.trezor.all_out1_set()
+            tx_extra, tx_prefix_hash = await self.trezor.all_out1_set()
             self.ct.tx.extra = list(bytearray(tx_extra))
+
+            # Verify transaction prefix hash correctness, tx hash in one pass
+            tx_prefix_hash_computed = await monero.get_transaction_prefix_hash(self.ct.tx)
+            if tx_prefix_hash != tx_prefix_hash_computed:
+                raise ValueError('Transaction prefix has does not match')
 
             # RctSig
             rv = await self.trezor.tsx_gen_rv()
