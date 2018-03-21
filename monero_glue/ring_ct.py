@@ -3,7 +3,6 @@
 # Author: https://github.com/monero-project/mininero
 # Author: Dusan Klinec, ph4r05, 2018
 
-import Crypto.Random.random as rand
 import logging
 
 from monero_serialize import xmrtypes, xmrserialize

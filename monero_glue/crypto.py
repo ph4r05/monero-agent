@@ -9,15 +9,12 @@
 # https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-00#section-4
 # https://github.com/monero-project/research-lab
 
-import math
 import sys
 import operator
 
 from Crypto.Random import random as rand
-from mnero import mnemonic  # making 25 word mnemonic to remember your keys
 import binascii  # conversion between hex, int, and binary. Also for the crc32 thing
 from mnero import ed25519  # Bernsteins python ed25519 code from cr.yp.to
-from mnero import ed25519ietf
 from mnero import ed25519_2
 
 from mnero.ed25519 import b, q, l, d

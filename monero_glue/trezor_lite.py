@@ -9,7 +9,6 @@ from .monero import TsxData, classify_subaddresses, addr_to_hash
 from . import monero, crypto, ring_ct, mlsag2, aesgcm
 from . import common as common
 from . import trezor
-from . import debugtools
 
 
 class TrezorLite(object):

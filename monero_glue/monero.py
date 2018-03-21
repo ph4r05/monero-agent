@@ -5,10 +5,8 @@
 from monero_serialize import xmrtypes, xmrserialize
 from . import common as common
 from . import crypto
-from . import b58
 from . import b58_mnr
 import binascii
-import base64
 import struct
 
 

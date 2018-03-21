@@ -5,7 +5,6 @@
 
 from monero_serialize import xmrtypes, xmrserialize, protobuf as xproto
 from mnero import keccak2
-import hashlib
 import hmac
 import functools
 

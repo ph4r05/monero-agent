@@ -3,8 +3,6 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 from Crypto.Cipher import AES
-from Crypto.Random import random as rand
-from Crypto.Random import get_random_bytes
 
 
 def encrypt(key, plaintext, associated_data=None):
