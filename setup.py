@@ -38,14 +38,15 @@ except(IOError, ImportError):
         long_description = f.read()
 
 setup(
-    name='monero_glue',
+    name='monero_agent',
     version=version,
-    description='Monero Glue',
+    description='Monero Agent',
     long_description=long_description,
     url='https://github.com/ph4r05/monero-glue',
     author='Dusan Klinec',
     author_email='dusan.klinec@gmail.com',
-    license='MIT',
+    license='CLOSED',
+    # license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
