@@ -13,15 +13,15 @@ import binascii
 
 import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor, monero, common, crypto, agent
+from monero_glue import trezor, trezor_lite, monero, common, crypto, agent_lite
 import zlib
 
 
-class AgentTest(aiounittest.AsyncTestCase):
+class AgentLiteTest(aiounittest.AsyncTestCase):
     """Simple tests"""
 
     def __init__(self, *args, **kwargs):
-        super(AgentTest, self).__init__(*args, **kwargs)
+        super(AgentLiteTest, self).__init__(*args, **kwargs)
 
     async def test_tx_sign_simple(self):
         """
@@ -88,7 +88,7 @@ class AgentTest(aiounittest.AsyncTestCase):
         Initialize new trezor instance
         :return:
         """
-        trez = trezor.Trezor()
+        trez = trezor_lite.TrezorLite()
         trez.creds = self.get_creds()
         return trez
 
@@ -97,7 +97,7 @@ class AgentTest(aiounittest.AsyncTestCase):
         Initialize new agent instance
         :return:
         """
-        return agent.Agent(self.init_trezor())
+        return agent_lite.Agent(self.init_trezor())
 
 
 if __name__ == "__main__":
