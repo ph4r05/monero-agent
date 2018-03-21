@@ -255,8 +255,8 @@ def add_tx_pub_key_to_extra(tx_extra, pub_key):
     :param pub_key:
     :return:
     """
-    tx_extra.append(1)  # TX_EXTRA_TAG_PUBKEY
-    tx_extra.extend(crypto.encodepoint(pub_key))
+    tx_extra += b'\x01' + crypto.encodepoint(pub_key)  # TX_EXTRA_TAG_PUBKEY
+    return tx_extra
 
 
 async def add_additional_tx_pub_keys_to_extra(tx_extra, additional_pub_keys):
@@ -273,7 +273,8 @@ async def add_additional_tx_pub_keys_to_extra(tx_extra, additional_pub_keys):
 
     # format: variant_tag (0x4) | array len varint | 32B | 32B | ...
     await ar.variant(pubs_msg, xmrtypes.TxExtraField)
-    tx_extra.extend(rw.buffer)
+    tx_extra += bytes(rw.buffer)
+    return tx_extra
 
 
 def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
@@ -458,7 +459,7 @@ async def get_transaction_prefix_hash(tx):
     """
     writer = common.get_keccak_writer()
     ar1 = xmrserialize.Archive(writer, True)
-    await ar1.message(tx, msg_type=xmrtypes.TransactionPrefix)
+    await ar1.message(tx, msg_type=xmrtypes.TransactionPrefixExtraBlob)
     return writer.get_digest()
 
 

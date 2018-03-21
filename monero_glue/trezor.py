@@ -109,7 +109,7 @@ class TTransaction(object):
         self.input_secrets = []
         self.output_secrets = []
         self.subaddresses = {}
-        self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
+        self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=b'')
         self.source_permutation = []  # sorted by key images
         self.tx_prefix_hash = None
 
@@ -167,7 +167,7 @@ class TTransaction(object):
         payment_id_encr = monero.encrypt_payment_id(self.tsx_data.payment_id, view_key_pub, self.r)
 
         extra_nonce = monero.set_encrypted_payment_id_to_tx_extra_nonce(payment_id_encr)
-        self.tx.extra = monero.add_extra_nonce_to_tx_extra([], extra_nonce)
+        self.tx.extra = monero.add_extra_nonce_to_tx_extra(b'', extra_nonce)
 
     async def compute_hmac_keys(self, tsx_ctr):
         """
@@ -260,8 +260,7 @@ class TTransaction(object):
         common.apply_permutation(self.source_permutation, swapper)
 
         # Set public key to the extra
-        # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
-        monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
+        self.tx.extra = monero.add_tx_pub_key_to_extra(self.tx.extra, self.r_pub)
 
         self.use_simple_rct = self.inp_idx > 0
 
@@ -315,9 +314,9 @@ class TTransaction(object):
         Adds additional public keys to the tx.extra
         :return:
         """
-        self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraAdditionalPubKeys)
+        # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraAdditionalPubKeys)
         if self.need_additional_txkeys:
-            await monero.add_additional_tx_pub_keys_to_extra(self.tx.extra, self.additional_tx_public_keys)
+            self.tx.extra = await monero.add_additional_tx_pub_keys_to_extra(self.tx.extra, self.additional_tx_public_keys)
 
         if self.summary_outs_money > self.summary_inputs_money:
             raise ValueError('Transaction inputs money (%s) less than outputs money (%s)'
