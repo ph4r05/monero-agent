@@ -54,6 +54,8 @@ class Agent(object):
             tsx_data.unlock_time = tx.unlock_time
             tsx_data.outputs = tx.splitted_dsts
             tsx_data.change_dts = tx.change_dts
+            tsx_data.num_inputs = len(tx.sources)
+            tsx_data.mixin = len(tx.sources[0].outputs)
 
             self.ct.tsx_data = tsx_data
             await self.trezor.init_transaction(tsx_data)
@@ -69,7 +71,7 @@ class Agent(object):
 
             await self.trezor.tsx_inputs_done()
 
-            for dst in tx.dests:
+            for dst in tx.splitted_dsts:
                 await self.trezor.set_tsx_output1(dst)
 
             # One pass protocol, python Monero implementation / port

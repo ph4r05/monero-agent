@@ -355,7 +355,7 @@ class TTransaction(object):
         destinations = []
         outamounts = []
         amount_out = 0
-        for idx, dst in enumerate(tx.dests):
+        for idx, dst in enumerate(tx.splitted_dsts):
             destinations.append(crypto.decodepoint(self.tx.vout[idx].target.key))
             outamounts.append(self.tx.vout[idx].amount)
             amount_out += self.tx.vout[idx].amount
