@@ -659,9 +659,9 @@ def recode_rangesig(rsig, encode=True):
     return rsig
 
 
-def recode_rct(rv, encode=True):
+def recode_msg(mgs, encode=True):
     """
-    Recodes RCT MGs signatures from raw forms to bytearrays so it works with serialization
+    Recodes MGs signatures from raw forms to bytearrays so it works with serialization
     :param rv:
     :param encode: if true encodes to byte representation, otherwise decodes from byte representation
     :return:
@@ -669,7 +669,6 @@ def recode_rct(rv, encode=True):
     recode_int = crypto.encodeint if encode else crypto.decodeint
     recode_point = crypto.encodepoint if encode else crypto.decodepoint
 
-    mgs = rv.p.MGs
     for idx in range(len(mgs)):
         mgs[idx].cc = recode_int(mgs[idx].cc)
         if hasattr(mgs[idx], 'II') and mgs[idx].II:
@@ -679,6 +678,17 @@ def recode_rct(rv, encode=True):
         for i in range(len(mgs[idx].ss)):
             for j in range(len(mgs[idx].ss[i])):
                 mgs[idx].ss[i][j] = recode_int(mgs[idx].ss[i][j])
+    return mgs
+
+
+def recode_rct(rv, encode=True):
+    """
+    Recodes RCT MGs signatures from raw forms to bytearrays so it works with serialization
+    :param rv:
+    :param encode: if true encodes to byte representation, otherwise decodes from byte representation
+    :return:
+    """
+    rv.p.MGs = recode_msg(rv.p.MGs, encode=encode)
     return rv
 
 
