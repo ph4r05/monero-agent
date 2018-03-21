@@ -166,7 +166,6 @@ class Agent(object):
             await ar1.message(self.ct.tx, msg_type=xmrtypes.Transaction)
 
             txes.append(writer.buffer)
-            return bytes(writer.buffer)
 
         return txes
 
