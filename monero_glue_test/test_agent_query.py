@@ -14,7 +14,7 @@ import pkg_resources
 
 import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor, monero, common, crypto, agent
+from monero_glue import trezor, monero, common, crypto, agent, trezor_lite, agent_lite
 
 
 class AgentTest(aiounittest.AsyncTestCase):
@@ -82,21 +82,22 @@ class AgentTest(aiounittest.AsyncTestCase):
             priv_view_key=crypto.b16_to_scalar(b'4ce88c168e0f5f8d6524f712d5f8d7d83233b1e7a2a60b5aba5206cc0ea2bc08'),
             priv_spend_key=crypto.b16_to_scalar(b'f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a'))
 
-    def init_trezor(self):
+    def init_trezor(self, lite=True):
         """
         Initialize new trezor instance
         :return:
         """
-        trez = trezor.Trezor()
+        trez = trezor.Trezor() if not lite else trezor_lite.TrezorLite()
         trez.creds = self.get_creds()
         return trez
 
-    def init_agent(self):
+    def init_agent(self, lite=True):
         """
         Initialize new agent instance
         :return:
         """
-        return agent.Agent(self.init_trezor())
+        t = self.init_trezor(lite=lite)
+        return agent.Agent(t) if not lite else agent_lite.Agent(t)
 
 
 if __name__ == "__main__":
