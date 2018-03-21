@@ -61,7 +61,7 @@ def prove_range(amount, last_mask=None, use_asnl=False):
     for i in range(0, ATOMS):
         ai[i] = crypto.random_scalar()
         if last_mask is not None and i == ATOMS - 1:
-            ai[i] = crypto.sc_sub(a, last_mask)
+            ai[i] = crypto.sc_sub(last_mask, a)
 
         a = crypto.sc_add(a, ai[i])  # creating the total mask since you have to pass this to receiver...
         if bb[i] == 0:
