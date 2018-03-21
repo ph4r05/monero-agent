@@ -57,7 +57,7 @@ class MoneroTest(aiounittest.AsyncTestCase):
         tx_j = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_01.json'))
         tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_01_plain.txt'))
         tx_u_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_01_uns.txt'))
-        tx_js = json.loads(tx_j)
+        tx_js = json.loads(tx_j.decode('utf8'))
 
         reader = xmrserialize.MemoryReaderWriter(bytearray(binascii.unhexlify(tx_c)))
         ar = xmrserialize.Archive(reader, False)
