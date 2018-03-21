@@ -17,13 +17,15 @@ class TsxData(xmrserialize.MessageType):
     TsxData, initial input to the transaction processing.
     Serialization structure for easy hashing.
     """
-    __slots__ = ['version', 'payment_id', 'unlock_time', 'outputs', 'change_dts']
+    __slots__ = ['version', 'payment_id', 'unlock_time', 'outputs', 'change_dts', 'num_inputs', 'mixin']
     FIELDS = [
         ('version', xmrserialize.UVarintType),
         ('payment_id', xmrserialize.BlobType),
         ('unlock_time', xmrserialize.UVarintType),
         ('outputs', xmrserialize.ContainerType, xmrtypes.TxDestinationEntry),
         ('change_dts', xmrtypes.TxDestinationEntry),
+        ('num_inputs', xmrserialize.UVarintType),
+        ('mixin', xmrserialize.UVarintType),
     ]
 
     def __init__(self, payment_id=None, outputs=None, change_dts=None, **kwargs):

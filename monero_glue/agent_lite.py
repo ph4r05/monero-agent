@@ -76,16 +76,17 @@ class Agent(object):
             tsx_data.unlock_time = tx.unlock_time
             tsx_data.outputs = tx.dests
             tsx_data.change_dts = tx.change_dts
+            tsx_data.num_inputs = len(tx.sources)
+            tsx_data.mixin = len(tx.sources[0].outputs)
             self.ct.tx.unlock_time = tx.unlock_time
 
             self.ct.tsx_data = tsx_data
             await self.trezor.init_transaction(tsx_data)
 
-            # Subaddresses
+            # Subaddresses precomputation - needed for this transaction
             await self.trezor.precompute_subaddr(tx.subaddr_account, tx.subaddr_indices)
 
             # Set transaction inputs
-            await self.trezor.set_input_count(len(tx.sources))
             for idx, src in enumerate(tx.sources):
                 vini, vini_hmac, pseudo_out, alpha_enc = await self.trezor.set_tsx_input(src)
                 self.ct.tx.vin.append(vini)

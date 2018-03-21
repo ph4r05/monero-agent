@@ -36,13 +36,6 @@ class TrezorLite(object):
         """
         return self.tsx_obj.precompute_subaddr(account, indices)
 
-    async def set_input_count(self, inp_cnt):
-        """
-        :param inp_cnt
-        :return:
-        """
-        return await self.tsx_obj.set_input_cnt(inp_cnt)
-
     async def set_tsx_input(self, src_entr):
         """
         :param src_entr
@@ -137,16 +130,16 @@ class TState(object):
             raise ValueError('Illegal state')
         self.s = 1
 
-    def precomp(self):
+    def inp_cnt(self, in_mem):
         if self.s != 1:
             raise ValueError('Illegal state')
         self.s = 2
+        self.in_mem = in_mem
 
-    def inp_cnt(self, in_mem):
+    def precomp(self):
         if self.s != 2:
             raise ValueError('Illegal state')
         self.s = 3
-        self.in_mem = in_mem
 
     def input(self):
         if self.s != 3 and self.s != 4:
@@ -219,12 +212,15 @@ class TTransaction(object):
         self.r_pub = None
         self.state = TState()
 
-        self.tsx_data = None  # type: monero.TsxData
         self.need_additional_txkeys = False
         self.use_bulletproof = False
         self.use_rct = True
         self.use_simple_rct = False
         self.input_count = 0
+        self.output_count = 0
+        self.output_change = None
+        self.mixin = 0
+
         self.additional_tx_keys = []
         self.additional_tx_public_keys = []
         self.inp_idx = -1
@@ -264,12 +260,19 @@ class TTransaction(object):
         :param tsx_ctr:
         :return:
         """
-        self.tsx_data = tsx_data
         self.gen_r()
         self.state.init_tsx()
 
-        # Additional keys
-        class_res = classify_subaddresses(tsx_data.outputs, tsx_data.change_dts.addr if tsx_data.change_dts else None)
+        # Basic transaction parameters
+        self.input_count = tsx_data.num_inputs
+        self.output_count = len(tsx_data.outputs)
+        self.output_change = tsx_data.change_dts
+        self.mixin = tsx_data.mixin
+        self.use_simple_rct = self.input_count > 1
+        self.state.inp_cnt(self.in_memory())
+
+        # Additional keys w.r.t. subaddress destinations
+        class_res = classify_subaddresses(tsx_data.outputs, self.change_address())
         num_stdaddresses, num_subaddresses, single_dest_subaddress = class_res
 
         # if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
@@ -284,36 +287,40 @@ class TTransaction(object):
         # Extra processing, payment id
         self.tx.version = 2
         self.tx.unlock_time = tsx_data.unlock_time
-        await self.process_payment_id()
-        await self.compute_sec_keys(tsx_ctr)
+        await self.process_payment_id(tsx_data)
+        await self.compute_sec_keys(tsx_data, tsx_ctr)
 
-    async def process_payment_id(self):
+        # HMAC outputs - pinning
+
+
+        return self.in_memory()
+
+    async def process_payment_id(self, tsx_data):
         """
         Payment id -> extra
         :return:
         """
-        if self.tsx_data.payment_id is None or len(self.tsx_data.payment_id) == 0:
+        if tsx_data.payment_id is None or len(tsx_data.payment_id) == 0:
             return
 
-        change_addr = self.tsx_data.change_dts.addr if self.tsx_data.change_dts else None
-        view_key_pub_enc = monero.get_destination_view_key_pub(self.tsx_data.outputs, change_addr)
+        view_key_pub_enc = monero.get_destination_view_key_pub(tsx_data.outputs, self.change_address())
         if view_key_pub_enc == crypto.NULL_KEY_ENC:
             raise ValueError('Destinations have to have exactly one output to support encrypted payment ids')
 
         view_key_pub = crypto.decodepoint(view_key_pub_enc)
-        payment_id_encr = monero.encrypt_payment_id(self.tsx_data.payment_id, view_key_pub, self.r)
+        payment_id_encr = monero.encrypt_payment_id(tsx_data.payment_id, view_key_pub, self.r)
 
         extra_nonce = monero.set_encrypted_payment_id_to_tx_extra_nonce(payment_id_encr)
         self.tx.extra = monero.add_extra_nonce_to_tx_extra(b'', extra_nonce)
 
-    async def compute_sec_keys(self, tsx_ctr):
+    async def compute_sec_keys(self, tsx_data, tsx_ctr):
         """
         Generate master key H(TsxData || r || c_tsx)
         :return:
         """
         writer = common.get_keccak_writer()
         ar1 = xmrserialize.Archive(writer, True)
-        await ar1.message(self.tsx_data)
+        await ar1.message(tsx_data)
         await xmrserialize.dump_uvarint(writer, self.r)
         await xmrserialize.dump_uvarint(writer, tsx_ctr)
         self.key_master = writer.get_digest()
@@ -360,7 +367,7 @@ class TTransaction(object):
         Number of destinations
         :return:
         """
-        return len(self.tsx_data.outputs)
+        return self.output_count
 
     def get_fee(self):
         """
@@ -369,6 +376,13 @@ class TTransaction(object):
         """
         fee = self.summary_inputs_money - self.summary_outs_money
         return fee if fee > 0 else 0
+
+    def change_address(self):
+        """
+        Returns change address if change dst is set
+        :return:
+        """
+        return self.output_change.addr if self.output_change else None
 
     def get_rct_type(self):
         """
@@ -477,16 +491,6 @@ class TTransaction(object):
         hmac_vouti = common.compute_hmac(hmac_key_vouti, kwriter.get_digest())
         return hmac_vouti
 
-    async def set_input_cnt(self, inpt_cnt):
-        """
-        Sets input count
-        :param inpt_cnt:
-        :return:
-        """
-        self.input_count = inpt_cnt
-        self.state.inp_cnt(self.in_memory())
-        self.use_simple_rct = inpt_cnt > 1
-
     async def set_input(self, src_entr):
         """
         :param src_entr:
@@ -495,6 +499,8 @@ class TTransaction(object):
         """
         self.state.input()
         self.inp_idx += 1
+        if self.inp_idx >= self.num_inputs():
+            raise ValueError('Too many inputs')
         if src_entr.real_output >= len(src_entr.outputs):
             raise ValueError('real_output index %s bigger than output_keys.size()' % (src_entr.real_output, len(src_entr.outputs)))
         self.summary_inputs_money += src_entr.amount
@@ -550,7 +556,7 @@ class TTransaction(object):
         :return:
         """
         # Sort tx.in by key image
-        self.source_permutation = list(range(self.input_count))
+        self.source_permutation = list(range(self.num_inputs()))
         self.source_permutation.sort(key=lambda x: self.tx.vin[x].k_image)
         await self._tsx_inputs_permutation(self.source_permutation)
 
@@ -560,7 +566,7 @@ class TTransaction(object):
         :return:
         """
         self.state.input_done()
-        if self.input_count != self.inp_idx + 1:
+        if self.inp_idx + 1 != self.num_inputs():
             raise ValueError('Input count mismatch')
         if self.in_memory():
             return await self.tsx_inputs_done_inm()
@@ -570,7 +576,7 @@ class TTransaction(object):
         await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])
 
         # vins size
-        await self.tx_prefix_hasher.ar.container_size(self.input_count, xmrtypes.TransactionPrefix.FIELDS[2][1])
+        await self.tx_prefix_hasher.ar.container_size(self.num_inputs(), xmrtypes.TransactionPrefix.FIELDS[2][1])
         return self.r_pub
 
     async def tsx_inputs_permutation(self, permutation):
@@ -630,7 +636,7 @@ class TTransaction(object):
         :return:
         """
         self.state.input_vins_done()
-        if self.inp_idx + 1 != self.input_count:
+        if self.inp_idx + 1 != self.num_inputs():
             raise ValueError('Invalid number of inputs')
 
     async def commitment(self, in_amount):
@@ -700,7 +706,7 @@ class TTransaction(object):
         # TODO: tsxData addr verification. does it match?
         self.state.set_output()
         self.out_idx += 1
-        change_addr = self.tsx_data.change_dts.addr if self.tsx_data.change_dts else None
+        change_addr = self.change_address()
 
         if dst_entr.amount <= 0 and self.tx.version <= 1:
             raise ValueError('Destination with wrong amount: %s' % dst_entr.amount)
@@ -808,7 +814,7 @@ class TTransaction(object):
         """
         self.state.set_pseudo_out()
         self.inp_idx += 1
-        if self.inp_idx > self.num_inputs():
+        if self.inp_idx >= self.num_inputs():
             raise ValueError('Too many pseudo inputs')
 
         if not self.in_memory():
@@ -907,7 +913,7 @@ class TTransaction(object):
         """
         self.state.set_signature()
         self.inp_idx += 1
-        if self.inp_idx + 1 > self.num_inputs():
+        if self.inp_idx >= self.num_inputs():
             raise ValueError('Invalid ins')
         if not self.in_memory() and alpha is None:
             raise ValueError('Inconsistent')
