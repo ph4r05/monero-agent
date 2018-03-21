@@ -1,5 +1,7 @@
 # Monero Wallet Python implementation
 
+[![Build Status](https://travis-ci.org/ph4r05/monero-agent.svg?branch=master)](https://travis-ci.org/ph4r05/monero-agent)
+
 Pure-python Monero Wallet implementation in Python3.
 Supports RingCT signature on the given Transaction Construction Data.
 
@@ -32,6 +34,20 @@ The introduction to the topic is described here:
 https://github.com/ph4r05/monero-trezor-doc
 
 The documentation can be out of sync from the code. Take this source code as a primary reference.
+
+In the current protocol it is assumed there may be multiple input UTXO (tens to hundreds). So it is optimized
+to work incrementally, one UTXO at a time. This is reasonable to assume as your funds may be scattered over
+many small transactions. On the other hand we assume the number of outputs is relatively small (small units) as
+it usually is in the Monero transactions.
+
+It is quite easy to extend protocol to work with large amounts of outputs but due to the message structure
+which is later signed it will be needed to add two more roundrips with sending output related data one by one
+to the Trezor for incremental hashing.
+
+Outputs are pinned in the beginning of the protocol - number of outputs is fixed at this point in the Trezor
+and HMAC with unique key (index dependent) is generated for each output. So in further roundtrips it is assured only
+previously pinned outputs in the exact given order are processed. The same principle is used for each data produced by
+the Trezor which are later used as inputs.
 
 ## Project structure
 
