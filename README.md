@@ -111,7 +111,7 @@ To store a 32 B number it takes 60 B in integer representation and 65 B in the b
 representation (some ed25519 libraries and mininero use this representation).
 For scalars it is apparently more effective to store integers naturally, saving both memory and CPU cycles with recoding.
 
-EC point arithmetics can use classic point coordinates $(x, y)$ or extended Edwards point coordinates $(x,y,z,t)$.
+EC point arithmetics can use classic point coordinates `(x, y)` or extended Edwards point coordinates `(x,y,z,t)`.
 It takes 64 and 80 B to store tuple of 2 and 4 elements respectively.
 It thus take 184 B and 320 B to store an EC point in the natural form compared to the 65 B byte representation.
 
