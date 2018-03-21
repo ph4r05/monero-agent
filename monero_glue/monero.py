@@ -86,10 +86,10 @@ def classify_subaddresses(tx_dests, change_addr : xmrtypes.AccountPublicAddress)
             continue
         addr_set.add(addr_hashed)
         if tx.is_subaddress:
-            num_subaddresses+=1
+            num_subaddresses += 1
             single_dest_subaddress = tx.addr
         else:
-            num_stdaddresses+=1
+            num_stdaddresses += 1
     return num_stdaddresses, num_subaddresses, single_dest_subaddress
 
 
