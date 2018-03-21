@@ -153,12 +153,12 @@ class TState(object):
         self.s = 5
 
     def input_permutation(self):
-        if self.in_mem or self.s != 5:
+        if self.s != 5:
             raise ValueError('Illegal state')
         self.s = 6
 
     def input_vins(self):
-        if self.in_mem or (self.s != 6 and self.s != 7):
+        if self.s != 6 and self.s != 7:
             raise ValueError('Illegal state')
         self.s = 7
 
@@ -340,7 +340,7 @@ class TTransaction(object):
         Returns true if the input transaction can be processed whole in-memory
         :return:
         """
-        return self.input_count == 0  # TODO: temporary, all tsx are not in-memory
+        return self.input_count <= 1
 
     def num_inputs(self):
         """
@@ -548,7 +548,7 @@ class TTransaction(object):
         # Sort tx.in by key image
         self.source_permutation = list(range(self.input_count))
         self.source_permutation.sort(key=lambda x: self.tx.vin[x].k_image)
-        await self.tsx_inputs_permutation(self.source_permutation)
+        await self._tsx_inputs_permutation(self.source_permutation)
 
     async def tsx_inputs_done(self):
         """
@@ -575,6 +575,16 @@ class TTransaction(object):
         :param permutation:
         :return:
         """
+        if self.in_memory():
+            return
+        return await self._tsx_inputs_permutation(permutation)
+
+    async def _tsx_inputs_permutation(self, permutation):
+        """
+        Set sort permutation on the inputs - sorted by key image
+        :param permutation:
+        :return:
+        """
         self.state.input_permutation()
         self.source_permutation = permutation
 
@@ -596,6 +606,9 @@ class TTransaction(object):
         :param hmac:
         :return:
         """
+        if self.in_memory():
+            return
+
         self.state.input_vins()
         self.inp_idx += 1
 
@@ -743,7 +756,7 @@ class TTransaction(object):
             raise ValueError('Invalid out num')
 
         # Test is \sum Alpha == \sum A
-        if __debug__:
+        if __debug__ and self.use_simple_rct:
             assert crypto.sc_eq(self.sumout, self.sumpouts_alphas)
 
         # Set public key to the extra
@@ -792,13 +805,14 @@ class TTransaction(object):
         if self.inp_idx > self.num_inputs():
             raise ValueError('Too many pseudo inputs')
 
-        idx = self.source_permutation[self.inp_idx]
-        pseudo_out, pseudo_out_hmac_provided = out
-        pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(idx), pseudo_out)
-        if not common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
-            raise ValueError('HMAC invalid for pseudo outs')
+        if not self.in_memory():
+            idx = self.source_permutation[self.inp_idx]
+            pseudo_out, pseudo_out_hmac_provided = out
+            pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(idx), pseudo_out)
+            if not common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
+                raise ValueError('HMAC invalid for pseudo outs')
 
-        await self.full_message_hasher.set_pseudo_out(pseudo_out)
+            await self.full_message_hasher.set_pseudo_out(pseudo_out)
 
         # Next state transition
         if self.inp_idx + 1 == self.num_inputs():
@@ -903,7 +917,7 @@ class TTransaction(object):
             alpha_c = crypto.decodeint(alpha_c)
             pseudo_out_c = crypto.decodepoint(pseudo_out[0])
 
-        else:
+        elif self.use_simple_rct:
             alpha_c = self.input_alphas[self.inp_idx]
             pseudo_out_c = crypto.decodepoint(self.input_pseudo_outs[self.inp_idx])
 
@@ -941,13 +955,13 @@ class TTransaction(object):
         else:
             # Full RingCt, only one input
             txn_fee_key = crypto.scalarmult_h(self.get_fee())
-            n_total_outs = len(src_entr[0].outputs)
+            n_total_outs = len(src_entr.outputs)
             mix_ring = [None] * n_total_outs
             for idx in range(n_total_outs):
                 mix_ring[idx] = [src_entr.outputs[idx][1]]
 
             mg = mlsag2.prove_rct_mg(self.full_message, mix_ring,
-                                    in_sk, self.output_sk, self.output_pk, kLRki, None, index, txn_fee_key)
+                                     [in_sk], self.output_sk, self.output_pk, kLRki, None, index, txn_fee_key)
 
             if __debug__:
                 assert mlsag2.ver_rct_mg(mg, mix_ring, self.output_pk, txn_fee_key, self.full_message)
