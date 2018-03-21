@@ -186,7 +186,7 @@ class TState(object):
         self.s = 13
 
     def set_signature(self):
-        if self.s != 13 or self.s != 14:
+        if self.s != 13 and self.s != 14:
             raise ValueError('Illegal state')
         self.s = 14
 
@@ -528,13 +528,14 @@ class TTransaction(object):
         alpha_enc = None
         if self.use_simple_rct:
             alpha, pseudo_out = await self.commitment(src_entr.amount)
+            pseudo_out = crypto.encodepoint(pseudo_out)
 
             # In full version the alpha is encrypted and passed back for storage
             if self.in_memory():
                 self.input_alphas.append(alpha)
                 self.input_pseudo_outs.append(pseudo_out)
             else:
-                pseudo_out_hmac = crypto.hmac_point(self.hmac_key_txin_comm(self.inp_idx), pseudo_out)
+                pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(self.inp_idx), pseudo_out)
                 alpha_enc = aesgcm.encrypt(self.enc_key_txin_alpha(self.inp_idx), crypto.encodeint(alpha))
 
         return vini, hmac_vini, (pseudo_out, pseudo_out_hmac), alpha_enc
@@ -790,8 +791,9 @@ class TTransaction(object):
         if self.inp_idx > self.num_inputs():
             raise ValueError('Too many pseudo inputs')
 
+        idx = self.source_permutation[self.inp_idx]
         pseudo_out, pseudo_out_hmac_provided = out
-        pseudo_out_hmac = crypto.hmac_point(self.hmac_key_txin_comm(self.source_permutation[self.inp_idx]), pseudo_out)
+        pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(idx), pseudo_out)
         if not common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
             raise ValueError('HMAC invalid for pseudo outs')
 
@@ -885,16 +887,17 @@ class TTransaction(object):
             raise ValueError('HMAC is not correct')
 
         if not self.in_memory():
-            pseudo_out_hmac = crypto.hmac_point(self.hmac_key_txin_comm(inv_idx), pseudo_out[0])
+            pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(inv_idx), pseudo_out[0])
             if not common.ct_equal(pseudo_out_hmac, pseudo_out[1]):
                 raise ValueError('HMAC is not correct')
 
             alpha_c = aesgcm.decrypt(self.enc_key_txin_alpha(inv_idx), alpha[0], alpha[1], alpha[2])
-            pseudo_out_c = pseudo_out[0]
+            alpha_c = crypto.decodeint(alpha_c)
+            pseudo_out_c = crypto.decodepoint(pseudo_out[0])
 
         else:
             alpha_c = self.input_alphas[self.inp_idx]
-            pseudo_out_c = self.input_pseudo_outs[self.inp_idx]
+            pseudo_out_c = crypto.decodepoint(self.input_pseudo_outs[self.inp_idx])
 
         # Basic setup, sanity check
         index = src_entr.real_output
