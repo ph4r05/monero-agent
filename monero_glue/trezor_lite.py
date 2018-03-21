@@ -406,20 +406,9 @@ class TTransaction(object):
         rv.type = self.get_rct_type()
         return rv
 
-    def inv_input_permutation(self, new_idx):
-        """
-        Finds inverse of the input permutation O(N)
-        :param new_idx:
-        :return:
-        """
-        for i in range(len(self.source_permutation)):
-            if self.source_permutation[i] == new_idx:
-                return i
-        raise ValueError('Invalid index / permutation')
-
     def hmac_key_txin(self, idx):
         """
-        Input hmac key
+        (TxSourceEntry[i] || tx.vin[i]) hmac key
         :param idx:
         :return:
         """
@@ -427,15 +416,23 @@ class TTransaction(object):
 
     def hmac_key_txin_comm(self, idx):
         """
-        Input hmac key - commitment
+        pseudo_outputs[i] hmac key. Pedersen commitment for inputs.
         :param idx:
         :return:
         """
         return common.keccak_2hash(self.key_hmac + b'txin-comm' + xmrserialize.dump_uvarint_b(idx))
 
+    def hmac_key_txdst(self, idx):
+        """
+        TxDestinationEntry[i] hmac key
+        :param idx:
+        :return:
+        """
+        return common.keccak_2hash(self.key_hmac + b'txdest' + xmrserialize.dump_uvarint_b(idx))
+
     def hmac_key_txout(self, idx):
         """
-        Output hmac key
+        (TxDestinationEntry[i] || tx.vout[i]) hmac key
         :param idx:
         :return:
         """
@@ -443,7 +440,7 @@ class TTransaction(object):
 
     def hmac_key_txout_asig(self, idx):
         """
-        Output hmac key
+        rsig[i] hmac key. Range signature HMAC
         :param idx:
         :return:
         """
@@ -451,7 +448,7 @@ class TTransaction(object):
 
     def enc_key_txin_alpha(self, idx):
         """
-        Enc key for alpha
+        AES-GCM encryption key for alpha[i] used in Pedersen commitment in pseudo_outs[i]
         :param idx:
         :return:
         """
@@ -459,7 +456,7 @@ class TTransaction(object):
 
     async def gen_hmac_vini(self, src_entr, vini, idx):
         """
-        Computes hmac for src entry, vini in the index idx
+        Computes hmac (TxSourceEntry[i] || tx.vin[i])
         :param src_entr:
         :param vini:
         :param idx:
@@ -476,7 +473,7 @@ class TTransaction(object):
 
     async def gen_hmac_vouti(self, dst_entr, tx_out, idx):
         """
-        Generates HMAC for dst_entr, tx_out
+        Generates HMAC for (TxDestinationEntry[i] || tx.vout[i])
         :param dst_entr:
         :param tx_out:
         :param idx:
@@ -490,6 +487,21 @@ class TTransaction(object):
         hmac_key_vouti = self.hmac_key_txout(idx)
         hmac_vouti = common.compute_hmac(hmac_key_vouti, kwriter.get_digest())
         return hmac_vouti
+
+    async def gen_hmac_tsxdest(self, dst_entr, idx):
+        """
+        Generates HMAC for TxDestinationEntry[i]
+        :param dst_entr:
+        :param idx:
+        :return:
+        """
+        kwriter = common.get_keccak_writer()
+        ar = xmrserialize.Archive(kwriter, True)
+        await ar.message(dst_entr, xmrtypes.TxDestinationEntry)
+
+        hmac_key = self.hmac_key_txdst(idx)
+        hmac_tsxdest = common.compute_hmac(hmac_key, kwriter.get_digest())
+        return hmac_tsxdest
 
     async def set_input(self, src_entr):
         """
