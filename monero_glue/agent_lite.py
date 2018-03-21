@@ -153,6 +153,12 @@ class Agent(object):
                 rv.outPk.append(self.ct.tx_out_pk[idx])
                 rv.ecdhInfo.append(self.ct.tx_out_ecdh[idx])
 
+            # MLSAG message check
+            mlsag_hash = await self.trezor.tsx_mlsag_done()
+            mlsag_hash_computed = await monero.get_pre_mlsag_hash(rv)
+            if mlsag_hash != mlsag_hash_computed:
+                raise ValueError('Transaction prefix has does not match')
+
             # Sign each input
             rv.p.MGs = []
             for idx, src in enumerate(tx.sources):

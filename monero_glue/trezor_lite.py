@@ -111,6 +111,12 @@ class TrezorLite(object):
         """
         return await self.tsx_obj.tsx_mlsag_rangeproof(range_proof)
 
+    async def tsx_mlsag_done(self):
+        """
+        :return:
+        """
+        return await self.tsx_obj.tsx_mlsag_done()
+
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
         """
         :return:
@@ -884,6 +890,13 @@ class TTransaction(object):
 
             self.state.set_final_message_done()
             self.inp_idx = -1
+
+    async def tsx_mlsag_done(self):
+        """
+        MLSAG message computed
+        :return:
+        """
+        return self.full_message
 
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
         """
