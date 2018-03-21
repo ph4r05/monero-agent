@@ -18,14 +18,31 @@ class TrezorLite(object):
     """
     def __init__(self):
         self.tsx_ctr = 0
+        self.err_ctr = 0
         self.tsx_obj = None  # type: TTransaction
         self.creds = None  # type: trezor.WalletCreds
+
+    def exc_handler(self, e):
+        """
+        Handles the exception thrown in the Trezor processing
+        We could use decorator/wrapper for message calls but not sure how uPython handles them
+        so now are entry points wrapped in try-catch
+
+        :param e:
+        :return:
+        """
+        self.err_ctr += 1
+        self.tsx_obj = None  # clear transaction object
 
     async def init_transaction(self, tsx_data: TsxData):
         self.tsx_ctr += 1
         self.tsx_obj = TTransaction(self)
         self.tsx_obj.creds = self.creds
-        return await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
+        try:
+            return await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def precompute_subaddr(self, account, indices):
         """
@@ -34,7 +51,11 @@ class TrezorLite(object):
         :param indices:
         :return:
         """
-        return self.tsx_obj.precompute_subaddr(account, indices)
+        try:
+            return self.tsx_obj.precompute_subaddr(account, indices)
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def set_tsx_input(self, src_entr):
         """
@@ -42,35 +63,55 @@ class TrezorLite(object):
         :type src_entr: xmrtypes.TxSourceEntry
         :return:
         """
-        return await self.tsx_obj.set_input(src_entr)
+        try:
+            return await self.tsx_obj.set_input(src_entr)
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def tsx_inputs_done(self):
         """
         All inputs set
         :return:
         """
-        return await self.tsx_obj.tsx_inputs_done()
+        try:
+            return await self.tsx_obj.tsx_inputs_done()
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def tsx_inputs_permutation(self, permutation):
         """
         All inputs set
         :return:
         """
-        return await self.tsx_obj.tsx_inputs_permutation(permutation)
+        try:
+            return await self.tsx_obj.tsx_inputs_permutation(permutation)
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def tsx_input_vini(self, *args, **kwargs):
         """
         All inputs set
         :return:
         """
-        return await self.tsx_obj.tsx_input_vini(*args, **kwargs)
+        try:
+            return await self.tsx_obj.tsx_input_vini(*args, **kwargs)
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def tsx_input_vini_done(self, *args, **kwargs):
         """
         All inputs set
         :return:
         """
-        return await self.tsx_obj.tsx_input_vini_done()
+        try:
+            return await self.tsx_obj.tsx_input_vini_done()
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def set_tsx_output1(self, dst_entr, dst_entr_hmac):
         """
@@ -79,43 +120,71 @@ class TrezorLite(object):
         :param dst_entr_hmac
         :return:
         """
-        return await self.tsx_obj.set_out1(dst_entr, dst_entr_hmac)
+        try:
+            return await self.tsx_obj.set_out1(dst_entr, dst_entr_hmac)
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def all_out1_set(self):
         """
         :return:
         """
-        return await self.tsx_obj.all_out1_set()
+        try:
+            return await self.tsx_obj.all_out1_set()
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def tsx_mlsag_pseudo_out(self, out):
         """
         :return:
         """
-        return await self.tsx_obj.tsx_mlsag_pseudo_out(out)
+        try:
+            return await self.tsx_obj.tsx_mlsag_pseudo_out(out)
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def tsx_gen_rv(self):
         """
         :return:
         """
-        return await self.tsx_obj.tsx_gen_rv()
+        try:
+            return await self.tsx_obj.tsx_gen_rv()
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def tsx_mlsag_rangeproof(self, range_proof):
         """
         :return:
         """
-        return await self.tsx_obj.tsx_mlsag_rangeproof(range_proof)
+        try:
+            return await self.tsx_obj.tsx_mlsag_rangeproof(range_proof)
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def tsx_mlsag_done(self):
         """
         :return:
         """
-        return await self.tsx_obj.tsx_mlsag_done()
+        try:
+            return await self.tsx_obj.tsx_mlsag_done()
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
         """
         :return:
         """
-        return await self.tsx_obj.sign_input(src_entr, vini, hmac_vini, pseudo_out, alpha)
+        try:
+            return await self.tsx_obj.sign_input(src_entr, vini, hmac_vini, pseudo_out, alpha)
+        except Exception as e:
+            self.exc_handler(e)
+            raise
 
 
 class TState(object):
