@@ -72,13 +72,14 @@ class TrezorLite(object):
         """
         return await self.tsx_obj.tsx_input_vini_done()
 
-    async def set_tsx_output1(self, dst_entr):
+    async def set_tsx_output1(self, dst_entr, dst_entr_hmac):
         """
-        :param src_entr
-        :type src_entr: xmrtypes.TxDestinationEntry
+        :param dst_entr
+        :type dst_entr: xmrtypes.TxDestinationEntry
+        :param dst_entr_hmac
         :return:
         """
-        return await self.tsx_obj.set_out1(dst_entr)
+        return await self.tsx_obj.set_out1(dst_entr, dst_entr_hmac)
 
     async def all_out1_set(self):
         """
@@ -270,6 +271,7 @@ class TTransaction(object):
         self.mixin = tsx_data.mixin
         self.use_simple_rct = self.input_count > 1
         self.state.inp_cnt(self.in_memory())
+        self.check_change(tsx_data.outputs)
 
         # Additional keys w.r.t. subaddress destinations
         class_res = classify_subaddresses(tsx_data.outputs, self.change_address())
@@ -281,7 +283,7 @@ class TTransaction(object):
 
         self.need_additional_txkeys = num_subaddresses > 0 and (num_stdaddresses > 0 or num_subaddresses > 1)
         if self.need_additional_txkeys:
-            for _ in range(len(tsx_data.outputs)):
+            for _ in range(self.num_dests()):
                 self.additional_tx_keys.append(crypto.random_scalar())
 
         # Extra processing, payment id
@@ -291,9 +293,12 @@ class TTransaction(object):
         await self.compute_sec_keys(tsx_data, tsx_ctr)
 
         # HMAC outputs - pinning
+        hmacs = []
+        for idx in range(self.num_dests()):
+            c_hmac = await self.gen_hmac_tsxdest(tsx_data.outputs[idx], idx)
+            hmacs.append(c_hmac)
 
-
-        return self.in_memory()
+        return self.in_memory(), hmacs
 
     async def process_payment_id(self, tsx_data):
         """
@@ -347,6 +352,22 @@ class TTransaction(object):
                                                          major=account, minor=idx)
             pub = crypto.encodepoint(pub)
             self.subaddresses[pub] = (account, idx)
+
+    def check_change(self, outputs):
+        """
+        Checks if the change address is amond sources
+        :param outputs:
+        :return:
+        """
+        change_addr = self.change_address()
+        if change_addr is None:
+            return
+
+        for out in outputs:
+            if out.addr == change_addr:
+                return True
+
+        raise ValueError('Change address not found in outputs')
 
     def in_memory(self):
         """
@@ -708,20 +729,25 @@ class TTransaction(object):
         monero.recode_ecdh(ecdh_info, encode=True)
         return rsig, out_pk, ecdh_info
 
-    async def set_out1(self, dst_entr):
+    async def set_out1(self, dst_entr, dst_entr_hmac):
         """
         Set destination entry
-        :param src_entr
-        :type src_entr: xmrtypes.TxDestinationEntry
+        :param dst_entr
+        :type dst_entr: xmrtypes.TxDestinationEntry
+        :param dst_entr_hmac
         :return:
         """
-        # TODO: tsxData addr verification. does it match?
         self.state.set_output()
         self.out_idx += 1
         change_addr = self.change_address()
 
         if dst_entr.amount <= 0 and self.tx.version <= 1:
             raise ValueError('Destination with wrong amount: %s' % dst_entr.amount)
+
+        # HMAC check of the destination
+        dst_entr_hmac_computed = await self.gen_hmac_tsxdest(dst_entr, self.out_idx)
+        if not common.ct_equal(dst_entr_hmac, dst_entr_hmac_computed):
+            raise ValueError('HMAC invalid')
 
         if self.need_additional_txkeys:
             if dst_entr.is_subaddress:

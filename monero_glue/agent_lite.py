@@ -25,6 +25,7 @@ class TData(object):
         self.tsx_data = None  # type: monero.TsxData
         self.tx = xmrtypes.Transaction(version=2, vin=[], vout=[], extra=[])
         self.tx_in_hmacs = []
+        self.tx_out_entr_hmacs = []
         self.tx_out_hmacs = []
         self.tx_out_rsigs = []
         self.tx_out_pk = []
@@ -81,7 +82,8 @@ class Agent(object):
             self.ct.tx.unlock_time = tx.unlock_time
 
             self.ct.tsx_data = tsx_data
-            await self.trezor.init_transaction(tsx_data)
+            init_res = await self.trezor.init_transaction(tsx_data)
+            self.ct.tx_out_entr_hmacs = init_res[1]
 
             # Subaddresses precomputation - needed for this transaction
             await self.trezor.precompute_subaddr(tx.subaddr_account, tx.subaddr_indices)
@@ -115,8 +117,8 @@ class Agent(object):
                 await self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx])
 
             # Set transaction outputs
-            for dst in tx.dests:
-                vouti, vouti_mac, rsig, out_pk, ecdh_info = await self.trezor.set_tsx_output1(dst)
+            for idx, dst in enumerate(tx.splitted_dsts):
+                vouti, vouti_mac, rsig, out_pk, ecdh_info = await self.trezor.set_tsx_output1(dst, self.ct.tx_out_entr_hmacs[idx])
                 self.ct.tx.vout.append(vouti)
                 self.ct.tx_out_hmacs.append(vouti_mac)
                 self.ct.tx_out_rsigs.append(rsig)
