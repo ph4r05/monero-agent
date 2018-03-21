@@ -572,11 +572,8 @@ async def get_pre_mlsag_hash(rv):
     kc_master = common.HashWrapper(common.get_keccak())
     kc_master.update(rv.message)
 
-    if len(rv.mixRing) == 0:
-        raise ValueError('Empty mixring')
-
     is_simple = rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.SimpleBulletproof]
-    inputs = len(rv.mixRing) if is_simple else len(rv.mixRing[0])
+    inputs = len(rv.pseudoOuts) if is_simple else 0
     outputs = len(rv.ecdhInfo)
 
     kwriter = common.get_keccak_writer()
