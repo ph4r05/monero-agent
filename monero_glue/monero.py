@@ -392,11 +392,11 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     """
     Generates UTXO spending key and key image.
 
-    :param ack:
-    :param out_key:
+    :param ack: sender credentials
+    :param out_key: real output (from input RCT) destination key
     :param recv_derivation:
     :param real_output_index:
-    :param received_index:
+    :param received_index: subaddress index this payment was received to
     :return:
     """
     if ack.spend_key_private == 0:
@@ -433,10 +433,10 @@ def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, addit
 
     :param creds:
     :param subaddresses:
-    :param out_key:
-    :param tx_public_key:
+    :param out_key: real output (from input RCT) destination key
+    :param tx_public_key: real output (from input RCT) public key
     :param additional_tx_public_keys:
-    :param real_output_index:
+    :param real_output_index: index of the real output in the RCT
     :return:
     """
     recv_derivation = generate_key_derivation(tx_public_key, creds.view_key_private)
