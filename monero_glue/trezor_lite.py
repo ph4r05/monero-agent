@@ -282,6 +282,7 @@ class TTransaction(object):
         self.r_pub = None
         self.state = TState()
 
+        self.multi_sig = False
         self.need_additional_txkeys = False
         self.use_bulletproof = False
         self.use_rct = True
@@ -638,7 +639,8 @@ class TTransaction(object):
         self.input_secrets.append(xi)
 
         # Construct tx.vin
-        vini = xmrtypes.TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki))
+        ki_real = src_entr.multisig_kLRki.ki if self.multi_sig else ki
+        vini = xmrtypes.TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki_real))
         vini.key_offsets = [x[0] for x in src_entr.outputs]
         vini.key_offsets = monero.absolute_output_offsets_to_relative(vini.key_offsets)
 
