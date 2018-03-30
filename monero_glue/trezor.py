@@ -522,11 +522,10 @@ class TTransaction(object):
         # TODO: msout multisig
 
         full_message = await monero.get_pre_mlsag_hash(rv)
-        rv.p.MGs = [
-            mlsag2.prove_rct_mg(full_message,
-                                rv.mixRing,
-                                in_sk, out_sk, rv.outPk, kLRki, None, index, txn_fee_key)
-        ]
+        mg, msc = mlsag2.prove_rct_mg(full_message,
+                                      rv.mixRing,
+                                      in_sk, out_sk, rv.outPk, kLRki, None, index, txn_fee_key)
+        rv.p.MGs = [mg]
 
         if __debug__:
             assert mlsag2.ver_rct_mg(rv.p.MGs[0], rv.mixRing, rv.outPk, txn_fee_key, full_message)
@@ -591,7 +590,7 @@ class TTransaction(object):
 
         # TODO: msout multisig
         for i in range(len(inamounts)):
-            rv.p.MGs[i] = mlsag2.prove_rct_mg_simple(
+            rv.p.MGs[i], msc = mlsag2.prove_rct_mg_simple(
                 full_message,
                 rv.mixRing[i],
                 in_sk[i], a[i],

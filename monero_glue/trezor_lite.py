@@ -1095,8 +1095,7 @@ class TTransaction(object):
         # Basic setup, sanity check
         index = src_entr.real_output
         in_sk = xmrtypes.CtKey(dest=self.input_secrets[self.inp_idx], mask=crypto.decodeint(src_entr.mask))
-        kLRki = None
-        # TODO: kLRki
+        kLRki = src_entr.multisig_kLRki if self.multi_sig else None
 
         # Private key correctness test
         self.assrt(crypto.point_eq(crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].dest),
@@ -1112,8 +1111,8 @@ class TTransaction(object):
             for idx2, out in enumerate(src_entr.outputs):
                 mix_ring.append(out[1])
 
-            mg = mlsag2.prove_rct_mg_simple(self.full_message, mix_ring,
-                                            in_sk, alpha_c, pseudo_out_c, kLRki, None, index)
+            mg, msc = mlsag2.prove_rct_mg_simple(self.full_message, mix_ring,
+                                                 in_sk, alpha_c, pseudo_out_c, kLRki, None, index)
 
             if __debug__:
                 self.assrt(mlsag2.ver_rct_mg_simple(self.full_message, mg, mix_ring, pseudo_out_c))
@@ -1126,11 +1125,13 @@ class TTransaction(object):
             for idx in range(n_total_outs):
                 mix_ring[idx] = [src_entr.outputs[idx][1]]
 
-            mg = mlsag2.prove_rct_mg(self.full_message, mix_ring,
-                                     [in_sk], self.output_sk, self.output_pk, kLRki, None, index, txn_fee_key)
+            mg, msc = mlsag2.prove_rct_mg(self.full_message, mix_ring,
+                                          [in_sk], self.output_sk, self.output_pk, kLRki, None, index, txn_fee_key)
 
             if __debug__:
                 self.assrt(mlsag2.ver_rct_mg(mg, mix_ring, self.output_pk, txn_fee_key, self.full_message))
+
+        # TODO: kLRki multisig
 
         # Encode
         mgs = monero.recode_msg([mg])

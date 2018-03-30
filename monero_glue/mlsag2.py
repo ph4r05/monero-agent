@@ -494,7 +494,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
     if mscout:
         mscout(c)
 
-    return rv
+    return rv, c
 
 
 def ver_mlsag_assert(pk, rv, dsRows):
