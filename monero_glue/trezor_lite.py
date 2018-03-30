@@ -13,7 +13,8 @@ from . import trezor
 
 class TrezorLite(object):
     """
-    Main Trezor object
+    Main Trezor object.
+    Provides interface to the host, packages messages.
     """
     def __init__(self):
         self.tsx_ctr = 0
