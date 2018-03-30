@@ -434,7 +434,7 @@ class TTransaction(object):
 
     def check_change(self, outputs):
         """
-        Checks if the change address is amond sources
+        Checks if the change address is among tx outputs.
         :param outputs:
         :return:
         """
@@ -486,7 +486,7 @@ class TTransaction(object):
 
     def get_rct_type(self):
         """
-        RCTsig type
+        RCTsig type (simple/full x Borromean/Bulletproof)
         :return:
         """
         if self.use_simple_rct:
@@ -496,7 +496,7 @@ class TTransaction(object):
 
     def init_rct_sig(self):
         """
-        Initializes RCTsig
+        Initializes RCTsig structure (fee, tx prefix hash, type)
         :return:
         """
         rv = xmrtypes.RctSig()
@@ -605,6 +605,13 @@ class TTransaction(object):
 
     async def set_input(self, src_entr):
         """
+        Sets UTXO one by one.
+        Computes spending secret key, key image. tx.vin[i] + HMAC, Pedersen commitment on amount.
+
+        If number of inputs is small, in-memory mode is used = alpha, pseudo_outs are kept in the Trezor.
+        Otherwise pseudo_outs are offloaded with HMAC, alpha is offloaded encrypted under AES-GCM() with
+        key derived for exactly this purpose.
+
         :param src_entr:
         :type src_entr: xmrtypes.TxSourceEntry
         :return:
@@ -663,7 +670,8 @@ class TTransaction(object):
 
     async def tsx_inputs_done_inm(self):
         """
-        In-memory post processing
+        In-memory post processing - tx.vin[i] sorting by key image.
+        Used only if number of inputs is small - computable in Trezor without offloading.
 
         :return:
         """
@@ -693,7 +701,8 @@ class TTransaction(object):
 
     async def tsx_inputs_permutation(self, permutation):
         """
-        Set sort permutation on the inputs - sorted by key image
+        Set permutation on the inputs - sorted by key image on host.
+
         :param permutation:
         :return:
         """
@@ -703,7 +712,8 @@ class TTransaction(object):
 
     async def _tsx_inputs_permutation(self, permutation):
         """
-        Set sort permutation on the inputs - sorted by key image
+        Set permutation on the inputs - sorted by key image on host.
+
         :param permutation:
         :return:
         """
@@ -723,9 +733,12 @@ class TTransaction(object):
 
     async def tsx_input_vini(self, src_entr, vini, hmac):
         """
-        Set Vini for message computation
-        :param vini:
-        :param hmac:
+        Set tx.vin[i] for incremental tx prefix hash computation.
+        After sorting by key images on host.
+
+        :param src_entr:
+        :param vini: tx.vin[i]
+        :param hmac: HMAC of tx.vin[i]
         :return:
         """
         if self.in_memory():
@@ -744,7 +757,9 @@ class TTransaction(object):
 
     async def tsx_input_vini_done(self):
         """
-        all vini set
+        All inputs were set from the Agent.
+        Shifts state machine to a next state (if everything is set correctly).
+        Currently we return nothing from this message.
         :return:
         """
         self.state.input_vins_done()
@@ -769,7 +784,13 @@ class TTransaction(object):
 
     async def range_proof(self, idx):
         """
-        Computes rangeproof and related information - out_sk, out_pk, ecdh_info
+        Computes rangeproof and related information - out_sk, out_pk, ecdh_info.
+        In order to optimize incremental transaction build, the mask computation is changed compared
+        to the official Monero code. In the official code, the input pedersen commitments are computed
+        after range proof in such a way summed masks for commitments (alpha) and rangeproofs (ai) are equal.
+
+        In order to save roundtrips we compute commitments randomly and then for the last rangeproof
+        a[63] = (\sum_{i=0}^{num_inp}alpha_i - \sum_{i=0}^{num_outs-1} amasks_i) - \sum_{i=0}^{62}a_i
 
         :param idx:
         :return:
@@ -810,7 +831,9 @@ class TTransaction(object):
 
     async def set_out1(self, dst_entr, dst_entr_hmac):
         """
-        Set destination entry
+        Set destination entry one by one.
+        Computes destination stealth address, amount key, range proof + HMAC, out_pk, ecdh_info.
+
         :param dst_entr
         :type dst_entr: xmrtypes.TxDestinationEntry
         :param dst_entr_hmac
@@ -874,15 +897,16 @@ class TTransaction(object):
 
     async def all_out1_set(self):
         """
-        All out1 set phase
+        All outputs were set in this phase. Computes additional public keys (if needed), tx.extra and
+        transaction prefix hash.
         Adds additional public keys to the tx.extra
-        :return:
+        :return: tx.extra, tx_prefix_hash
         """
         self.state.set_output_done()
         if self.out_idx + 1 != self.num_dests():
             raise ValueError('Invalid out num')
 
-        # Test is \sum Alpha == \sum A
+        # Test if \sum Alpha == \sum A
         if self.use_simple_rct:
             self.assrt(crypto.sc_eq(self.sumout, self.sumpouts_alphas))
 
@@ -926,7 +950,7 @@ class TTransaction(object):
 
     async def tsx_mlsag_pseudo_out(self, out):
         """
-        Pseudo outputs for the final_message hash
+        Sets Pseudo outputs (Pedersen commitments) for the final_message incremental hashing.
         :return:
         """
         self.state.set_pseudo_out()
@@ -952,7 +976,7 @@ class TTransaction(object):
 
     async def tsx_mlsag_ecdh_info(self):
         """
-        ecdh info to the hash
+        Sets ecdh info for the incremental hashing mlsag.
         :return:
         """
         if self.num_dests() != len(self.output_ecdh):
@@ -963,7 +987,7 @@ class TTransaction(object):
 
     async def tsx_mlsag_out_pk(self):
         """
-        Out pk to the hash
+        Sets out_pk for the incremental hashing mlsag.
         :return:
         """
         if self.num_dests() != len(self.output_pk):
@@ -974,15 +998,15 @@ class TTransaction(object):
 
     async def tsx_gen_rv(self):
         """
-        Generates RctSig
+        Generates initial RctSig
         :return:
         """
         return self.init_rct_sig()
 
     async def tsx_mlsag_rangeproof(self, range_proof):
         """
-        Range proof to the hash
-        :param range_proof:
+        Sets previously computed range proof, offloaded to host. Used for incremental hashing for mlsag struct.
+        :param range_proof: (range proof, range proof hmac)
         :return:
         """
         self.state.set_range_proof()
@@ -1024,9 +1048,15 @@ class TTransaction(object):
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
         """
         Generates a signature for one input
-        :param src:
-        :type src: xmrtypes.TxSourceEntry
-        :return:
+        :param src_entr: Source entry
+        :type src_entr: xmrtypes.TxSourceEntry
+        :param vini: tx.vin[i] for the transaction. Contains key image, offsets, amount (usually zero)
+        :param hmac_vini: HMAC for the tx.vin[i] as returned from Trezor
+        :param pseudo_out: pedersen commitment for the current input, uses alpha as the mask.
+        Only in memory offloaded scenario. Tuple containing HMAC, as returned from the Trezor.
+        :param alpha: alpha mask for the current input. Only in memory offloaded scenario,
+        tuple as returned from the Trezor
+        :return: Generated signature MGs[i]
         """
         self.state.set_signature()
         self.inp_idx += 1
