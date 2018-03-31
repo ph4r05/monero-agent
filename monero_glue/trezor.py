@@ -20,6 +20,7 @@ class WalletCreds(object):
         self.spend_key_private = spend_key_private
         self.spend_key_public = spend_key_public
         self.address = address
+        self.multisig_keys = []
 
     @classmethod
     def new_wallet(cls, priv_view_key, priv_spend_key):
