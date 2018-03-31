@@ -441,10 +441,19 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
         subaddr_sk = get_subaddress_secret_key(ack.view_key_private, major=received_index[0], minor=received_index[1])
         scalar_step2 = crypto.sc_add(scalar_step1, subaddr_sk)
 
-    # TODO: multisig here
-    # ...
+    # when not in multisig, we know the full spend secret key, so the output pubkey can be obtained by scalarmultBase
+    if len(ack.multisig_keys) == 0:
+        pub_ver = crypto.scalarmult_base(scalar_step2)
 
-    pub_ver = crypto.scalarmult_base(scalar_step2)
+    else:
+        # When in multisig, we only know the partial spend secret key. But we do know the full spend public key,
+        # so the output pubkey can be obtained by using the standard CN key derivation.
+        pub_ver = crypto.derive_public_key(recv_derivation, real_output_index, ack.spend_key_public)
+
+        # Add the contribution from the subaddress part
+        if received_index != (0, 0):
+            subaddr_pk = crypto.scalarmult_base(subaddr_sk)
+            pub_ver = crypto.point_add(pub_ver, subaddr_pk)
 
     if not crypto.point_eq(pub_ver, out_key):
         raise ValueError('key image helper precomp: given output pubkey doesn\'t match the derived one')
