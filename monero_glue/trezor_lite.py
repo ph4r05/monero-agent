@@ -1131,9 +1131,8 @@ class TTransaction(object):
             if __debug__:
                 self.assrt(mlsag2.ver_rct_mg(mg, mix_ring, self.output_pk, txn_fee_key, self.full_message))
 
-        # TODO: kLRki multisig
-
         # Encode
         mgs = monero.recode_msg([mg])
-        return mgs[0]
+        cout = msc if self.multi_sig else None
+        return mgs[0], cout
 

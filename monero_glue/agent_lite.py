@@ -180,9 +180,9 @@ class Agent(object):
         # Sign each input
         rv.p.MGs = []
         for idx, src in enumerate(tx.sources):
-            mg = await self.trezor.sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
-                                              self.ct.pseudo_outs[idx],
-                                              self.ct.alphas[idx])
+            mg, msc = await self.trezor.sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
+                                                   self.ct.pseudo_outs[idx],
+                                                   self.ct.alphas[idx])
             rv.p.MGs.append(mg)
 
         self.ct.tx.signatures = []
