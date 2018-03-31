@@ -277,12 +277,12 @@ async def add_additional_tx_pub_keys_to_extra(tx_extra, additional_pub_keys):
     return tx_extra
 
 
-def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
+def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None, little_endian=True):
     """
     Builds subaddress secret key from the subaddress index
     Hs(SubAddr || a || index_major || index_minor)
 
-    TODO: handle endianity in the index
+    Note: need to handle endianity in the index
     C-code simply does: memcpy(data + sizeof(prefix) + sizeof(crypto::secret_key), &index, sizeof(subaddress_index));
     Where the index has the following form:
 
@@ -296,14 +296,16 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
     :param index:
     :param major:
     :param minor:
+    :param little_endian:
     :return:
     """
     if index:
         major = index.major
         minor = index.minor
+    endianity = '<' if little_endian else '>'
     prefix = b'SubAddr'
     buffer = bytearray(len(prefix) + 1 + 32 + 4 + 4)
-    struct.pack_into('=7sb32sLL', buffer, 0, prefix, 0, crypto.encodeint(secret_key), major, minor)
+    struct.pack_into('%s7sb32sLL' % endianity, buffer, 0, prefix, 0, crypto.encodeint(secret_key), major, minor)
     return crypto.hash_to_scalar(buffer)
 
 
