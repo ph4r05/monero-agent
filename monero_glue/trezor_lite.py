@@ -24,9 +24,9 @@ class TrezorLite(object):
 
     def exc_handler(self, e):
         """
-        Handles the exception thrown in the Trezor processing
+        Handles the exception thrown in the Trezor processing. Clears transaction state.
         We could use decorator/wrapper for message calls but not sure how uPython handles them
-        so now are entry points wrapped in try-catch
+        so now are entry points wrapped in try-catch.
 
         :param e:
         :return:
@@ -35,6 +35,11 @@ class TrezorLite(object):
         self.tsx_obj = None  # clear transaction object
 
     async def init_transaction(self, tsx_data: TsxData):
+        """
+        Initialize transaction state.
+        :param tsx_data:
+        :return:
+        """
         self.tsx_ctr += 1
         self.tsx_obj = TTransaction(self)
         self.tsx_obj.creds = self.creds
@@ -59,6 +64,13 @@ class TrezorLite(object):
 
     async def set_tsx_input(self, src_entr):
         """
+        Sets UTXO one by one.
+        Computes spending secret key, key image. tx.vin[i] + HMAC, Pedersen commitment on amount.
+
+        If number of inputs is small, in-memory mode is used = alpha, pseudo_outs are kept in the Trezor.
+        Otherwise pseudo_outs are offloaded with HMAC, alpha is offloaded encrypted under AES-GCM() with
+        key derived for exactly this purpose.
+
         :param src_entr
         :type src_entr: xmrtypes.TxSourceEntry
         :return:
@@ -82,7 +94,8 @@ class TrezorLite(object):
 
     async def tsx_inputs_permutation(self, permutation):
         """
-        All inputs set
+        Set permutation on the inputs - sorted by key image on host.
+
         :return:
         """
         try:
@@ -93,7 +106,9 @@ class TrezorLite(object):
 
     async def tsx_input_vini(self, *args, **kwargs):
         """
-        All inputs set
+        Set tx.vin[i] for incremental tx prefix hash computation.
+        After sorting by key images on host.
+
         :return:
         """
         try:
@@ -104,7 +119,10 @@ class TrezorLite(object):
 
     async def tsx_input_vini_done(self, *args, **kwargs):
         """
-        All inputs set
+        All inputs were set from the Agent after key image sort.
+        Shifts state machine to a next state (if everything is set correctly).
+        Currently we return nothing from this message.
+
         :return:
         """
         try:
@@ -115,6 +133,9 @@ class TrezorLite(object):
 
     async def set_tsx_output1(self, dst_entr, dst_entr_hmac):
         """
+        Set destination entry one by one.
+        Computes destination stealth address, amount key, range proof + HMAC, out_pk, ecdh_info.
+
         :param dst_entr
         :type dst_entr: xmrtypes.TxDestinationEntry
         :param dst_entr_hmac
@@ -128,7 +149,11 @@ class TrezorLite(object):
 
     async def all_out1_set(self):
         """
-        :return:
+        All outputs were set in this phase. Computes additional public keys (if needed), tx.extra and
+        transaction prefix hash.
+        Adds additional public keys to the tx.extra
+
+        :return: tx.extra, tx_prefix_hash
         """
         try:
             return await self.tsx_obj.all_out1_set()
@@ -138,6 +163,8 @@ class TrezorLite(object):
 
     async def tsx_mlsag_pseudo_out(self, out):
         """
+        Sets Pseudo outputs (Pedersen commitments) for the final_message incremental hashing.
+
         :return:
         """
         try:
@@ -148,6 +175,8 @@ class TrezorLite(object):
 
     async def tsx_gen_rv(self):
         """
+        Generates initial RctSig
+
         :return:
         """
         try:
@@ -158,6 +187,9 @@ class TrezorLite(object):
 
     async def tsx_mlsag_rangeproof(self, range_proof):
         """
+        Sets previously computed range proof, offloaded to host. Used for incremental hashing for mlsag struct.
+
+        :param range_proof: (range proof, range proof hmac)
         :return:
         """
         try:
@@ -168,6 +200,8 @@ class TrezorLite(object):
 
     async def tsx_mlsag_done(self):
         """
+        MLSAG message computed.
+
         :return:
         """
         try:
@@ -178,6 +212,8 @@ class TrezorLite(object):
 
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
         """
+        Generates a signature for one input.
+        
         :return:
         """
         try:
@@ -339,6 +375,7 @@ class TTransaction(object):
         """
         Initializes a new transaction.
         :param tsx_data:
+        :type tsx_data: TsxData
         :param tsx_ctr:
         :return:
         """
@@ -760,9 +797,10 @@ class TTransaction(object):
 
     async def tsx_input_vini_done(self):
         """
-        All inputs were set from the Agent.
+        All inputs were set from the Agent after key image sort.
         Shifts state machine to a next state (if everything is set correctly).
         Currently we return nothing from this message.
+
         :return:
         """
         self.state.input_vins_done()
@@ -903,6 +941,7 @@ class TTransaction(object):
         All outputs were set in this phase. Computes additional public keys (if needed), tx.extra and
         transaction prefix hash.
         Adds additional public keys to the tx.extra
+
         :return: tx.extra, tx_prefix_hash
         """
         self.state.set_output_done()
@@ -954,6 +993,7 @@ class TTransaction(object):
     async def tsx_mlsag_pseudo_out(self, out):
         """
         Sets Pseudo outputs (Pedersen commitments) for the final_message incremental hashing.
+
         :return:
         """
         self.state.set_pseudo_out()
@@ -980,6 +1020,7 @@ class TTransaction(object):
     async def tsx_mlsag_ecdh_info(self):
         """
         Sets ecdh info for the incremental hashing mlsag.
+
         :return:
         """
         if self.num_dests() != len(self.output_ecdh):
@@ -991,6 +1032,7 @@ class TTransaction(object):
     async def tsx_mlsag_out_pk(self):
         """
         Sets out_pk for the incremental hashing mlsag.
+
         :return:
         """
         if self.num_dests() != len(self.output_pk):
@@ -1002,6 +1044,7 @@ class TTransaction(object):
     async def tsx_gen_rv(self):
         """
         Generates initial RctSig
+
         :return:
         """
         return self.init_rct_sig()
@@ -1009,6 +1052,7 @@ class TTransaction(object):
     async def tsx_mlsag_rangeproof(self, range_proof):
         """
         Sets previously computed range proof, offloaded to host. Used for incremental hashing for mlsag struct.
+
         :param range_proof: (range proof, range proof hmac)
         :return:
         """
@@ -1043,14 +1087,16 @@ class TTransaction(object):
 
     async def tsx_mlsag_done(self):
         """
-        MLSAG message computed
+        MLSAG message computed.
+
         :return:
         """
         return self.full_message
 
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
         """
-        Generates a signature for one input
+        Generates a signature for one input.
+
         :param src_entr: Source entry
         :type src_entr: xmrtypes.TxSourceEntry
         :param vini: tx.vin[i] for the transaction. Contains key image, offsets, amount (usually zero)
