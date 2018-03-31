@@ -5,7 +5,7 @@
 import binascii
 
 from monero_serialize import xmrtypes, xmrserialize
-from .monero import TsxData, classify_subaddresses, addr_to_hash
+from .monero import TsxData, classify_subaddresses
 from . import monero, crypto, ring_ct, mlsag2, aesgcm
 from . import common as common
 from . import trezor
@@ -20,7 +20,7 @@ class TrezorLite(object):
         self.tsx_ctr = 0
         self.err_ctr = 0
         self.tsx_obj = None  # type: TTransaction
-        self.creds = None  # type: trezor.WalletCreds
+        self.creds = None  # type: monero.AccountCreds
 
     def exc_handler(self, e):
         """

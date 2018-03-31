@@ -34,6 +34,30 @@ class TsxData(xmrserialize.MessageType):
         self.outputs = outputs if outputs else []  # type: list[xmrtypes.TxDestinationEntry]
 
 
+class AccountCreds(object):
+    """
+    Stores account private keys
+    """
+    def __init__(self, view_key_private=None, spend_key_private=None, view_key_public=None, spend_key_public=None, address=None):
+        self.view_key_private = view_key_private
+        self.view_key_public = view_key_public
+        self.spend_key_private = spend_key_private
+        self.spend_key_public = spend_key_public
+        self.address = address
+        self.multisig_keys = []
+
+    @classmethod
+    def new_wallet(cls, priv_view_key, priv_spend_key):
+        pub_view_key = crypto.scalarmult_base(priv_view_key)
+        pub_spend_key = crypto.scalarmult_base(priv_spend_key)
+        addr = encode_addr(net_version(),
+                           crypto.encodepoint(pub_spend_key),
+                           crypto.encodepoint(pub_view_key))
+        return cls(view_key_private=priv_view_key, spend_key_private=priv_spend_key,
+                   view_key_public=pub_view_key, spend_key_public=pub_spend_key,
+                   address=addr)
+
+
 def net_version():
     """
     Network version bytes
@@ -395,6 +419,7 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     Generates UTXO spending key and key image.
 
     :param ack: sender credentials
+    :type ack: AccountCreds
     :param out_key: real output (from input RCT) destination key
     :param recv_derivation:
     :param real_output_index:

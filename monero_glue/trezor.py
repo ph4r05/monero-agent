@@ -2,36 +2,10 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import binascii
-
 from monero_serialize import xmrtypes, xmrserialize
-from .monero import TsxData, classify_subaddresses, addr_to_hash
+from .monero import TsxData, classify_subaddresses
 from . import monero, crypto, ring_ct, mlsag2
 from . import common as common
-
-
-class WalletCreds(object):
-    """
-    Stores wallet private keys
-    """
-    def __init__(self, view_key_private=None, spend_key_private=None, view_key_public=None, spend_key_public=None, address=None):
-        self.view_key_private = view_key_private
-        self.view_key_public = view_key_public
-        self.spend_key_private = spend_key_private
-        self.spend_key_public = spend_key_public
-        self.address = address
-        self.multisig_keys = []
-
-    @classmethod
-    def new_wallet(cls, priv_view_key, priv_spend_key):
-        pub_view_key = crypto.scalarmult_base(priv_view_key)
-        pub_spend_key = crypto.scalarmult_base(priv_spend_key)
-        addr = monero.encode_addr(monero.net_version(),
-                                  crypto.encodepoint(pub_spend_key),
-                                  crypto.encodepoint(pub_view_key))
-        return cls(view_key_private=priv_view_key, spend_key_private=priv_spend_key,
-                   view_key_public=pub_view_key, spend_key_public=pub_spend_key,
-                   address=addr)
 
 
 class Trezor(object):
