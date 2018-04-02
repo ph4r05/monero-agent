@@ -117,20 +117,6 @@ class TrezorLite(object):
             self.exc_handler(e)
             raise
 
-    async def tsx_input_vini_done(self, *args, **kwargs):
-        """
-        All inputs were set from the Agent after key image sort.
-        Shifts state machine to a next state (if everything is set correctly).
-        Currently we return nothing from this message.
-
-        :return:
-        """
-        try:
-            return await self.tsx_obj.tsx_input_vini_done()
-        except Exception as e:
-            self.exc_handler(e)
-            raise
-
     async def set_tsx_output1(self, dst_entr, dst_entr_hmac):
         """
         Set destination entry one by one.
@@ -227,80 +213,101 @@ class TState(object):
     """
     Transaction state
     """
+    START = 0
+    INIT = 1
+    INP_CNT = 2
+    PRECOMP = 3
+    INPUT = 4
+    INPUT_DONE = 5
+    INPUT_PERM = 6
+    INPUT_VINS = 7
+    OUTPUT = 8
+    OUTPUT_DONE = 9
+    PSEUDO_OUTS = 10
+    RANGE_PROOF = 11
+    FINAL_MESSAGE = 12
+    SIGNATURE = 13
+    FINAL = 14
+
     def __init__(self):
-        self.s = 0
+        self.s = self.START
         self.in_mem = False
 
     def init_tsx(self):
-        if self.s != 0:
+        if self.s != self.START:
             raise ValueError('Illegal state')
-        self.s = 1
+        self.s = self.INIT
 
     def inp_cnt(self, in_mem):
-        if self.s != 1:
+        if self.s != self.INIT:
             raise ValueError('Illegal state')
-        self.s = 2
+        self.s = self.INP_CNT
         self.in_mem = in_mem
 
     def precomp(self):
-        if self.s != 2:
+        if self.s != self.INP_CNT:
             raise ValueError('Illegal state')
-        self.s = 3
+        self.s = self.PRECOMP
 
     def input(self):
-        if self.s != 3 and self.s != 4:
+        if self.s != self.PRECOMP and self.s != self.INPUT:
             raise ValueError('Illegal state')
-        self.s = 4
+        self.s = self.INPUT
 
     def input_done(self):
-        if self.s != 4:
+        if self.s != self.INPUT:
             raise ValueError('Illegal state')
-        self.s = 5
+        self.s = self.INPUT_DONE
 
     def input_permutation(self):
-        if self.s != 5:
+        if self.s != self.INPUT_DONE:
             raise ValueError('Illegal state')
-        self.s = 6
+        self.s = self.INPUT_PERM
 
     def input_vins(self):
-        if self.s != 6 and self.s != 7:
+        if self.s != self.INPUT_PERM and self.s != self.INPUT_VINS:
             raise ValueError('Illegal state')
-        self.s = 7
+        self.s = self.INPUT_VINS
 
-    def input_vins_done(self):
-        if self.in_mem or self.s != 7:
-            raise ValueError('Illegal state')
-        self.s = 8
+    def is_input_vins(self):
+        return self.s == self.INPUT_VINS
 
     def set_output(self):
-        if ((not self.in_mem and self.s != 7) or (self.in_mem and self.s != 6)) and self.s != 9:
+        if ((not self.in_mem and self.s != self.INPUT_VINS)
+            or (self.in_mem and self.s != self.INPUT_PERM)) \
+                and self.s != self.OUTPUT:
             raise ValueError('Illegal state')
-        self.s = 9
+        self.s = self.OUTPUT
 
     def set_output_done(self):
-        if self.s != 9:
+        if self.s != self.OUTPUT:
             raise ValueError('Illegal state')
-        self.s = 10
+        self.s = self.OUTPUT_DONE
 
     def set_pseudo_out(self):
-        if self.s != 10 and self.s != 11:
+        if self.s != self.OUTPUT_DONE and self.s != self.PSEUDO_OUTS:
             raise ValueError('Illegal state')
-        self.s = 11
+        self.s = self.PSEUDO_OUTS
 
     def set_range_proof(self):
-        if self.s != 10 and self.s != 11 and self.s != 12:
+        if self.s != self.OUTPUT_DONE and self.s != self.PSEUDO_OUTS and self.s != self.RANGE_PROOF:
             raise ValueError('Illegal state')
-        self.s = 12
+        self.s = self.RANGE_PROOF
 
     def set_final_message_done(self):
-        if self.s != 12:
+        if self.s != self.RANGE_PROOF:
             raise ValueError('Illegal state')
-        self.s = 13
+        self.s = self.FINAL_MESSAGE
 
     def set_signature(self):
-        if self.s != 13 and self.s != 14:
+        if self.s != self.FINAL_MESSAGE and self.s != self.SIGNATURE:
             raise ValueError('Illegal state')
-        self.s = 14
+        self.s = self.SIGNATURE
+
+    def set_final(self):
+        if self.s != self.SIGNATURE:
+            raise ValueError('Illegal state')
+        self.s = self.FINAL
 
 
 class TTransaction(object):
@@ -795,18 +802,6 @@ class TTransaction(object):
         # Serialize particular input type
         await self.tx_prefix_hasher.ar.field(vini, xmrtypes.TxInV)
 
-    async def tsx_input_vini_done(self):
-        """
-        All inputs were set from the Agent after key image sort.
-        Shifts state machine to a next state (if everything is set correctly).
-        Currently we return nothing from this message.
-
-        :return:
-        """
-        self.state.input_vins_done()
-        if self.inp_idx + 1 != self.num_inputs():
-            raise ValueError('Invalid number of inputs')
-
     async def commitment(self, in_amount):
         """
         Computes Pedersen commitment - pseudo outs
@@ -880,6 +875,9 @@ class TTransaction(object):
         :param dst_entr_hmac
         :return:
         """
+        if self.state.is_input_vins() and self.inp_idx + 1 != self.num_inputs():
+            raise ValueError('Invalid number of inputs')
+
         self.state.set_output()
         self.out_idx += 1
         change_addr = self.change_address()
@@ -1180,5 +1178,10 @@ class TTransaction(object):
         # Encode
         mgs = monero.recode_msg([mg])
         cout = msc if self.multi_sig else None
+
+        # Final state transition
+        if self.inp_idx + 1 == self.num_inputs():
+            self.state.set_final()
+
         return mgs[0], cout
 
