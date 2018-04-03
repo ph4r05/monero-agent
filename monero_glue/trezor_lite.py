@@ -835,6 +835,7 @@ class TTransaction(object):
         is_last = idx + 1 == self.num_dests()
         last_mask = None if not is_last or not self.use_simple_rct else crypto.sc_sub(self.sumpouts_alphas, self.sumout)
 
+        # Pedersen commitment on the value, mask from the commitment, range signature.
         C, mask, rsig = None, 0, None
 
         # Rangeproof

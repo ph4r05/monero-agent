@@ -48,7 +48,9 @@ def prove_range(amount, last_mask=None, use_asnl=False):
     :param amount:
     :param last_mask: ai[ATOMS-1] will be computed as \sum_{i=0}^{ATOMS-2} a_i - last_mask
     :param use_asnl: use ASNL, used before Borromean
-    :return: sumCi, mask, RangeSig
+    :return: sumCi, mask, RangeSig.
+        sumCi is Pedersen commitment on the amount value. sumCi = aG + amount*H
+        mask is "a" from the Pedersent commitment above.
     """
     bb = d2b(amount, ATOMS)  # gives binary form of bb in "digits" binary digits
     logger.info("amount, amount in binary %s %s" % (amount, bb))
