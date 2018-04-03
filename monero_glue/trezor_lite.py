@@ -344,7 +344,6 @@ class TTransaction(object):
         self.input_secrets = []
         self.input_alphas = []
         self.input_pseudo_outs = []
-        self.output_secrets = []
         self.output_amounts = []
         self.output_sk = []
         self.output_pk = []
@@ -818,7 +817,7 @@ class TTransaction(object):
         self.sumpouts_alphas = crypto.sc_add(self.sumpouts_alphas, alpha)
         return alpha, crypto.gen_c(alpha, in_amount)
 
-    async def range_proof(self, idx):
+    async def range_proof(self, idx, amount_key):
         """
         Computes rangeproof and related information - out_sk, out_pk, ecdh_info.
         In order to optimize incremental transaction build, the mask computation is changed compared
@@ -829,6 +828,7 @@ class TTransaction(object):
         a[63] = (\sum_{i=0}^{num_inp}alpha_i - \sum_{i=0}^{num_outs-1} amasks_i) - \sum_{i=0}^{62}a_i
 
         :param idx:
+        :param amount_key:
         :return:
         """
         out_pk = xmrtypes.CtKey(dest=self.tx.vout[idx].target.key)
@@ -860,9 +860,8 @@ class TTransaction(object):
         self.output_sk.append(xmrtypes.CtKey(mask=mask))
 
         # ECDH masking
-        amount_key = crypto.encodeint(self.output_secrets[idx])
         ecdh_info = xmrtypes.EcdhTuple(mask=mask, amount=self.output_amounts[idx])
-        ecdh_info = ring_ct.ecdh_encode(ecdh_info, derivation=amount_key)
+        ecdh_info = ring_ct.ecdh_encode(ecdh_info, derivation=crypto.encodeint(amount_key))
         monero.recode_ecdh(ecdh_info, encode=True)
         return rsig, out_pk, ecdh_info
 
@@ -915,15 +914,13 @@ class TTransaction(object):
         tx_out = xmrtypes.TxOut(amount=0, target=tk)
         self.tx.vout.append(tx_out)
         self.summary_outs_money += dst_entr.amount
-
-        self.output_secrets.append(amount_key)
         self.output_amounts.append(dst_entr.amount)
 
         # Hmac dest_entr.
         hmac_vouti = await self.gen_hmac_vouti(dst_entr, tx_out, self.out_idx)
 
         # Range proof, out_pk, ecdh_info
-        rsig, out_pk, ecdh_info = await self.range_proof(self.out_idx)
+        rsig, out_pk, ecdh_info = await self.range_proof(self.out_idx, amount_key=amount_key)
         kwriter = common.get_keccak_writer()
         ar = xmrserialize.Archive(kwriter, True)
         await ar.message(rsig)
