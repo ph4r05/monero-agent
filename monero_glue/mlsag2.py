@@ -274,8 +274,6 @@ def gen_borromean(x, P1, P2, indices):
     n = len(P1)
     L = [key_vector(n), key_vector(n)]
     alpha = key_zero_vector(n)
-
-    s0 = key_zero_vector(n)
     s1 = key_zero_vector(n)
 
     for ii in range(n):
@@ -292,8 +290,10 @@ def gen_borromean(x, P1, P2, indices):
     for ii in range(n):
         kck.update(crypto.encodepoint(L[1][ii]))
 
-    # ee = crypto.hash_to_scalar(L[1])
     ee = crypto.sc_reduce32(crypto.decodeint(kck.digest()))
+
+    del L
+    s0 = key_zero_vector(n)
 
     for jj in range(n):
         if not indices[jj]:
