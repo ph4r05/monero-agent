@@ -272,27 +272,25 @@ def gen_borromean(x, P1, P2, indices):
     :return:
     """
     n = len(P1)
-    L = [key_vector(n), key_vector(n)]
     alpha = key_zero_vector(n)
     s1 = key_zero_vector(n)
+    kck = common.get_keccak()  # ee computation
 
     for ii in range(n):
         naught = indices[ii]
-        prime = naught ^ 1
         alpha[ii] = crypto.random_scalar()
-        L[naught][ii] = crypto.scalarmult_base(alpha[ii])
+        L = crypto.scalarmult_base(alpha[ii])
+
         if naught == 0:
             s1[ii] = crypto.random_scalar()
-            c = crypto.hash_to_scalar(crypto.encodepoint(L[naught][ii]))
-            L[prime][ii] = add_keys1(s1[ii], c, P2[ii])
+            c = crypto.hash_to_scalar(crypto.encodepoint(L))
+            L = add_keys1(s1[ii], c, P2[ii])
+            kck.update(crypto.encodepoint(L))
 
-    kck = common.get_keccak()
-    for ii in range(n):
-        kck.update(crypto.encodepoint(L[1][ii]))
+        else:
+            kck.update(crypto.encodepoint(L))
 
     ee = crypto.sc_reduce32(crypto.decodeint(kck.digest()))
-
-    del L
     s0 = key_zero_vector(n)
 
     for jj in range(n):
