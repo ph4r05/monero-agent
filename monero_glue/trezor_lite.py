@@ -916,6 +916,8 @@ class TTransaction(object):
         # as whole vectors. Hashing ECDH info saves state space.
         await self.full_message_hasher.set_ecdh(ecdh_info)
 
+        # Output_pk is stored to the state as it is used during the signature and hashed to the
+        # RctSigBase later.
         self.output_pk.append(out_pk)
         return tx_out, hmac_vouti, (rsig, None), out_pk, ecdh_info
 
