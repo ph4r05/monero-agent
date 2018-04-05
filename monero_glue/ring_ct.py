@@ -187,7 +187,6 @@ def prove_range_mem(amount, last_mask=None):
     R.asig = A
     R.Ci = Ci
 
-    C = sum_Ci(Ci)
     return C, a, R
 
 
