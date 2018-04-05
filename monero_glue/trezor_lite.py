@@ -452,7 +452,7 @@ class TTransaction(object):
         await ar1.message(tsx_data)
         await xmrserialize.dump_uvarint(writer, self.r)
         await xmrserialize.dump_uvarint(writer, tsx_ctr)
-        self.key_master = writer.get_digest()
+        self.key_master = common.keccak_2hash(writer.get_digest() + crypto.encodeint(crypto.random_scalar()))
         self.key_hmac = common.keccak_2hash(b'hmac' + self.key_master)
         self.key_enc = common.keccak_2hash(b'enc' + self.key_master)
 
