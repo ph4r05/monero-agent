@@ -171,19 +171,6 @@ class TrezorLite(object):
             self.exc_handler(e)
             raise
 
-    async def tsx_mlsag_rangeproof(self, range_proof):
-        """
-        Sets previously computed range proof, offloaded to host. Used for incremental hashing for mlsag struct.
-
-        :param range_proof: (range proof, range proof hmac)
-        :return:
-        """
-        try:
-            return await self.tsx_obj.tsx_mlsag_rangeproof(range_proof)
-        except Exception as e:
-            self.exc_handler(e)
-            raise
-
     async def tsx_mlsag_done(self):
         """
         MLSAG message computed.
@@ -224,10 +211,9 @@ class TState(object):
     OUTPUT = 8
     OUTPUT_DONE = 9
     PSEUDO_OUTS = 10
-    RANGE_PROOF = 11
-    FINAL_MESSAGE = 12
-    SIGNATURE = 13
-    FINAL = 14
+    FINAL_MESSAGE = 11
+    SIGNATURE = 12
+    FINAL = 13
 
     def __init__(self):
         self.s = self.START
@@ -289,13 +275,8 @@ class TState(object):
             raise ValueError('Illegal state')
         self.s = self.PSEUDO_OUTS
 
-    def set_range_proof(self):
-        if self.s != self.OUTPUT_DONE and self.s != self.PSEUDO_OUTS and self.s != self.RANGE_PROOF:
-            raise ValueError('Illegal state')
-        self.s = self.RANGE_PROOF
-
     def set_final_message_done(self):
-        if self.s != self.RANGE_PROOF:
+        if self.s != self.OUTPUT_DONE and self.s != self.PSEUDO_OUTS:
             raise ValueError('Illegal state')
         self.s = self.FINAL_MESSAGE
 
@@ -827,6 +808,8 @@ class TTransaction(object):
         In order to save roundtrips we compute commitments randomly and then for the last rangeproof
         a[63] = (\sum_{i=0}^{num_inp}alpha_i - \sum_{i=0}^{num_outs-1} amasks_i) - \sum_{i=0}^{62}a_i
 
+        The range proof is incrementally hashed to the final_message.
+
         :param idx:
         :param amount_key:
         :return:
@@ -853,6 +836,9 @@ class TTransaction(object):
 
             # Recoding to structure
             monero.recode_rangesig(rsig, encode=True)
+
+            # Incremental hashing
+            await self.full_message_hasher.rsig_val(rsig, self.use_bulletproof)
 
         # Mask sum
         out_pk.mask = crypto.encodepoint(C)
@@ -1045,48 +1031,18 @@ class TTransaction(object):
         """
         return self.init_rct_sig()
 
-    async def tsx_mlsag_rangeproof(self, range_proof):
-        """
-        Sets previously computed range proof, offloaded to host. Used for incremental hashing for mlsag struct.
-
-        :param range_proof: (range proof, range proof hmac)
-        :return:
-        """
-        self.state.set_range_proof()
-        self.out_idx += 1
-
-        if self.inp_idx + 1 != self.num_inputs():
-            raise ValueError('Invalid ins')
-        if self.out_idx + 1 > self.num_dests():
-            raise ValueError('Invalid outs')
-
-        rsig, hmac_rsig = range_proof
-
-        kwriter = common.get_keccak_writer()
-        ar = xmrserialize.Archive(kwriter, True)
-        await ar.message(rsig)
-
-        hmac_key_rsig = self.hmac_key_txout_asig(self.out_idx)
-        hmac_rsig_comp = common.compute_hmac(hmac_key_rsig, kwriter.get_digest())
-        if not common.ct_equal(hmac_rsig, hmac_rsig_comp):
-            raise ValueError('HMAC invalid for rsig')
-
-        await self.full_message_hasher.rsig_val(rsig, bulletproof=self.use_bulletproof)
-
-        # Next state transition
-        if self.out_idx + 1 == self.num_dests():
-            self.full_message = await self.full_message_hasher.get_digest()
-            del self.full_message_hasher
-
-            self.state.set_final_message_done()
-            self.inp_idx = -1
-
     async def tsx_mlsag_done(self):
         """
         MLSAG message computed.
 
         :return:
         """
+        self.state.set_final_message_done()
+        self.inp_idx = -1
+
+        self.full_message = await self.full_message_hasher.get_digest()
+        del self.full_message_hasher
+
         return self.full_message
 
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):

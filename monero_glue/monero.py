@@ -557,9 +557,8 @@ class PreMlsagHasher(object):
         del self.rtcsig_hasher
 
     async def rsig_val(self, p, bulletproof):
-        if self.state != 6 and self.state != 7:
+        if self.state == 8:
             raise ValueError('State error')
-        self.state = 7
 
         if bulletproof:
             self.rsig_hasher.update(p.A)
@@ -586,7 +585,7 @@ class PreMlsagHasher(object):
                 self.rsig_hasher.update(p.Ci[i])
 
     async def get_digest(self):
-        if self.state != 7:
+        if self.state != 6:
             raise ValueError('State error')
         self.state = 8
 

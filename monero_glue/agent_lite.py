@@ -166,7 +166,6 @@ class Agent(object):
         rv.outPk = []
         rv.ecdhInfo = []
         for idx in range(len(self.ct.tx_out_rsigs)):
-            await self.trezor.tsx_mlsag_rangeproof(self.ct.tx_out_rsigs[idx])
             rv.p.rangeSigs.append(self.ct.tx_out_rsigs[idx][0])
             rv.outPk.append(self.ct.tx_out_pk[idx])
             rv.ecdhInfo.append(self.ct.tx_out_ecdh[idx])
