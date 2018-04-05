@@ -291,6 +291,8 @@ def gen_borromean(x, P1, P2, indices):
             kck.update(crypto.encodepoint(L))
 
     ee = crypto.sc_reduce32(crypto.decodeint(kck.digest()))
+    del kck
+
     s0 = key_zero_vector(n)
 
     for jj in range(n):
