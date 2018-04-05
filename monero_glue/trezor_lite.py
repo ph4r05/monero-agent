@@ -311,7 +311,6 @@ class TTransaction(object):
         self.output_amounts = []
         self.output_sk = []
         self.output_pk = []
-        self.output_ecdh = []
         self.sumout = 0
         self.sumpouts_alphas = 0
         self.subaddresses = {}
@@ -912,12 +911,13 @@ class TTransaction(object):
         ar = xmrserialize.Archive(kwriter, True)
         await ar.message(rsig)
 
-        hmac_key_rsig = self.hmac_key_txout_asig(self.out_idx)
-        hmac_rsig = common.compute_hmac(hmac_key_rsig, kwriter.get_digest())
-        self.output_pk.append(out_pk)
-        self.output_ecdh.append(ecdh_info)
+        # Incremental hashing of the ECDH info.
+        # RctSigBase allows to hash only one of the (ecdh, out_pk) as they are serialized
+        # as whole vectors. Hashing ECDH info saves state space.
+        await self.full_message_hasher.set_ecdh(ecdh_info)
 
-        return tx_out, hmac_vouti, (rsig, hmac_rsig), out_pk, ecdh_info
+        self.output_pk.append(out_pk)
+        return tx_out, hmac_vouti, (rsig, None), out_pk, ecdh_info
 
     async def all_out1_set(self):
         """
@@ -974,11 +974,7 @@ class TTransaction(object):
 
         :return:
         """
-        if self.num_dests() != len(self.output_ecdh):
-            raise ValueError('Invalid number of ecdh')
-
-        for ecdh in self.output_ecdh:
-            await self.full_message_hasher.set_ecdh(ecdh)
+        pass
 
     async def tsx_mlsag_out_pk(self):
         """
