@@ -37,12 +37,12 @@ class RingCtTest(aiounittest.AsyncTestCase):
         self.assertTrue(res)
 
     def test_range_proof_old(self):
-        proof = ring_ct.prove_range(0, use_asnl=True)
+        proof = ring_ct.prove_range(0, use_asnl=True, mem_opt=False)
         res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True)
         self.assertTrue(res)
 
     def test_range_proof2_old(self):
-        proof = ring_ct.prove_range(123456789, use_asnl=True)
+        proof = ring_ct.prove_range(123456789, use_asnl=True, mem_opt=False)
         res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True)
         self.assertTrue(res)
         res = ring_ct.ver_range(crypto.point_add(proof[0], crypto.scalarmult_base(4)), proof[2], use_asnl=True)
