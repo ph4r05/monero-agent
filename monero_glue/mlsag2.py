@@ -278,7 +278,7 @@ def gen_borromean(x, P1, P2, indices):
 
     for ii in range(n):
         naught = indices[ii]
-        prime = (indices[ii] + 1) % 2
+        prime = naught ^ 1
         alpha[ii] = crypto.random_scalar()
         L[naught][ii] = crypto.scalarmult_base(alpha[ii])
         if naught == 0:
