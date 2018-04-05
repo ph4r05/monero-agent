@@ -277,11 +277,10 @@ def gen_borromean(x, P1, P2, indices):
     kck = common.get_keccak()  # ee computation
 
     for ii in range(n):
-        naught = indices[ii]
         alpha[ii] = crypto.random_scalar()
         L = crypto.scalarmult_base(alpha[ii])
 
-        if naught == 0:
+        if indices[ii] == 0:
             s1[ii] = crypto.random_scalar()
             c = crypto.hash_to_scalar(crypto.encodepoint(L))
             L = add_keys1(s1[ii], c, P2[ii])
