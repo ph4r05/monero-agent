@@ -94,10 +94,12 @@ class Agent(object):
         tsx_data.change_dts = tx.change_dts
         tsx_data.num_inputs = len(tx.sources)
         tsx_data.mixin = len(tx.sources[0].outputs)
+        tsx_data.fee = sum([x.amount for x in tx.sources]) - sum([x.amount for x in tx.splitted_dsts])
         self.ct.tx.unlock_time = tx.unlock_time
 
         self.ct.tsx_data = tsx_data
         init_res = await self.trezor.init_transaction(tsx_data)
+        in_memory = init_res[0]
         self.ct.tx_out_entr_hmacs = init_res[1]
 
         # Subaddresses precomputation - needed for this transaction
@@ -129,7 +131,8 @@ class Agent(object):
 
         # Set vin_i back - tx prefix hashing
         for idx in range(len(self.ct.tx.vin)):
-            await self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx])
+            await self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
+                                             self.ct.pseudo_outs[idx] if not in_memory else None)
 
         # Set transaction outputs
         for idx, dst in enumerate(tx.splitted_dsts):
@@ -150,10 +153,6 @@ class Agent(object):
 
         # RctSig
         rv = await self.trezor.tsx_gen_rv()
-
-        # Pseudo outputs
-        for idx in range(len(self.ct.pseudo_outs)):
-            await self.trezor.tsx_mlsag_pseudo_out(self.ct.pseudo_outs[idx])
 
         if self.is_simple(rv):
             if self.is_bulletproof(rv):

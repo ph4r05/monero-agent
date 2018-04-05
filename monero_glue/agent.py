@@ -48,6 +48,7 @@ class Agent(object):
             tsx_data.change_dts = tx.change_dts
             tsx_data.num_inputs = len(tx.sources)
             tsx_data.mixin = len(tx.sources[0].outputs)
+            tsx_data.fee = sum([x.amount for x in tx.sources]) - sum([x.amount for x in tx.splitted_dsts])
 
             self.ct.tsx_data = tsx_data
             await self.trezor.init_transaction(tsx_data)

@@ -147,18 +147,6 @@ class TrezorLite(object):
             self.exc_handler(e)
             raise
 
-    async def tsx_mlsag_pseudo_out(self, out):
-        """
-        Sets Pseudo outputs (Pedersen commitments) for the final_message incremental hashing.
-
-        :return:
-        """
-        try:
-            return await self.tsx_obj.tsx_mlsag_pseudo_out(out)
-        except Exception as e:
-            self.exc_handler(e)
-            raise
-
     async def tsx_gen_rv(self):
         """
         Generates initial RctSig
@@ -210,10 +198,9 @@ class TState(object):
     INPUT_VINS = 7
     OUTPUT = 8
     OUTPUT_DONE = 9
-    PSEUDO_OUTS = 10
-    FINAL_MESSAGE = 11
-    SIGNATURE = 12
-    FINAL = 13
+    FINAL_MESSAGE = 10
+    SIGNATURE = 11
+    FINAL = 12
 
     def __init__(self):
         self.s = self.START
@@ -270,13 +257,8 @@ class TState(object):
             raise ValueError('Illegal state')
         self.s = self.OUTPUT_DONE
 
-    def set_pseudo_out(self):
-        if self.s != self.OUTPUT_DONE and self.s != self.PSEUDO_OUTS:
-            raise ValueError('Illegal state')
-        self.s = self.PSEUDO_OUTS
-
     def set_final_message_done(self):
-        if self.s != self.OUTPUT_DONE and self.s != self.PSEUDO_OUTS:
+        if self.s != self.OUTPUT_DONE:
             raise ValueError('Illegal state')
         self.s = self.FINAL_MESSAGE
 
@@ -315,6 +297,7 @@ class TTransaction(object):
         self.output_count = 0
         self.output_change = None
         self.mixin = 0
+        self.fee = 0
 
         self.additional_tx_keys = []
         self.additional_tx_public_keys = []
@@ -374,6 +357,7 @@ class TTransaction(object):
         self.output_count = len(tsx_data.outputs)
         self.output_change = tsx_data.change_dts
         self.mixin = tsx_data.mixin
+        self.fee = tsx_data.fee
         self.use_simple_rct = self.input_count > 1
         self.state.inp_cnt(self.in_memory())
         self.check_change(tsx_data.outputs)
@@ -396,6 +380,10 @@ class TTransaction(object):
         self.tx.unlock_time = tsx_data.unlock_time
         await self.process_payment_id(tsx_data)
         await self.compute_sec_keys(tsx_data, tsx_ctr)
+
+        # Final message hasher
+        self.full_message_hasher.init(self.use_simple_rct)
+        await self.full_message_hasher.set_type_fee(self.get_rct_type(), self.get_fee())
 
         # HMAC outputs - pinning
         hmacs = []
@@ -500,8 +488,7 @@ class TTransaction(object):
         Txn fee
         :return:
         """
-        fee = self.summary_inputs_money - self.summary_outs_money
-        return fee if fee > 0 else 0
+        return self.fee if self.fee > 0 else 0
 
     def change_address(self):
         """
@@ -758,14 +745,16 @@ class TTransaction(object):
         common.apply_permutation(self.source_permutation, swapper)
         self.inp_idx = -1
 
-    async def tsx_input_vini(self, src_entr, vini, hmac):
+    async def tsx_input_vini(self, src_entr, vini, hmac, pseudo_out):
         """
         Set tx.vin[i] for incremental tx prefix hash computation.
         After sorting by key images on host.
+        Hashes pseudo_out to the final_message.
 
         :param src_entr:
         :param vini: tx.vin[i]
         :param hmac: HMAC of tx.vin[i]
+        :param pseudo_out: pseudo_out for the current entry
         :return:
         """
         if self.in_memory():
@@ -781,6 +770,18 @@ class TTransaction(object):
 
         # Serialize particular input type
         await self.tx_prefix_hasher.ar.field(vini, xmrtypes.TxInV)
+
+        # Pseudo_out incremental hashing
+        if not self.in_memory():
+            idx = self.source_permutation[self.inp_idx]
+            pseudo_out, pseudo_out_hmac_provided = pseudo_out
+            pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(idx), pseudo_out)
+            if not common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
+                raise ValueError('HMAC invalid for pseudo outs')
+        else:
+            pseudo_out = self.input_pseudo_outs[self.inp_idx]
+
+        await self.full_message_hasher.set_pseudo_out(pseudo_out)
 
     async def commitment(self, in_amount):
         """
@@ -934,6 +935,10 @@ class TTransaction(object):
         if self.use_simple_rct:
             self.assrt(crypto.sc_eq(self.sumout, self.sumpouts_alphas))
 
+        # Fee test
+        if self.fee != (self.summary_inputs_money - self.summary_outs_money):
+            raise ValueError('Fee invalid')
+
         # Set public key to the extra
         # Not needed to remove - extra is clean
         # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraPubKey)
@@ -959,45 +964,9 @@ class TTransaction(object):
         self.tx_prefix_hash = self.tx_prefix_hasher.kwriter.get_digest()
         del self.tx_prefix_hasher
 
-        # Init full_message hasher
-        # Hash message, type, fee, pseudoOuts number of elements
-        self.full_message_hasher.init(self.use_simple_rct, self.tx_prefix_hash)
-        await self.full_message_hasher.set_type_fee(self.get_rct_type(), self.get_fee())
-
-        if self.in_memory():
-            for idx in range(len(self.input_pseudo_outs)):
-                await self.full_message_hasher.set_pseudo_out(self.input_pseudo_outs[idx])
-        else:
-            self.inp_idx = -1
-
+        # Hash message to the final_message
+        await self.full_message_hasher.set_message(self.tx_prefix_hash)
         return self.tx.extra, self.tx_prefix_hash
-
-    async def tsx_mlsag_pseudo_out(self, out):
-        """
-        Sets Pseudo outputs (Pedersen commitments) for the final_message incremental hashing.
-
-        :return:
-        """
-        self.state.set_pseudo_out()
-        self.inp_idx += 1
-        if self.inp_idx >= self.num_inputs():
-            raise ValueError('Too many pseudo inputs')
-
-        if not self.in_memory():
-            idx = self.source_permutation[self.inp_idx]
-            pseudo_out, pseudo_out_hmac_provided = out
-            pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(idx), pseudo_out)
-            if not common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
-                raise ValueError('HMAC invalid for pseudo outs')
-
-            await self.full_message_hasher.set_pseudo_out(pseudo_out)
-
-        # Next state transition
-        if self.inp_idx + 1 == self.num_inputs():
-            await self.tsx_mlsag_ecdh_info()
-            await self.tsx_mlsag_out_pk()
-            await self.full_message_hasher.rctsig_base_done()
-            self.out_idx = -1
 
     async def tsx_mlsag_ecdh_info(self):
         """
@@ -1038,6 +1007,11 @@ class TTransaction(object):
         :return:
         """
         self.state.set_final_message_done()
+
+        await self.tsx_mlsag_ecdh_info()
+        await self.tsx_mlsag_out_pk()
+        await self.full_message_hasher.rctsig_base_done()
+        self.out_idx = -1
         self.inp_idx = -1
 
         self.full_message = await self.full_message_hasher.get_digest()

@@ -15,7 +15,7 @@ class TsxData(xmrserialize.MessageType):
     TsxData, initial input to the transaction processing.
     Serialization structure for easy hashing.
     """
-    __slots__ = ['version', 'payment_id', 'unlock_time', 'outputs', 'change_dts', 'num_inputs', 'mixin']
+    __slots__ = ['version', 'payment_id', 'unlock_time', 'outputs', 'change_dts', 'num_inputs', 'mixin', 'fee']
     FIELDS = [
         ('version', xmrserialize.UVarintType),
         ('payment_id', xmrserialize.BlobType),
@@ -24,6 +24,7 @@ class TsxData(xmrserialize.MessageType):
         ('change_dts', xmrtypes.TxDestinationEntry),
         ('num_inputs', xmrserialize.UVarintType),
         ('mixin', xmrserialize.UVarintType),
+        ('fee', xmrserialize.UVarintType),
     ]
 
     def __init__(self, payment_id=None, outputs=None, change_dts=None, **kwargs):
@@ -510,12 +511,14 @@ class PreMlsagHasher(object):
         self.rtcsig_hasher = common.KeccakArchive()
         self.rsig_hasher = common.get_keccak()
 
-    def init(self, is_simple, message):
+    def init(self, is_simple):
         if self.state != 0:
             raise ValueError('State error')
 
         self.state = 1
         self.is_simple = is_simple
+
+    async def set_message(self, message):
         self.kc_master.update(message)
 
     async def set_type_fee(self, rv_type, fee):
