@@ -59,6 +59,13 @@ class AccountCreds(object):
                    address=addr)
 
 
+class TxScanInfo(object):
+    """
+    struct tx_scan_info_t
+    """
+    __slots__ = ['in_ephemeral', 'ki', 'mask', 'amount', 'money_transfered', 'error', 'received']
+
+
 def net_version():
     """
     Network version bytes
@@ -486,6 +493,33 @@ def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, addit
 
     xi, ki = generate_key_image_helper_precomp(creds, out_key, subaddr_recv_info[1], real_output_index, subaddr_recv_info[0])
     return xi, ki, recv_derivation
+
+
+def check_acc_out_precomp(tx_out, subaddresses, derivation, additional_derivations, i):
+    """
+    wallet2::check_acc_out_precomp
+    Detects whether the tx output belongs to the subaddresses. If yes, computes the derivation.
+    Returns TxScanInfo
+
+    :param tx_out:
+    :param derivation:
+    :param additional_derivations:
+    :param i:
+    :return:
+    """
+    tx_scan_info = TxScanInfo()
+    tx_scan_info.error = True
+
+    if not isinstance(tx_out.target, xmrtypes.TxoutToKey):
+        return tx_scan_info
+
+    tx_scan_info.received = is_out_to_acc_precomp(subaddresses, tx_out.target.key, derivation, additional_derivations, i)
+    if tx_scan_info.received:
+        tx_scan_info.money_transfered = tx_out.amount
+    else:
+        tx_scan_info.money_transfered = 0
+    tx_scan_info.error = False
+    return tx_scan_info
 
 
 async def get_transaction_prefix_hash(tx):
