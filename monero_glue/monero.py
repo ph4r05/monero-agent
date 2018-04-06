@@ -753,3 +753,28 @@ def expand_transaction(tx):
 
     return tx
 
+
+def compute_subaddresses(creds, account, indices, subaddresses=None):
+    """
+    Computes subaddress public spend key for receiving transactions.
+
+    :param creds: credentials
+    :param account: major index
+    :param indices: array of minor indices
+    :param subaddresses: subaddress dict. optional.
+    :return:
+    """
+    if subaddresses is None:
+        subaddresses = {}
+
+    for idx in indices:
+        if account == 0 and idx == 0:
+            subaddresses[crypto.encodepoint(creds.spend_key_public)] = (0, 0)
+            continue
+
+        pub = get_subaddress_spend_public_key(creds.view_key_private,
+                                              creds.spend_key_public,
+                                              major=account, minor=idx)
+        pub = crypto.encodepoint(pub)
+        subaddresses[pub] = (account, idx)
+    return subaddresses

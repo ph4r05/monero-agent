@@ -434,16 +434,7 @@ class TTransaction(object):
         :return:
         """
         self.state.precomp()
-        for idx in indices:
-            if account == 0 and idx == 0:
-                self.subaddresses[crypto.encodepoint(self.trezor.creds.spend_key_public)] = (0, 0)
-                continue
-
-            pub = monero.get_subaddress_spend_public_key(self.trezor.creds.view_key_private,
-                                                         self.trezor.creds.spend_key_public,
-                                                         major=account, minor=idx)
-            pub = crypto.encodepoint(pub)
-            self.subaddresses[pub] = (account, idx)
+        monero.compute_subaddresses(self.trezor.creds, account, indices, self.subaddresses)
 
     def check_change(self, outputs):
         """
