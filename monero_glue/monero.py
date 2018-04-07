@@ -513,7 +513,7 @@ def check_acc_out_precomp(tx_out, subaddresses, derivation, additional_derivatio
     if not isinstance(tx_out.target, xmrtypes.TxoutToKey):
         return tx_scan_info
 
-    tx_scan_info.received = is_out_to_acc_precomp(subaddresses, tx_out.target.key, derivation, additional_derivations, i)
+    tx_scan_info.received = is_out_to_acc_precomp(subaddresses, crypto.decodepoint(tx_out.target.key), derivation, additional_derivations, i)
     if tx_scan_info.received:
         tx_scan_info.money_transfered = tx_out.amount
     else:
