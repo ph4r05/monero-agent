@@ -713,6 +713,8 @@ class TTransaction(object):
         """
         if self.in_memory():
             return
+        if self.inp_idx >= self.num_inputs():
+            raise ValueError('Too many inputs')
 
         self.state.input_vins()
         self.inp_idx += 1
