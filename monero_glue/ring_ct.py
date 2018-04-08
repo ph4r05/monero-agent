@@ -269,6 +269,7 @@ def ecdh_decode(masked, receiver_sk=None, derivation=None):
     rv.amount = crypto.sc_sub(masked.amount, sharedSec2)
     return rv
 
+
 #
 # RingCT protocol
 #
