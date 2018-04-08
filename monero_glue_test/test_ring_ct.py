@@ -20,10 +20,19 @@ class RingCtTest(aiounittest.AsyncTestCase):
         res = ring_ct.ver_range(proof[0], proof[2])
         self.assertTrue(res)
 
+        proof = ring_ct.prove_range(0, mem_opt=False)
+        res = ring_ct.ver_range(proof[0], proof[2])
+        self.assertTrue(res)
+
     def test_range_proof2(self):
         proof = ring_ct.prove_range(123456789)
         res = ring_ct.ver_range(proof[0], proof[2])
         self.assertTrue(res)
+
+        proof = ring_ct.prove_range(123456789, mem_opt=False)
+        res = ring_ct.ver_range(proof[0], proof[2])
+        self.assertTrue(res)
+
         res = ring_ct.ver_range(crypto.point_add(proof[0], crypto.scalarmult_base(4)), proof[2])
         self.assertFalse(res)
 
