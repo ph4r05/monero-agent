@@ -539,8 +539,8 @@ def scan_output(creds, tx, i, tx_scan_info, tx_money_got_in_outs, outs, multisig
     :return:
     """
     if multisig:
-        # TODO: implement
-        raise ValueError('Not yet implemented')
+        tx_scan_info.in_ephemeral = 0
+        tx_scan_info.ki = crypto.identity()
 
     else:
         out_dec = crypto.decodepoint(tx.vout[i].target.key)
@@ -550,13 +550,13 @@ def scan_output(creds, tx, i, tx_scan_info, tx_money_got_in_outs, outs, multisig
         if not tx_scan_info.ki:
             raise ValueError('Key error generation failed')
 
-        outs.append(i)
-        if tx_scan_info.money_transfered == 0:
-            res2 = ecdh_decode_rv(tx.rct_signatures, tx_scan_info.received[1], i)
-            tx_scan_info.money_transfered, tx_scan_info.mask = res2
+    outs.append(i)
+    if tx_scan_info.money_transfered == 0:
+        res2 = ecdh_decode_rv(tx.rct_signatures, tx_scan_info.received[1], i)
+        tx_scan_info.money_transfered, tx_scan_info.mask = res2
 
-        tx_money_got_in_outs[tx_scan_info.received.index] += tx_scan_info.money_transfered
-        tx_scan_info.amount = tx_scan_info.money_transfered
+    tx_money_got_in_outs[tx_scan_info.received.index] += tx_scan_info.money_transfered
+    tx_scan_info.amount = tx_scan_info.money_transfered
     return tx_scan_info
 
 
