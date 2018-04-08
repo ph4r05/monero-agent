@@ -298,105 +298,6 @@ class TTransaction(object):
         self.r = crypto.random_scalar()
         self.r_pub = crypto.scalarmult_base(self.r)
 
-    async def init_transaction(self, tsx_data, tsx_ctr):
-        """
-        Initializes a new transaction.
-        :param tsx_data:
-        :type tsx_data: TsxData
-        :param tsx_ctr:
-        :return:
-        """
-        self.gen_r()
-        self.state.init_tsx()
-
-        # Basic transaction parameters
-        self.input_count = tsx_data.num_inputs
-        self.output_count = len(tsx_data.outputs)
-        self.output_change = tsx_data.change_dts
-        self.mixin = tsx_data.mixin
-        self.fee = tsx_data.fee
-        self.use_simple_rct = self.input_count > 1
-        self.state.inp_cnt(self.in_memory())
-        self.check_change(tsx_data.outputs)
-
-        # Additional keys w.r.t. subaddress destinations
-        class_res = classify_subaddresses(tsx_data.outputs, self.change_address())
-        num_stdaddresses, num_subaddresses, single_dest_subaddress = class_res
-
-        # if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
-        if num_stdaddresses == 0 and num_subaddresses == 1:
-            self.r_pub = crypto.ge_scalarmult(self.r, crypto.decodepoint(single_dest_subaddress.m_spend_public_key))
-
-        self.need_additional_txkeys = num_subaddresses > 0 and (num_stdaddresses > 0 or num_subaddresses > 1)
-        if self.need_additional_txkeys:
-            for _ in range(self.num_dests()):
-                self.additional_tx_keys.append(crypto.random_scalar())
-
-        # Extra processing, payment id
-        self.tx.version = 2
-        self.tx.unlock_time = tsx_data.unlock_time
-        await self.process_payment_id(tsx_data)
-        await self.compute_sec_keys(tsx_data, tsx_ctr)
-
-        # Final message hasher
-        self.full_message_hasher.init(self.use_simple_rct)
-        await self.full_message_hasher.set_type_fee(self.get_rct_type(), self.get_fee())
-
-        # Sub address precomputation
-        if tsx_data.account is not None and tsx_data.minor_indices:
-            self.precompute_subaddr(tsx_data.account, tsx_data.minor_indices)
-
-        # HMAC outputs - pinning
-        hmacs = []
-        for idx in range(self.num_dests()):
-            c_hmac = await self.gen_hmac_tsxdest(tsx_data.outputs[idx], idx)
-            hmacs.append(c_hmac)
-
-        return self.in_memory(), hmacs
-
-    async def process_payment_id(self, tsx_data):
-        """
-        Payment id -> extra
-        :return:
-        """
-        if tsx_data.payment_id is None or len(tsx_data.payment_id) == 0:
-            return
-
-        view_key_pub_enc = monero.get_destination_view_key_pub(tsx_data.outputs, self.change_address())
-        if view_key_pub_enc == crypto.NULL_KEY_ENC:
-            raise ValueError('Destinations have to have exactly one output to support encrypted payment ids')
-
-        view_key_pub = crypto.decodepoint(view_key_pub_enc)
-        payment_id_encr = monero.encrypt_payment_id(tsx_data.payment_id, view_key_pub, self.r)
-
-        extra_nonce = monero.set_encrypted_payment_id_to_tx_extra_nonce(payment_id_encr)
-        self.tx.extra = monero.add_extra_nonce_to_tx_extra(b'', extra_nonce)
-
-    async def compute_sec_keys(self, tsx_data, tsx_ctr):
-        """
-        Generate master key H(TsxData || r || c_tsx)
-        :return:
-        """
-        writer = common.get_keccak_writer()
-        ar1 = xmrserialize.Archive(writer, True)
-        await ar1.message(tsx_data)
-        await xmrserialize.dump_uvarint(writer, self.r)
-        await xmrserialize.dump_uvarint(writer, tsx_ctr)
-        self.key_master = common.keccak_2hash(writer.get_digest() + crypto.encodeint(crypto.random_scalar()))
-        self.key_hmac = common.keccak_2hash(b'hmac' + self.key_master)
-        self.key_enc = common.keccak_2hash(b'enc' + self.key_master)
-
-    def precompute_subaddr(self, account, indices):
-        """
-        Precomputes subaddresses for account (major) and list of indices (minors)
-        Subaddresses have to be stored in encoded form - unique representation.
-        Single point can have multiple extended coordinates representation - would not match during subaddress search.
-        :param account:
-        :param indices:
-        :return:
-        """
-        monero.compute_subaddresses(self.trezor.creds, account, indices, self.subaddresses)
-
     def check_change(self, outputs):
         """
         Checks if the change address is among tx outputs.
@@ -566,6 +467,105 @@ class TTransaction(object):
         hmac_key = self.hmac_key_txdst(idx)
         hmac_tsxdest = common.compute_hmac(hmac_key, kwriter.get_digest())
         return hmac_tsxdest
+
+    async def init_transaction(self, tsx_data, tsx_ctr):
+        """
+        Initializes a new transaction.
+        :param tsx_data:
+        :type tsx_data: TsxData
+        :param tsx_ctr:
+        :return:
+        """
+        self.gen_r()
+        self.state.init_tsx()
+
+        # Basic transaction parameters
+        self.input_count = tsx_data.num_inputs
+        self.output_count = len(tsx_data.outputs)
+        self.output_change = tsx_data.change_dts
+        self.mixin = tsx_data.mixin
+        self.fee = tsx_data.fee
+        self.use_simple_rct = self.input_count > 1
+        self.state.inp_cnt(self.in_memory())
+        self.check_change(tsx_data.outputs)
+
+        # Additional keys w.r.t. subaddress destinations
+        class_res = classify_subaddresses(tsx_data.outputs, self.change_address())
+        num_stdaddresses, num_subaddresses, single_dest_subaddress = class_res
+
+        # if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
+        if num_stdaddresses == 0 and num_subaddresses == 1:
+            self.r_pub = crypto.ge_scalarmult(self.r, crypto.decodepoint(single_dest_subaddress.m_spend_public_key))
+
+        self.need_additional_txkeys = num_subaddresses > 0 and (num_stdaddresses > 0 or num_subaddresses > 1)
+        if self.need_additional_txkeys:
+            for _ in range(self.num_dests()):
+                self.additional_tx_keys.append(crypto.random_scalar())
+
+        # Extra processing, payment id
+        self.tx.version = 2
+        self.tx.unlock_time = tsx_data.unlock_time
+        await self.process_payment_id(tsx_data)
+        await self.compute_sec_keys(tsx_data, tsx_ctr)
+
+        # Final message hasher
+        self.full_message_hasher.init(self.use_simple_rct)
+        await self.full_message_hasher.set_type_fee(self.get_rct_type(), self.get_fee())
+
+        # Sub address precomputation
+        if tsx_data.account is not None and tsx_data.minor_indices:
+            self.precompute_subaddr(tsx_data.account, tsx_data.minor_indices)
+
+        # HMAC outputs - pinning
+        hmacs = []
+        for idx in range(self.num_dests()):
+            c_hmac = await self.gen_hmac_tsxdest(tsx_data.outputs[idx], idx)
+            hmacs.append(c_hmac)
+
+        return self.in_memory(), hmacs
+
+    async def process_payment_id(self, tsx_data):
+        """
+        Payment id -> extra
+        :return:
+        """
+        if tsx_data.payment_id is None or len(tsx_data.payment_id) == 0:
+            return
+
+        view_key_pub_enc = monero.get_destination_view_key_pub(tsx_data.outputs, self.change_address())
+        if view_key_pub_enc == crypto.NULL_KEY_ENC:
+            raise ValueError('Destinations have to have exactly one output to support encrypted payment ids')
+
+        view_key_pub = crypto.decodepoint(view_key_pub_enc)
+        payment_id_encr = monero.encrypt_payment_id(tsx_data.payment_id, view_key_pub, self.r)
+
+        extra_nonce = monero.set_encrypted_payment_id_to_tx_extra_nonce(payment_id_encr)
+        self.tx.extra = monero.add_extra_nonce_to_tx_extra(b'', extra_nonce)
+
+    async def compute_sec_keys(self, tsx_data, tsx_ctr):
+        """
+        Generate master key H(TsxData || r || c_tsx)
+        :return:
+        """
+        writer = common.get_keccak_writer()
+        ar1 = xmrserialize.Archive(writer, True)
+        await ar1.message(tsx_data)
+        await xmrserialize.dump_uvarint(writer, self.r)
+        await xmrserialize.dump_uvarint(writer, tsx_ctr)
+        self.key_master = common.keccak_2hash(writer.get_digest() + crypto.encodeint(crypto.random_scalar()))
+        self.key_hmac = common.keccak_2hash(b'hmac' + self.key_master)
+        self.key_enc = common.keccak_2hash(b'enc' + self.key_master)
+
+    def precompute_subaddr(self, account, indices):
+        """
+        Precomputes subaddresses for account (major) and list of indices (minors)
+        Subaddresses have to be stored in encoded form - unique representation.
+        Single point can have multiple extended coordinates representation - would not match during subaddress search.
+        :param account:
+        :param indices:
+        :return:
+        """
+        monero.compute_subaddresses(self.trezor.creds, account, indices, self.subaddresses)
 
     async def set_input(self, src_entr):
         """
