@@ -7,6 +7,7 @@ import unittest
 import pkg_resources
 import aiounittest
 import binascii
+import collections
 
 from monero_serialize import xmrserialize, xmrtypes
 from monero_glue import trezor, trezor_lite, monero, common, crypto, agent_lite
@@ -69,23 +70,59 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
 
         tagent = self.init_agent()
         txes = await tagent.transfer_unsigned(unsig)
-        self.receive(txes[0])
+        await self.receive(txes[0])
 
-    def receive(self, tx):
+    async def receive(self, tx):
         """
         Test transaction receive with known view/spend keys of destinations.
         :return:
         """
         wallet_creds = [self.get_creds(), self.get_creds_01(), self.get_creds_02()]
-        wallet_subs = [None] * len(wallet_creds)
 
-        # Precompute subaddresses.
+        # Unserialize the transaction
+        tx_obj = xmrtypes.Transaction()
+        reader = xmrserialize.MemoryReaderWriter(bytearray(tx))
+        ar1 = xmrserialize.Archive(reader, False)
+
+        await ar1.message(tx_obj, msg_type=xmrtypes.Transaction)
+        extras = await monero.parse_extra_fields(tx_obj.extra)
+        tx_pub = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraPubKey).pub_key
+        additional_pub_keys = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraAdditionalPubKeys)
+        num_outs = len(tx_obj.vout)
+        num_received = 0
+
+        # Try to receive tsx outputs with each account.
+        tx_money_got_in_outs = collections.defaultdict(lambda: 0)
+        outs = []
+
         for idx, creds in enumerate(wallet_creds):
-            wallet_subs[idx] = {}
-            for account in range(0, 10):
-                monero.compute_subaddresses(creds, account, range(200), wallet_subs[idx])
+            wallet_subs = {}
+            for account in range(0, 5):
+                monero.compute_subaddresses(creds, account, range(5), wallet_subs)
 
-        pass
+            derivation = monero.generate_key_derivation(crypto.decodepoint(tx_pub), creds.view_key_private)
+            additional_derivations = []
+            if additional_pub_keys and additional_pub_keys.data:
+                for x in additional_pub_keys.data:
+                    additional_derivations.append(monero.generate_key_derivation(crypto.decodepoint(x), creds.view_key_private))
+
+            for ti, to in enumerate(tx_obj.vout):
+                tx_scan_info = monero.check_acc_out_precomp(to, wallet_subs, derivation, additional_derivations, ti)
+                if not tx_scan_info.received:
+                    continue
+
+                num_received += 1
+                tx_scan_info = monero.scan_output(creds, tx_obj, ti, tx_scan_info, tx_money_got_in_outs, outs, False)
+
+                # Check spending private key correctness
+                self.assertTrue(crypto.point_eq(crypto.decodepoint(tx_obj.rct_signatures.outPk[ti].mask),
+                                                crypto.gen_c(tx_scan_info.mask, tx_scan_info.amount)))
+
+                self.assertTrue(crypto.point_eq(crypto.decodepoint(tx_obj.vout[ti].target.key),
+                                                crypto.scalarmult_base(tx_scan_info.in_ephemeral)))
+
+        # All outputs have to be successfully received
+        self.assertEqual(num_outs, num_received)
 
     def get_creds(self):
         """
