@@ -5,6 +5,8 @@
 from monero_serialize import xmrtypes, xmrserialize
 from . import common as common
 from . import crypto
+from . import ring_ct
+from . import mlsag2
 from . import b58_mnr
 import binascii
 import struct
@@ -520,6 +522,86 @@ def check_acc_out_precomp(tx_out, subaddresses, derivation, additional_derivatio
         tx_scan_info.money_transfered = 0
     tx_scan_info.error = False
     return tx_scan_info
+
+
+def scan_output(creds, tx, i, tx_scan_info, tx_money_got_in_outs, outs, multisig):
+    """
+    Wallet2::scan_output()
+    Computes spending key, key image, decodes ECDH info, amount, checks masks.
+
+    :param creds:
+    :param tx:
+    :param i:
+    :param tx_scan_info:
+    :param tx_money_got_in_outs:
+    :param outs:
+    :param multisig:
+    :return:
+    """
+    if multisig:
+        # TODO: implement
+        raise ValueError('Not yet implemented')
+
+    else:
+        out_dec = crypto.decodepoint(tx.vout[i].target.key)
+        res = generate_key_image_helper_precomp(creds, out_dec,
+                                                tx_scan_info.received[1], i, tx_scan_info.received[0])
+        tx_scan_info.in_ephemeral, tx_scan_info.ki = res
+        if not tx_scan_info.ki:
+            raise ValueError('Key error generation failed')
+
+        outs.append(i)
+        if tx_scan_info.money_transfered == 0:
+            res2 = ecdh_decode_rv(tx.rct_signatures, tx_scan_info.received[1], i)
+            tx_scan_info.money_transfered, tx_scan_info.mask = res2
+
+        tx_money_got_in_outs[tx_scan_info.received.index] += tx_scan_info.money_transfered
+        tx_scan_info.amount = tx_scan_info.money_transfered
+    return tx_scan_info
+
+
+def ecdh_decode_rv(rv, derivation, i):
+    """
+    Decodes ECDH info from transaction.
+
+    :param rv:
+    :param derivation:
+    :param i:
+    :return:
+    """
+    scalar = crypto.derivation_to_scalar(derivation, i)
+    if rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.SimpleBulletproof]:
+        return ecdh_decode_simple(rv, scalar, i)
+
+    elif rv.type in [xmrtypes.RctType.Full, xmrtypes.RctType.FullBulletproof]:
+        return ecdh_decode_simple(rv, scalar, i)
+
+    else:
+        raise ValueError('Unknown rv type')
+
+
+def ecdh_decode_simple(rv, sk, i):
+    """
+    Decodes ECDH from the transaction, checks mask (decoding validity).
+
+    :param rv:
+    :param sk:
+    :param i:
+    :return:
+    """
+    if i >= len(rv.ecdhInfo):
+        raise ValueError('Bad index')
+    if len(rv.outPk) != len(rv.ecdhInfo):
+        raise ValueError('outPk vs ecdhInfo mismatch')
+
+    ecdh_info = rv.ecdhInfo[i]
+    ecdh_info = recode_ecdh(ecdh_info, False)
+    ecdh_info = ring_ct.ecdh_decode(ecdh_info, derivation=crypto.encodeint(sk))
+    c_tmp = mlsag2.add_keys1(ecdh_info.mask, ecdh_info.amount, crypto.gen_H())
+    if not crypto.point_eq(c_tmp, crypto.decodepoint(rv.outPk[i].mask)):
+        raise ValueError('Amount decoded incorrectly')
+
+    return ecdh_info.amount, ecdh_info.mask
 
 
 async def get_transaction_prefix_hash(tx):
