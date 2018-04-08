@@ -27,6 +27,8 @@ class TsxData(xmrserialize.MessageType):
         ('num_inputs', xmrserialize.UVarintType),
         ('mixin', xmrserialize.UVarintType),
         ('fee', xmrserialize.UVarintType),
+        ('account', xmrserialize.UVarintType),
+        ('minor_indices', xmrserialize.ContainerType, xmrserialize.UVarintType),
     ]
 
     def __init__(self, payment_id=None, outputs=None, change_dts=None, **kwargs):
@@ -34,6 +36,9 @@ class TsxData(xmrserialize.MessageType):
 
         self.payment_id = payment_id
         self.change_dts = change_dts
+        self.fee = 0
+        self.account = 0
+        self.minor_indices = [0]
         self.outputs = outputs if outputs else []  # type: list[xmrtypes.TxDestinationEntry]
 
 

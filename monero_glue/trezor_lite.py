@@ -49,19 +49,6 @@ class TrezorLite(object):
             self.exc_handler(e)
             raise
 
-    async def precompute_subaddr(self, account, indices):
-        """
-        Precomputes subaddresses for account (major) and list of indices (minors)
-        :param account:
-        :param indices:
-        :return:
-        """
-        try:
-            return self.tsx_obj.precompute_subaddr(account, indices)
-        except Exception as e:
-            self.exc_handler(e)
-            raise
-
     async def set_tsx_input(self, src_entr):
         """
         Sets UTXO one by one.
@@ -77,17 +64,6 @@ class TrezorLite(object):
         """
         try:
             return await self.tsx_obj.set_input(src_entr)
-        except Exception as e:
-            self.exc_handler(e)
-            raise
-
-    async def tsx_inputs_done(self):
-        """
-        All inputs set
-        :return:
-        """
-        try:
-            return await self.tsx_obj.tsx_inputs_done()
         except Exception as e:
             self.exc_handler(e)
             raise
@@ -147,18 +123,6 @@ class TrezorLite(object):
             self.exc_handler(e)
             raise
 
-    async def tsx_gen_rv(self):
-        """
-        Generates initial RctSig
-
-        :return:
-        """
-        try:
-            return await self.tsx_obj.tsx_gen_rv()
-        except Exception as e:
-            self.exc_handler(e)
-            raise
-
     async def tsx_mlsag_done(self):
         """
         MLSAG message computed.
@@ -191,16 +155,15 @@ class TState(object):
     START = 0
     INIT = 1
     INP_CNT = 2
-    PRECOMP = 3
-    INPUT = 4
-    INPUT_DONE = 5
-    INPUT_PERM = 6
-    INPUT_VINS = 7
-    OUTPUT = 8
-    OUTPUT_DONE = 9
-    FINAL_MESSAGE = 10
-    SIGNATURE = 11
-    FINAL = 12
+    INPUT = 3
+    INPUT_DONE = 4
+    INPUT_PERM = 5
+    INPUT_VINS = 6
+    OUTPUT = 7
+    OUTPUT_DONE = 8
+    FINAL_MESSAGE = 9
+    SIGNATURE = 10
+    FINAL = 11
 
     def __init__(self):
         self.s = self.START
@@ -217,13 +180,8 @@ class TState(object):
         self.s = self.INP_CNT
         self.in_mem = in_mem
 
-    def precomp(self):
-        if self.s != self.INP_CNT:
-            raise ValueError('Illegal state')
-        self.s = self.PRECOMP
-
     def input(self):
-        if self.s != self.PRECOMP and self.s != self.INPUT:
+        if self.s != self.INP_CNT and self.s != self.INPUT:
             raise ValueError('Illegal state')
         self.s = self.INPUT
 
@@ -330,7 +288,7 @@ class TTransaction(object):
         """
         if condition:
             return
-        raise ValueError('Assertion error')
+        raise ValueError('Assertion error%s' % (' : %s' % msg if msg else ''))
 
     def gen_r(self):
         """
@@ -384,6 +342,10 @@ class TTransaction(object):
         self.full_message_hasher.init(self.use_simple_rct)
         await self.full_message_hasher.set_type_fee(self.get_rct_type(), self.get_fee())
 
+        # Sub address precomputation
+        if tsx_data.account is not None and tsx_data.minor_indices:
+            self.precompute_subaddr(tsx_data.account, tsx_data.minor_indices)
+
         # HMAC outputs - pinning
         hmacs = []
         for idx in range(self.num_dests()):
@@ -433,7 +395,6 @@ class TTransaction(object):
         :param indices:
         :return:
         """
-        self.state.precomp()
         monero.compute_subaddresses(self.trezor.creds, account, indices, self.subaddresses)
 
     def check_change(self, outputs):
@@ -670,19 +631,11 @@ class TTransaction(object):
                 pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(self.inp_idx), pseudo_out)
                 alpha_enc = aesgcm.encrypt(self.enc_key_txin_alpha(self.inp_idx), crypto.encodeint(alpha))
 
+        # All inputs done?
+        if self.inp_idx + 1 == self.num_inputs():
+            await self.tsx_inputs_done()
+
         return vini, hmac_vini, (pseudo_out, pseudo_out_hmac), alpha_enc
-
-    async def tsx_inputs_done_inm(self):
-        """
-        In-memory post processing - tx.vin[i] sorting by key image.
-        Used only if number of inputs is small - computable in Trezor without offloading.
-
-        :return:
-        """
-        # Sort tx.in by key image
-        self.source_permutation = list(range(self.num_inputs()))
-        self.source_permutation.sort(key=lambda x: self.tx.vin[x].k_image)
-        await self._tsx_inputs_permutation(self.source_permutation)
 
     async def tsx_inputs_done(self):
         """
@@ -701,7 +654,18 @@ class TTransaction(object):
 
         # vins size
         await self.tx_prefix_hasher.ar.container_size(self.num_inputs(), xmrtypes.TransactionPrefix.FIELDS[2][1])
-        return self.r_pub
+
+    async def tsx_inputs_done_inm(self):
+        """
+        In-memory post processing - tx.vin[i] sorting by key image.
+        Used only if number of inputs is small - computable in Trezor without offloading.
+
+        :return:
+        """
+        # Sort tx.in by key image
+        self.source_permutation = list(range(self.num_inputs()))
+        self.source_permutation.sort(key=lambda x: self.tx.vin[x].k_image)
+        await self._tsx_inputs_permutation(self.source_permutation)
 
     async def tsx_inputs_permutation(self, permutation):
         """
@@ -959,7 +923,9 @@ class TTransaction(object):
 
         # Hash message to the final_message
         await self.full_message_hasher.set_message(self.tx_prefix_hash)
-        return self.tx.extra, self.tx_prefix_hash
+        rv = self.init_rct_sig()
+
+        return self.tx.extra, self.tx_prefix_hash, rv
 
     async def tsx_mlsag_ecdh_info(self):
         """
@@ -980,14 +946,6 @@ class TTransaction(object):
 
         for out in self.output_pk:
             await self.full_message_hasher.set_out_pk(out)
-
-    async def tsx_gen_rv(self):
-        """
-        Generates initial RctSig
-
-        :return:
-        """
-        return self.init_rct_sig()
 
     async def tsx_mlsag_done(self):
         """

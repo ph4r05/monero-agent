@@ -95,15 +95,14 @@ class Agent(object):
         tsx_data.num_inputs = len(tx.sources)
         tsx_data.mixin = len(tx.sources[0].outputs)
         tsx_data.fee = sum([x.amount for x in tx.sources]) - sum([x.amount for x in tx.splitted_dsts])
+        tsx_data.account = tx.subaddr_account
+        tsx_data.minor_indices = tx.subaddr_indices
         self.ct.tx.unlock_time = tx.unlock_time
 
         self.ct.tsx_data = tsx_data
         init_res = await self.trezor.init_transaction(tsx_data)
         in_memory = init_res[0]
         self.ct.tx_out_entr_hmacs = init_res[1]
-
-        # Subaddresses precomputation - needed for this transaction
-        await self.trezor.precompute_subaddr(tx.subaddr_account, tx.subaddr_indices)
 
         # Set transaction inputs
         for idx, src in enumerate(tx.sources):
@@ -112,8 +111,6 @@ class Agent(object):
             self.ct.tx_in_hmacs.append(vini_hmac)
             self.ct.pseudo_outs.append(pseudo_out)
             self.ct.alphas.append(alpha_enc)
-
-        await self.trezor.tsx_inputs_done()
 
         # Sort key image
         self.ct.source_permutation = list(range(len(tx.sources)))
@@ -143,7 +140,7 @@ class Agent(object):
             self.ct.tx_out_pk.append(out_pk)
             self.ct.tx_out_ecdh.append(ecdh_info)
 
-        tx_extra, tx_prefix_hash = await self.trezor.all_out1_set()
+        tx_extra, tx_prefix_hash, rv = await self.trezor.all_out1_set()
         self.ct.tx.extra = list(bytearray(tx_extra))
 
         # Verify transaction prefix hash correctness, tx hash in one pass
@@ -152,8 +149,6 @@ class Agent(object):
             raise ValueError('Transaction prefix has does not match')
 
         # RctSig
-        rv = await self.trezor.tsx_gen_rv()
-
         if self.is_simple(rv):
             if self.is_bulletproof(rv):
                 rv.p.pseudoOuts = [x[0] for x in self.ct.pseudo_outs]
