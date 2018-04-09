@@ -257,7 +257,6 @@ class TTransaction(object):
         self.mixin = 0
         self.fee = 0
 
-        self.additional_tx_keys = []
         self.additional_tx_public_keys = []
         self.inp_idx = -1
         self.out_idx = -1
@@ -497,10 +496,7 @@ class TTransaction(object):
             self.r_pub = crypto.ge_scalarmult(self.r, crypto.decodepoint(single_dest_subaddress.m_spend_public_key))
 
         self.need_additional_txkeys = num_subaddresses > 0 and (num_stdaddresses > 0 or num_subaddresses > 1)
-        if self.need_additional_txkeys:
-            for _ in range(self.num_dests()):
-                self.additional_tx_keys.append(crypto.random_scalar())
-
+        
         # Extra processing, payment id
         self.tx.version = 2
         self.tx.unlock_time = tsx_data.unlock_time
@@ -833,12 +829,15 @@ class TTransaction(object):
         if not common.ct_equal(dst_entr_hmac, dst_entr_hmac_computed):
             raise ValueError('HMAC invalid')
 
+        additional_tx_key_priv = None
         if self.need_additional_txkeys:
+            additional_tx_key_priv = crypto.random_scalar()
+
             if dst_entr.is_subaddress:
-                additional_txkey = crypto.ge_scalarmult(self.additional_tx_keys[self.out_idx],
+                additional_txkey = crypto.ge_scalarmult(additional_tx_key_priv,
                                                         crypto.decodepoint(dst_entr.addr.m_spend_public_key))
             else:
-                additional_txkey = crypto.ge_scalarmult_base(self.additional_tx_keys[self.out_idx])
+                additional_txkey = crypto.ge_scalarmult_base(additional_tx_key_priv)
 
             self.additional_tx_public_keys.append(additional_txkey)
 
@@ -848,7 +847,7 @@ class TTransaction(object):
 
         else:
             # sending to the recipient; derivation = r*A (or s*C in the subaddress scheme)
-            deriv_priv = self.additional_tx_keys[self.out_idx] if dst_entr.is_subaddress and self.need_additional_txkeys else self.r
+            deriv_priv = additional_tx_key_priv if dst_entr.is_subaddress and self.need_additional_txkeys else self.r
             derivation = monero.generate_key_derivation(crypto.decodepoint(dst_entr.addr.m_view_public_key), deriv_priv)
 
         amount_key = crypto.derivation_to_scalar(derivation, self.out_idx)
