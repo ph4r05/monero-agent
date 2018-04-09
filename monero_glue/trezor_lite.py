@@ -879,9 +879,6 @@ class TTransaction(object):
         tx_out = xmrtypes.TxOut(amount=0, target=tk)
         self.summary_outs_money += dst_entr.amount
 
-        if self.in_memory():
-            self.tx.vout.append(tx_out)
-
         # Tx header prefix hashing
         await self.tx_prefix_hasher.ar.field(tx_out, xmrtypes.TxOut)
 
