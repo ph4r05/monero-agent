@@ -503,6 +503,11 @@ class TTransaction(object):
         await self.process_payment_id(tsx_data)
         await self.compute_sec_keys(tsx_data, tsx_ctr)
 
+        # Iterative tx_prefix_hash hash computation
+        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[0])
+        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])
+        await self.tx_prefix_hasher.ar.container_size(self.num_inputs(), xmrtypes.TransactionPrefix.FIELDS[2][1])
+
         # Final message hasher
         self.full_message_hasher.init(self.use_simple_rct)
         await self.full_message_hasher.set_type_fee(self.get_rct_type(), self.get_fee())
@@ -640,15 +645,9 @@ class TTransaction(object):
         self.state.input_done()
         if self.inp_idx + 1 != self.num_inputs():
             raise ValueError('Input count mismatch')
+
         if self.in_memory():
             return await self.tsx_inputs_done_inm()
-
-        # Iterative message hash computation
-        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[0])
-        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])
-
-        # vins size
-        await self.tx_prefix_hasher.ar.container_size(self.num_inputs(), xmrtypes.TransactionPrefix.FIELDS[2][1])
 
     async def tsx_inputs_done_inm(self):
         """
@@ -694,6 +693,11 @@ class TTransaction(object):
         common.apply_permutation(self.source_permutation, swapper)
         self.inp_idx = -1
 
+        # Incremental hashing
+        if self.in_memory():
+            for idx in range(self.num_inputs()):
+                await self.hash_vini_pseudo_out(self.tx.vin[idx], idx)
+
     async def tsx_input_vini(self, src_entr, vini, hmac, pseudo_out):
         """
         Set tx.vin[i] for incremental tx prefix hash computation.
@@ -719,18 +723,31 @@ class TTransaction(object):
         if not common.ct_equal(hmac_vini, hmac):
             raise ValueError('HMAC is not correct')
 
+        await self.hash_vini_pseudo_out(vini, self.inp_idx, pseudo_out)
+
+    async def hash_vini_pseudo_out(self, vini, inp_idx, pseudo_out=None):
+        """
+        Incremental hasing of tx.vin[i] and pseudo output
+        :param vini:
+        :param pseudo_out:
+        :param inp_idx:
+        :return:
+        """
         # Serialize particular input type
         await self.tx_prefix_hasher.ar.field(vini, xmrtypes.TxInV)
 
-        # Pseudo_out incremental hashing
+        # Pseudo_out incremental hashing - applicable only in simple rct
+        if not self.use_simple_rct:
+            return
+
         if not self.in_memory():
-            idx = self.source_permutation[self.inp_idx]
+            idx = self.source_permutation[inp_idx]
             pseudo_out, pseudo_out_hmac_provided = pseudo_out
             pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(idx), pseudo_out)
             if not common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
                 raise ValueError('HMAC invalid for pseudo outs')
         else:
-            pseudo_out = self.input_pseudo_outs[self.inp_idx]
+            pseudo_out = self.input_pseudo_outs[inp_idx]
 
         await self.full_message_hasher.set_pseudo_out(pseudo_out)
 
@@ -750,7 +767,7 @@ class TTransaction(object):
         self.sumpouts_alphas = crypto.sc_add(self.sumpouts_alphas, alpha)
         return alpha, crypto.gen_c(alpha, in_amount)
 
-    async def range_proof(self, idx, amount, amount_key):
+    async def range_proof(self, idx, dest_pub_key, amount, amount_key):
         """
         Computes rangeproof and related information - out_sk, out_pk, ecdh_info.
         In order to optimize incremental transaction build, the mask computation is changed compared
@@ -763,11 +780,12 @@ class TTransaction(object):
         The range proof is incrementally hashed to the final_message.
 
         :param idx:
+        :param dest_pub_key:
         :param amount:
         :param amount_key:
         :return:
         """
-        out_pk = xmrtypes.CtKey(dest=self.tx.vout[idx].target.key)
+        out_pk = xmrtypes.CtKey(dest=dest_pub_key)
         is_last = idx + 1 == self.num_dests()
         last_mask = None if not is_last or not self.use_simple_rct else crypto.sc_sub(self.sumpouts_alphas, self.sumout)
 
@@ -829,6 +847,10 @@ class TTransaction(object):
         if not common.ct_equal(dst_entr_hmac, dst_entr_hmac_computed):
             raise ValueError('HMAC invalid')
 
+        # First output - tx prefix hasher - size of the container
+        if self.out_idx == 0:
+            await self.tx_prefix_hasher.ar.container_size(self.num_dests(), xmrtypes.TransactionPrefix.FIELDS[3][1])
+
         additional_txkey = None
         additional_txkey_priv = None
         if self.need_additional_txkeys:
@@ -855,14 +877,19 @@ class TTransaction(object):
         tx_out_key = crypto.derive_public_key(derivation, self.out_idx, crypto.decodepoint(dst_entr.addr.m_spend_public_key))
         tk = xmrtypes.TxoutToKey(key=crypto.encodepoint(tx_out_key))
         tx_out = xmrtypes.TxOut(amount=0, target=tk)
-        self.tx.vout.append(tx_out)
         self.summary_outs_money += dst_entr.amount
+
+        if self.in_memory():
+            self.tx.vout.append(tx_out)
+
+        # Tx header prefix hashing
+        await self.tx_prefix_hasher.ar.field(tx_out, xmrtypes.TxOut)
 
         # Hmac dest_entr.
         hmac_vouti = await self.gen_hmac_vouti(dst_entr, tx_out, self.out_idx)
 
         # Range proof, out_pk, ecdh_info
-        rsig, out_pk, ecdh_info = await self.range_proof(self.out_idx, amount=dst_entr.amount, amount_key=amount_key)
+        rsig, out_pk, ecdh_info = await self.range_proof(self.out_idx, dest_pub_key=tk.key, amount=dst_entr.amount, amount_key=amount_key)
         kwriter = common.get_keccak_writer()
         ar = xmrserialize.Archive(kwriter, True)
         await ar.message(rsig)
@@ -912,11 +939,6 @@ class TTransaction(object):
                              % (self.summary_inputs_money, self.summary_outs_money))
 
         # Hashing transaction prefix
-        if self.in_memory():
-            await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[0])  # version
-            await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[1])  # unlock_time
-            await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[2])  # vins
-        await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefix.FIELDS[3])  # vouts
         await self.tx_prefix_hasher.ar.message_field(self.tx, xmrtypes.TransactionPrefixExtraBlob.FIELDS[4])  # extra
 
         self.tx_prefix_hash = self.tx_prefix_hasher.kwriter.get_digest()
