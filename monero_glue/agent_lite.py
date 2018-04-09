@@ -124,12 +124,16 @@ class Agent(object):
             tx.sources[x], tx.sources[y] = tx.sources[y], tx.sources[x]
 
         common.apply_permutation(self.ct.source_permutation, swapper)
-        await self.trezor.tsx_inputs_permutation(self.ct.source_permutation)
+
+        if not in_memory:
+            await self.trezor.tsx_inputs_permutation(self.ct.source_permutation)
 
         # Set vin_i back - tx prefix hashing
-        for idx in range(len(self.ct.tx.vin)):
-            await self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
-                                             self.ct.pseudo_outs[idx] if not in_memory else None)
+        # Done only if not in-memory.
+        if not in_memory:
+            for idx in range(len(self.ct.tx.vin)):
+                await self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
+                                                 self.ct.pseudo_outs[idx] if not in_memory else None)
 
         # Set transaction outputs
         for idx, dst in enumerate(tx.splitted_dsts):
