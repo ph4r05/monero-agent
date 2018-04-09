@@ -266,7 +266,6 @@ class TTransaction(object):
         self.input_secrets = []
         self.input_alphas = []
         self.input_pseudo_outs = []
-        self.output_amounts = []
         self.output_sk = []
         self.output_pk = []
         self.sumout = 0
@@ -755,7 +754,7 @@ class TTransaction(object):
         self.sumpouts_alphas = crypto.sc_add(self.sumpouts_alphas, alpha)
         return alpha, crypto.gen_c(alpha, in_amount)
 
-    async def range_proof(self, idx, amount_key):
+    async def range_proof(self, idx, amount, amount_key):
         """
         Computes rangeproof and related information - out_sk, out_pk, ecdh_info.
         In order to optimize incremental transaction build, the mask computation is changed compared
@@ -768,6 +767,7 @@ class TTransaction(object):
         The range proof is incrementally hashed to the final_message.
 
         :param idx:
+        :param amount:
         :param amount_key:
         :return:
         """
@@ -783,13 +783,13 @@ class TTransaction(object):
             raise ValueError('Bulletproof not yet supported')
 
         else:
-            C, mask, rsig = ring_ct.prove_range(self.output_amounts[idx], last_mask)
+            C, mask, rsig = ring_ct.prove_range(amount, last_mask)
 
             if __debug__:
                 self.assrt(ring_ct.ver_range(C, rsig))
                 self.assrt(crypto.point_eq(C, crypto.point_add(
                     crypto.scalarmult_base(mask),
-                    crypto.scalarmult_h(self.output_amounts[idx]))))
+                    crypto.scalarmult_h(amount))))
 
             # Recoding to structure
             monero.recode_rangesig(rsig, encode=True)
@@ -803,7 +803,7 @@ class TTransaction(object):
         self.output_sk.append(xmrtypes.CtKey(mask=mask))
 
         # ECDH masking
-        ecdh_info = xmrtypes.EcdhTuple(mask=mask, amount=self.output_amounts[idx])
+        ecdh_info = xmrtypes.EcdhTuple(mask=mask, amount=amount)
         ecdh_info = ring_ct.ecdh_encode(ecdh_info, derivation=crypto.encodeint(amount_key))
         monero.recode_ecdh(ecdh_info, encode=True)
         return rsig, out_pk, ecdh_info
@@ -857,13 +857,12 @@ class TTransaction(object):
         tx_out = xmrtypes.TxOut(amount=0, target=tk)
         self.tx.vout.append(tx_out)
         self.summary_outs_money += dst_entr.amount
-        self.output_amounts.append(dst_entr.amount)
 
         # Hmac dest_entr.
         hmac_vouti = await self.gen_hmac_vouti(dst_entr, tx_out, self.out_idx)
 
         # Range proof, out_pk, ecdh_info
-        rsig, out_pk, ecdh_info = await self.range_proof(self.out_idx, amount_key=amount_key)
+        rsig, out_pk, ecdh_info = await self.range_proof(self.out_idx, amount=dst_entr.amount, amount_key=amount_key)
         kwriter = common.get_keccak_writer()
         ar = xmrserialize.Archive(kwriter, True)
         await ar.message(rsig)
