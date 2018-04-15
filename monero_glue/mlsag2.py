@@ -488,7 +488,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
             rv.cc = c_old
 
     for j in range(rows):
-        rv.ss[index][j] = crypto.sc_mulsub(alpha[j], c, xx[j])  # sc_mulsub in original does c-ab
+        rv.ss[index][j] = crypto.sc_mulsub(alpha[j], c, xx[j])  # alpha[j] - c * xx[j]; sc_mulsub in original does c-ab
 
     if mscout:
         mscout(c)
@@ -641,11 +641,12 @@ def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
     Simple version for when we assume only
         post rct inputs
         here pubs is a vector of (P, C) length mixin
+
     :param message:
-    :param pubs: vector of CtKeys, public, point values, encoded form
-    :param in_sk: CtKey, private
-    :param a:
-    :param cout: point, decoded
+    :param pubs: vector of CtKeys, public, point values, encoded form. (dest, mask) = (P, C)
+    :param in_sk: CtKey, private. (spending private key, input commitment mask (original))
+    :param a: mask from the pseudo_output commitment (alpha)
+    :param cout: point, decoded. Pseudo output public key.
     :param kLRki:
     :param mscout: lambda accepting c
     :param index:
