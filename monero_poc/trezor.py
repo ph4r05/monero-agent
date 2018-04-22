@@ -4,6 +4,7 @@
 
 import sys
 import os
+import json
 import time
 import asyncio
 import argparse
@@ -20,6 +21,7 @@ from eventlet import wsgi
 from flask import Flask, jsonify, request, abort
 
 from monero_glue import crypto, monero, trezor_lite
+from monero_serialize import xmrserialize, xmrtypes, xmrobj, xmrjson, xmrboost
 
 
 logger = logging.getLogger(__name__)
@@ -37,10 +39,10 @@ class TrezorServer(Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.trez = None
+        self.trez = None  # type: trezor_lite.TrezorLite
         self.args = None
         self.network_type = None
-        self.creds = None
+        self.creds = None  # type: monero.AccountCreds
         self.port = 46123
         self.t = Terminal()
 
@@ -190,7 +192,7 @@ class TrezorServer(Cmd):
         js = request.json
         cmd = js['cmd']
         if cmd == 'init':
-            await self.tx_sign_init(js, request)
+            return await self.tx_sign_init(js, request)
         else:
             return abort(405)
 
