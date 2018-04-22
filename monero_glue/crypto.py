@@ -578,12 +578,13 @@ def scalarmult_h(a):
     return scalarmult(gen_H(), a)
 
 
-def identity():
+def identity(byte_enc=False):
     """
     Identity point
     :return:
     """
-    return scalarmult_base(0)
+    idd = scalarmult_base(0)
+    return idd if not byte_enc else encodepoint(idd)
 
 
 def ge_frombytes_vartime(key):
