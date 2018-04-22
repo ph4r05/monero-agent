@@ -92,7 +92,7 @@ class Agent(object):
         await ar1.message(self.ct.tx, msg_type=xmrtypes.Transaction)
         return bytes(writer.buffer)
 
-    async def sign_transaction(self, tx):
+    async def sign_transaction_data(self, tx):
         """
         Uses Trezor to sign the transaction
         :param tx:
