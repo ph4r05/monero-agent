@@ -104,7 +104,7 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         :return:
         """
         tagent = self.init_agent()
-        txes = await tagent.transfer_unsigned(unsigned_tx)
+        txes = await tagent.sign_unsigned_tx(unsigned_tx)
         return await self.receive(txes[0])
 
     async def tx_sign_unsigned(self, unsigned_tx):
@@ -147,7 +147,7 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         await ar.message(pending)
 
         tagent = self.init_agent()
-        txes = await tagent.transfer_tx(pending.construction_data)
+        txes = await tagent.sign_tx(pending.construction_data)
         await self.receive(txes[0])
 
     async def receive(self, tx):

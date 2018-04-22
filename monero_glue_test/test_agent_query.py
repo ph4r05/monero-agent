@@ -74,7 +74,7 @@ class AgentTest(aiounittest.AsyncTestCase):
         await ar.message(unsig)
 
         tagent = self.init_agent()
-        txes = await tagent.transfer_unsigned(unsig)
+        txes = await tagent.sign_unsigned_tx(unsig)
 
         resp = requests.post('http://localhost:48081/sendrawtransaction', json={
             'tx_as_hex': binascii.hexlify(txes[0]).decode('utf8'),

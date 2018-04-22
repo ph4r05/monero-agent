@@ -51,7 +51,7 @@ class Agent(object):
         """
         return rv.type in [xmrtypes.RctType.FullBulletproof, xmrtypes.RctType.SimpleBulletproof]
 
-    async def transfer_unsigned(self, unsig):
+    async def sign_unsigned_tx(self, unsig):
         """
         Processes unsigned transaction set, returns serialized signed transactions.
         :param unsig:
@@ -59,12 +59,12 @@ class Agent(object):
         """
         txes = []
         for tx in unsig.txes:
-            await self.sign_transaction(tx)
+            await self.sign_transaction_data(tx)
             txes.append(await self.serialized_tx())
 
         return txes
 
-    async def transfer_tx(self, construction_data):
+    async def sign_tx(self, construction_data):
         """
         Transfers transaction, serializes response
 
@@ -76,7 +76,7 @@ class Agent(object):
 
         txes = []
         for tdata in construction_data:
-            await self.sign_transaction(tdata)
+            await self.sign_transaction_data(tdata)
             txes.append(await self.serialized_tx())
 
         return txes
