@@ -116,6 +116,30 @@ def encode_addr(version, spend_pub, view_pub):
     return b58_mnr.b58encode(buf)
 
 
+def decode_addr(addr):
+    """
+    Given address, get version and public spend and view keys.
+
+    :param addr:
+    :return:
+    """
+    d = b58_mnr.b58decode(data_bin=addr)
+    print(len(d))
+    print(d)
+    print(binascii.hexlify(d))
+
+    addr_checksum = d[-4:]
+    calc_checksum = crypto.cn_fast_hash(d[:-4])[:4]
+    if addr_checksum == calc_checksum:
+        version = ord(d[:1])
+        pub_spend_key = d[1:33]
+        pub_view_key = d[33:65]
+        return version, pub_spend_key, pub_view_key
+
+    else:
+        raise ValueError('Invalid address checksum')
+
+
 def classify_subaddresses(tx_dests, change_addr : xmrtypes.AccountPublicAddress):
     """
     Classify destination subaddresses
