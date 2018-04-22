@@ -26,6 +26,10 @@ poc_extras = [
     'shellescape',
     'coloredlogs',
     'blessed>=1.14.1',
+    'flask>=0.12',
+    'flask-socketio',
+    'eventlet',
+    'gevent',
 ]
 
 docs_extras = [
