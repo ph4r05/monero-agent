@@ -209,7 +209,8 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         """
         return monero.AccountCreds.new_wallet(
             priv_view_key=crypto.b16_to_scalar(b'4ce88c168e0f5f8d6524f712d5f8d7d83233b1e7a2a60b5aba5206cc0ea2bc08'),
-            priv_spend_key=crypto.b16_to_scalar(b'f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a'))
+            priv_spend_key=crypto.b16_to_scalar(b'f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a'),
+            network_type=monero.NetworkTypes.TESTNET)
 
     def get_creds_01(self):
         """
@@ -218,7 +219,8 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         """
         return monero.AccountCreds.new_wallet(
             priv_view_key=crypto.b16_to_scalar(b'42ba20adb337e5eca797565be11c9adb0a8bef8c830bccc2df712535d3b8f608'),
-            priv_spend_key=crypto.b16_to_scalar(b'b0ef6bd527b9b23b9ceef70dc8b4cd1ee83ca14541964e764ad23f5151204f0f'))
+            priv_spend_key=crypto.b16_to_scalar(b'b0ef6bd527b9b23b9ceef70dc8b4cd1ee83ca14541964e764ad23f5151204f0f'),
+            network_type=monero.NetworkTypes.TESTNET)
 
     def get_creds_02(self):
         """
@@ -227,7 +229,8 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         """
         return monero.AccountCreds.new_wallet(
             priv_view_key=crypto.b16_to_scalar(b'9e7aba8ae9ee134e5d5464d9145a4db26793d7411af7d06f20e755cb2a5ad50f'),
-            priv_spend_key=crypto.b16_to_scalar(b'283d8bab1aeaee8f8b5aed982fc894c67d3e03db9006e488321c053f5183310d'))
+            priv_spend_key=crypto.b16_to_scalar(b'283d8bab1aeaee8f8b5aed982fc894c67d3e03db9006e488321c053f5183310d'),
+            network_type=monero.NetworkTypes.TESTNET)
 
     def init_trezor(self):
         """
