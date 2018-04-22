@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
+#
+# Educational use only.
+# One pass signature, not maintained
+# DEPRECATED
 
 from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses
