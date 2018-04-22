@@ -147,6 +147,23 @@ class TrezorLite(object):
             self.exc_handler(e)
             raise
 
+    async def key_image_sync_ask(self, *args, **kwargs):
+        """
+        Ask for initial permission to sync key images
+        TODO: implement
+        
+        :return:
+        """
+
+    async def key_image_sync_transfer(self, td, *args, **kwargs):
+        """
+        Generate key image for one transfer detail.
+        TODO: implement
+
+        :param td:
+        :return:
+        """
+
 
 class TState(object):
     """
