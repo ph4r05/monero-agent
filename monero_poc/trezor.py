@@ -5,6 +5,7 @@
 import sys
 import os
 import time
+import asyncio
 import argparse
 import binascii
 import logging
@@ -43,10 +44,14 @@ class TrezorServer(Cmd):
         self.port = 46123
         self.t = Terminal()
 
+        self.loop = asyncio.get_event_loop()
         self.running = True
         self.stop_event = threading.Event()
         self.local_data = threading.local()
         self.thread_rest = None
+        self.thread_loop = None
+        self.rest_loop = None
+        self.worker_loop = None
 
         self.debug = False
         self.server = None
@@ -105,15 +110,37 @@ class TrezorServer(Cmd):
         self.running = False
         self.stop_event.set()
 
+    def wait_coro(self, coro):
+        """
+        Waits on the coroutine, for flask server
+        :param coro:
+        :return:
+        """
+        # Running on a different thread is not supported in flask:
+        # future = asyncio.run_coroutine_threadsafe(self.on_ping(request=request), self.worker_loop)
+        # return future.result()
+
+        # Running on the common rest thread
+        # return self.rest_loop.run_until_complete(self.on_ping(request=request))
+
+        # Option: create a new loop as this worker is inside own thread
+        loop = asyncio.new_event_loop()
+        res = loop.run_until_complete(coro)
+        loop.close()
+        return res
+
     def init_rest(self):
         """
         Initializes rest server
         :return:
         """
-
         @self.flask.route('/api/v1.0/ping', methods=['GET'])
         def keep_alive():
-            return self.on_ping(request=request)
+            return self.wait_coro(self.on_ping(request=request))
+
+        @self.flask.route('/api/v1.0/tx_sign', methods=['GET', 'POST'])
+        def tx_sign():
+            return self.wait_coro(self.on_tx_sign(request=request))
 
     def wsgi_options(self):
         """
@@ -146,7 +173,7 @@ class TrezorServer(Cmd):
     # Handlers
     #
 
-    def on_ping(self, request=None):
+    async def on_ping(self, request=None):
         """
         Simple ping
         :param request:
@@ -154,11 +181,34 @@ class TrezorServer(Cmd):
         """
         return jsonify({'result': True})
 
+    async def on_tx_sign(self, request=None):
+        """
+        TX sign
+        :param request:
+        :return:
+        """
+        js = request.json
+        cmd = js['cmd']
+        if cmd == 'init':
+            await self.tx_sign_init(js, request)
+        else:
+            return abort(405)
+
+    async def tx_sign_init(self, js, req):
+        pass
 
 
     #
     # Work
     #
+
+    def loop_work(self, loop):
+        """
+        Looping worker
+        :return:
+        """
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
 
     def rest_thread_work(self):
         """
@@ -168,6 +218,14 @@ class TrezorServer(Cmd):
         logger.info('REST thread started %s %s %s dbg: %s'
                     % (os.getpid(), os.getppid(), threading.current_thread(), self.debug))
         try:
+            self.worker_loop = asyncio.new_event_loop()
+            self.rest_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.rest_loop)
+
+            worker = threading.Thread(target=self.loop_work, args=(self.worker_loop,))
+            worker.setDaemon(True)
+            worker.start()
+
             self.init_rest()
             if self.debug:
                 self.serve_werkzeug()
@@ -192,7 +250,7 @@ class TrezorServer(Cmd):
         self.thread_rest.setDaemon(True)
         self.thread_rest.start()
 
-    def entry(self):
+    async def entry(self):
         """
         pass
         :return:
@@ -224,7 +282,7 @@ class TrezorServer(Cmd):
         self.cmdloop()
         self.terminating()
 
-    def main(self):
+    async def main(self):
         """
         Entry point
         :return:
@@ -250,16 +308,19 @@ class TrezorServer(Cmd):
         self.args, unknown = parser.parse_known_args(args=args_src[1:])
 
         sys.argv = [args_src[0]]
-        self.entry()
+        await self.entry()
         sys.argv = args_src
 
 
-def main():
+async def main():
     agent = TrezorServer()
-    agent.main()
+    await agent.main()
 
 
 if __name__ == '__main__':
-    main()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+    # loop.run_forever()
+    loop.close()
 
 
