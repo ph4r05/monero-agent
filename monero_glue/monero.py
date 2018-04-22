@@ -12,6 +12,13 @@ import binascii
 import struct
 
 
+class NetworkTypes(object):
+    MAINNET = 0
+    TESTNET = 1
+    STAGENET = 2
+    FAKECHAIN = 3
+
+
 class TsxData(xmrserialize.MessageType):
     """
     TsxData, initial input to the transaction processing.
@@ -55,10 +62,10 @@ class AccountCreds(object):
         self.multisig_keys = []
 
     @classmethod
-    def new_wallet(cls, priv_view_key, priv_spend_key):
+    def new_wallet(cls, priv_view_key, priv_spend_key, network_type=NetworkTypes.MAINNET):
         pub_view_key = crypto.scalarmult_base(priv_view_key)
         pub_spend_key = crypto.scalarmult_base(priv_spend_key)
-        addr = encode_addr(net_version(),
+        addr = encode_addr(net_version(network_type),
                            crypto.encodepoint(pub_spend_key),
                            crypto.encodepoint(pub_view_key))
         return cls(view_key_private=priv_view_key, spend_key_private=priv_spend_key,
@@ -73,12 +80,17 @@ class TxScanInfo(object):
     __slots__ = ['in_ephemeral', 'ki', 'mask', 'amount', 'money_transfered', 'error', 'received']
 
 
-def net_version():
+def net_version(network_type=NetworkTypes.MAINNET):
     """
-    Network version bytes
+    Network version bytes used for address construction
     :return:
     """
-    return b'\x12'
+    if network_type == NetworkTypes.MAINNET:
+        return b'\x12'
+    elif network_type == NetworkTypes.TESTNET:
+        return b'\x35'
+    elif network_type == NetworkTypes.STAGENET:
+        return b'\x18'
 
 
 def addr_to_hash(addr: xmrtypes.AccountPublicAddress):

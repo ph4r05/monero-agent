@@ -27,6 +27,13 @@ class MoneroTest(aiounittest.AsyncTestCase):
             binascii.unhexlify(b'2d5918e31d3c003da3c778592c07b398ad6f961a67082a75fd49394d51e69bbe'))
         self.assertEqual(addr, b'43tpGG9PKbwCpjRvNLn1jwXPpnacw2uVUcszAtgmDiVcZK4VgHwjJT9BJz1WGF9eMxSYASp8yNMkuLjeQfWqJn3CNWdWfzV')
 
+        w = monero.AccountCreds.new_wallet(
+            crypto.b16_to_scalar(b'4ce88c168e0f5f8d6524f712d5f8d7d83233b1e7a2a60b5aba5206cc0ea2bc08'),
+            crypto.b16_to_scalar(b'f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a'),
+            network_type=monero.NetworkTypes.TESTNET
+        )
+        self.assertEqual(w.address, b'9vacMKaj8JJV6MnwDzh2oNVdwTLJfTDyNRiB6NzV9TT7fqvzLivH2dB8Tv7VYR3ncn8vCb3KdNMJzQWrPAF1otYJ9cPKpkr')
+
     def test_derive_subaddress_public_key(self):
         out_key = crypto.decodepoint(bytes(
             [0xf4, 0xef, 0xc2, 0x9d, 0xa4, 0xcc, 0xd6, 0xbc, 0x6e, 0x81, 0xf5, 0x2a, 0x6f, 0x47, 0xb2, 0x95, 0x29, 0x66,
