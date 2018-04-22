@@ -4,7 +4,14 @@
 
 import argparse
 import binascii
+import logging
+import coloredlogs
+
 from monero_glue import crypto, monero
+
+
+logger = logging.getLogger(__name__)
+coloredlogs.install(level=logging.DEBUG)
 
 
 class HostAgent(object):
@@ -12,7 +19,8 @@ class HostAgent(object):
     Host agent wrapper
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.args = None
         self.network_type = None
 
@@ -30,8 +38,8 @@ class HostAgent(object):
             raise ValueError('Computed view public key does not match the one from address')
 
         print('Ver: %s' % version)
-        print('Public spend key: %s' % binascii.hexlify(pub_spend))
-        print('Public view key : %s' % binascii.hexlify(pub_view))
+        print('Public spend key: %s' % binascii.hexlify(pub_spend).decode('utf8'))
+        print('Public view key : %s' % binascii.hexlify(pub_view).decode('utf8'))
 
     def main(self):
         """
