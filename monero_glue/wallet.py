@@ -37,3 +37,40 @@ async def load_unsigned_tx(priv_key, data):
     await ar.message(msg)
     return msg
 
+
+async def dump_signed_tx(priv_key, signed_tx):
+    """
+    Dumps signed_tx to a file as wallet produces
+
+    :param priv_key:
+    :param signed_tx:
+    :return:
+    """
+    writer = xmrserialize.MemoryReaderWriter()
+    ar = xmrboost.Archive(writer, True)
+    await ar.root()
+    await ar.message(signed_tx)
+
+    ciphertext = chacha.encrypt_xmr(priv_key, bytes(writer.buffer), authenticated=True)
+    return SIGNED_TX_PREFIX + ciphertext
+
+
+def construct_pending_tsx(tx, cd):
+    """
+    Dummy pending transaction record from real transaction + construction data.
+
+    :param tx:
+    :param cd:
+    :return:
+    """
+    pending = xmrtypes.PendingTransaction(tx=tx, dust=0, fee=0,
+                                          dust_added_to_fee=False,
+                                          change_dts=cd.change_dts,
+                                          selected_transfers=[],
+                                          key_images='',
+                                          tx_key=b'\x00' * 32,
+                                          additional_tx_keys=[],
+                                          dests=cd.dests,
+                                          multisig_sigs=[], construction_data=cd)
+    return pending
+
