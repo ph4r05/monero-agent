@@ -45,10 +45,13 @@ class TrezorProxy(trezor_lite.TrezorLite):
     async def transfer_pickle(self, action, *args, **kwargs):
         logger.debug('Action: %s' % action)
         to_pickle = (args, kwargs)
-        payload = binascii.hexlify(pickle.dumps(to_pickle)).decode('utf8')
+        pickled_data = pickle.dumps(to_pickle)
+        payload = binascii.hexlify(pickled_data).decode('utf8')
 
         resp = await self.transfer(action, payload)
         pickle_data = binascii.unhexlify(resp['payload'].encode('utf8'))
+        logger.debug('Req size: %s, response size: %s' % (len(pickled_data), len(pickle_data)))
+
         res = pickle.loads(pickle_data)
         return res
 
