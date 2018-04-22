@@ -213,8 +213,6 @@ class Agent(object):
 
         self.ct.tx.signatures = []
         self.ct.tx.rct_signatures = rv
-        del rv
-
         return self.ct.tx
 
 
