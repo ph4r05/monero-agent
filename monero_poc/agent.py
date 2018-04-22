@@ -18,7 +18,7 @@ import requests
 import coloredlogs
 import pickle
 
-from monero_glue import crypto, monero, agent_lite, trezor_lite, wallet
+from monero_glue import crypto, monero, agent_lite, trezor_lite, wallet, common
 from monero_glue.monero import TsxData
 from monero_serialize import xmrboost, xmrtypes, xmrserialize, xmrobj, xmrjson
 
@@ -36,19 +36,19 @@ class TrezorProxy(trezor_lite.TrezorLite):
         self.url = 'http://127.0.0.1:46123' if url is None else url
         self.endpoint = '%s/api/v1.0' % self.url
 
-    async def transfer(self, cmd, payload):
-        endp = '%s/tx_sign' % self.endpoint
+    async def transfer(self, method, cmd, payload):
+        endp = '%s/%s' % (self.endpoint, method)
         req = {'cmd': cmd, 'payload': payload}
         resp = requests.post(endp, json=req)
         return resp.json()
 
-    async def transfer_pickle(self, action, *args, **kwargs):
+    async def transfer_pickle(self, method, action, *args, **kwargs):
         logger.debug('Action: %s' % action)
         to_pickle = (args, kwargs)
         pickled_data = pickle.dumps(to_pickle)
         payload = binascii.hexlify(pickled_data).decode('utf8')
 
-        resp = await self.transfer(action, payload)
+        resp = await self.transfer(method, action, payload)
         pickle_data = binascii.unhexlify(resp['payload'].encode('utf8'))
         logger.debug('Req size: %s, response size: %s' % (len(pickled_data), len(pickle_data)))
 
@@ -56,28 +56,28 @@ class TrezorProxy(trezor_lite.TrezorLite):
         return res
 
     async def init_transaction(self, tsx_data: TsxData):
-        return await self.transfer_pickle('init_transaction', tsx_data)
+        return await self.transfer_pickle('tx_sign', 'init_transaction', tsx_data)
 
     async def set_tsx_input(self, src_entr):
-        return await self.transfer_pickle('set_tsx_input', src_entr)
+        return await self.transfer_pickle('tx_sign', 'set_tsx_input', src_entr)
 
     async def tsx_inputs_permutation(self, permutation):
-        return await self.transfer_pickle('tsx_inputs_permutation', permutation)
+        return await self.transfer_pickle('tx_sign', 'tsx_inputs_permutation', permutation)
 
     async def tsx_input_vini(self, *args, **kwargs):
-        return await self.transfer_pickle('tsx_input_vini', *args, **kwargs)
+        return await self.transfer_pickle('tx_sign', 'tsx_input_vini', *args, **kwargs)
 
     async def set_tsx_output1(self, dst_entr, dst_entr_hmac):
-        return await self.transfer_pickle('set_tsx_output1', dst_entr, dst_entr_hmac)
+        return await self.transfer_pickle('tx_sign', 'set_tsx_output1', dst_entr, dst_entr_hmac)
 
     async def all_out1_set(self):
-        return await self.transfer_pickle('all_out1_set')
+        return await self.transfer_pickle('tx_sign', 'all_out1_set')
 
     async def tsx_mlsag_done(self):
-        return await self.transfer_pickle('tsx_mlsag_done')
+        return await self.transfer_pickle('tx_sign', 'tsx_mlsag_done')
 
     async def sign_input(self, *args, **kwars):
-        return await self.transfer_pickle('sign_input', *args, **kwars)
+        return await self.transfer_pickle('tx_sign', 'sign_input', *args, **kwars)
 
 
 class HostAgent(object):
