@@ -658,7 +658,7 @@ class TTransaction(object):
         """
         # Sort tx.in by key image
         self.source_permutation = list(range(self.num_inputs()))
-        self.source_permutation.sort(key=lambda x: self.tx.vin[x].k_image)
+        self.source_permutation.sort(key=lambda x: self.tx.vin[x].k_image, reverse=True)
         await self._tsx_inputs_permutation(self.source_permutation)
 
     async def tsx_inputs_permutation(self, permutation):

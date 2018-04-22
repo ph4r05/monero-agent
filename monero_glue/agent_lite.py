@@ -143,7 +143,7 @@ class Agent(object):
 
         # Sort key image
         self.ct.source_permutation = list(range(len(tx.sources)))
-        self.ct.source_permutation.sort(key=lambda x: self.ct.tx.vin[x].k_image)
+        self.ct.source_permutation.sort(key=lambda x: self.ct.tx.vin[x].k_image, reverse=True)
 
         def swapper(x, y):
             self.ct.tx.vin[x], self.ct.tx.vin[y] = self.ct.tx.vin[y], self.ct.tx.vin[x]
