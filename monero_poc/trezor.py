@@ -4,6 +4,7 @@
 
 import sys
 import os
+import time
 import argparse
 import binascii
 import logging
@@ -17,11 +18,12 @@ import eventlet
 from eventlet import wsgi
 from flask import Flask, jsonify, request, abort
 
-from monero_glue import crypto, monero
+from monero_glue import crypto, monero, trezor_lite
 
 
 logger = logging.getLogger(__name__)
-coloredlogs.install(level=logging.DEBUG)
+coloredlogs.CHROOT_FILES = []
+coloredlogs.install(level=logging.DEBUG, use_chroot=False)
 eventlet.monkey_patch(socket=True)
 
 
@@ -34,6 +36,7 @@ class TrezorServer(Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.trez = None
         self.args = None
         self.network_type = None
         self.creds = None
@@ -210,9 +213,14 @@ class TrezorServer(Cmd):
         self.creds = monero.AccountCreds.new_wallet(priv_view_key, priv_spend_key, self.network_type)
         self.update_intro()
 
-        print('Address: %s' % self.creds.address.decode('utf8'))
+        logger.info('Address: %s' % self.creds.address.decode('utf8'))
+        self.trez = trezor_lite.TrezorLite()
+        self.trez.creds = self.creds
 
+        logging.info('Starting rest server...')
         self.rest_server_boot()
+        time.sleep(1)
+
         self.cmdloop()
         self.terminating()
 

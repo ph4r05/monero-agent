@@ -11,7 +11,8 @@ from monero_glue import crypto, monero
 
 
 logger = logging.getLogger(__name__)
-coloredlogs.install(level=logging.DEBUG)
+coloredlogs.CHROOT_FILES = []
+coloredlogs.install(level=logging.DEBUG, use_chroot=False)
 
 
 class HostAgent(object):
