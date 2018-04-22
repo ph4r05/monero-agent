@@ -124,9 +124,6 @@ def decode_addr(addr):
     :return:
     """
     d = b58_mnr.b58decode(data_bin=addr)
-    print(len(d))
-    print(d)
-    print(binascii.hexlify(d))
 
     addr_checksum = d[-4:]
     calc_checksum = crypto.cn_fast_hash(d[:-4])[:4]
