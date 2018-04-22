@@ -215,4 +215,11 @@ class Agent(object):
         self.ct.tx.rct_signatures = rv
         return self.ct.tx
 
+    def last_transaction_data(self):
+        """
+        Returns last transaction data
+        :return:
+        """
+        return self.ct
+
 
