@@ -70,7 +70,7 @@ def construct_pending_tsx(tx, cd):
                                           change_dts=cd.change_dts,
                                           selected_transfers=cd.selected_transfers,
                                           key_images='',
-                                          tx_key=b'\x01' + b'\x00' * 31,
+                                          tx_key=crypto.identity(True),
                                           additional_tx_keys=[],
                                           dests=cd.dests,
                                           multisig_sigs=[], construction_data=cd)
