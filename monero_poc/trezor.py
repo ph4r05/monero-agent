@@ -2,6 +2,12 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+#
+# Note pickling is used for message serialization.
+# This is just for the prototyping & fast PoC, pickling wont be used in the production.
+# Instead, protobuf messages will be defined and parsed to avoid malicious pickling.
+#
+
 import sys
 import os
 import json
@@ -13,6 +19,7 @@ import logging
 import traceback
 import threading
 import coloredlogs
+import pickle
 from blessed import Terminal
 from cmd2 import Cmd
 
@@ -191,14 +198,49 @@ class TrezorServer(Cmd):
         """
         js = request.json
         cmd = js['cmd']
-        if cmd == 'init':
-            return await self.tx_sign_init(js, request)
+        logger.debug('Action: %s' % cmd)
+        args, kwargs = self.unpickle_args(js) if 'payload' in js else ([], {})
+
+        if cmd == 'init_transaction':
+            res = await self.trez.init_transaction(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
+        elif cmd == 'set_tsx_input':
+            res = await self.trez.set_tsx_input(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
+        elif cmd == 'tsx_inputs_permutation':
+            res = await self.trez.tsx_inputs_permutation(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
+        elif cmd == 'tsx_input_vini':
+            res = await self.trez.tsx_input_vini(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
+        elif cmd == 'set_tsx_output1':
+            res = await self.trez.set_tsx_output1(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
+        elif cmd == 'all_out1_set':
+            res = await self.trez.all_out1_set(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
+        elif cmd == 'tsx_mlsag_done':
+            res = await self.trez.tsx_mlsag_done(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
+        elif cmd == 'sign_input':
+            res = await self.trez.sign_input(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
         else:
             return abort(405)
 
-    async def tx_sign_init(self, js, req):
-        pass
+    def unpickle_args(self, js):
+        return pickle.loads(binascii.unhexlify(js['payload'].encode('utf8')))
 
+    def pickle_res(self, res):
+        return binascii.hexlify(pickle.dumps(res)).decode('utf8')
 
     #
     # Work
