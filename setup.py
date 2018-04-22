@@ -20,6 +20,14 @@ dev_extras = [
     'requests',
 ]
 
+poc_extras = [
+    'requests',
+    'cmd2>=0.6.9',
+    'shellescape',
+    'coloredlogs',
+    'blessed>=1.14.1',
+]
+
 docs_extras = [
     'Sphinx>=1.0',  # autodoc_member_order = 'bysource', autodoc_default_flags
     'sphinx_rtd_theme',
@@ -62,6 +70,7 @@ setup(
     install_requires=install_requires,
     extras_require={
         'dev': dev_extras,
+        'poc': poc_extras,
         'docs': docs_extras,
     },
 )
