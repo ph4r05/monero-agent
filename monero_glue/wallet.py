@@ -58,6 +58,8 @@ async def dump_signed_tx(priv_key, signed_tx):
 def construct_pending_tsx(tx, cd):
     """
     Dummy pending transaction record from real transaction + construction data.
+    Tx key is not sent to untrusted wallet.
+    Same logic as in wallet2.cpp:sign_tx
 
     :param tx:
     :param cd:
@@ -66,9 +68,9 @@ def construct_pending_tsx(tx, cd):
     pending = xmrtypes.PendingTransaction(tx=tx, dust=0, fee=0,
                                           dust_added_to_fee=False,
                                           change_dts=cd.change_dts,
-                                          selected_transfers=[],
+                                          selected_transfers=cd.selected_transfers,
                                           key_images='',
-                                          tx_key=b'\x00' * 32,
+                                          tx_key=b'\x01' + b'\x00' * 31,
                                           additional_tx_keys=[],
                                           dests=cd.dests,
                                           multisig_sigs=[], construction_data=cd)
