@@ -180,16 +180,21 @@ async def parse_extra_fields(extra_buff):
     return extras
 
 
-def find_tx_extra_field_by_type(extra_fields, msg):
+def find_tx_extra_field_by_type(extra_fields, msg, idx=0):
     """
     Finds given message type in the extra array, or returns None if not found
     :param extra_fields:
     :param msg:
+    :param idx:
     :return:
     """
+    cur_idx = 0
     for x in extra_fields:
         if isinstance(x, msg):
-            return x
+            if cur_idx == idx:
+                return x
+            cur_idx += 1
+    return None
 
 
 def has_encrypted_payment_id(extra_nonce):
@@ -933,3 +938,31 @@ def compute_subaddresses(creds, account, indices, subaddresses=None):
         pub = crypto.encodepoint(pub)
         subaddresses[pub] = (account, idx)
     return subaddresses
+
+
+async def get_tx_pub_key_from_received_outs(td):
+    """
+    Extracts tx pub key from extras.
+    Handles previous bug in Monero.
+
+    :param td:
+    :type td: xmrtypes.TransferDetails
+    :return:
+    """
+    extras = await parse_extra_fields(td.m_tx.extra)
+    tx_pub = find_tx_extra_field_by_type(extras, xmrtypes.TxExtraPubKey, 0)
+
+    # Due to a previous bug, there might be more than one tx pubkey in extra, one being
+    # the result of a previously discarded signature.
+    # For speed, since scanning for outputs is a slow process, we check whether extra
+    # contains more than one pubkey. If not, the first one is returned. If yes, they're
+    # checked for whether they yield at least one output
+    second_pub = find_tx_extra_field_by_type(extras, xmrtypes.TxExtraPubKey, 1)
+    if second_pub is None:
+        return tx_pub.pub_key
+
+    # Workaround: resend all your funds to the wallet in a different transaction.
+    # Proper handling would require derivation -> need trezor roundtrips.
+    raise ValueError('Input transaction is buggy, contains two tx keys')
+
+

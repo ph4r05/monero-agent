@@ -140,3 +140,12 @@ def apply_permutation(permutation, swapper):
             current = nxt
         perm[current] = current
 
+
+def is_empty(inp):
+    """
+    True if none or empty
+    :param inp:
+    :return:
+    """
+    return inp is None or len(inp) == 0
+
