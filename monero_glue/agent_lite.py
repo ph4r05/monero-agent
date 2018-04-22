@@ -86,10 +86,17 @@ class Agent(object):
         Returns the last signed transaction as blob
         :return:
         """
-        # Serialize response
+        return await self.serialize_tx(self.ct.tx)
+
+    async def serialize_tx(self, tx):
+        """
+        Serializes transaction
+        :param tx:
+        :return:
+        """
         writer = xmrserialize.MemoryReaderWriter()
         ar1 = xmrserialize.Archive(writer, True)
-        await ar1.message(self.ct.tx, msg_type=xmrtypes.Transaction)
+        await ar1.message(tx, msg_type=xmrtypes.Transaction)
         return bytes(writer.buffer)
 
     async def sign_transaction_data(self, tx):
