@@ -9,7 +9,7 @@ version = '0.1.2'
 install_requires = [
     'monero-serialize>=1.1.0',
     'pycryptodome',
-    'py-cryptonight',
+    'py-cryptonight>=0.1.2',
 ]
 
 dev_extras = [
