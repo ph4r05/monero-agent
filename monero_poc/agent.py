@@ -138,8 +138,46 @@ class HostAgent(object):
             data = fh.read()
 
         msg = await wallet.load_unsigned_tx(self.priv_view, data)
-        txes = await self.agent.sign_unsigned_tx(msg)
-        print(txes)
+        txes = []
+        key_images = []
+        pendings = []
+        for tx in msg.txes:
+            res = await self.agent.sign_transaction_data(tx)
+            # obj = await xmrobj.dump_message(None, res)
+            # print(xmrjson.json_dumps(obj, indent=2))
+
+            txes.append(await self.agent.serialize_tx(res))
+            key_images += [res.vin[i].k_image for i in range(len(res.vin))]
+            pending = wallet.construct_pending_tsx(res, tx)
+            pendings.append(pending)
+
+        signed_tx = xmrtypes.SignedTxSet(ptx=pendings, key_images=key_images)
+        signed_data = await wallet.dump_signed_tx(self.priv_view, signed_tx)
+        with open('signed_monero_tx', 'wb+') as fh:
+            fh.write(signed_data)
+            logger.info('Signed transaction file: signed_monero_tx')
+
+        print('Key images: %s' % [binascii.hexlify(ff).decode('utf8') for ff in key_images])
+        for idx, tx in enumerate(txes):
+            fname = 'transaction_%02d' % idx
+            with open(fname, 'wb+') as fh:
+                fh.write(tx)
+
+            relay_fname = 'transaction_%02d_relay.sh' % idx
+            hex_ctx = binascii.hexlify(tx).decode('utf8')
+            with open(relay_fname, 'w+') as fh:
+                fh.write('#!/bin/bash\n')
+                fh.write('curl -X POST http://%s/sendrawtransaction '
+                         '-d \'{"tx_as_hex":"%s", "do_not_relay":false}\' '
+                         '-H \'Content-Type: application/json\'\n' % (self.args.rpc_addr, hex_ctx))
+
+            print('Transaction %02d stored to %s, relay script: %s' % (idx, fname, relay_fname))
+
+            if self.args.relay:
+                print('Relaying...')
+                payload = {'tx_as_hex': hex_ctx, 'do_not_relay': False}
+                resp = requests.post('http://%s/sendrawtransaction' % (self.args.rpc_addr, ), json=payload)
+                print('Relay response: %s' % resp.json())
 
     async def main(self):
         """
@@ -153,6 +191,12 @@ class HostAgent(object):
 
         parser.add_argument('--view-key', dest='view_key', required=True,
                             help='Hex coded private view key')
+
+        parser.add_argument('--rpc-addr', dest='rpc_addr', default='127.0.0.1:18081',
+                            help='RPC address for tsx relay')
+
+        parser.add_argument('--relay', dest='relay', default=False, action='store_const', const=True,
+                            help='Relay constructed transactions')
 
         parser.add_argument('--sign', dest='sign', default=None,
                             help='Sign the unsigned file')
