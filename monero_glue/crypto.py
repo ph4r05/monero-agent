@@ -793,3 +793,47 @@ def hmac_point(key, point):
     """
     return common.compute_hmac(key, encodepoint(point))
 
+
+def generate_signature(data, priv):
+    """
+    Generate EC signature
+    crypto_ops::generate_signature(const hash &prefix_hash, const public_key &pub, const secret_key &sec, signature &sig)
+
+    :param data:
+    :param priv:
+    :return:
+    """
+    pub = scalarmult_base(priv)
+
+    k = random_scalar()
+    comm = scalarmult_base(k)
+
+    buff = data + encodepoint(pub) + encodepoint(comm)
+    c = hash_to_scalar(buff)
+    r = sc_mulsub(k, priv, c)
+    return c, r, pub
+
+
+def check_signature(data, c, r, pub):
+    """
+    EC signature verification
+
+    :param data:
+    :param pub:
+    :param c:
+    :param r:
+    :return:
+    """
+    check_ed25519point(pub)
+    c = sc_reduce32(c)
+    r = sc_reduce32(r)
+    if sc_check(c) != 0 or sc_check(r) != 0:
+        raise ValueError('Signature error')
+
+    tmp2 = point_add(scalarmult(pub, c), scalarmult_base(r))
+    buff = data + encodepoint(pub) + encodepoint(tmp2)
+    tmp_c = hash_to_scalar(buff)
+    res = sc_sub(tmp_c, c)
+    return not sc_isnonzero(res)
+
+

@@ -132,6 +132,18 @@ class CryptoTest(aiounittest.AsyncTestCase):
                 crypto.encodepoint(hp[i]),
                 crypto.encodepoint(crypto.scalarmult(crypto.gen_H(), 2 ** i)))
 
+    def test_signature(self):
+        for i in range(10):
+            priv = crypto.random_scalar()
+            data = crypto.cn_fast_hash(bytes(bytearray([i])))
+
+            c, r, pub = crypto.generate_signature(data, priv)
+            res = crypto.check_signature(data, c, r, pub)
+            self.assertEqual(res, 1)
+
+            res2 = crypto.check_signature(data, c+1, r, pub)
+            self.assertEqual(res2, 0)
+
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
