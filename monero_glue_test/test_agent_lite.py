@@ -66,12 +66,32 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         pending_bin = binascii.unhexlify(pending_hex)
         await self.tx_sign_pending_boost(pending_bin)
 
+    async def test_tx_sign_pending02_boost_full_sub_3dest(self):
+        """
+        Testing tx signature, one input. full RCT, boost serialized
+        :return:
+        """
+        pending_hex = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_pending02.txt'))
+        pending_bin = binascii.unhexlify(pending_hex)
+        await self.tx_sign_pending_boost(pending_bin)
+
     async def test_tx_sign_uns01_boost_full_2dest(self):
         """
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
         unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns_enc01.txt'))
+
+        creds = self.get_creds()
+        unsigned_tx = await wallet.load_unsigned_tx(creds.view_key_private, unsigned_tx_c)
+        await self.tx_sign_unsigned_msg(unsigned_tx)
+
+    async def test_tx_sign_uns01_boost_full_2dest_sub(self):
+        """
+        Testing tx signature, one input. full RCT, boost serialized
+        :return:
+        """
+        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns_enc02.txt'))
 
         creds = self.get_creds()
         unsigned_tx = await wallet.load_unsigned_tx(creds.view_key_private, unsigned_tx_c)
