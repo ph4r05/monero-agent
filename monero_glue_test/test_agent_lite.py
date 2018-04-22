@@ -9,8 +9,8 @@ import aiounittest
 import binascii
 import collections
 
-from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor, trezor_lite, monero, common, crypto, agent_lite
+from monero_serialize import xmrserialize, xmrtypes, xmrboost
+from monero_glue import trezor, trezor_lite, monero, common, crypto, agent_lite, wallet
 import zlib
 
 
@@ -28,7 +28,7 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns01.txt'))
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
 
-        await self.tx_sign(unsigned_tx)
+        await self.tx_sign_unsigned(unsigned_tx)
 
     async def test_tx_sign(self):
         """
@@ -37,7 +37,7 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         """
         unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns02.txt'))
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
-        await self.tx_sign(unsigned_tx)
+        await self.tx_sign_unsigned(unsigned_tx)
 
     async def test_tx_sign_sub_dest(self):
         """
@@ -46,7 +46,7 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         """
         unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns03.txt'))
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
-        await self.tx_sign(unsigned_tx)
+        await self.tx_sign_unsigned(unsigned_tx)
 
     async def test_tx_sign_sub_2dest(self):
         """
@@ -55,9 +55,39 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         """
         unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns04.txt'))
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
-        await self.tx_sign(unsigned_tx)
+        await self.tx_sign_unsigned(unsigned_tx)
 
-    async def tx_sign(self, unsigned_tx):
+    async def test_tx_sign_pending01_boost_full_2dest(self):
+        """
+        Testing tx signature, one input. full RCT, boost serialized
+        :return:
+        """
+        pending_hex = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_pending01.txt'))
+        pending_bin = binascii.unhexlify(pending_hex)
+        await self.tx_sign_pending_boost(pending_bin)
+
+    async def xtest_tx_sign_uns01_boost_full_2dest(self):
+        """
+        Testing tx signature, one input. full RCT, boost serialized
+        :return:
+        """
+        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns_enc01.txt'))
+
+        creds = self.get_creds()
+        unsigned_tx = await wallet.load_unsigned_tx(creds.view_key_private, unsigned_tx_c)
+        await self.tx_sign_unsigned_msg(unsigned_tx)
+
+    async def tx_sign_unsigned_msg(self, unsigned_tx):
+        """
+        Signs tx stored in unsigned tx message
+        :param unsigned_tx:
+        :return:
+        """
+        tagent = self.init_agent()
+        txes = await tagent.transfer_unsigned(unsigned_tx)
+        return await self.receive(txes[0])
+
+    async def tx_sign_unsigned(self, unsigned_tx):
         """
         Tx sign test with given unsigned transaction data
         :param unsigned_tx:
@@ -67,9 +97,37 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         ar = xmrserialize.Archive(reader, False)
         unsig = xmrtypes.UnsignedTxSet()
         await ar.message(unsig)
+        await self.tx_sign_unsigned_msg(unsig)
+
+    async def tx_sign_unsigned_boost(self, unsigned_tx):
+        """
+        Tx sign test with given unsigned transaction data, serialized by boost -
+        unsigned tx produced by watch-only cli wallet.
+
+        :param unsigned_tx:
+        :return:
+        """
+        reader = xmrserialize.MemoryReaderWriter(bytearray(unsigned_tx))
+        ar = xmrboost.Archive(reader, False)
+        unsig = xmrtypes.UnsignedTxSet()
+        await ar.root()
+        await ar.message(unsig)
+        await self.tx_sign_unsigned_msg(unsig)
+
+    async def tx_sign_pending_boost(self, pending_tx):
+        """
+        Signs transaction produced by the wallet-rpc, metadata parser, boost
+        :param metadata:
+        :return:
+        """
+        reader = xmrserialize.MemoryReaderWriter(bytearray(pending_tx))
+        ar = xmrboost.Archive(reader, False)
+        pending = xmrtypes.PendingTransaction()
+        await ar.root()
+        await ar.message(pending)
 
         tagent = self.init_agent()
-        txes = await tagent.transfer_unsigned(unsig)
+        txes = await tagent.transfer_tx(pending.construction_data)
         await self.receive(txes[0])
 
     async def receive(self, tx):
