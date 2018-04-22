@@ -29,6 +29,12 @@ class Base58Test(aiounittest.AsyncTestCase):
                 b'61a67082a75fd49394d51e69bbea9a6e386'),
             b'43tpGG9PKbwCpjRvNLn1jwXPpnacw2uVUcszAtgmDiVcZK4VgHwjJT9BJz1WGF9eMxSYASp8yNMkuLjeQfWqJn3CNWdWfzV')
 
+        for i in range(10):
+            inp = b'test01' * (7*i+i+1)
+            enc = b58_mnr.b58encode(data_bin=inp)
+            dec = b58_mnr.b58decode(data_bin=enc)
+            self.assertEqual(inp, dec)
+
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
