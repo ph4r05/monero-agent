@@ -66,7 +66,7 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         pending_bin = binascii.unhexlify(pending_hex)
         await self.tx_sign_pending_boost(pending_bin)
 
-    async def xtest_tx_sign_uns01_boost_full_2dest(self):
+    async def test_tx_sign_uns01_boost_full_2dest(self):
         """
         Testing tx signature, one input. full RCT, boost serialized
         :return:
