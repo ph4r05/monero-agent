@@ -21,6 +21,7 @@ dev_extras = [
 ]
 
 poc_extras = [
+    'asyncio',
     'requests',
     'cmd2>=0.6.9',
     'shellescape',
