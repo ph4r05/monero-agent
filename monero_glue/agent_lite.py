@@ -222,4 +222,24 @@ class Agent(object):
         """
         return self.ct
 
+    async def import_outputs(self, outputs):
+        """
+        Key images sync. Required for hot wallet be able to construct transactions.
+        If the signed transaction is not relayed with the hot wallet it gets out of sync with
+        key images. Thus importing is needed.
+
+        Wallet2::import_outputs()
+        TODO: implement. Ask user permission to generate key images with Trezor for x inputs.
+
+        :param outputs:
+        :return:
+        """
+        for idx, td in enumerate(outputs):  # type: xmrtypes.TransferDetails
+            if common.is_empty(td.m_tx.vout):
+                raise ValueError('Tx with no outputs %s' % idx)
+
+            tx_pub_key = await monero.get_tx_pub_key_from_received_outs(td)
+            extras = await monero.parse_extra_fields(td.m_tx.extra)
+            additional_pub_keys = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraAdditionalPubKeys)
+            out_key = td.m_tx.vout[td.m_internal_output_index].target.key
 
