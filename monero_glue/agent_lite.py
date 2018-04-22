@@ -60,15 +60,37 @@ class Agent(object):
         txes = []
         for tx in unsig.txes:
             await self.sign_transaction(tx)
-
-            # Serialize response
-            writer = xmrserialize.MemoryReaderWriter()
-            ar1 = xmrserialize.Archive(writer, True)
-            await ar1.message(self.ct.tx, msg_type=xmrtypes.Transaction)
-
-            txes.append(bytes(writer.buffer))
+            txes.append(await self.serialized_tx())
 
         return txes
+
+    async def transfer_tx(self, construction_data):
+        """
+        Transfers transaction, serializes response
+
+        :param construction_data:
+        :return:
+        """
+        if not isinstance(construction_data, list):
+            construction_data = [construction_data]
+
+        txes = []
+        for tdata in construction_data:
+            await self.sign_transaction(tdata)
+            txes.append(await self.serialized_tx())
+
+        return txes
+
+    async def serialized_tx(self):
+        """
+        Returns the last signed transaction as blob
+        :return:
+        """
+        # Serialize response
+        writer = xmrserialize.MemoryReaderWriter()
+        ar1 = xmrserialize.Archive(writer, True)
+        await ar1.message(self.ct.tx, msg_type=xmrtypes.Transaction)
+        return bytes(writer.buffer)
 
     async def sign_transaction(self, tx):
         """
