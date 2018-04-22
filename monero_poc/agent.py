@@ -138,19 +138,33 @@ class HostAgent(object):
             data = fh.read()
 
         msg = await wallet.load_unsigned_tx(self.priv_view, data)
+
+        # Key image sync
+        # key_images = await self.agent.import_outputs(msg.transfers)
+        # For now sync only spent key images to the hot wallet.
+        key_images = [td.m_key_image for td in msg.transfers]
+
         txes = []
-        key_images = []
         pendings = []
-        for tx in msg.txes:
+        for tx in msg.txes:  # type: xmrtypes.TxConstructionData
             res = await self.agent.sign_transaction_data(tx)
+            cdata = self.agent.last_transaction_data()
+
             # obj = await xmrobj.dump_message(None, res)
             # print(xmrjson.json_dumps(obj, indent=2))
 
+            # Key image sync for spent TXOs
+            # Updating only spent.
+            for idx in range(len(tx.selected_transfers)):
+                idx_mapped = cdata.source_permutation[idx]
+                key_images[tx.selected_transfers[idx_mapped]] = res.vin[idx].k_image
+
             txes.append(await self.agent.serialize_tx(res))
-            key_images += [res.vin[i].k_image for i in range(len(res.vin))]
             pending = wallet.construct_pending_tsx(res, tx)
             pendings.append(pending)
 
+        # Key images array has to cover all transfers sent.
+        # Watch only wallet does not have key images.
         signed_tx = xmrtypes.SignedTxSet(ptx=pendings, key_images=key_images)
         signed_data = await wallet.dump_signed_tx(self.priv_view, signed_tx)
         with open('signed_monero_tx', 'wb+') as fh:
@@ -179,6 +193,8 @@ class HostAgent(object):
                 resp = requests.post('http://%s/sendrawtransaction' % (self.args.rpc_addr, ), json=payload)
                 print('Relay response: %s' % resp.json())
 
+        print('Please note that by manual relaying hot wallet key images get out of sync')
+
     async def main(self):
         """
         Entry point
@@ -196,7 +212,7 @@ class HostAgent(object):
                             help='RPC address for tsx relay')
 
         parser.add_argument('--relay', dest='relay', default=False, action='store_const', const=True,
-                            help='Relay constructed transactions')
+                            help='Relay constructed transactions. Warning! Key images will get out of sync')
 
         parser.add_argument('--sign', dest='sign', default=None,
                             help='Sign the unsigned file')
