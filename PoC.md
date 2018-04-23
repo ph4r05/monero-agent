@@ -15,13 +15,16 @@ Spending is then following:
 Note the submit has to be done with hot watch-only wallet otherwise key images will get out of sync.
 Key image sync feature is not yet implemented.
 
+Python 3 is supported only (asyncio).
+
 ## Creating wallet
 
 ```bash
 # Install poc dependencies
-$> pip install monero-agent[poc]
+$> git clone https://github.com/ph4r05/monero-agent.git
+$> cd monero-agent
+$> pip install .[poc]
 
-$> cd monero-agent/
 $> python -m monero_poc.generate_creds --testnet
 Address: 9wzrQmYBPcL2SdHrZhURPhQQeeYAriuv4FSKsqqRRpBaMsknACiLjyrLtTpdToGYh2ao9jFMcKzwUUgg3ZChvPXX75Gfifc
 Private view key:  53ebe2f7c79b1cf7fab2d7d049700b2c73497ff5d83b8445fb5fa72e6d01db03
