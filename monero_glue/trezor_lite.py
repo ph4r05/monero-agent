@@ -174,6 +174,19 @@ class TrezorLite(object):
             self.exc_handler(e)
             return TError(exc=e)
 
+    async def tx_sign_final(self, *args, **kwargs):
+        """
+        Final message.
+        Offloading tx related data, encrypted.
+
+        :return:
+        """
+        try:
+            return await self.tsx_obj.final_msg(*args, **kwargs)
+        except Exception as e:
+            self.exc_handler(e)
+            return TError(exc=e)
+
     async def key_image_sync_ask(self, *args, **kwargs):
         """
         Ask for initial permission to sync key images
@@ -207,6 +220,7 @@ class TState(object):
     OUTPUT_DONE = 8
     FINAL_MESSAGE = 9
     SIGNATURE = 10
+    SIGNATURE_DONE = 11
     FINAL = 11
 
     def __init__(self):
@@ -269,8 +283,13 @@ class TState(object):
             raise ValueError('Illegal state')
         self.s = self.SIGNATURE
 
-    def set_final(self):
+    def set_signature_done(self):
         if self.s != self.SIGNATURE:
+            raise ValueError('Illegal state')
+        self.s = self.SIGNATURE_DONE
+
+    def set_final(self):
+        if self.s != self.SIGNATURE_DONE:
             raise ValueError('Illegal state')
         self.s = self.FINAL
 
@@ -1125,7 +1144,22 @@ class TTransaction(object):
 
         # Final state transition
         if self.inp_idx + 1 == self.num_inputs():
-            self.state.set_final()
+            self.state.set_signature_done()
 
+        # TODO: multisig values returned encrypted, keys returned after finished successfully.
         return TResponse(mgs[0], cout)
+
+    async def final_msg(self, *args, **kwargs):
+        """
+        Final step after transaction signing.
+        TODO: return encrypted tx keys under transaction specific key, derived from txhash and spend key.
+        TODO: return encryption keys for multisig values
+
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        self.state.set_final()
+
+        return None
 

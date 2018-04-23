@@ -250,6 +250,10 @@ class Agent(object):
 
         self.ct.tx.signatures = []
         self.ct.tx.rct_signatures = rv
+
+        t_res = await self.trezor.tx_sign_final()
+        self.handle_error(t_res)
+
         return self.ct.tx
 
     def last_transaction_data(self):
