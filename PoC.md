@@ -127,7 +127,7 @@ Confirming transaction:
   Unlock time: 0
   UTXOs: 1
   Mixin: 7
-  Output  0:  12.00000000 to 9wviCeWe2D8XS82k2ovp5EUYLzBt9pYNW2LXUFsZiv8S3Mt21FZ5qQaAroko1enzw3eGr9qC7X1D7Geoo2RrAotYPwq9Gm8, sub: 0
+  Output  0:  16.00000000 to 9wviCeWe2D8XS82k2ovp5EUYLzBt9pYNW2LXUFsZiv8S3Mt21FZ5qQaAroko1enzw3eGr9qC7X1D7Geoo2RrAotYPwq9Gm8, sub: 0
   Change:    546.95380931 to 9sj6vz6uiX9dYekg1SWHzWViba8qLZA2mGmjTbR9QFNshk3bxruqQH3VrHprg2Pw4AitgRxnSpZkugJHWoB6YQYc8PgWp5X, sub: 0
   Fee: 0.00908518
   Account: 0
