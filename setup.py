@@ -19,6 +19,8 @@ dev_extras = [
     'aiounittest',
     'requests',
     'pympler',
+    'pypandoc',
+    'pandoc',
 ]
 
 poc_extras = [
