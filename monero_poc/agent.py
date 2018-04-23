@@ -39,6 +39,10 @@ class TrezorProxy(trezor_lite.TrezorLite):
         self.url = 'http://127.0.0.1:46123' if url is None else url
         self.endpoint = '%s/api/v1.0' % self.url
 
+    async def ping(self):
+        resp = requests.get('%s/ping' % self.endpoint)
+        return resp.json()
+
     async def transfer(self, method, cmd, payload):
         endp = '%s/%s' % (self.endpoint, method)
         req = {'cmd': cmd, 'payload': payload}
@@ -132,6 +136,10 @@ class HostAgent(object):
                 print('Trezor returned an error: %s' % e)
                 return 1
 
+            except agent_misc.TrezorNotRunning as e:
+                logger.error('Trezor server is not running')
+                return 2
+
         logger.info('Terminating')
 
     async def sign(self, file):
@@ -140,6 +148,11 @@ class HostAgent(object):
         :param file:
         :return:
         """
+        try:
+            await self.trezor_proxy.ping()
+        except Exception as e:
+            raise agent_misc.TrezorNotRunning(e)
+
         if not os.path.exists(file):
             raise ValueError('Could not find unsigned transaction file')
 
@@ -157,6 +170,9 @@ class HostAgent(object):
         txes = []
         pendings = []
         for tx in msg.txes:  # type: xmrtypes.TxConstructionData
+            print('Signing transaction with Trezor')
+            print('Please check the Trezor and confirm / reject the transaction\n')
+
             res = await self.agent.sign_transaction_data(tx)
             cdata = self.agent.last_transaction_data()
 
