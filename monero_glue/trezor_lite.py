@@ -49,7 +49,7 @@ class TrezorLite(object):
         self.creds = None  # type: monero.AccountCreds
         self.iface = trezor_iface.TrezorInterface()
 
-    def exc_handler(self, e):
+    async def exc_handler(self, e):
         """
         Handles the exception thrown in the Trezor processing. Clears transaction state.
         We could use decorator/wrapper for message calls but not sure how uPython handles them
@@ -60,6 +60,7 @@ class TrezorLite(object):
         """
         self.err_ctr += 1
         self.tsx_obj = None  # clear transaction object
+        self.iface.transaction_error(e)
 
     async def init_transaction(self, tsx_data: TsxData):
         """
@@ -73,7 +74,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
         except Exception as e:
-            self.exc_handler(e)
+            await self.exc_handler(e)
             return TError(exc=e)
 
     async def set_tsx_input(self, src_entr):
@@ -92,7 +93,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.set_input(src_entr)
         except Exception as e:
-            self.exc_handler(e)
+            await self.exc_handler(e)
             return TError(exc=e)
 
     async def tsx_inputs_permutation(self, permutation):
@@ -104,7 +105,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.tsx_inputs_permutation(permutation)
         except Exception as e:
-            self.exc_handler(e)
+            await self.exc_handler(e)
             return TError(exc=e)
 
     async def tsx_input_vini(self, *args, **kwargs):
@@ -117,7 +118,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.tsx_input_vini(*args, **kwargs)
         except Exception as e:
-            self.exc_handler(e)
+            await self.exc_handler(e)
             return TError(exc=e)
 
     async def set_tsx_output1(self, dst_entr, dst_entr_hmac):
@@ -133,7 +134,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.set_out1(dst_entr, dst_entr_hmac)
         except Exception as e:
-            self.exc_handler(e)
+            await self.exc_handler(e)
             return TError(exc=e)
 
     async def all_out1_set(self):
@@ -147,7 +148,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.all_out1_set()
         except Exception as e:
-            self.exc_handler(e)
+            await self.exc_handler(e)
             return TError(exc=e)
 
     async def tsx_mlsag_done(self):
@@ -159,7 +160,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.tsx_mlsag_done()
         except Exception as e:
-            self.exc_handler(e)
+            await self.exc_handler(e)
             return TError(exc=e)
 
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
@@ -171,7 +172,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.sign_input(src_entr, vini, hmac_vini, pseudo_out, alpha)
         except Exception as e:
-            self.exc_handler(e)
+            await self.exc_handler(e)
             return TError(exc=e)
 
     async def tx_sign_final(self, *args, **kwargs):
@@ -184,7 +185,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.final_msg(*args, **kwargs)
         except Exception as e:
-            self.exc_handler(e)
+            await self.exc_handler(e)
             return TError(exc=e)
 
     async def key_image_sync_ask(self, *args, **kwargs):
@@ -298,6 +299,15 @@ class TTransaction(object):
     """
     Transaction builder
     """
+
+    STEP_INP = 100
+    STEP_PERM = 200
+    STEP_VINI = 300
+    STEP_OUT = 400
+    STEP_ALL_OUT = 500
+    STEP_MLSAG = 600
+    STEP_SIGN = 700
+
     def __init__(self, trezor=None):
         self.trezor = trezor  # type: TrezorLite
         self.creds = None  # type: trezor.WalletCreds
@@ -650,6 +660,9 @@ class TTransaction(object):
         """
         self.state.input()
         self.inp_idx += 1
+
+        await self.trezor.iface.transaction_step(self.STEP_INP, self.inp_idx)
+
         if self.inp_idx >= self.num_inputs():
             raise ValueError('Too many inputs')
         if src_entr.real_output >= len(src_entr.outputs):
@@ -736,6 +749,8 @@ class TTransaction(object):
         :param permutation:
         :return:
         """
+        await self.trezor.iface.transaction_step(self.STEP_PERM)
+
         if self.in_memory():
             return
         return TResponse(await self._tsx_inputs_permutation(permutation))
@@ -778,6 +793,8 @@ class TTransaction(object):
         :param pseudo_out: pseudo_out for the current entry
         :return:
         """
+        await self.trezor.iface.transaction_step(self.STEP_VINI, self.inp_idx + 1)
+
         if self.in_memory():
             return
         if self.inp_idx >= self.num_inputs():
@@ -900,6 +917,8 @@ class TTransaction(object):
         :param dst_entr_hmac
         :return:
         """
+        await self.trezor.iface.transaction_step(self.STEP_OUT, self.out_idx + 1)
+
         if self.state.is_input_vins() and self.inp_idx + 1 != self.num_inputs():
             raise ValueError('Invalid number of inputs')
 
@@ -978,6 +997,8 @@ class TTransaction(object):
         :return: tx.extra, tx_prefix_hash
         """
         self.state.set_output_done()
+        await self.trezor.iface.transaction_step(self.STEP_ALL_OUT)
+
         if self.out_idx + 1 != self.num_dests():
             raise ValueError('Invalid out num')
 
@@ -1042,6 +1063,7 @@ class TTransaction(object):
         :return:
         """
         self.state.set_final_message_done()
+        await self.trezor.iface.transaction_step(self.STEP_MLSAG)
 
         await self.tsx_mlsag_ecdh_info()
         await self.tsx_mlsag_out_pk()
@@ -1069,6 +1091,8 @@ class TTransaction(object):
         :return: Generated signature MGs[i]
         """
         self.state.set_signature()
+        await self.trezor.iface.transaction_step(self.STEP_SIGN)
+
         self.inp_idx += 1
         if self.inp_idx >= self.num_inputs():
             raise ValueError('Invalid ins')
@@ -1145,6 +1169,7 @@ class TTransaction(object):
         # Final state transition
         if self.inp_idx + 1 == self.num_inputs():
             self.state.set_signature_done()
+            await self.trezor.iface.transaction_signed()
 
         # TODO: multisig values returned encrypted, keys returned after finished successfully.
         return TResponse(mgs[0], cout)
@@ -1160,6 +1185,7 @@ class TTransaction(object):
         :return:
         """
         self.state.set_final()
+        await self.trezor.iface.transaction_finished()
 
         return None
 
