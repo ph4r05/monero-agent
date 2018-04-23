@@ -20,9 +20,11 @@ Python 3 is supported only (asyncio).
 ## Creating wallet
 
 ```bash
-# Install poc dependencies
+# Clone project
 $> git clone https://github.com/ph4r05/monero-agent.git
 $> cd monero-agent
+
+# Install poc dependencies
 $> pip install .[poc]
 
 $> python -m monero_poc.generate_creds --testnet
