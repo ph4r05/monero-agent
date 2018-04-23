@@ -27,7 +27,7 @@ from monero_serialize import xmrboost, xmrtypes, xmrserialize, xmrobj, xmrjson
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
-coloredlogs.install(level=logging.DEBUG, use_chroot=False)
+coloredlogs.install(level=logging.WARNING, use_chroot=False)
 
 
 class TrezorProxy(trezor_lite.TrezorLite):
@@ -115,6 +115,9 @@ class HostAgent(object):
         pass
         :return:
         """
+        if self.args.debug:
+            coloredlogs.install(level=logging.DEBUG, use_chroot=False)
+
         priv_view = self.args.view_key.encode('utf8')
         self.priv_view = crypto.b16_to_scalar(priv_view)
         self.address = self.args.address.encode('utf8')
@@ -246,6 +249,9 @@ class HostAgent(object):
 
         parser.add_argument('--sign', dest='sign', default=None,
                             help='Sign the unsigned file')
+
+        parser.add_argument('--debug', dest='debug', default=False, action='store_const', const=True,
+                            help='Debugging output')
 
         self.args = parser.parse_args()
         return await self.entry()
