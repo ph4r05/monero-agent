@@ -18,6 +18,7 @@ dev_extras = [
     'tox',
     'aiounittest',
     'requests',
+    'pympler',
 ]
 
 poc_extras = [
