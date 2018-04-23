@@ -83,8 +83,11 @@ class TrezorProxy(trezor_lite.TrezorLite):
     async def tsx_mlsag_done(self):
         return await self.transfer_pickle('tx_sign', 'tsx_mlsag_done')
 
-    async def sign_input(self, *args, **kwars):
-        return await self.transfer_pickle('tx_sign', 'sign_input', *args, **kwars)
+    async def sign_input(self, *args, **kwargs):
+        return await self.transfer_pickle('tx_sign', 'sign_input', *args, **kwargs)
+
+    async def tx_sign_final(self, *args, **kwargs):
+        return await self.transfer_pickle('tx_sign', 'final', *args, **kwargs)
 
 
 class HostAgent(object):

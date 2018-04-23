@@ -266,6 +266,10 @@ class TrezorServer(Cmd):
             res = await self.trez.sign_input(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
+        elif cmd == 'final':
+            res = await self.trez.tx_sign_final(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
         else:
             return abort(405)
 
