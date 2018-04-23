@@ -6,7 +6,7 @@ import binascii
 
 from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses
-from . import monero, crypto, ring_ct, mlsag2, aesgcm
+from . import monero, crypto, ring_ct, mlsag2, aesgcm, trezor_iface
 from . import common as common
 from . import trezor
 
@@ -47,6 +47,7 @@ class TrezorLite(object):
         self.err_ctr = 0
         self.tsx_obj = None  # type: TTransaction
         self.creds = None  # type: monero.AccountCreds
+        self.iface = trezor_iface.TrezorInterface()
 
     def exc_handler(self, e):
         """
@@ -520,6 +521,11 @@ class TTransaction(object):
         self.gen_r()
         self.state.init_tsx()
 
+        # Ask for confirmation
+        confirmation = await self.trezor.iface.confirm_transaction(tsx_data)
+        if not confirmation:
+            return TError(reason='rejected')
+
         # Basic transaction parameters
         self.input_count = tsx_data.num_inputs
         self.output_count = len(tsx_data.outputs)
@@ -529,9 +535,6 @@ class TTransaction(object):
         self.use_simple_rct = self.input_count > 1
         self.state.inp_cnt(self.in_memory())
         self.check_change(tsx_data.outputs)
-
-        # TODO: ask for tsx confirmation
-        # ...
 
         # Additional keys w.r.t. subaddress destinations
         class_res = classify_subaddresses(tsx_data.outputs, self.change_address())
