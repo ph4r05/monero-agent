@@ -7,7 +7,7 @@
 Spending is then following:
 
 - Generate unsigned transaction with watch-only wallet
-- Use Trezor agent with view-only credentials to sign the transaction with Trezor server
+- Use Trezor agent with watch-only credentials to sign the transaction with Trezor server
 - Submit signed transaction with watch only wallet
 
 ## Submitting signed transaction
