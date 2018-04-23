@@ -2,13 +2,11 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import random
-import base64
 import unittest
 import aiounittest
-import binascii
 
-from monero_glue import aesgcm, common
+from monero_glue import common
+from monero_glue.enc import aesgcm
 
 
 class AesTest(aiounittest.AsyncTestCase):

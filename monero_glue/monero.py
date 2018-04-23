@@ -7,7 +7,7 @@ from . import common as common
 from . import crypto
 from . import ring_ct
 from . import mlsag2
-from . import b58_mnr
+from monero_glue.misc import b58_mnr
 import binascii
 import struct
 

@@ -7,9 +7,9 @@
 # DEPRECATED
 
 from monero_serialize import xmrtypes, xmrserialize
-from .monero import TsxData, classify_subaddresses
-from . import monero, crypto, ring_ct, mlsag2
-from . import common as common
+from monero_glue.monero import TsxData, classify_subaddresses
+from monero_glue import monero, crypto, ring_ct, mlsag2
+from monero_glue import common as common
 
 
 class Trezor(object):

@@ -8,9 +8,9 @@ import requests
 import aiounittest
 import binascii
 
-import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor, monero, common, crypto, agent, trezor_lite, agent_lite
+from monero_glue import monero, crypto, trezor_lite, agent_lite
+from monero_glue.old import agent, trezor
 
 
 class AgentTest(aiounittest.AsyncTestCase):

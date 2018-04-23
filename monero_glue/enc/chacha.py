@@ -4,7 +4,7 @@
 
 from Crypto.Cipher import ChaCha20
 import pycryptonight
-from . import crypto
+from monero_glue import crypto
 
 
 def generate_key(data):

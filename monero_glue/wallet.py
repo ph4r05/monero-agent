@@ -3,7 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 from . import crypto
-from . import chacha
+from monero_glue.enc import chacha
 from monero_serialize import xmrboost, xmrtypes, xmrserialize
 
 UNSIGNED_TX_PREFIX = b"Monero unsigned tx set\004"

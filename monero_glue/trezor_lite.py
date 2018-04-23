@@ -2,13 +2,11 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import binascii
-
 from monero_serialize import xmrtypes, xmrserialize
 from .monero import TsxData, classify_subaddresses
-from . import monero, crypto, ring_ct, mlsag2, aesgcm, trezor_iface
+from . import monero, crypto, ring_ct, mlsag2, trezor_iface
+from monero_glue.enc import aesgcm
 from . import common as common
-from . import trezor
 
 
 class TMessage(object):

@@ -10,7 +10,7 @@ import binascii
 import collections
 
 from monero_serialize import xmrserialize, xmrtypes, xmrboost
-from monero_glue import trezor, trezor_lite, monero, common, crypto, agent_lite, wallet
+from monero_glue import trezor_lite, monero, crypto, agent_lite, wallet
 import zlib
 
 

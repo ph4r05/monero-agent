@@ -6,11 +6,9 @@
 # One pass signature, not maintained
 # DEPRECATED
 
-import binascii
-
-import monero_serialize as xmrser
-from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor, monero, common, crypto
+from monero_serialize import xmrtypes
+from monero_glue import monero
+from monero_glue.old import trezor
 
 
 class TData(object):

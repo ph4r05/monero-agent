@@ -7,7 +7,7 @@ import unittest
 import aiounittest
 
 from monero_glue import crypto
-from monero_glue import chacha
+from monero_glue.enc import chacha
 
 
 class ChachaTest(aiounittest.AsyncTestCase):

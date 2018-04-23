@@ -6,7 +6,7 @@ import unittest
 
 import aiounittest
 
-from monero_glue import b58_mnr
+from monero_glue.misc import b58_mnr
 
 
 class Base58Test(aiounittest.AsyncTestCase):
@@ -22,7 +22,7 @@ class Base58Test(aiounittest.AsyncTestCase):
         """
         self.assertIsNotNone(b58_mnr.b58encode(b''))
         self.assertIsNotNone(b58_mnr.b58encode(b'1234567890'))
-        self.assertIsNotNone(b58_mnr.b58encode(b'1234567890'*50))
+        self.assertIsNotNone(b58_mnr.b58encode(b'1234567890' * 50))
         self.assertEqual(
             b58_mnr.b58encode(
                 b'123bec484c5d7f0246af520aab550452b5b6013733feabebd681c4a60d457b7fc12d5918e31d3c003da3c778592c07b398ad6f9'
