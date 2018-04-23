@@ -91,7 +91,7 @@ Unsigned transaction(s) successfully written to file: unsigned_monero_tx
 Use Agent to perform signing protocol with the Trezor.
 
 ```bash
-$> ./venv/bin/python3 -m monero_poc.agent \
+$> python -m monero_poc.agent \
     --address 9sj6vz6uiX9dYekg1SWHzWViba8qLZA2mGmjTbR9QFNshk3bxruqQH3VrHprg2Pw4AitgRxnSpZkugJHWoB6YQYc8PgWp5X \
     --view-key 41db4ed31316f25ac932fe9c4ba820da7e8740f695148719bf0948848faa5c08 \
     --sign ~/testnet/unsigned_monero_tx --debug
