@@ -66,6 +66,10 @@ Note: For the PoC sake the communication between Trezor and Agent is serialized 
 This is not secure as `pickle` is not immune to malformed / tampered archives. In the production a `protobuf`
 messages will be constructed and use which are safe w.r.t. tampering.
 
+# Spending
+
+In order to spend pls send funds to address you just created.
+
 ## Create unsigned transaction
 
 In the watch only hot wallet:
