@@ -3,7 +3,8 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor_lite, monero, common, agent_misc
+from monero_glue import trezor_lite, agent_misc
+from monero_glue.xmr import monero, common
 from monero_glue.old import trezor
 
 

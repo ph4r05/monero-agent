@@ -6,7 +6,7 @@ import unittest
 
 import aiounittest
 
-from monero_glue import monero, crypto, ring_ct
+from monero_glue.xmr import monero, ring_ct, crypto
 
 
 class RingCtTest(aiounittest.AsyncTestCase):

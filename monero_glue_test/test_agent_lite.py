@@ -10,7 +10,8 @@ import binascii
 import collections
 
 from monero_serialize import xmrserialize, xmrtypes, xmrboost
-from monero_glue import trezor_lite, monero, crypto, agent_lite, wallet
+from monero_glue import trezor_lite, agent_lite
+from monero_glue.xmr import wallet, monero, crypto
 import zlib
 
 
@@ -182,7 +183,8 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
             additional_derivations = []
             if additional_pub_keys and additional_pub_keys.data:
                 for x in additional_pub_keys.data:
-                    additional_derivations.append(monero.generate_key_derivation(crypto.decodepoint(x), creds.view_key_private))
+                    additional_derivations.append(
+                        monero.generate_key_derivation(crypto.decodepoint(x), creds.view_key_private))
 
             for ti, to in enumerate(tx_obj.vout):
                 tx_scan_info = monero.check_acc_out_precomp(to, wallet_subs, derivation, additional_derivations, ti)

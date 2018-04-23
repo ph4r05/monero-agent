@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from . import crypto
-from monero_glue.enc import chacha
+from monero_glue.xmr import crypto
+from monero_glue.xmr.enc import chacha
 from monero_serialize import xmrboost, xmrtypes, xmrserialize
 
 UNSIGNED_TX_PREFIX = b"Monero unsigned tx set\004"

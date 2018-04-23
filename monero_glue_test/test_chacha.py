@@ -6,8 +6,8 @@ import unittest
 
 import aiounittest
 
-from monero_glue import crypto
-from monero_glue.enc import chacha
+from monero_glue.xmr import crypto
+from monero_glue.xmr.enc import chacha
 
 
 class ChachaTest(aiounittest.AsyncTestCase):
@@ -19,7 +19,7 @@ class ChachaTest(aiounittest.AsyncTestCase):
     def test_encrypt_base(self):
         for i in range(10):
             key = crypto.cn_fast_hash(crypto.encodeint(crypto.random_scalar()))
-            data = crypto.cn_fast_hash(crypto.encodeint(crypto.random_scalar())) * (i+1)
+            data = crypto.cn_fast_hash(crypto.encodeint(crypto.random_scalar())) * (i + 1)
 
             ciphertext = chacha.encrypt(key, data)
             plaintext = chacha.decrypt(key, ciphertext)

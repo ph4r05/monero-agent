@@ -6,7 +6,7 @@ import unittest
 
 import aiounittest
 
-from monero_glue import crypto
+from monero_glue.xmr import crypto
 
 
 class CryptoTest(aiounittest.AsyncTestCase):
@@ -141,7 +141,7 @@ class CryptoTest(aiounittest.AsyncTestCase):
             res = crypto.check_signature(data, c, r, pub)
             self.assertEqual(res, 1)
 
-            res2 = crypto.check_signature(data, c+1, r, pub)
+            res2 = crypto.check_signature(data, c + 1, r, pub)
             self.assertEqual(res2, 0)
 
 

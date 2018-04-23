@@ -5,8 +5,7 @@
 # see https://eprint.iacr.org/2015/1098.pdf
 
 import logging
-from . import common
-from . import crypto
+from monero_glue.xmr import crypto, common
 from monero_serialize import xmrtypes
 
 logger = logging.getLogger(__name__)
@@ -210,7 +209,7 @@ def gen_mlsag(pk, xx, index):
     
     oldi = index
     i = (index + 1) % cols
-    c[i] = crypto.cn_fast_hash(m+''.join(L[oldi]) + ''.join(R[oldi]))
+    c[i] = crypto.cn_fast_hash(m + ''.join(L[oldi]) + ''.join(R[oldi]))
 
     while i != index:
         s[i] = scalar_gen_vector(rows)
@@ -220,7 +219,7 @@ def gen_mlsag(pk, xx, index):
         R[i] = [add_keys2(s[i][j], Hi[j], c[i], I[j]) for j in range(0, rows)]
         oldi = i
         i = (i + 1) % cols
-        c[i] = crypto.cn_fast_hash(m+''.join(L[oldi]) + ''.join(R[oldi]))
+        c[i] = crypto.cn_fast_hash(m + ''.join(L[oldi]) + ''.join(R[oldi]))
 
     s[index] = [crypto.sc_mulsub(alpha[j], c[index], xx[j]) for j in range(0, rows)]  # alpha - c * x
     return I, c[0], s
@@ -256,7 +255,7 @@ def ver_mlsag(pk, I, c0, s):
 
         oldi = i
         i = i + 1
-        c[i] = crypto.cn_fast_hash(m+''.join(L[oldi]) + ''.join(R[oldi]))
+        c[i] = crypto.cn_fast_hash(m + ''.join(L[oldi]) + ''.join(R[oldi]))
 
     return c0 == c[cols]
 

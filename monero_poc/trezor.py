@@ -10,7 +10,6 @@
 
 import sys
 import os
-import json
 import time
 import asyncio
 import argparse
@@ -27,9 +26,8 @@ import eventlet
 from eventlet import wsgi
 from flask import Flask, jsonify, request, abort
 
-from monero_glue import crypto, monero, trezor_lite, trezor_iface
-from monero_serialize import xmrserialize, xmrtypes, xmrobj, xmrjson, xmrboost
-
+from monero_glue import trezor_lite, trezor_iface
+from monero_glue.xmr import monero, crypto
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
@@ -307,7 +305,7 @@ class TrezorServer(Cmd):
         self.poutput('Transaction was successfully signed\n')
 
     def conv_disp_amount(self, amount):
-        return amount / float(10**monero.DISPLAY_DECIMAL_POINT)
+        return amount / float(10 ** monero.DISPLAY_DECIMAL_POINT)
 
     def do_T(self, line):
         if not self.trez_iface.in_confirmation:

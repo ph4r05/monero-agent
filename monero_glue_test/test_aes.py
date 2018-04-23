@@ -5,8 +5,8 @@
 import unittest
 import aiounittest
 
-from monero_glue import common
-from monero_glue.enc import aesgcm
+from monero_glue.xmr import common
+from monero_glue.xmr.enc import aesgcm
 
 
 class AesTest(aiounittest.AsyncTestCase):

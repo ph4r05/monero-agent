@@ -17,12 +17,11 @@ import binascii  # conversion between hex, int, and binary. Also for the crc32 t
 from mnero import ed25519  # Bernsteins python ed25519 code from cr.yp.to
 from mnero import ed25519_2
 
-from mnero.ed25519 import b, q, l, d
+from mnero.ed25519 import b, q, l
 
 from mnero import keccak2
-from monero_serialize import xmrtypes, xmrserialize
-from . import common as common
-
+from monero_serialize import xmrserialize
+from monero_glue.xmr import common as common
 
 # Useful for very coarse version differentiation.
 PY3 = sys.version_info[0] == 3

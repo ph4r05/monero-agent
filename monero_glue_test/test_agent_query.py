@@ -9,7 +9,8 @@ import aiounittest
 import binascii
 
 from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import monero, crypto, trezor_lite, agent_lite
+from monero_glue import trezor_lite, agent_lite
+from monero_glue.xmr import monero, crypto
 from monero_glue.old import agent, trezor
 
 

@@ -4,7 +4,7 @@
 
 import argparse
 import binascii
-from monero_glue import crypto, monero
+from monero_glue.xmr import monero, crypto
 
 
 def main():

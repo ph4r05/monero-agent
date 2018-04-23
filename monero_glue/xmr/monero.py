@@ -3,10 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 from monero_serialize import xmrtypes, xmrserialize
-from . import common as common
-from . import crypto
-from . import ring_ct
-from . import mlsag2
+from monero_glue.xmr import mlsag2, ring_ct, crypto, common as common
 from monero_glue.misc import b58_mnr
 import binascii
 import struct

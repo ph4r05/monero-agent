@@ -13,17 +13,16 @@ import asyncio
 import argparse
 import binascii
 import logging
-import json
 import requests
 import coloredlogs
 import pickle
 import sys
-import traceback
 
 from . import trace_logger
-from monero_glue import crypto, monero, agent_lite, agent_misc, trezor_lite, wallet, common
-from monero_glue.monero import TsxData
-from monero_serialize import xmrboost, xmrtypes, xmrserialize, xmrobj, xmrjson
+from monero_glue import agent_lite, agent_misc, trezor_lite
+from monero_glue.xmr import wallet, monero, crypto
+from monero_glue.xmr.monero import TsxData
+from monero_serialize import xmrtypes
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []

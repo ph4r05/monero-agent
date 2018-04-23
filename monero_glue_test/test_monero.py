@@ -11,7 +11,7 @@ import aiounittest
 import pkg_resources
 from monero_serialize import xmrserialize, xmrtypes
 
-from monero_glue import monero, crypto, ring_ct, mlsag2
+from monero_glue.xmr import monero, mlsag2, ring_ct, crypto
 
 
 class MoneroTest(aiounittest.AsyncTestCase):
@@ -120,7 +120,7 @@ class MoneroTest(aiounittest.AsyncTestCase):
                 r = mlsag2.ver_rct_mg_simple(full_message, rv.p.MGs[index], rv.mixRing[index], pseudo_out)
                 self.assertTrue(r)
 
-                r = mlsag2.ver_rct_mg_simple(full_message, rv.p.MGs[index], rv.mixRing[index-1], pseudo_out)
+                r = mlsag2.ver_rct_mg_simple(full_message, rv.p.MGs[index], rv.mixRing[index - 1], pseudo_out)
                 self.assertFalse(r)
 
         else:
@@ -128,7 +128,7 @@ class MoneroTest(aiounittest.AsyncTestCase):
             r = mlsag2.ver_rct_mg(rv.p.MGs[0], rv.mixRing, rv.outPk, txn_fee_key, digest)
             self.assertTrue(r)
 
-            r = mlsag2.ver_rct_mg(rv.p.MGs[0], rv.mixRing, rv.outPk, crypto.scalarmult_h(rv.txnFee-100), digest)
+            r = mlsag2.ver_rct_mg(rv.p.MGs[0], rv.mixRing, rv.outPk, crypto.scalarmult_h(rv.txnFee - 100), digest)
             self.assertTrue(r)
 
     def mixring(self, js):

@@ -7,7 +7,7 @@
 # DEPRECATED
 
 from monero_serialize import xmrtypes
-from monero_glue import monero
+from monero_glue.xmr import monero
 from monero_glue.old import trezor
 
 

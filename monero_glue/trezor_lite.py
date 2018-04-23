@@ -3,10 +3,10 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 from monero_serialize import xmrtypes, xmrserialize
-from .monero import TsxData, classify_subaddresses
-from . import monero, crypto, ring_ct, mlsag2, trezor_iface
-from monero_glue.enc import aesgcm
-from . import common as common
+from monero_glue.xmr.monero import TsxData, classify_subaddresses
+from . import trezor_iface
+from monero_glue.xmr import monero, mlsag2, ring_ct, crypto, common as common
+from monero_glue.xmr.enc import aesgcm
 
 
 class TMessage(object):

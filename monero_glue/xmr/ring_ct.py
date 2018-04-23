@@ -5,12 +5,8 @@
 
 import logging
 
-from monero_serialize import xmrtypes, xmrserialize
-from . import common
-from . import crypto
-from . import asnl
-from . import mlsag2
-
+from monero_serialize import xmrtypes
+from monero_glue.xmr import mlsag2, crypto, common, asnl
 
 logger = logging.getLogger(__name__)
 ATOMS = 64
