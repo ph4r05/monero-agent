@@ -17,8 +17,11 @@ import json
 import requests
 import coloredlogs
 import pickle
+import sys
+import traceback
 
-from monero_glue import crypto, monero, agent_lite, trezor_lite, wallet, common
+from . import trace_logger
+from monero_glue import crypto, monero, agent_lite, agent_misc, trezor_lite, wallet, common
 from monero_glue.monero import TsxData
 from monero_serialize import xmrboost, xmrtypes, xmrserialize, xmrobj, xmrjson
 
@@ -95,6 +98,7 @@ class HostAgent(object):
         self.pub_view = None
         self.pub_spend = None
 
+        self.trace_logger = trace_logger.Tracelogger(logger)
         self.loop = asyncio.get_event_loop()
         self.trezor_proxy = TrezorProxy()
         self.agent = agent_lite.Agent(self.trezor_proxy)
@@ -120,7 +124,13 @@ class HostAgent(object):
         print('Public view key : %s' % binascii.hexlify(pub_view).decode('utf8'))
 
         if self.args.sign:
-            await self.sign(self.args.sign)
+            try:
+                return await self.sign(self.args.sign)
+
+            except agent_misc.TrezorReturnedError as e:
+                self.trace_logger.log(e)
+                print('Trezor returned an error: %s' % e)
+                return 1
 
         logger.info('Terminating')
 
@@ -194,6 +204,7 @@ class HostAgent(object):
                 print('Relay response: %s' % resp.json())
 
         print('Please note that by manual relaying hot wallet key images get out of sync')
+        return 0
 
     async def main(self):
         """
@@ -218,12 +229,13 @@ class HostAgent(object):
                             help='Sign the unsigned file')
 
         self.args = parser.parse_args()
-        await self.entry()
+        return await self.entry()
 
 
 async def main():
     agent = HostAgent()
-    await agent.main()
+    res = await agent.main()
+    sys.exit(res)
 
 
 if __name__ == '__main__':
