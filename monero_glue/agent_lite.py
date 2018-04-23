@@ -6,7 +6,7 @@ import binascii
 
 import monero_serialize as xmrser
 from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor, trezor_lite, monero, common, crypto
+from monero_glue import trezor, trezor_lite, monero, common, crypto, agent_misc
 
 
 class TData(object):
@@ -50,6 +50,24 @@ class Agent(object):
         :return:
         """
         return rv.type in [xmrtypes.RctType.FullBulletproof, xmrtypes.RctType.SimpleBulletproof]
+
+    def is_error(self, response):
+        """
+        True if trezor returned an error
+        :param response:
+        :return:
+        """
+        return isinstance(response, trezor_lite.TError)
+
+    def handle_error(self, response):
+        """
+        Raises an error if Trezor returned an error.
+        :param response:
+        :return:
+        """
+        if not self.is_error(response):
+            return
+        raise agent_misc.TrezorReturnedError(response)
 
     async def sign_unsigned_tx(self, unsig):
         """
@@ -129,13 +147,18 @@ class Agent(object):
         self.ct.tx.unlock_time = tx.unlock_time
 
         self.ct.tsx_data = tsx_data
-        init_res = await self.trezor.init_transaction(tsx_data)
-        in_memory = init_res[0]
-        self.ct.tx_out_entr_hmacs = init_res[1]
+        t_res = await self.trezor.init_transaction(tsx_data)
+        self.handle_error(t_res)
+
+        in_memory = t_res.args[0]
+        self.ct.tx_out_entr_hmacs = t_res.args[1]
 
         # Set transaction inputs
         for idx, src in enumerate(tx.sources):
-            vini, vini_hmac, pseudo_out, alpha_enc = await self.trezor.set_tsx_input(src)
+            t_res = await self.trezor.set_tsx_input(src)
+            self.handle_error(t_res)
+
+            vini, vini_hmac, pseudo_out, alpha_enc = t_res.args
             self.ct.tx.vin.append(vini)
             self.ct.tx_in_hmacs.append(vini_hmac)
             self.ct.pseudo_outs.append(pseudo_out)
@@ -155,25 +178,33 @@ class Agent(object):
         common.apply_permutation(self.ct.source_permutation, swapper)
 
         if not in_memory:
-            await self.trezor.tsx_inputs_permutation(self.ct.source_permutation)
+            t_res = await self.trezor.tsx_inputs_permutation(self.ct.source_permutation)
+            self.handle_error(t_res)
 
         # Set vin_i back - tx prefix hashing
         # Done only if not in-memory.
         if not in_memory:
             for idx in range(len(self.ct.tx.vin)):
-                await self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
-                                                 self.ct.pseudo_outs[idx] if not in_memory else None)
+                t_res = await self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
+                                                         self.ct.pseudo_outs[idx] if not in_memory else None)
+                self.handle_error(t_res)
 
         # Set transaction outputs
         for idx, dst in enumerate(tx.splitted_dsts):
-            vouti, vouti_mac, rsig, out_pk, ecdh_info = await self.trezor.set_tsx_output1(dst, self.ct.tx_out_entr_hmacs[idx])
+            t_res = await self.trezor.set_tsx_output1(dst, self.ct.tx_out_entr_hmacs[idx])
+            self.handle_error(t_res)
+
+            vouti, vouti_mac, rsig, out_pk, ecdh_info = t_res.args
             self.ct.tx.vout.append(vouti)
             self.ct.tx_out_hmacs.append(vouti_mac)
             self.ct.tx_out_rsigs.append(rsig)
             self.ct.tx_out_pk.append(out_pk)
             self.ct.tx_out_ecdh.append(ecdh_info)
 
-        tx_extra, tx_prefix_hash, rv = await self.trezor.all_out1_set()
+        t_res = await self.trezor.all_out1_set()
+        self.handle_error(t_res)
+
+        tx_extra, tx_prefix_hash, rv = t_res.args
         self.ct.tx.extra = list(bytearray(tx_extra))
 
         # Verify transaction prefix hash correctness, tx hash in one pass
@@ -198,7 +229,10 @@ class Agent(object):
             rv.ecdhInfo.append(self.ct.tx_out_ecdh[idx])
 
         # MLSAG message check
-        mlsag_hash = await self.trezor.tsx_mlsag_done()
+        t_res = await self.trezor.tsx_mlsag_done()
+        self.handle_error(t_res)
+
+        mlsag_hash = t_res.args[0]
         mlsag_hash_computed = await monero.get_pre_mlsag_hash(rv)
         if mlsag_hash != mlsag_hash_computed:
             raise ValueError('Pre MLSAG hash has does not match')
@@ -206,9 +240,12 @@ class Agent(object):
         # Sign each input
         rv.p.MGs = []
         for idx, src in enumerate(tx.sources):
-            mg, msc = await self.trezor.sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
+            t_res = await self.trezor.sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
                                                    self.ct.pseudo_outs[idx],
                                                    self.ct.alphas[idx])
+            self.handle_error(t_res)
+
+            mg, msc = t_res.args
             rv.p.MGs.append(mg)
 
         self.ct.tx.signatures = []

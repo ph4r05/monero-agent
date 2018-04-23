@@ -11,6 +11,32 @@ from . import common as common
 from . import trezor
 
 
+class TMessage(object):
+    def __init__(self, *args, **kwargs):
+        self.status = 0
+
+
+class TError(TMessage):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.status = 1
+        self.reason = kwargs.pop('reason', None)
+        self.exc = kwargs.pop('exc', None)
+        for kw in kwargs:
+            setattr(self, kw, kwargs[kw])
+
+    def __repr__(self):
+        return 'TError(status=%r, reason=%r, exc=%r)' % (self.status, self.reason, self.exc)
+
+
+class TResponse(TMessage):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.args = args
+        for kw in kwargs:
+            setattr(self, kw, kwargs[kw])
+
+
 class TrezorLite(object):
     """
     Main Trezor object.
@@ -47,7 +73,7 @@ class TrezorLite(object):
             return await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
         except Exception as e:
             self.exc_handler(e)
-            raise
+            return TError(exc=e)
 
     async def set_tsx_input(self, src_entr):
         """
@@ -66,7 +92,7 @@ class TrezorLite(object):
             return await self.tsx_obj.set_input(src_entr)
         except Exception as e:
             self.exc_handler(e)
-            raise
+            return TError(exc=e)
 
     async def tsx_inputs_permutation(self, permutation):
         """
@@ -78,7 +104,7 @@ class TrezorLite(object):
             return await self.tsx_obj.tsx_inputs_permutation(permutation)
         except Exception as e:
             self.exc_handler(e)
-            raise
+            return TError(exc=e)
 
     async def tsx_input_vini(self, *args, **kwargs):
         """
@@ -91,7 +117,7 @@ class TrezorLite(object):
             return await self.tsx_obj.tsx_input_vini(*args, **kwargs)
         except Exception as e:
             self.exc_handler(e)
-            raise
+            return TError(exc=e)
 
     async def set_tsx_output1(self, dst_entr, dst_entr_hmac):
         """
@@ -107,7 +133,7 @@ class TrezorLite(object):
             return await self.tsx_obj.set_out1(dst_entr, dst_entr_hmac)
         except Exception as e:
             self.exc_handler(e)
-            raise
+            return TError(exc=e)
 
     async def all_out1_set(self):
         """
@@ -121,7 +147,7 @@ class TrezorLite(object):
             return await self.tsx_obj.all_out1_set()
         except Exception as e:
             self.exc_handler(e)
-            raise
+            return TError(exc=e)
 
     async def tsx_mlsag_done(self):
         """
@@ -133,7 +159,7 @@ class TrezorLite(object):
             return await self.tsx_obj.tsx_mlsag_done()
         except Exception as e:
             self.exc_handler(e)
-            raise
+            return TError(exc=e)
 
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
         """
@@ -145,13 +171,13 @@ class TrezorLite(object):
             return await self.tsx_obj.sign_input(src_entr, vini, hmac_vini, pseudo_out, alpha)
         except Exception as e:
             self.exc_handler(e)
-            raise
+            return TError(exc=e)
 
     async def key_image_sync_ask(self, *args, **kwargs):
         """
         Ask for initial permission to sync key images
         TODO: implement
-        
+
         :return:
         """
 
@@ -504,6 +530,9 @@ class TTransaction(object):
         self.state.inp_cnt(self.in_memory())
         self.check_change(tsx_data.outputs)
 
+        # TODO: ask for tsx confirmation
+        # ...
+
         # Additional keys w.r.t. subaddress destinations
         class_res = classify_subaddresses(tsx_data.outputs, self.change_address())
         num_stdaddresses, num_subaddresses, single_dest_subaddress = class_res
@@ -539,7 +568,7 @@ class TTransaction(object):
             c_hmac = await self.gen_hmac_tsxdest(tsx_data.outputs[idx], idx)
             hmacs.append(c_hmac)
 
-        return self.in_memory(), hmacs
+        return TResponse(self.in_memory(), hmacs)
 
     async def process_payment_id(self, tsx_data):
         """
@@ -652,7 +681,7 @@ class TTransaction(object):
         if self.inp_idx + 1 == self.num_inputs():
             await self.tsx_inputs_done()
 
-        return vini, hmac_vini, (pseudo_out, pseudo_out_hmac), alpha_enc
+        return TResponse(vini, hmac_vini, (pseudo_out, pseudo_out_hmac), alpha_enc)
 
     async def tsx_inputs_done(self):
         """
@@ -664,7 +693,7 @@ class TTransaction(object):
             raise ValueError('Input count mismatch')
 
         if self.in_memory():
-            return await self.tsx_inputs_done_inm()
+            return TResponse(await self.tsx_inputs_done_inm())
 
     async def tsx_inputs_done_inm(self):
         """
@@ -687,7 +716,7 @@ class TTransaction(object):
         """
         if self.in_memory():
             return
-        return await self._tsx_inputs_permutation(permutation)
+        return TResponse(await self._tsx_inputs_permutation(permutation))
 
     async def _tsx_inputs_permutation(self, permutation):
         """
@@ -740,7 +769,7 @@ class TTransaction(object):
         if not common.ct_equal(hmac_vini, hmac):
             raise ValueError('HMAC is not correct')
 
-        await self.hash_vini_pseudo_out(vini, self.inp_idx, pseudo_out)
+        return TResponse(await self.hash_vini_pseudo_out(vini, self.inp_idx, pseudo_out))
 
     async def hash_vini_pseudo_out(self, vini, inp_idx, pseudo_out=None):
         """
@@ -916,7 +945,7 @@ class TTransaction(object):
         # Output_pk is stored to the state as it is used during the signature and hashed to the
         # RctSigBase later.
         self.output_pk.append(out_pk)
-        return tx_out, hmac_vouti, (rsig, None), out_pk, ecdh_info
+        return TResponse(tx_out, hmac_vouti, (rsig, None), out_pk, ecdh_info)
 
     async def all_out1_set(self):
         """
@@ -962,7 +991,7 @@ class TTransaction(object):
         await self.full_message_hasher.set_message(self.tx_prefix_hash)
         rv = self.init_rct_sig()
 
-        return self.tx.extra, self.tx_prefix_hash, rv
+        return TResponse(self.tx.extra, self.tx_prefix_hash, rv)
 
     async def tsx_mlsag_ecdh_info(self):
         """
@@ -1001,7 +1030,7 @@ class TTransaction(object):
         self.full_message = await self.full_message_hasher.get_digest()
         del self.full_message_hasher
 
-        return self.full_message
+        return TResponse(self.full_message)
 
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
         """
@@ -1095,5 +1124,5 @@ class TTransaction(object):
         if self.inp_idx + 1 == self.num_inputs():
             self.state.set_final()
 
-        return mgs[0], cout
+        return TResponse(mgs[0], cout)
 
