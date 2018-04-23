@@ -67,6 +67,18 @@ class TrezorInterface(trezor_iface.TrezorInterface):
             self.in_confirmation = False
             self.tsx_data = None
 
+    async def transaction_signed(self):
+        pass
+
+    async def transaction_error(self, *args, **kwargs):
+        logger.error('Transaction error')
+
+    async def transaction_finished(self):
+        self.server.on_transaction_signed()
+
+    async def transaction_step(self, step, sub_step=None):
+        logger.debug('Transaction step: %s, sub step: %s' % (step, sub_step))
+
 
 class TrezorServer(Cmd):
     """
@@ -290,6 +302,10 @@ class TrezorServer(Cmd):
         self.poutput('-' * 80)
         self.poutput('Transaction confirmation procedure\nEnter T to start\n')
 
+    def on_transaction_signed(self):
+        self.poutput('-' * 80)
+        self.poutput('Transaction was successfully signed\n')
+
     def conv_disp_amount(self, amount):
         return amount / float(10**monero.DISPLAY_DECIMAL_POINT)
 
@@ -325,6 +341,7 @@ class TrezorServer(Cmd):
 
         self.poutput('- ' * 40)
         result = self.select([(0, 'Confirm the transaction'), (1, 'Reject')], 'Do you confirm the transaction? ')
+        self.poutput('\n')
         self.trez_iface.confirmation(result == 0)
 
     do_t = do_T
