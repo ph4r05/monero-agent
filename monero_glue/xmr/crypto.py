@@ -16,7 +16,7 @@ from Crypto.Random import random as rand
 import binascii  # conversion between hex, int, and binary. Also for the crc32 thing
 from monero_glue.xmr.backend import ed25519_2
 
-from monero_glue.xmr.backend.ed25519 import b, q, l
+from monero_glue.xmr.backend.ed25519 import b, q, l, d
 
 from monero_glue.xmr.backend import keccak2, ed25519
 from monero_serialize import xmrserialize
