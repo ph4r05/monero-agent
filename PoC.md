@@ -1,8 +1,17 @@
 # Proof of concept demo
 
+PoC demonstrates spending implemented via signing protocol as described in the docs.
+There are the following components:
+
+- Monero Watch-only hot wallet, `monero-wallet-cli`.
+- Trezor server, representing connected Trezor device. Isolated process, communicates over API.
+- Trezor agent, host-based utility implementing host side of the  signing protocol.
+
+## Usage
+
 - Generate wallet credentials
 - Create watch-only wallet
-- Start Trezor server with full credentials (represents running Trezor device)
+- Start Trezor server with full credentials
 
 Spending is then following:
 
