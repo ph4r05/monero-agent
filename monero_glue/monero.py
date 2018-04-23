@@ -12,11 +12,32 @@ import binascii
 import struct
 
 
+DISPLAY_DECIMAL_POINT=12
+
+
 class NetworkTypes(object):
     MAINNET = 0
     TESTNET = 1
     STAGENET = 2
     FAKECHAIN = 3
+
+
+class MainNet(object):
+    PUBLIC_ADDRESS_BASE58_PREFIX = 18
+    PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 19
+    PUBLIC_SUBADDRESS_BASE58_PREFIX = 42
+
+
+class TestNet(object):
+    PUBLIC_ADDRESS_BASE58_PREFIX = 53
+    PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 54
+    PUBLIC_SUBADDRESS_BASE58_PREFIX = 63
+
+
+class StageNet(object):
+    PUBLIC_ADDRESS_BASE58_PREFIX = 24
+    PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX = 25
+    PUBLIC_SUBADDRESS_BASE58_PREFIX = 36
 
 
 class TsxData(xmrserialize.MessageType):
@@ -81,17 +102,23 @@ class TxScanInfo(object):
     __slots__ = ['in_ephemeral', 'ki', 'mask', 'amount', 'money_transfered', 'error', 'received']
 
 
-def net_version(network_type=NetworkTypes.MAINNET):
+def net_version(network_type=NetworkTypes.MAINNET, is_subaddr=False):
     """
     Network version bytes used for address construction
     :return:
     """
+    c_net = None
     if network_type == NetworkTypes.MAINNET:
-        return b'\x12'
+        c_net = MainNet
     elif network_type == NetworkTypes.TESTNET:
-        return b'\x35'
+        c_net = TestNet
     elif network_type == NetworkTypes.STAGENET:
-        return b'\x18'
+        c_net = StageNet
+    else:
+        raise ValueError()
+
+    prefix = c_net.PUBLIC_ADDRESS_BASE58_PREFIX if not is_subaddr else c_net.PUBLIC_SUBADDRESS_BASE58_PREFIX
+    return bytes([prefix])
 
 
 def addr_to_hash(addr: xmrtypes.AccountPublicAddress):
@@ -136,6 +163,19 @@ def decode_addr(addr):
 
     else:
         raise ValueError('Invalid address checksum')
+
+
+def public_addr_encode(pub_addr, is_sub=False, net=NetworkTypes.MAINNET):
+    """
+    Encodes public address to Monero address
+    :param pub_addr:
+    :type pub_addr: xmrtypes.AccountPublicAddress
+    :param is_sub:
+    :param net:
+    :return:
+    """
+    net_ver = net_version(net, is_sub)
+    return encode_addr(net_ver, pub_addr.m_spend_public_key, pub_addr.m_view_public_key)
 
 
 def classify_subaddresses(tx_dests, change_addr : xmrtypes.AccountPublicAddress):
