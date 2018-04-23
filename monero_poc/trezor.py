@@ -27,14 +27,45 @@ import eventlet
 from eventlet import wsgi
 from flask import Flask, jsonify, request, abort
 
-from monero_glue import crypto, monero, trezor_lite
+from monero_glue import crypto, monero, trezor_lite, trezor_iface
 from monero_serialize import xmrserialize, xmrtypes, xmrobj, xmrjson, xmrboost
 
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
-coloredlogs.install(level=logging.DEBUG, use_chroot=False)
+coloredlogs.install(level=logging.WARNING, use_chroot=False)
 eventlet.monkey_patch(socket=True)
+
+
+class TrezorInterface(trezor_iface.TrezorInterface):
+    def __init__(self, server=None):
+        self.server = server
+        self.in_confirmation = False
+        self.tsx_data = None
+        self.conf_evt = None
+        self.confirmed_result = False
+
+    def get_tx_data(self):
+        return self.tsx_data
+
+    def confirmation(self, confirmed):
+        self.confirmed_result = confirmed
+        self.conf_evt.set()
+
+    async def confirm_transaction(self, tsx_data):
+        self.in_confirmation = True
+        self.confirmed_result = False
+        self.tsx_data = tsx_data
+        self.conf_evt = threading.Event()
+        try:
+            self.server.on_confirm_start()
+            self.conf_evt.wait()
+
+            return self.confirmed_result
+
+        finally:
+            self.in_confirmation = False
+            self.tsx_data = None
 
 
 class TrezorServer(Cmd):
@@ -52,6 +83,7 @@ class TrezorServer(Cmd):
         self.creds = None  # type: monero.AccountCreds
         self.port = 46123
         self.t = Terminal()
+        self.trez_iface = TrezorInterface(self)
 
         self.loop = asyncio.get_event_loop()
         self.running = True
@@ -202,6 +234,7 @@ class TrezorServer(Cmd):
         args, kwargs = self.unpickle_args(js) if 'payload' in js else ([], {})
 
         if cmd == 'init_transaction':
+
             res = await self.trez.init_transaction(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
@@ -241,6 +274,56 @@ class TrezorServer(Cmd):
 
     def pickle_res(self, res):
         return binascii.hexlify(pickle.dumps(res)).decode('utf8')
+
+    #
+    # Terminal
+    #
+
+    do_q = quit
+    do_Q = quit
+
+    def on_confirm_start(self):
+        self.poutput('-' * 80)
+        self.poutput('Transaction confirmation procedure\nEnter T to start\n')
+
+    def conv_disp_amount(self, amount):
+        return amount / float(10**monero.DISPLAY_DECIMAL_POINT)
+
+    def do_T(self, line):
+        if not self.trez_iface.in_confirmation:
+            self.poutput('No transaction in progress')
+            return
+
+        tsx_data = self.trez_iface.get_tx_data()
+        self.poutput('Confirming transaction:')
+        self.poutput('- ' * 40)
+        if tsx_data.payment_id:
+            self.poutput('  Payment ID: %s' % binascii.hexlify(tsx_data.payment_id).decode('utf8'))
+
+        self.poutput('  Unlock time: %s' % tsx_data.unlock_time)
+        self.poutput('  UTXOs: %s' % tsx_data.num_inputs)
+        self.poutput('  Mixin: %s' % tsx_data.mixin)
+
+        chg = tsx_data.change_dts
+        addr_chg = monero.public_addr_encode(chg.addr, chg.is_subaddress, self.network_type) if chg else None
+
+        for idx, out in enumerate(tsx_data.outputs):
+            addr = monero.public_addr_encode(out.addr, out.is_subaddress, self.network_type)
+            if addr != addr_chg:
+                self.poutput('  Output %2d: %12.8f to %s, sub: %s'
+                             % (idx, self.conv_disp_amount(out.amount), addr.decode('utf8'), out.is_subaddress))
+            else:
+                self.poutput('  Change:    %12.8f to %s, sub: %s'
+                             % (self.conv_disp_amount(out.amount), addr.decode('utf8'), out.is_subaddress))
+
+        self.poutput('  Fee: %.8f' % self.conv_disp_amount(tsx_data.fee))
+        self.poutput('  Account: %s' % tsx_data.account)
+
+        self.poutput('- ' * 40)
+        result = self.select([(0, 'Confirm the transaction'), (1, 'Reject')], 'Do you confirm the transaction? ')
+        self.trez_iface.confirmation(result == 0)
+
+    do_t = do_T
 
     #
     # Work
@@ -300,7 +383,7 @@ class TrezorServer(Cmd):
         :return:
         """
         if self.args.debug:
-            coloredlogs.install(level=logging.DEBUG)
+            coloredlogs.install(level=logging.DEBUG, use_chroot=False)
 
         self.network_type = monero.NetworkTypes.MAINNET
         if self.args.testnet:
@@ -318,6 +401,7 @@ class TrezorServer(Cmd):
         logger.info('Address: %s' % self.creds.address.decode('utf8'))
         self.trez = trezor_lite.TrezorLite()
         self.trez.creds = self.creds
+        self.trez.iface = self.trez_iface
 
         logging.info('Starting rest server...')
         self.rest_server_boot()
