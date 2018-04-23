@@ -14,12 +14,11 @@ import operator
 
 from Crypto.Random import random as rand
 import binascii  # conversion between hex, int, and binary. Also for the crc32 thing
-from mnero import ed25519  # Bernsteins python ed25519 code from cr.yp.to
-from mnero import ed25519_2
+from monero_glue.xmr.backend import ed25519_2
 
-from mnero.ed25519 import b, q, l
+from monero_glue.xmr.backend.ed25519 import b, q, l
 
-from mnero import keccak2
+from monero_glue.xmr.backend import keccak2, ed25519
 from monero_serialize import xmrserialize
 from monero_glue.xmr import common as common
 
@@ -201,8 +200,8 @@ def isoncurve_ext(P):
     """
     (x, y, z, t) = P
     return (z % q != 0 and
-            x*y % q == z*t % q and
-            (y*y - x*x - z*z - ed25519.d*t*t) % q == 0)
+            x * y % q == z * t % q and
+            (y * y - x * x - z * z - ed25519.d * t * t) % q == 0)
 
 
 def decodepoint_ext(s):
@@ -249,7 +248,7 @@ def conv_xy_to_precomp(P):
     :return:
     """
     x,y = P
-    return y-x, y+x, 2*ed25519.d*x*y
+    return y - x, y + x, 2 * ed25519.d * x * y
 
 
 def conv_ext_to_proj(P):

@@ -2,16 +2,9 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import random
-import base64
 import unittest
-import pkg_resources
 
-import asyncio
-import aiounittest
-
-
-from mnero import ed25519
+from monero_glue.xmr.backend import ed25519
 
 
 class Basetest(unittest.TestCase):

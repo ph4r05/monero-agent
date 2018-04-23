@@ -3,8 +3,8 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 
-from monero_serialize import xmrtypes, xmrserialize, protobuf as xproto
-from mnero import keccak2
+from monero_serialize import xmrserialize, protobuf as xproto
+from monero_glue.xmr.backend import keccak2
 import hmac
 import functools
 
