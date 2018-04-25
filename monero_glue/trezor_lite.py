@@ -328,6 +328,7 @@ class TTransaction(object):
         self.mixin = 0
         self.fee = 0
 
+        self.additional_tx_private_keys = []
         self.additional_tx_public_keys = []
         self.inp_idx = -1
         self.out_idx = -1
@@ -955,7 +956,8 @@ class TTransaction(object):
             else:
                 additional_txkey = crypto.ge_scalarmult_base(additional_txkey_priv)
 
-            self.additional_tx_public_keys.append(additional_txkey)
+            self.additional_tx_private_keys.append(additional_txkey_priv)
+            self.additional_tx_public_keys.append(crypto.encodepoint(additional_txkey))
 
         if change_addr and dst_entr.addr == change_addr:
             # sending change to yourself; derivation = a*R
@@ -1024,7 +1026,7 @@ class TTransaction(object):
         # Not needed to remove - extra is clean
         # self.tx.extra = await monero.remove_field_from_tx_extra(self.tx.extra, xmrtypes.TxExtraAdditionalPubKeys)
         if self.need_additional_txkeys:
-            self.tx.extra = await monero.add_additional_tx_pub_keys_to_extra(self.tx.extra, self.additional_tx_public_keys)
+            self.tx.extra = await monero.add_additional_tx_pub_keys_to_extra(self.tx.extra, pub_enc=self.additional_tx_public_keys)
 
         if self.summary_outs_money > self.summary_inputs_money:
             raise ValueError('Transaction inputs money (%s) less than outputs money (%s)'

@@ -374,14 +374,16 @@ def add_tx_pub_key_to_extra(tx_extra, pub_key):
     return tx_extra
 
 
-async def add_additional_tx_pub_keys_to_extra(tx_extra, additional_pub_keys):
+async def add_additional_tx_pub_keys_to_extra(tx_extra, additional_pub_keys=None, pub_enc=None):
     """
     Adds all pubkeys to the extra
     :param tx_extra:
     :param additional_pub_keys:
+    :param pub_enc: None
     :return:
     """
-    pubs_msg = xmrtypes.TxExtraAdditionalPubKeys(data=[crypto.encodepoint(x) for x in additional_pub_keys])
+    pubs_msg = xmrtypes.TxExtraAdditionalPubKeys(
+        data=pub_enc if pub_enc else [crypto.encodepoint(x) for x in additional_pub_keys])
 
     rw = xmrserialize.MemoryReaderWriter()
     ar = xmrserialize.Archive(rw, True)
