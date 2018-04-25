@@ -1188,17 +1188,30 @@ class TTransaction(object):
     async def final_msg(self, *args, **kwargs):
         """
         Final step after transaction signing.
-        TODO: return encrypted tx keys under transaction specific key, derived from txhash and spend key.
-        TODO: return encryption keys for multisig values
 
         :param args:
         :param kwargs:
         :return:
         """
         self.state.set_final()
-        await self.trezor.iface.transaction_finished()
 
         res = []
         res.append(self.enc_key_cout() if self.multi_sig else None)  # cout key
+
+        # Encrypted tx keys under transaction specific key, derived from txhash and spend key.
+        # Deterministic transaction key, so we can recover it just from transaction and the spend key.
+        salt = common.random_bytes(32)
+        rand_mult = crypto.random_scalar()
+        rand_inp = crypto.sc_add(self.creds.spend_key_private, rand_mult)
+        passwd = common.keccak_2hash(crypto.encodeint(rand_inp) + self.tx_prefix_hash)
+        tx_key = common.pbkdf2(passwd, salt, count=100)
+
+        key_buff = crypto.encodeint(self.r) + b''.join([crypto.encodeint(x) for x in self.additional_tx_private_keys])
+        tx_enc_keys = aesgcm.encrypt(tx_key, key_buff)
+
+        res.append(salt)
+        res.append(tx_enc_keys)
+
+        await self.trezor.iface.transaction_finished()
         return res
 
