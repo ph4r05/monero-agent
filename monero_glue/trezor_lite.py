@@ -308,7 +308,7 @@ class TTransaction(object):
 
     def __init__(self, trezor=None):
         self.trezor = trezor  # type: TrezorLite
-        self.creds = None  # type: trezor.WalletCreds
+        self.creds = None  # type: monero.AccountCreds
         self.key_master = None
         self.key_hmac = None
         self.key_enc = None
