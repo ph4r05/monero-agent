@@ -58,7 +58,7 @@ class TrezorLite(object):
         """
         self.err_ctr += 1
         self.tsx_obj = None  # clear transaction object
-        self.iface.transaction_error(e)
+        await self.iface.transaction_error(e)
 
     async def init_transaction(self, tsx_data: TsxData):
         """
