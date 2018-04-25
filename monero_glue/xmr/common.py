@@ -5,6 +5,10 @@
 
 from monero_serialize import xmrserialize, protobuf as xproto
 from monero_glue.xmr.backend import keccak2
+from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Random import random as rand
+from Crypto.Random import get_random_bytes
+
 import hmac
 import functools
 
@@ -98,6 +102,31 @@ def compute_hmac(key, msg=None):
     """
     h = hmac.new(key, msg=msg, digestmod=get_keccak)
     return h.digest()
+
+
+def random_bytes(by):
+    """
+    Generates X random bytes, returns byte-string
+    :param by:
+    :return:
+    """
+    return get_random_bytes(by)
+
+
+def pbkdf2(inp, salt, length=32, count=1000, prf=None):
+    """
+    PBKDF2 with default PRF as HMAC-KECCAK-256
+    :param inp:
+    :param salt:
+    :param length:
+    :param count:
+    :param prf:
+    :return:
+    """
+
+    if prf is None:
+        prf = lambda p, s: hmac.new(p, msg=s, digestmod=get_keccak).digest()
+    return PBKDF2(inp, salt, length, count, prf)
 
 
 def ct_equal(a, b):
