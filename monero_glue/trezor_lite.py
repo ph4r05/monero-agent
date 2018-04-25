@@ -488,6 +488,14 @@ class TTransaction(object):
         """
         return common.keccak_2hash(self.key_enc + b'txin-alpha' + xmrserialize.dump_uvarint_b(idx))
 
+    def enc_key_cout(self, idx=None):
+        """
+        AES-GCM encryption key for multisig C values from MLASG.
+        :param idx:
+        :return:
+        """
+        return common.keccak_2hash(self.key_enc + b'cout' + (xmrserialize.dump_uvarint_b(idx) if idx else ''))
+
     async def gen_hmac_vini(self, src_entr, vini, idx):
         """
         Computes hmac (TxSourceEntry[i] || tx.vin[i])
@@ -1162,14 +1170,17 @@ class TTransaction(object):
 
         # Encode
         mgs = monero.recode_msg([mg])
-        cout = msc if self.multi_sig else None
+        cout = None
+
+        # Multisig values returned encrypted, keys returned after finished successfully.
+        if self.multi_sig:
+            cout = aesgcm.encrypt(self.enc_key_cout(), crypto.encodeint(msc))
 
         # Final state transition
         if self.inp_idx + 1 == self.num_inputs():
             self.state.set_signature_done()
             await self.trezor.iface.transaction_signed()
 
-        # TODO: multisig values returned encrypted, keys returned after finished successfully.
         return TResponse(mgs[0], cout)
 
     async def final_msg(self, *args, **kwargs):
@@ -1185,5 +1196,7 @@ class TTransaction(object):
         self.state.set_final()
         await self.trezor.iface.transaction_finished()
 
-        return None
+        res = []
+        res.append(self.enc_key_cout() if self.multi_sig else None)  # cout key
+        return res
 
