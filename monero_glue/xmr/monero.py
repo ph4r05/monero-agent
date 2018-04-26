@@ -43,7 +43,7 @@ class TsxData(xmrserialize.MessageType):
     Serialization structure for easy hashing.
     """
     __slots__ = ['version', 'payment_id', 'unlock_time', 'outputs', 'change_dts', 'num_inputs', 'mixin', 'fee',
-                 'account', 'minor_indices']
+                 'account', 'minor_indices', 'is_multisig', 'exp_tx_prefix_hash', 'use_tx_keys']
     FIELDS = [
         ('version', xmrserialize.UVarintType),
         ('payment_id', xmrserialize.BlobType),
@@ -55,6 +55,9 @@ class TsxData(xmrserialize.MessageType):
         ('fee', xmrserialize.UVarintType),
         ('account', xmrserialize.UVarintType),
         ('minor_indices', xmrserialize.ContainerType, xmrserialize.UVarintType),
+        ('is_multisig', xmrserialize.BoolType),
+        ('exp_tx_prefix_hash', xmrserialize.BlobType),                    # expected prefix hash, bail on error
+        ('use_tx_keys', xmrserialize.ContainerType, xmrtypes.SecretKey),  # use this secret key, multisig
     ]
 
     def __init__(self, payment_id=None, outputs=None, change_dts=None, **kwargs):
@@ -66,6 +69,9 @@ class TsxData(xmrserialize.MessageType):
         self.account = 0
         self.minor_indices = [0]
         self.outputs = outputs if outputs else []  # type: list[xmrtypes.TxDestinationEntry]
+        self.is_multisig = False
+        self.exp_tx_prefix_hash = b''
+        self.use_tx_keys = []
 
 
 class AccountCreds(object):
