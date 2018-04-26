@@ -121,12 +121,14 @@ class Agent(object):
         await ar1.message(tx, msg_type=xmrtypes.Transaction)
         return bytes(writer.buffer)
 
-    async def sign_transaction_data(self, tx, multisig=False):
+    async def sign_transaction_data(self, tx, multisig=False, exp_tx_prefix_hash=None, use_tx_keys=None):
         """
         Uses Trezor to sign the transaction
         :param tx:
         :type tx: xmrtypes.TxConstructionData
         :param multisig:
+        :param exp_tx_prefix_hash:
+        :param use_tx_keys:
         :return:
         """
         self.ct = TData()
@@ -149,6 +151,9 @@ class Agent(object):
         tsx_data.fee = sum([x.amount for x in tx.sources]) - sum([x.amount for x in tx.splitted_dsts])
         tsx_data.account = tx.subaddr_account
         tsx_data.minor_indices = tx.subaddr_indices
+        tsx_data.is_multisig = multisig
+        tsx_data.exp_tx_prefix_hash = common.defval(exp_tx_prefix_hash, b'')
+        tsx_data.use_tx_keys = common.defval(use_tx_keys, [])
         self.ct.tx.unlock_time = tx.unlock_time
 
         self.ct.tsx_data = tsx_data

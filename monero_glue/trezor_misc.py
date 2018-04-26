@@ -5,6 +5,28 @@
 from monero_glue.xmr import common, crypto
 
 
+class TrezorError(Exception):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for kw in kwargs:
+            setattr(self, kw, kwargs[kw])
+
+
+class TrezorSecurityError(TrezorError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class TrezorInvalidStateError(TrezorError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class TrezorTxPrefixHashNotMatchingError(TrezorError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None):
     """
 

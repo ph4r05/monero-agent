@@ -27,6 +27,11 @@ class TError(TMessage):
         return 'TError(status=%r, reason=%r, exc=%r)' % (self.status, self.reason, self.exc)
 
 
+class TTxHashNotMatchingError(TError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 class TResponse(TMessage):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -145,6 +150,11 @@ class TrezorLite(object):
         """
         try:
             return await self.tsx_obj.all_out1_set()
+
+        except trezor_misc.TrezorTxPrefixHashNotMatchingError as e:
+            await self.exc_handler(e)
+            return TTxHashNotMatchingError(exc=e)
+
         except Exception as e:
             await self.exc_handler(e)
             return TError(exc=e)
@@ -221,6 +231,7 @@ class TState(object):
     SIGNATURE = 10
     SIGNATURE_DONE = 11
     FINAL = 11
+    FAIL = 250
 
     def __init__(self):
         self.s = self.START
@@ -292,6 +303,9 @@ class TState(object):
             raise ValueError('Illegal state')
         self.s = self.FINAL
 
+    def set_fail(self):
+        self.s = self.FAIL
+
 
 class TTransaction(object):
     """
@@ -348,6 +362,7 @@ class TTransaction(object):
         self.tx_prefix_hash = None
         self.full_message_hasher = monero.PreMlsagHasher()
         self.full_message = None
+        self.exp_tx_prefix_hash = None
 
     def assrt(self, condition, msg=None):
         """
@@ -571,6 +586,7 @@ class TTransaction(object):
         self.use_simple_rct = self.input_count > 1
         self.state.inp_cnt(self.in_memory())
         self.check_change(tsx_data.outputs)
+        self.exp_tx_prefix_hash = common.defval_empty(tsx_data.exp_tx_prefix_hash, None)
 
         # Additional keys w.r.t. subaddress destinations
         class_res = classify_subaddresses(tsx_data.outputs, self.change_address())
@@ -614,7 +630,7 @@ class TTransaction(object):
         Payment id -> extra
         :return:
         """
-        if tsx_data.payment_id is None or len(tsx_data.payment_id) == 0:
+        if common.is_empty(tsx_data.payment_id):
             return
 
         view_key_pub_enc = monero.get_destination_view_key_pub(tsx_data.outputs, self.change_address())
@@ -1041,6 +1057,12 @@ class TTransaction(object):
         # Hash message to the final_message
         await self.full_message_hasher.set_message(self.tx_prefix_hash)
         rv = self.init_rct_sig()
+
+        # Txprefix match check for multisig
+        if not common.is_empty(self.exp_tx_prefix_hash) and \
+                not common.ct_equal(self.exp_tx_prefix_hash, self.tx_prefix_hash):
+            self.state.set_fail()
+            raise trezor_misc.TrezorTxPrefixHashNotMatchingError()
 
         return TResponse(self.tx.extra, self.tx_prefix_hash, rv)
 

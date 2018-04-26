@@ -178,3 +178,66 @@ def is_empty(inp):
     """
     return inp is None or len(inp) == 0
 
+
+def defval(val, default=None):
+    """
+    Returns val if is not None, default instead
+    :param val:
+    :param default:
+    :return:
+    """
+    return val if val is not None else default
+
+
+def defval_empty(val, default=None):
+    """
+    Returns val if is not None, default instead
+    :param val:
+    :param default:
+    :return:
+    """
+    return val if not is_empty(val) else default
+
+
+def defvalkey(js, key, default=None, take_none=True):
+    """
+    Returns js[key] if set, otherwise default. Note js[key] can be None.
+    :param js:
+    :param key:
+    :param default:
+    :param take_none:
+    :return:
+    """
+    if js is None:
+        return default
+    if key not in js:
+        return default
+    if js[key] is None and not take_none:
+        return default
+    return js[key]
+
+
+def defvalkeys(js, key, default=None):
+    """
+    Returns js[key] if set, otherwise default. Note js[key] can be None.
+    Key is array of keys. js[k1][k2][k3]...
+
+    :param js:
+    :param key:
+    :param default:
+    :param take_none:
+    :return:
+    """
+    if js is None:
+        return default
+    if not isinstance(key, (tuple, list)):
+        key = key.split('.')
+    try:
+        cur = js
+        for ckey in key:
+            cur = cur[ckey]
+        return cur
+    except:
+        pass
+    return default
+
