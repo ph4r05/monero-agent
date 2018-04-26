@@ -454,10 +454,21 @@ def check_ed25519point(P):
 def sc_check(key):
     """
     sc_check is not relevant for long-integer scalar representation.
+    TODO: scalar value check
     :param key:
     :return:
     """
-    return 0 if key > 0 else 1
+    return 0 if key > 1000 else 1
+
+
+def check_sc(key):
+    """
+    throws exception on invalid key
+    :param key:
+    :return:
+    """
+    if sc_check(key) != 0:
+        raise ValueError('Invalid scalar value')
 
 
 def sc_reduce32(data):
