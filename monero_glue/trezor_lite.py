@@ -375,12 +375,13 @@ class TTransaction(object):
             return
         raise ValueError('Assertion error%s' % (' : %s' % msg if msg else ''))
 
-    def gen_r(self):
+    def gen_r(self, use_r=None):
         """
         Generates a new transaction key pair.
+        :param use_r:
         :return:
         """
-        self.r = crypto.random_scalar()
+        self.r = crypto.random_scalar() if use_r is None else use_r
         self.r_pub = crypto.scalarmult_base(self.r)
 
     def check_change(self, outputs):
@@ -584,9 +585,18 @@ class TTransaction(object):
         self.mixin = tsx_data.mixin
         self.fee = tsx_data.fee
         self.use_simple_rct = self.input_count > 1
+        self.multi_sig = tsx_data.is_multisig
         self.state.inp_cnt(self.in_memory())
         self.check_change(tsx_data.outputs)
         self.exp_tx_prefix_hash = common.defval_empty(tsx_data.exp_tx_prefix_hash, None)
+
+        # Provided tx key, used mostly in multisig.
+        if len(tsx_data.use_tx_keys) > 0:
+            for ckey in tsx_data.use_tx_keys:
+                crypto.check_sc(crypto.decodeint(ckey))
+                
+            self.gen_r(use_r=crypto.decodeint(tsx_data.use_tx_keys[0]))
+            self.additional_tx_private_keys = [crypto.decodeint(x) for x in tsx_data.use_tx_keys[1:]]
 
         # Additional keys w.r.t. subaddress destinations
         class_res = classify_subaddresses(tsx_data.outputs, self.change_address())
@@ -964,7 +974,8 @@ class TTransaction(object):
         additional_txkey = None
         additional_txkey_priv = None
         if self.need_additional_txkeys:
-            additional_txkey_priv = crypto.random_scalar()
+            use_provided = self.num_dests() == len(self.additional_tx_private_keys)
+            additional_txkey_priv = self.additional_tx_private_keys[self.out_idx] if use_provided else crypto.random_scalar()
 
             if dst_entr.is_subaddress:
                 additional_txkey = crypto.ge_scalarmult(additional_txkey_priv,
@@ -972,8 +983,9 @@ class TTransaction(object):
             else:
                 additional_txkey = crypto.ge_scalarmult_base(additional_txkey_priv)
 
-            self.additional_tx_private_keys.append(additional_txkey_priv)
             self.additional_tx_public_keys.append(crypto.encodepoint(additional_txkey))
+            if not use_provided:
+                self.additional_tx_private_keys.append(additional_txkey_priv)
 
         if change_addr and dst_entr.addr == change_addr:
             # sending change to yourself; derivation = a*R
