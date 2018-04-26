@@ -194,6 +194,8 @@ class HostAgent(object):
             pending = wallet.construct_pending_tsx(res, tx)
             pendings.append(pending)
 
+            # TODO: store cdata.enc_salt1, cdata.enc_salt2, cdata.enc_keys
+
         # Key images array has to cover all transfers sent.
         # Watch only wallet does not have key images.
         signed_tx = xmrtypes.SignedTxSet(ptx=pendings, key_images=key_images)

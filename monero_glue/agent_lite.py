@@ -5,6 +5,7 @@
 from monero_serialize import xmrserialize, xmrtypes
 from monero_glue import trezor_lite, agent_misc
 from monero_glue.xmr import monero, common
+from monero_glue.xmr.enc import aesgcm
 from monero_glue.old import trezor
 
 
@@ -24,6 +25,10 @@ class TData(object):
         self.source_permutation = []
         self.alphas = []
         self.pseudo_outs = []
+        self.couts = []
+        self.enc_salt1 = None
+        self.enc_salt2 = None
+        self.enc_keys = None  # encrypted tx keys
 
 
 class Agent(object):
@@ -116,11 +121,12 @@ class Agent(object):
         await ar1.message(tx, msg_type=xmrtypes.Transaction)
         return bytes(writer.buffer)
 
-    async def sign_transaction_data(self, tx):
+    async def sign_transaction_data(self, tx, multisig=False):
         """
         Uses Trezor to sign the transaction
         :param tx:
         :type tx: xmrtypes.TxConstructionData
+        :param multisig:
         :return:
         """
         self.ct = TData()
@@ -237,6 +243,7 @@ class Agent(object):
             raise ValueError('Pre MLSAG hash has does not match')
 
         # Sign each input
+        couts = []
         rv.p.MGs = []
         for idx, src in enumerate(tx.sources):
             t_res = await self.trezor.sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
@@ -246,6 +253,7 @@ class Agent(object):
 
             mg, msc = t_res.args
             rv.p.MGs.append(mg)
+            couts.append(msc)
 
         self.ct.tx.signatures = []
         self.ct.tx.rct_signatures = rv
@@ -253,6 +261,13 @@ class Agent(object):
         t_res = await self.trezor.tx_sign_final()
         self.handle_error(t_res)
 
+        if multisig:
+            cout_key = t_res.args[0]
+            for ccout in couts:
+                self.ct.couts.append(aesgcm.decrypt(cout_key, ccout[0], ccout[1], ccout[2]))
+
+        self.ct.enc_salt1, self.ct.enc_salt2 = t_res.args[1]
+        self.ct.enc_keys = t_res.args[2]
         return self.ct.tx
 
     def last_transaction_data(self):

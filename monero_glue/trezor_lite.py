@@ -4,8 +4,8 @@
 
 from monero_serialize import xmrtypes, xmrserialize
 from monero_glue.xmr.monero import TsxData, classify_subaddresses
-from . import trezor_iface
-from monero_glue.xmr import monero, mlsag2, ring_ct, crypto, common as common
+from . import trezor_iface, trezor_misc
+from monero_glue.xmr import monero, mlsag2, ring_ct, crypto, common
 from monero_glue.xmr.enc import aesgcm
 
 
@@ -1200,18 +1200,14 @@ class TTransaction(object):
 
         # Encrypted tx keys under transaction specific key, derived from txhash and spend key.
         # Deterministic transaction key, so we can recover it just from transaction and the spend key.
-        salt = common.random_bytes(32)
-        rand_mult = crypto.random_scalar()
-        rand_inp = crypto.sc_add(self.creds.spend_key_private, rand_mult)
-        passwd = common.keccak_2hash(crypto.encodeint(rand_inp) + self.tx_prefix_hash)
-        tx_key = common.pbkdf2(passwd, salt, count=100)
+        tx_key, salt, rand_mult, = trezor_misc.compute_tx_key(self.creds.spend_key_private, self.tx_prefix_hash)
 
         key_buff = crypto.encodeint(self.r) + b''.join([crypto.encodeint(x) for x in self.additional_tx_private_keys])
         tx_enc_keys = aesgcm.encrypt(tx_key, key_buff)
 
-        res.append(salt)
+        res.append((salt, rand_mult))
         res.append(tx_enc_keys)
 
         await self.trezor.iface.transaction_finished()
-        return res
+        return TResponse(*res)
 
