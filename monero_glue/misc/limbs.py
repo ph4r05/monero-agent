@@ -30,6 +30,14 @@ def to_limbs(num):
     return limbs
 
 
+def print_limbs(limbs):
+    res = 0
+    for i in range(LIMBS):
+        res += (2 ** (LIMB_SIZE * i)) * limbs[i]
+        print('  %x %s' % (limbs[i], math.log(limbs[i], 2) if limbs[i] > 0 else '-'))
+    print('Total: %s, below moduli: %s' % (res, res < crypto.l))
+
+
 def limbs_consts(var=0, limbs_val=0, limbs=None, value=None):
     print('** Limbs var: %s val: %x' % (var, limbs_val))
 
@@ -41,10 +49,11 @@ def limbs_consts(var=0, limbs_val=0, limbs=None, value=None):
     if var == 2:
         pbase = 2**LIMB_SIZE + 2**(LIMB_SIZE + 1)
 
-    if value:
+    if value is not None:
         limbs = to_limbs(value)
     else:
         limbs = [limbs_val] * LIMBS if not limbs else limbs
+        value = sumlimb(limbs)
 
     sums = sumlimb(limbs)
     sumsmod = sums % crypto.l
@@ -122,6 +131,15 @@ limbs_consts(0, value=0)
 limbs_consts(1, value=0)
 
 print('='*80)
-limbs_consts(0, value=crypto.l-1)
-limbs_consts(1, value=crypto.l-1)
+# limbs_consts(0, value=crypto.l-1)
+# limbs_consts(1, value=crypto.l-1)
+
+lmbs = [0x5cf5d3ed, 0x60498c68, 0x6f79cd64, 0x77be77a7, 0x40000013, 0x3fffffff, 0x3fffffff, 0x3fffffff, 0xfff]
+limbs = [0x0fffffff, 0x0fffffff, 0x0fffffff, 0x0fffffff, 4, 0, 0, 0, 0x1000]
+
+print_limbs(limbs)
+limbs_consts(0, limbs=limbs)
+
+print_limbs(to_limbs(crypto.l-1))
+
 
