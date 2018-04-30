@@ -622,6 +622,61 @@ def precomp(point):
     return point
 
 
+def encode_edd25519_xmr_const(arr):
+    """
+    Converts Monero based ed25519 constants to int32_t constants
+
+    :param arr:
+    :return:
+    """
+    bits = [26, 25, 26, 25, 26, 25, 26, 25, 26, 25]
+    limbs = []
+    c = 0  # carry bit
+    for i, x in enumerate(arr):
+        r = x + c
+        if x < 0:
+            r = r + 2**bits[i]
+            c = x >> bits[i]
+        else:
+            c = 0
+        limbs.append(r)
+    return limbs
+
+
+def encode_ed25519_hex(n):
+    """
+    Encodes Zmod(2^255-19) integer to hexcoded limbs with 25.5 radix
+
+    :param n:
+    :return:
+    """
+    n = n % q
+    limbs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    bits = [26, 25, 26, 25, 26, 25, 26, 25, 26, 25]
+    for i in range(10):
+        limbs[i] = n & (2**bits[i]-1)
+        n >>= bits[i]
+    return limbs
+
+
+def encode_ed25519_sign(x):
+    """
+    Encodes Zmod(2^255-19) integer to decimal-coded, signed limbs with 25.5 radix
+
+    :param x:
+    :return:
+    """
+    x = x % q
+    if x + x > q: x -= q
+    x = [x, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    bits = [26, 25, 26, 25, 26, 25, 26, 25, 26, 25]
+    for i in range(9):
+        carry = (x[i] + 2**(bits[i]-1)) // 2**bits[i]
+        x[i] -= carry * 2**bits[i]
+        x[i + 1] += carry
+    return x
+
+
 def generate_key_derivation(key1, key2):
     """
     Key derivation: 8*(key2*key1)
