@@ -740,7 +740,7 @@ def derive_secret_key(derivation, output_index, base):
     if sc_check(base) != 0:
         raise ValueError("cs_check in derive_secret_key")
     scalar = derivation_to_scalar(derivation, output_index)
-    return base + scalar
+    return sc_add(base, scalar)
 
 
 def hash_to_ec(buf):
