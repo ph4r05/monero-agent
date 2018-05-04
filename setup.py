@@ -24,6 +24,7 @@ dev_extras = [
 ]
 
 poc_extras = [
+    'ecdsa',
     'asyncio',
     'requests',
     'cmd2>=0.6.9',
