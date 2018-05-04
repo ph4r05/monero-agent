@@ -4,6 +4,7 @@ from hashlib import sha256
 from hashlib import sha512
 import hmac
 
+from monero_glue.xmr import common
 from monero_glue.misc import b58 as base58
 from os import urandom
 from ecdsa import SECP256k1
@@ -549,6 +550,7 @@ class Wallet(object):
             string. Do not use a phrase from a book or song, as that will
             be guessed and is not secure. My advice is to not supply this
             argument and let me generate a new random key for you.
+        :param network:
         See https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#Serialization_format  # nopep8
         """
         network = Wallet.get_network(network)
@@ -641,10 +643,7 @@ class Wallet(object):
         wallet. If you're even saving `user_entropy` at all, you're doing it
         wrong.
         """
-
-        seed = str(urandom(64))  # 512/8
-        # weak extra protection inspired by pybitcointools implementation:
-        seed += str(int(time.time()*10**6))
+        seed = common.random_bytes(64)
         if user_entropy:
             user_entropy = str(user_entropy)  # allow for int/long
             seed += user_entropy
