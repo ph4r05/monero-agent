@@ -172,7 +172,9 @@ class Wallet(object):
     def bytes_to_indices(seed, bits=11):
         """
         Transforms byte stream to list of bits-sized integers.
-        Used to transform secret seed to word list
+        Used to transform secret seed to word list.
+        Consistent with https://iancoleman.io/bip39/
+        
         :param seed:
         :param bits:
         :return:
