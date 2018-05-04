@@ -203,6 +203,42 @@ class Wallet(object):
 
         return indices
 
+    @staticmethod
+    def indices_to_bytes(indices, bits=11):
+        """
+        Converts indices to byte array
+        :param indices:
+        :param bits:
+        :return:
+        """
+        ind_len = len(indices)
+        barr = []
+
+        cidx = 0
+        carry = 0
+        carry_bits = 0
+        avail = bits
+
+        while True:
+            cb = 8 - carry_bits
+            cons = min(cb, avail)
+            carry <<= cons
+            carry |= indices[cidx] >> (avail - cons) & ((1 << cons) - 1)
+            carry_bits += cons
+            avail -= cons
+
+            if cb == cons:
+                barr.append(carry)
+                carry = 0
+                carry_bits = 0
+
+            if avail == 0:
+                if cidx + 1 == ind_len:
+                    break
+                cidx += 1
+                avail = bits
+        return bytes(barr)
+
     def to_seed_words(self):
         """
         Generates word-based seed:
