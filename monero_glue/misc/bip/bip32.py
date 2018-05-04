@@ -6,6 +6,7 @@ import hmac
 
 from monero_glue.xmr import common
 from monero_glue.misc import b58 as base58
+from monero_glue.misc.bip import bip39
 from os import urandom
 from ecdsa import SECP256k1
 from ecdsa.ecdsa import Public_key as _ECDSA_Public_key
@@ -59,7 +60,8 @@ class Wallet(object):
                  private_key=None,
                  public_pair=None,
                  public_key=None,
-                 network="bitcoin_testnet"):
+                 network="bitcoin_testnet",
+                 seed_secret=None):
         """Construct a new BIP32 compliant wallet.
         You probably don't want to use this init methd. Instead use one
         of the 'from_master_secret' or 'deserialize' cosntructors.
@@ -73,6 +75,7 @@ class Wallet(object):
         network = Wallet.get_network(network)
         self.private_key = None
         self.public_key = None
+        self.seed_secret = seed_secret
         if private_key:
             if not isinstance(private_key, PrivateKey):
                 raise InvalidPrivateKeyError(
@@ -164,6 +167,55 @@ class Wallet(object):
         """The first 32 bits of the identifier are called the fingerprint."""
         # 32 bits == 4 Bytes == 8 hex characters
         return b'0x' + self.identifier[:8]
+
+    @staticmethod
+    def bytes_to_indices(seed, bits=11):
+        """
+        Transforms byte stream to list of bits-sized integers.
+        Used to transform secret seed to word list
+        :param seed:
+        :param bits:
+        :return:
+        """
+        seed_len = len(seed)
+        indices = []
+        carry = 0
+        carry_bits = 0
+        for idx, b in enumerate(seed):
+            cleft = min(8, bits - carry_bits)
+            cleft_bl = 8 - cleft
+
+            carry_bits += cleft
+            carry <<= cleft
+            carry |= (int(b) >> cleft_bl) & (2 ** cleft - 1)
+
+            if idx + 1 == seed_len and cleft != 0:
+                cleft_s = bits - carry_bits
+                carry <<= cleft_s
+                cleft = 0
+
+            if cleft == 0:
+                indices.append(carry)
+                carry = 0
+                carry_bits = 0
+
+        return indices
+
+    def to_seed_words(self):
+        """
+        Generates word-based seed:
+        secret seed bits + SHA256 checksum -> words.
+        :return:
+        """
+        if self.seed_secret is None:
+            return None
+
+        checksum = sha256(self.seed_secret).digest()
+        seed = self.seed_secret + checksum[0:]
+
+        indices = Wallet.bytes_to_indices(seed)
+        words = [bip39.english_words[x] for x in indices]
+        return words, indices
 
     def create_new_address_for_user(self, user_id):
         """Create a new bitcoin address to accept payments for a User.
