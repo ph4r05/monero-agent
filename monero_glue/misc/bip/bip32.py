@@ -184,20 +184,20 @@ class Wallet(object):
         for idx, b in enumerate(seed):
             cleft = min(8, bits - carry_bits)
             cleft_bl = 8 - cleft
+            flush = cleft == bits - carry_bits
 
             carry_bits += cleft
             carry <<= cleft
             carry |= (int(b) >> cleft_bl) & (2 ** cleft - 1)
 
             if idx + 1 == seed_len and cleft != 0:
-                cleft_s = bits - carry_bits
-                carry <<= cleft_s
-                cleft = 0
+                carry <<= bits - carry_bits
+                flush = True
 
-            if cleft == 0:
+            if flush:
                 indices.append(carry)
-                carry = 0
-                carry_bits = 0
+                carry = int(b) & (2 ** cleft_bl - 1)
+                carry_bits = cleft_bl
 
         return indices
 
@@ -211,7 +211,7 @@ class Wallet(object):
             return None
 
         checksum = sha256(self.seed_secret).digest()
-        seed = self.seed_secret + checksum[0:]
+        seed = self.seed_secret + checksum[:1]
 
         indices = Wallet.bytes_to_indices(seed)
         words = [bip39.english_words[x] for x in indices]
