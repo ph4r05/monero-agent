@@ -641,6 +641,7 @@ class Wallet(object):
         wallet. If you're even saving `user_entropy` at all, you're doing it
         wrong.
         """
+
         seed = str(urandom(64))  # 512/8
         # weak extra protection inspired by pybitcointools implementation:
         seed += str(int(time.time()*10**6))
