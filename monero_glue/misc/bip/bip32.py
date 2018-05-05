@@ -653,7 +653,8 @@ class Wallet(object):
         # Use IL as master secret key, and IR as master chain code.
         return cls(private_exponent=long_or_int(hexlify(I_L), 16),
                    chain_code=long_or_int(hexlify(I_R), 16),
-                   network=network)
+                   network=network,
+                   seed_secret=seed)
 
     @classmethod
     def from_master_secret_slow(cls, password, network=BitcoinMainNet):
