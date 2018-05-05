@@ -11,6 +11,7 @@
 import sys
 import os
 import time
+import json
 import asyncio
 import argparse
 import binascii
@@ -19,6 +20,7 @@ import traceback
 import threading
 import coloredlogs
 import pickle
+import collections
 from blessed import Terminal
 from cmd2 import Cmd
 
@@ -27,7 +29,9 @@ from eventlet import wsgi
 from flask import Flask, jsonify, request, abort
 
 from monero_glue import trezor_lite, trezor_iface
-from monero_glue.xmr import monero, crypto
+from monero_glue.xmr import monero, crypto, common
+from monero_glue.xmr.backend import mnemonic
+from monero_glue.misc.bip import bip32
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
@@ -69,7 +73,7 @@ class TrezorInterface(trezor_iface.TrezorInterface):
         pass
 
     async def transaction_error(self, *args, **kwargs):
-        logger.error('Transaction error')
+        logger.error('Transaction error: %s %s' % (args, kwargs))
 
     async def transaction_finished(self):
         self.server.on_transaction_signed()
@@ -94,6 +98,7 @@ class TrezorServer(Cmd):
         self.port = 46123
         self.t = Terminal()
         self.trez_iface = TrezorInterface(self)
+        self.account_data = None
 
         self.loop = asyncio.get_event_loop()
         self.running = True
@@ -118,11 +123,16 @@ class TrezorServer(Cmd):
         :return:
         """
         self.intro = '-'*self.get_term_width() + \
-                     '\n    Trezor server\n' + \
-                     ('\n    Account address: %s ' % self.creds.address.decode('utf8')) + \
-                     ('\n    Running on: 127.0.0.1:%s ' % self.port) + \
-                     '\n' + \
-                     '-' * self.get_term_width()
+                     '\n    Trezor server\n'
+
+        if self.creds:
+            self.intro += ('\n    Account address: %s ' % self.creds.address.decode('utf8'))
+        else:
+            self.intro += ('\n    Account not initialized, call gen_account')
+
+        self.intro += ('\n    Running on: 127.0.0.1:%s ' % self.port) + \
+                      '\n' + \
+                      '-' * self.get_term_width()
 
     def get_term_width(self):
         """
@@ -243,8 +253,11 @@ class TrezorServer(Cmd):
         logger.debug('Action: %s' % cmd)
         args, kwargs = self.unpickle_args(js) if 'payload' in js else ([], {})
 
-        if cmd == 'init_transaction':
+        if not self.trez:
+            logger.warning('Transaction signing request on unitialized Trezor')
+            return abort(404)
 
+        if cmd == 'init_transaction':
             res = await self.trez.init_transaction(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
@@ -295,6 +308,9 @@ class TrezorServer(Cmd):
 
     do_q = quit
     do_Q = quit
+
+    def do_gen_account(self, line):
+        self.create_account(line)
 
     def on_confirm_start(self):
         self.poutput('-' * 80)
@@ -396,6 +412,121 @@ class TrezorServer(Cmd):
         self.thread_rest.setDaemon(True)
         self.thread_rest.start()
 
+    def create_account(self, line):
+        """
+        Creates a new account
+        :return:
+        """
+        if self.args.account_file:
+            if os.path.exists(self.args.account_file):
+                logger.error('Account file exists, could not overwrite')
+                return
+
+        print('Generating new account...')
+        seed = common.random_bytes(32)
+        electrum_words = mnemonic.mn_encode(binascii.hexlify(seed))
+
+        wl = bip32.Wallet.from_master_secret(seed)
+        seed_bip32_words, seed_bip32_words_indices = wl.to_seed_words()
+        seed_bip32_b58 = wl.serialize_b58()
+
+        print('Seed:             0x%s' % binascii.hexlify(seed).decode('utf8'))
+        print('Seed electrum:    %s' % electrum_words)
+        print('Seed bip39 words: %s' % ' '.join(seed_bip32_words))
+        print('Seed bip32 b58:   %s' % seed_bip32_b58)
+
+        # Generate private keys based on the gen mechanism. Bip44 path vs. Monero-like.
+        if self.args.bip44:
+            print('Using BIP44 path for Monero')
+            data = wl.get_child_for_path("m/44'/128'/0'/0/0")
+            to_hash = data.chain_code + binascii.unhexlify(data.private_key.get_key())
+            hashed = crypto.cn_fast_hash(to_hash)
+            keys = monero.generate_monero_keys(hashed)
+
+        else:
+            keys = monero.generate_monero_keys(seed)
+
+        spend_sec, spend_pub, view_sec, view_pub = keys
+        print('')
+        print('Spend key priv:   0x%s' % binascii.hexlify(crypto.encodeint(spend_sec)).decode('utf8'))
+        print('View key priv:    0x%s' % binascii.hexlify(crypto.encodeint(view_sec)).decode('utf8'))
+        print('')
+        print('Spend key pub:    0x%s' % binascii.hexlify(crypto.encodepoint(spend_pub)).decode('utf8'))
+        print('View key pub:     0x%s' % binascii.hexlify(crypto.encodepoint(view_pub)).decode('utf8'))
+
+        self.init_with_keys(spend_sec, view_sec)
+        print('')
+        print('Address:          %s' % self.creds.address.decode('utf8'))
+
+        self.account_data = collections.OrderedDict()
+        self.account_data['seed'] = binascii.hexlify(seed).decode('utf8')
+        self.account_data['spend_key'] = spend_sec
+        self.account_data['view_key'] = view_sec
+        self.account_data['meta'] = collections.OrderedDict([
+            ('addr', self.creds.address.decode('utf8')),
+            ('electrum_words', electrum_words),
+            ('bip32_39_words', ' '.join(seed_bip32_words)),
+            ('bip32_b58', seed_bip32_b58),
+            ('bip44_generated', self.args.bip44),
+        ])
+
+        if self.args.account_file:
+            with open(self.args.account_file, 'w+') as fh:
+                json.dump(self.account_data, fh, indent=2)
+        print('Account generated')
+
+    async def open_account(self):
+        """
+        Handles account open / management
+        :return:
+        """
+        self.update_intro()
+        priv_spend_key = None
+        priv_view_key = None
+
+        if not self.args.account_file and not self.args.spend_key:
+            logger.debug('No account file nor spend key. Please generate new account')
+            return
+
+        acc_file_exists = False
+        if self.args.account_file:
+            acc_file_exists = os.path.exists(self.args.account_file)
+
+            if acc_file_exists and self.args.spend_key:
+                logger.error('Account file exists, spend key is ignored')
+            if acc_file_exists and self.args.view_key:
+                logger.error('Account file exists, view key is ignored')
+            if acc_file_exists:
+                with open(self.args.account_file) as fh:
+                    self.account_data = json.load(fh)
+                priv_spend_key = self.account_data['spend_key']
+                priv_view_key = self.account_data['view_key']
+
+        if not acc_file_exists and self.args.spend_key:
+            priv_view = self.args.view_key.encode('utf8')
+            priv_spend = self.args.spend_key.encode('utf8')
+            priv_view_key = crypto.b16_to_scalar(priv_view)
+            priv_spend_key = crypto.b16_to_scalar(priv_spend)
+
+            self.account_data = {'spend_key': priv_spend_key, 'view_key': priv_view_key}
+            with open(self.args.account_file, 'w') as fh:
+                json.dump(self.account_data, fh, indent=2)
+
+        if priv_spend_key and priv_view_key:
+            self.init_with_keys(priv_spend_key, priv_view_key)
+
+    def init_with_keys(self, priv_spend_key, priv_view_key):
+        """
+        Initializes Trezor classes with the private keys
+        :return:
+        """
+        self.creds = monero.AccountCreds.new_wallet(priv_view_key, priv_spend_key, self.network_type)
+        self.update_intro()
+
+        self.trez = trezor_lite.TrezorLite()
+        self.trez.creds = self.creds
+        self.trez.iface = self.trez_iface
+
     async def entry(self):
         """
         pass
@@ -410,17 +541,7 @@ class TrezorServer(Cmd):
         elif self.args.stagenet:
             self.network_type = monero.NetworkTypes.STAGENET
 
-        priv_view = self.args.view_key.encode('utf8')
-        priv_spend = self.args.spend_key.encode('utf8')
-        priv_view_key = crypto.b16_to_scalar(priv_view)
-        priv_spend_key = crypto.b16_to_scalar(priv_spend)
-        self.creds = monero.AccountCreds.new_wallet(priv_view_key, priv_spend_key, self.network_type)
-        self.update_intro()
-
-        logger.info('Address: %s' % self.creds.address.decode('utf8'))
-        self.trez = trezor_lite.TrezorLite()
-        self.trez.creds = self.creds
-        self.trez.iface = self.trez_iface
+        await self.open_account()
 
         logging.info('Starting rest server...')
         self.rest_server_boot()
@@ -445,10 +566,16 @@ class TrezorServer(Cmd):
         parser.add_argument('--debug', dest='debug', default=False, action='store_const', const=True,
                             help='Debug')
 
-        parser.add_argument('--view-key', dest='view_key', required=True,
+        parser.add_argument('--bip44', dest='bip44', default=False, action='store_const', const=True,
+                            help='Prefer bip44 secret creation rather than Monero electrum')
+
+        parser.add_argument('--account-file', dest='account_file',
+                            help='Trezor account file to use / open')
+
+        parser.add_argument('--view-key', dest='view_key',
                             help='Hex coded private view key')
 
-        parser.add_argument('--spend-key', dest='spend_key', required=True,
+        parser.add_argument('--spend-key', dest='spend_key',
                             help='Hex coded private spend key')
 
         args_src = sys.argv
