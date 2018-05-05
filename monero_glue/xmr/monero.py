@@ -1018,3 +1018,28 @@ async def get_tx_pub_key_from_received_outs(td):
     raise ValueError('Input transaction is buggy, contains two tx keys')
 
 
+def generate_keys(recovery_key):
+    """
+    Wallet gen.
+    :param recovery_key:
+    :return:
+    """
+    sec = crypto.sc_reduce32(recovery_key)
+    pub = crypto.scalarmult_base(sec)
+    return sec, pub
+
+
+def generate_monero_keys(seed):
+    """
+    Generates spend key / view key from the seed in the same manner as Monero code does.
+
+    account.cpp:
+    crypto::secret_key account_base::generate(const crypto::secret_key& recovery_key, bool recover, bool two_random).
+    :param seed:
+    :return:
+    """
+    spend_sec, spend_pub = generate_keys(crypto.decodeint(seed))
+    hash = crypto.cn_fast_hash(crypto.encodeint(spend_sec))
+    view_sec, view_pub = generate_keys(crypto.decodeint(hash))
+    return spend_sec, spend_pub, view_sec, view_pub
+
