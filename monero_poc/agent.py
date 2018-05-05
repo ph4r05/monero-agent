@@ -46,6 +46,7 @@ class TrezorProxy(trezor_lite.TrezorLite):
         endp = '%s/%s' % (self.endpoint, method)
         req = {'cmd': cmd, 'payload': payload}
         resp = requests.post(endp, json=req)
+        resp.raise_for_status()
         return resp.json()
 
     async def transfer_pickle(self, method, action, *args, **kwargs):
