@@ -27,7 +27,10 @@ from cmd2 import Cmd
 import eventlet
 from eventlet import wsgi
 from flask import Flask, jsonify, request, abort
+from wsgiref.simple_server import make_server, WSGIServer
+from socketserver import ThreadingMixIn
 
+from monero_poc import misc
 from monero_glue import trezor_lite, trezor_iface
 from monero_glue.xmr import monero, crypto, common
 from monero_glue.xmr.backend import mnemonic
@@ -42,31 +45,30 @@ eventlet.monkey_patch(socket=True)
 class TrezorInterface(trezor_iface.TrezorInterface):
     def __init__(self, server=None):
         self.server = server
-        self.in_confirmation = False
+        self.tsx_waiter = misc.CliPrompt()
         self.tsx_data = None
-        self.conf_evt = None
         self.confirmed_result = False
 
     def get_tx_data(self):
         return self.tsx_data
 
+    @property
+    def in_confirmation(self):
+        return self.tsx_waiter.in_confirmation
+
     def confirmation(self, confirmed):
         self.confirmed_result = confirmed
-        self.conf_evt.set()
+        self.tsx_waiter.confirmation(confirmed)
 
     async def confirm_transaction(self, tsx_data):
-        self.in_confirmation = True
         self.confirmed_result = False
         self.tsx_data = tsx_data
-        self.conf_evt = threading.Event()
         try:
             self.server.on_confirm_start()
-            self.conf_evt.wait()
-
+            self.tsx_waiter.wait_confirmation()
             return self.confirmed_result
 
         finally:
-            self.in_confirmation = False
             self.tsx_data = None
 
     async def transaction_signed(self):
@@ -104,6 +106,9 @@ class TrezorServer(Cmd):
         self.running = True
         self.stop_event = threading.Event()
         self.local_data = threading.local()
+        self.watch_only_waiter = misc.CliPrompt()
+        self.ui_lock = threading.Lock()
+        self.use_werkzeug = False
         self.thread_rest = None
         self.thread_loop = None
         self.rest_loop = None
@@ -199,6 +204,10 @@ class TrezorServer(Cmd):
         def keep_alive():
             return self.wait_coro(self.on_ping(request=request))
 
+        @self.flask.route('/api/v1.0/watch_only', methods=['GET'])
+        def watch_only():
+            return self.wait_coro(self.on_watch_only(request=request))
+
         @self.flask.route('/api/v1.0/tx_sign', methods=['GET', 'POST'])
         def tx_sign():
             return self.wait_coro(self.on_tx_sign(request=request))
@@ -224,6 +233,8 @@ class TrezorServer(Cmd):
     def serve_eventlet(self):
         """
         Eventlet server, fast async, for production use
+        Warning: Eventlet is tricky to work concurrently with classical threading locks
+
         :return:
         """
         listener = eventlet.listen(('0.0.0.0', self.port))
@@ -241,6 +252,35 @@ class TrezorServer(Cmd):
         :return:
         """
         return jsonify({'result': True})
+
+    async def on_watch_only(self, request=None):
+        """
+        Exports watch only credentials
+        :param request:
+        :return:
+        """
+        if not self.creds:
+            logger.warning('Agent asks for watch-only credentials, Trezor not initialized')
+            return abort(406)
+
+        if self.watch_only_waiter.in_confirmation:
+            logger.warning('Agent asks for watch-only credentials concurrently')
+            return abort(406)
+        
+        # Prompt user to confirm.
+        self.on_watchonly()
+        confirmed = self.watch_only_waiter.wait_confirmation()
+
+        if not confirmed:
+            logger.warning('Watch only rejected')
+            return abort(403)
+
+        logger.info('Returning watch only credentials...')
+        res = {
+            'view_key': binascii.hexlify(crypto.encodeint(self.creds.view_key_private)).decode('utf8'),
+            'address': self.creds.address.decode('utf8')
+        }
+        return jsonify({'result': True, 'data': res})
 
     async def on_tx_sign(self, request=None):
         """
@@ -312,6 +352,10 @@ class TrezorServer(Cmd):
     def do_gen_account(self, line):
         self.create_account(line)
 
+    def on_watchonly(self):
+        self.poutput('-' * 80)
+        self.poutput('Watch-only request received\nEnter W to confirm/reject\n')
+
     def on_confirm_start(self):
         self.poutput('-' * 80)
         self.poutput('Transaction confirmation procedure\nEnter T to start\n')
@@ -358,7 +402,19 @@ class TrezorServer(Cmd):
         self.poutput('\n')
         self.trez_iface.confirmation(result == 0)
 
+    def do_W(self, line):
+        if not self.watch_only_waiter.in_confirmation:
+            self.poutput('No prompt')
+            return
+
+        result = self.select([(0, 'Confirm'), (1, 'Reject')],
+                             'Do you confirm sending watch-only credentials to the client? ')
+
+        self.poutput('\n')
+        self.watch_only_waiter.confirmation(result == 0)
+
     do_t = do_T
+    do_w = do_W
 
     #
     # Work
@@ -389,7 +445,7 @@ class TrezorServer(Cmd):
             worker.start()
 
             self.init_rest()
-            if self.debug:
+            if self.debug or self.use_werkzeug:
                 self.serve_werkzeug()
             else:
                 self.serve_eventlet()
