@@ -13,6 +13,11 @@ import hmac
 import functools
 
 
+class XmrException(Exception):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 def hash_bytearray(ba):
     """
     Hashing bytearray
