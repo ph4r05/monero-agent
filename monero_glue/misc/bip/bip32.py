@@ -634,7 +634,7 @@ class Wallet(object):
                    network=network)
 
     @classmethod
-    def from_master_secret(cls, seed, network="bitcoin_testnet"):
+    def from_master_secret(cls, seed, network='monero'):
         """Generate a new PrivateKey from a secret key.
         :param seed: The key to use to generate this wallet. It may be a long
             string. Do not use a phrase from a book or song, as that will
