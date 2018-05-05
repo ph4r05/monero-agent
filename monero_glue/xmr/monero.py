@@ -410,6 +410,7 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None, li
     Builds subaddress secret key from the subaddress index
     Hs(SubAddr || a || index_major || index_minor)
 
+    UPDATE: Monero team fixed this problem. Always use little endian.
     Note: need to handle endianity in the index
     C-code simply does: memcpy(data + sizeof(prefix) + sizeof(crypto::secret_key), &index, sizeof(subaddress_index));
     Where the index has the following form:
