@@ -12,6 +12,11 @@ import struct
 DISPLAY_DECIMAL_POINT=12
 
 
+class XmrNoSuchAddressException(common.XmrException):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 class NetworkTypes(object):
     MAINNET = 0
     TESTNET = 1
@@ -581,6 +586,8 @@ def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, addit
         additional_recv_derivations.append(generate_key_derivation(add_pub_key, creds.view_key_private))
 
     subaddr_recv_info = is_out_to_acc_precomp(subaddresses, out_key, recv_derivation, additional_recv_derivations, real_output_index)
+    if subaddr_recv_info is None:
+        raise XmrNoSuchAddressException()
 
     xi, ki = generate_key_image_helper_precomp(creds, out_key, subaddr_recv_info[1], real_output_index, subaddr_recv_info[0])
     return xi, ki, recv_derivation
