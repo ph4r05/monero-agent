@@ -263,16 +263,33 @@ class HostAgent(Cmd):
 
         # Write acquired data to the account file
         if account_file_set and not account_file_ex:
-            with open(self.args.account_file, 'w') as fh:
-                data = {
-                    'view_key': binascii.hexlify(crypto.encodeint(self.priv_view)).decode('utf8'),
-                    'address': self.address.decode('utf8'),
-                }
-                json.dump(data, fh)
+            await self.save_account(self.args.account_file)
+
+        # Create watch only wallet file for monero-wallet-rpc
+        await self.ensure_watch_only()
 
         print('Public spend key: %s' % binascii.hexlify(crypto.encodepoint(self.pub_spend)).decode('utf8'))
         print('Public view key : %s' % binascii.hexlify(crypto.encodepoint(self.pub_view)).decode('utf8'))
         print('Address:          %s' % self.address.decode('utf8'))
+
+    async def save_account(self, file):
+        """
+        Stores account data
+        :param file:
+        :return:
+        """
+        with open(file, 'w') as fh:
+            data = {
+                'view_key': binascii.hexlify(crypto.encodeint(self.priv_view)).decode('utf8'),
+                'address': self.address.decode('utf8'),
+            }
+            json.dump(data, fh)
+
+    async def ensure_watch_only(self):
+        """
+        Ensures watch only wallet for monero exists
+        :return:
+        """
 
     async def open_account_passed(self):
         """
