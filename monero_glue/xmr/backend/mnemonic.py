@@ -1648,45 +1648,51 @@ words = [
 
 n = len(words)
 
+
 def mn_len():
     return len(words)
+
 
 def mn_words():
     return words
 
+
 # Note about US patent no 5892470: Here each word does not represent a given digit.
 # Instead, the digit represented by a word is variable, it depends on the previous word.
 
+
 def mn_swap_endian_4byte(st):
-    #this is from moneromoo's code
+    # this is from moneromoo's code
     r = st[6:8]+st[4:6]+st[2:4]+st[0:2]
     return r
 
-def mn_encode( message ):
+
+def mn_encode(message):
     out = []
     n = len(words)
     for i in range(0, len(message), 8):
         message = message[0:i] + mn_swap_endian_4byte(message[i:i+8]) + message[i+8:]
-        #print(len(st[i:i+8]))
+
     for i in range(len(message)//8):
         word = message[8*i:8*i+8]
         x = int(word, 16)
-        w1 = (x%n)
-        w2 = ((x//n) + w1)%n
-        w3 = (((x//n)//n) + w2)%n
-        out += [ words[w1], words[w2], words[w3] ]
+        w1 = x % n
+        w2 = ((x//n) + w1) % n
+        w3 = (((x//n)//n) + w2) % n
+        out += [words[w1], words[w2], words[w3]]
     return ' '.join(out)
 
-def mn_decode( wlist ):
+
+def mn_decode(wlist):
     out = ''
     n = len(words)
-    for i in range(len(wlist)//3): #note 24 / 3 = 8... 12 / 3 = 4..
+    for i in range(len(wlist)//3):  # note 24 / 3 = 8... 12 / 3 = 4..
         word1, word2, word3 = wlist[3*i:3*i+3]
         w1 = words.index(word1)
         w2 = words.index(word2)
         w3 = words.index(word3)
-        x = w1 +n*((n + w2-w1)%n) +n*n*((n + w3-w2)%n) #as an int
-        b = '%08x'%x #this is big endian!
+        x = w1 + n * ((n + w2 - w1) % n) +n * n * ((n + w3 - w2) % n)  # as an int
+        b = '%08x' % x  # this is big endian!
         out += mn_swap_endian_4byte(b)
 
     return out
@@ -1694,9 +1700,9 @@ def mn_decode( wlist ):
 
 if __name__ == '__main__':
     import sys
-    if len( sys.argv ) == 1:
+    if len(sys.argv) == 1:
         print('I need arguments: a hex string to encode, or a list of words to decode')
-    elif len( sys.argv ) == 2:
+    elif len(sys.argv) == 2:
         print(' '.join(mn_encode(sys.argv[1])))
     else:
         print(mn_decode(sys.argv[1:]))
