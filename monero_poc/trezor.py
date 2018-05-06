@@ -277,8 +277,9 @@ class TrezorServer(Cmd):
 
         logger.info('Returning watch only credentials...')
         res = {
-            'view_key': binascii.hexlify(crypto.encodeint(self.creds.view_key_private)).decode('utf8'),
-            'address': self.creds.address.decode('utf8')
+            'view_key': binascii.hexlify(crypto.encodeint(self.creds.view_key_private)).decode('ascii'),
+            'address': self.creds.address.decode('ascii'),
+            'network_type': self.network_type,
         }
         return jsonify({'result': True, 'data': res})
 
@@ -628,7 +629,7 @@ class TrezorServer(Cmd):
                             help='Testnet')
 
         parser.add_argument('--stagenet', dest='stagenet', default=False, action='store_const', const=True,
-                            help='Testnet')
+                            help='Stagenet')
 
         parser.add_argument('--debug', dest='debug', default=False, action='store_const', const=True,
                             help='Debug')
