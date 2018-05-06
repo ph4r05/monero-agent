@@ -6,57 +6,54 @@ import binascii
 import json
 import re
 
-from monero_glue.xmr import crypto
+from monero_glue.xmr import crypto, common
 from monero_glue.xmr.enc import chacha
-from monero_serialize import xmrboost, xmrtypes, xmrserialize, xmrrpc
+from monero_serialize import xmrboost, xmrtypes, xmrserialize, xmrrpc, xmrjson
 
 UNSIGNED_TX_PREFIX = b"Monero unsigned tx set\004"
 SIGNED_TX_PREFIX = b"Monero signed tx set\004"
 MULTISIG_UNSIGNED_TX_PREFIX = b"Monero multisig unsigned tx set\001"
 
 
-def unescape_json_str(st):
-    """
-    Unescape Monero json encoded string
+class WalletKeyData(xmrtypes.WalletKeyData):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.m_creation_timestamp = kwargs.pop('m_creation_timestamp', 0)
+        self.m_keys = kwargs.pop('m_keys', None)  # type: xmrtypes.AccountKeys
 
-    :param st:
-    :return:
-    """
-    c = 0
-    ln = len(st)
-    escape_chmap = {
-        b'b': b'\b',
-        b'f': b'\f',
-        b'n': b'\n',
-        b'r': b'\r',
-        b't': b'\t',
-        b'\\': b'\\',
-        b'"': b'\"',
-        b'/': b'\/'
-    }
+    def to_json(self):
+        return self.__dict__
 
-    ret = []
 
-    def at(i):
-        return st[i:i+1]
+class WalletKeyFile(object):
+    def __init__(self, **kwargs):
+        self.seed_language = kwargs.pop('seed_language', 'English')
+        self.watch_only = kwargs.pop('watch_only', 1)
+        self.multisig = kwargs.pop('multisig', 0)
+        self.multisig_threshold = kwargs.pop('multisig_threshold', 0)
+        self.always_confirm_transfers = kwargs.pop('always_confirm_transfers', 1)
+        self.print_ring_members = kwargs.pop('print_ring_members', 1)
+        self.store_tx_info = kwargs.pop('store_tx_info', 1)
+        self.default_mixin = kwargs.pop('default_mixin', 7)
+        self.default_priority = kwargs.pop('default_priority', 7)
+        self.auto_refresh = kwargs.pop('auto_refresh', 1)
+        self.refresh_type = kwargs.pop('refresh_type', 1)
+        self.refresh_height = kwargs.pop('refresh_height', 0)
+        self.confirm_missing_payment_id = kwargs.pop('confirm_missing_payment_id', 1)
+        self.ask_password = kwargs.pop('ask_password', 1)
+        self.min_output_count = kwargs.pop('min_output_count', 0)
+        self.min_output_value = kwargs.pop('min_output_value', 0)
+        self.default_decimal_point = kwargs.pop('default_decimal_point', 12)
+        self.merge_destinations = kwargs.pop('merge_destinations', 0)
+        self.confirm_backlog = kwargs.pop('confirm_backlog', 1)
+        self.confirm_backlog_threshold = kwargs.pop('confirm_backlog_threshold', 0)
+        self.confirm_export_overwrite = kwargs.pop('confirm_export_overwrite', 1)
+        self.auto_low_priority = kwargs.pop('auto_low_priority', 1)
+        self.testnet = kwargs.pop('testnet', 0)
+        self.key_data = kwargs.pop('key_data', None)
 
-    while c < ln:
-        if at(c) == b'\\':
-            if at(c+1) == b'u':
-                ret.append(bytes([int(st[c+2:c+6], 16)]))
-                # ret.append(st[c:c+6].decode('unicode_escape').encode('utf8'))
-                c += 6
-
-            else:
-                ret.append(escape_chmap[at(c+1)])
-                c += 2
-
-        else:
-            ret.append(at(c))
-            c += 1
-
-    df = (b''.join(ret))
-    return df
+    def to_json(self):
+        return self.__dict__
 
 
 async def load_keys_file(file, password):
@@ -80,8 +77,8 @@ async def load_keys_file(file, password):
 
     m = re.search(b'(.*)"key_data":"(.+?)",?(.*)', dec)
     key_data = m.group(2)
-    dat = unescape_json_str(key_data)
 
+    dat = xmrjson.unescape_json_str(key_data)
     reader = xmrserialize.MemoryReaderWriter(bytearray(dat))
     ar = xmrrpc.Archive(reader, False)
 
