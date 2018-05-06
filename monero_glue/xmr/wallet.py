@@ -92,6 +92,52 @@ async def load_keys_file(file, password):
     return wallet_key
 
 
+async def save_keys_file(file, password, wkeyfile):
+    """
+    Stores the wallet key file
+
+    :param file:
+    :param password:
+    :param wkeyfile:
+    :type wkeyfile: WalletKeyFile
+    :return:
+    """
+    key_data = wkeyfile.key_data  # type: WalletKeyData
+    js = wkeyfile.to_json()
+    del js['key_data']
+
+    # encode wallet key file wth classical json encoder, key data added later with monero encoding.
+    enc = json.dumps(js, cls=xmrjson.AutoJSONEncoder)
+
+    # key_data KV serialization. Message -> Model.
+    modeler = xmrrpc.Modeler(writing=True, modelize=True)
+    mdl = await modeler.message(obj=None, msg=key_data)
+
+    # Model -> binary
+    writer = xmrserialize.MemoryReaderWriter()
+    ar = xmrrpc.Archive(writer, True)
+
+    await ar.root()
+    await ar.section(mdl)
+    ser = bytes(writer.buffer)
+
+    ser2 = xmrjson.escape_string_json(ser)
+    enc2 = b'{"key_data":"' + ser2 + b'",' + enc[1:].encode('utf8')
+
+    key = chacha.generate_key(password)
+    enc_enc = chacha.encrypt(key, enc2)
+
+    writer = xmrserialize.MemoryReaderWriter()
+    ar = xmrserialize.Archive(writer, True)
+    msg = xmrtypes.KeysFileData()
+    msg.iv = enc_enc[0:8]
+    msg.account_data = enc_enc[8:]
+    await ar.message(msg)
+
+    with open(file, 'wb') as fh:
+        fh.write(bytes(writer.buffer))
+
+
 async def load_unsigned_tx(priv_key, data):
     """
     Loads unsigned transaction from the encrypted file
