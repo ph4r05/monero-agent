@@ -268,8 +268,8 @@ class HostAgent(Cmd):
         # Create watch only wallet file for monero-wallet-rpc
         await self.ensure_watch_only()
 
-        print('Public spend key: %s' % binascii.hexlify(crypto.encodepoint(self.pub_spend)).decode('utf8'))
-        print('Public view key : %s' % binascii.hexlify(crypto.encodepoint(self.pub_view)).decode('utf8'))
+        print('Public spend key: %s' % binascii.hexlify(crypto.encodepoint(self.pub_spend)).decode('ascii'))
+        print('Public view key : %s' % binascii.hexlify(crypto.encodepoint(self.pub_view)).decode('ascii'))
         print('Address:          %s' % self.address.decode('utf8'))
 
     async def save_account(self, file):
@@ -280,10 +280,10 @@ class HostAgent(Cmd):
         """
         with open(file, 'w') as fh:
             data = {
-                'view_key': binascii.hexlify(crypto.encodeint(self.priv_view)).decode('utf8'),
-                'address': self.address.decode('utf8'),
+                'view_key': binascii.hexlify(crypto.encodeint(self.priv_view)).decode('ascii'),
+                'address': self.address.decode('ascii'),
             }
-            json.dump(data, fh)
+            json.dump(data, fh, indent=2)
 
     async def ensure_watch_only(self):
         """
