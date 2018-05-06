@@ -118,6 +118,7 @@ class HostAgent(Cmd):
         self.priv_view = None
         self.pub_view = None
         self.pub_spend = None
+        self.network_type = None
 
         self.trace_logger = trace_logger.Tracelogger(logger)
         self.loop = asyncio.get_event_loop()
@@ -241,6 +242,7 @@ class HostAgent(Cmd):
 
             self.priv_view = crypto.b16_to_scalar(res['data']['view_key'].encode('utf8'))
             self.address = res['data']['address'].encode('utf8')
+            self.network_type = res['data']['network_type']
             await self.open_with_keys(self.priv_view, self.address)
 
         except Exception as e:
@@ -296,9 +298,10 @@ class HostAgent(Cmd):
         Loads passed credentials
         :return:
         """
-        priv_view = self.args.view_key.encode('utf8')
+        priv_view = self.args.view_key.encode('ascii')
         self.priv_view = crypto.b16_to_scalar(priv_view)
-        self.address = self.args.address.encode('utf8')
+        self.address = self.args.address.encode('ascii')
+        self.network_type = monero.NetworkTypes.TESTNET if self.args.testnet else monero.NetworkTypes.MAINNET
         await self.open_with_keys(self.priv_view, self.address)
 
     async def open_account_file(self, file):
@@ -477,6 +480,9 @@ class HostAgent(Cmd):
 
         parser.add_argument('--debug', dest='debug', default=False, action='store_const', const=True,
                             help='Debugging output')
+
+        parser.add_argument('--testnet', dest='testnet', default=False, action='store_const', const=True,
+                            help='Testnet')
 
         args_src = sys.argv
         self.args, unknown = parser.parse_known_args(args=args_src[1:])
