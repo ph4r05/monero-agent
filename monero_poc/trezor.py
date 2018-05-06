@@ -362,15 +362,15 @@ class TrezorServer(Cmd):
         print('Spend key pub:    0x%s' % binascii.hexlify(crypto.encodepoint(self.creds.spend_key_public)).decode('ascii'))
         print('View key pub:     0x%s' % binascii.hexlify(crypto.encodepoint(self.creds.view_key_public)).decode('ascii'))
 
-    def on_watchonly(self, line):
+    def on_watchonly(self):
         self.poutput('-' * 80)
         self.poutput('Watch-only request received\nEnter W to confirm/reject\n')
 
-    def on_confirm_start(self, line):
+    def on_confirm_start(self):
         self.poutput('-' * 80)
         self.poutput('Transaction confirmation procedure\nEnter T to start\n')
 
-    def on_transaction_signed(self, line):
+    def on_transaction_signed(self):
         self.poutput('-' * 80)
         self.poutput('Transaction was successfully signed\n')
 
