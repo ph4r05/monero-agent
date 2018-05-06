@@ -352,15 +352,25 @@ class TrezorServer(Cmd):
     def do_gen_account(self, line):
         self.create_account(line)
 
-    def on_watchonly(self):
+    def do_address(self, line):
+        self.poutput(self.creds.address.decode('ascii'))
+
+    def do_keys(self, line):
+        print('Spend key priv:   0x%s' % binascii.hexlify(crypto.encodeint(self.creds.spend_key_private)).decode('ascii'))
+        print('View key priv:    0x%s' % binascii.hexlify(crypto.encodeint(self.creds.view_key_private)).decode('ascii'))
+        print('')
+        print('Spend key pub:    0x%s' % binascii.hexlify(crypto.encodepoint(self.creds.spend_key_public)).decode('ascii'))
+        print('View key pub:     0x%s' % binascii.hexlify(crypto.encodepoint(self.creds.view_key_public)).decode('ascii'))
+
+    def on_watchonly(self, line):
         self.poutput('-' * 80)
         self.poutput('Watch-only request received\nEnter W to confirm/reject\n')
 
-    def on_confirm_start(self):
+    def on_confirm_start(self, line):
         self.poutput('-' * 80)
         self.poutput('Transaction confirmation procedure\nEnter T to start\n')
 
-    def on_transaction_signed(self):
+    def on_transaction_signed(self, line):
         self.poutput('-' * 80)
         self.poutput('Transaction was successfully signed\n')
 
@@ -480,50 +490,51 @@ class TrezorServer(Cmd):
 
         print('Generating new account...')
         seed = common.random_bytes(32)
-        electrum_words = mnemonic.mn_encode(binascii.hexlify(seed))
 
         wl = bip32.Wallet.from_master_secret(seed)
         seed_bip32_words, seed_bip32_words_indices = wl.to_seed_words()
         seed_bip32_b58 = wl.serialize_b58()
 
-        print('Seed:             0x%s' % binascii.hexlify(seed).decode('utf8'))
-        print('Seed electrum:    %s' % electrum_words)
+        # Generate private keys based on the gen mechanism. Bip44 path + Monero backward compatible
+        data = wl.get_child_for_path("m/44'/128'/0'/0/0")
+        to_hash = data.chain_code + binascii.unhexlify(data.private_key.get_key())
+
+        # to_hash is initial seed in the Monero sense, recoverable from this seed
+        hashed = crypto.cn_fast_hash(to_hash)
+        electrum_words = mnemonic.mn_encode(binascii.hexlify(hashed))
+
+        keys = monero.generate_monero_keys(hashed)
+        spend_sec, spend_pub, view_sec, view_pub = keys
+
+        print('Seed:             0x%s' % binascii.hexlify(seed).decode('ascii'))
         print('Seed bip39 words: %s' % ' '.join(seed_bip32_words))
         print('Seed bip32 b58:   %s' % seed_bip32_b58)
 
-        # Generate private keys based on the gen mechanism. Bip44 path vs. Monero-like.
-        if self.args.bip44:
-            print('Using BIP44 path for Monero')
-            data = wl.get_child_for_path("m/44'/128'/0'/0/0")
-            to_hash = data.chain_code + binascii.unhexlify(data.private_key.get_key())
-            hashed = crypto.cn_fast_hash(to_hash)
-            keys = monero.generate_monero_keys(hashed)
+        print('Seed Monero:      %s' % binascii.hexlify(hashed).decode('ascii'))
+        print('Seed Monero wrds: %s' % electrum_words)
 
-        else:
-            keys = monero.generate_monero_keys(seed)
-
-        spend_sec, spend_pub, view_sec, view_pub = keys
         print('')
-        print('Spend key priv:   0x%s' % binascii.hexlify(crypto.encodeint(spend_sec)).decode('utf8'))
-        print('View key priv:    0x%s' % binascii.hexlify(crypto.encodeint(view_sec)).decode('utf8'))
+        print('Spend key priv:   0x%s' % binascii.hexlify(crypto.encodeint(spend_sec)).decode('ascii'))
+        print('View key priv:    0x%s' % binascii.hexlify(crypto.encodeint(view_sec)).decode('ascii'))
         print('')
-        print('Spend key pub:    0x%s' % binascii.hexlify(crypto.encodepoint(spend_pub)).decode('utf8'))
-        print('View key pub:     0x%s' % binascii.hexlify(crypto.encodepoint(view_pub)).decode('utf8'))
+        print('Spend key pub:    0x%s' % binascii.hexlify(crypto.encodepoint(spend_pub)).decode('ascii'))
+        print('View key pub:     0x%s' % binascii.hexlify(crypto.encodepoint(view_pub)).decode('ascii'))
 
         self.init_with_keys(spend_sec, view_sec)
         print('')
-        print('Address:          %s' % self.creds.address.decode('utf8'))
+        print('Address:          %s' % self.creds.address.decode('ascii'))
 
         self.account_data = collections.OrderedDict()
-        self.account_data['seed'] = binascii.hexlify(seed).decode('utf8')
+        self.account_data['seed'] = binascii.hexlify(seed).decode('ascii')
         self.account_data['spend_key'] = spend_sec
         self.account_data['view_key'] = view_sec
         self.account_data['meta'] = collections.OrderedDict([
-            ('addr', self.creds.address.decode('utf8')),
-            ('electrum_words', electrum_words),
+            ('addr', self.creds.address.decode('ascii')),
+            ('bip44_seed', binascii.hexlify(seed).decode('ascii')),
             ('bip32_39_words', ' '.join(seed_bip32_words)),
             ('bip32_b58', seed_bip32_b58),
-            ('bip44_generated', self.args.bip44),
+            ('monero_seed', binascii.hexlify(hashed).decode('ascii')),
+            ('monero_words', electrum_words),
         ])
 
         if self.args.account_file:
@@ -621,9 +632,6 @@ class TrezorServer(Cmd):
 
         parser.add_argument('--debug', dest='debug', default=False, action='store_const', const=True,
                             help='Debug')
-
-        parser.add_argument('--bip44', dest='bip44', default=False, action='store_const', const=True,
-                            help='Prefer bip44 secret creation rather than Monero electrum')
 
         parser.add_argument('--account-file', dest='account_file',
                             help='Trezor account file to use / open')
