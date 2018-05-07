@@ -84,22 +84,6 @@ class BaseCli(Cmd):
         if self.noninteractive and not support_non_interactive:
             raise ValueError('Non-interactive mode not supported for this prompt')
 
-        if self.noninteractive and support_non_interactive:
-            if self.args.yes:
-                self.poutput(question)
-                if non_interactive_return == self.PROCEED_YES:
-                    self.poutput('Y')
-                elif non_interactive_return == self.PROCEED_NO:
-                    self.poutput('n')
-                elif non_interactive_return == self.PROCEED_QUIT:
-                    self.poutput('q')
-                else:
-                    raise ValueError('Unknown default value')
-
-                return non_interactive_return
-            else:
-                raise ValueError('Non-interactive mode for a prompt without --yes flag')
-
         # Classic interactive prompt
         confirmation = None
         while confirmation != 'y' and confirmation != 'n' and confirmation != 'q':
