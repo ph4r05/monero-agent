@@ -9,6 +9,7 @@
 #
 
 import os
+import getpass
 import asyncio
 import argparse
 import binascii
@@ -26,6 +27,8 @@ from blessed import Terminal
 from cmd2 import Cmd
 
 from . import trace_logger
+from . import cli
+
 from monero_glue import agent_lite, agent_misc, trezor_lite
 from monero_glue.xmr import wallet, monero, crypto
 from monero_glue.xmr.monero import TsxData
@@ -103,7 +106,7 @@ class TrezorProxy(trezor_lite.TrezorLite):
         return await self.transfer_pickle('tx_sign', 'final', *args, **kwargs)
 
 
-class HostAgent(Cmd):
+class HostAgent(cli.BaseCli):
     """
     Host agent wrapper
     """
@@ -119,10 +122,10 @@ class HostAgent(Cmd):
         self.pub_view = None
         self.pub_spend = None
         self.network_type = None
+        self.wallet_password = b''
 
         self.trace_logger = trace_logger.Tracelogger(logger)
         self.loop = asyncio.get_event_loop()
-        self.t = Terminal()
         self.worker_loop = asyncio.new_event_loop()
         self.worker_thread = threading.Thread(target=self.looper, args=(self.worker_loop, ))
         self.worker_thread.setDaemon(True)
@@ -174,21 +177,6 @@ class HostAgent(Cmd):
                      '\n    Monero Trezor agent\n' + \
                      '\n' + \
                      '-' * self.get_term_width()
-
-    def get_term_width(self):
-        """
-        Returns terminal width
-        :return: terminal width in characters or 80 if exception encountered
-        """
-        try:
-            width = self.t.width
-            if width is None or width <= 0:
-                return 80
-
-            return width
-        except:
-            pass
-        return 80
 
     #
     # Handlers
@@ -263,16 +251,31 @@ class HostAgent(Cmd):
         else:
             await self.load_watchonly()
 
-        # Write acquired data to the account file
         if account_file_set and not account_file_ex:
-            await self.save_account(self.args.account_file)
+            await self.prompt_password(True)
 
         # Create watch only wallet file for monero-wallet-rpc
         await self.ensure_watch_only()
 
+        # Write acquired data to the account file
+        if account_file_set and not account_file_ex:
+            await self.save_account(self.args.account_file)
+
         print('Public spend key: %s' % binascii.hexlify(crypto.encodepoint(self.pub_spend)).decode('ascii'))
         print('Public view key : %s' % binascii.hexlify(crypto.encodepoint(self.pub_view)).decode('ascii'))
         print('Address:          %s' % self.address.decode('utf8'))
+
+    async def prompt_password(self, new_wallet=False):
+        """
+        Prompts password for a new wallet
+        :param new_wallet:
+        :return:
+        """
+        if new_wallet:
+            passwd = self.ask_password('Creating a new wallet. Please, enter the password: ', True)
+        else:
+            passwd = self.ask_password('Please, enter the wallet password: ', False)
+        return passwd.encode('utf8')
 
     async def save_account(self, file):
         """
@@ -284,6 +287,8 @@ class HostAgent(Cmd):
             data = {
                 'view_key': binascii.hexlify(crypto.encodeint(self.priv_view)).decode('ascii'),
                 'address': self.address.decode('ascii'),
+                'wallet_password': self.wallet_password.decode('utf8'),
+                'WARNING': 'Agent file is not password encrypted in the PoC',
             }
             json.dump(data, fh, indent=2)
 
@@ -292,6 +297,34 @@ class HostAgent(Cmd):
         Ensures watch only wallet for monero exists
         :return:
         """
+        if self.args.watch_wallet is None:
+            return
+
+        key_file = '%s.keys' % self.args.watch_wallet
+        if os.path.exists(key_file):
+            logger.debug('Watch onlly wallet key file exists: %s' % key_file)
+            return
+
+        account_keys = xmrtypes.AccountKeys()
+        key_data = wallet.WalletKeyData()
+
+        wallet_data = wallet.WalletKeyFile()
+        wallet_data.key_data = key_data
+        wallet_data.watch_only = 1
+        wallet_data.testnet = self.network_type == monero.NetworkTypes.TESTNET
+
+        key_data.m_creation_timestamp = int(time.time())
+        key_data.m_keys = account_keys
+
+        account_keys.m_account_address = xmrtypes.AccountPublicAddress(
+            m_spend_public_key=crypto.encodepoint(self.pub_spend),
+            m_view_public_key=crypto.encodepoint(self.pub_view),
+        )
+        account_keys.m_spend_secret_key = crypto.encodeint(0)
+        account_keys.m_view_secret_key = crypto.encodeint(self.priv_view)
+
+        await wallet.save_keys_file(key_file, self.wallet_password, wallet_data)
+        logger.debug('Watch-only wallet keys generated: %s' % key_file)
 
     async def open_account_passed(self):
         """
@@ -313,8 +346,15 @@ class HostAgent(Cmd):
         with open(file) as fh:
             js = json.load(fh)
 
+        self.wallet_password = await self.prompt_password()
+
+        # Note the agent is not encrypted for PoC - demo.
         self.priv_view = crypto.b16_to_scalar(js['view_key'].encode('utf8'))
         self.address = js['address'].encode('utf8')
+
+        if self.wallet_password != js['wallet_password'].encode('utf8'):
+            raise ValueError('Password didnt match')
+
         await self.open_with_keys(self.priv_view, self.address)
 
     async def open_with_keys(self, view_key, address):
@@ -468,6 +508,9 @@ class HostAgent(Cmd):
 
         parser.add_argument('--account-file', dest='account_file',
                             help='Account file with watch-only creds')
+
+        parser.add_argument('--watch-wallet', dest='watch_wallet',
+                            help='Watch-only wallet files')
 
         parser.add_argument('--rpc-addr', dest='rpc_addr', default='127.0.0.1:18081',
                             help='RPC address for tsx relay')
