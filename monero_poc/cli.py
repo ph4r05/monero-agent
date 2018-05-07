@@ -58,11 +58,11 @@ class BaseCli(Cmd):
         question = question if question is not None else 'Please enter the password'
 
         while True:
-            passwd = getpass.getpass(question)
+            passwd = getpass.getpass(question + '\n')
             if not double_verify:
                 return passwd
 
-            passwd2 = getpass.getpass('Please enter the password again for verification')
+            passwd2 = getpass.getpass('Please enter the password again for verification: \n')
             if passwd != passwd2:
                 print('Error: password did\'t match. Please, try again\n')
             else:
