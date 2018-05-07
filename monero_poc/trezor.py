@@ -531,8 +531,8 @@ class TrezorServer(cli.BaseCli):
 
         self.account_data = collections.OrderedDict()
         self.account_data['seed'] = binascii.hexlify(seed).decode('ascii')
-        self.account_data['spend_key'] = spend_sec
-        self.account_data['view_key'] = view_sec
+        self.account_data['spend_key'] = binascii.hexlify(crypto.encodeint(spend_sec)).decode('ascii')
+        self.account_data['view_key'] = binascii.hexlify(crypto.encodeint(view_sec)).decode('ascii')
         self.account_data['meta'] = collections.OrderedDict([
             ('addr', self.creds.address.decode('ascii')),
             ('bip44_seed', binascii.hexlify(seed).decode('ascii')),
@@ -574,8 +574,8 @@ class TrezorServer(cli.BaseCli):
             if acc_file_exists:
                 with open(self.args.account_file) as fh:
                     self.account_data = json.load(fh)
-                priv_spend_key = self.account_data['spend_key']
-                priv_view_key = self.account_data['view_key']
+                priv_spend_key = crypto.decodeint(binascii.unhexlify(self.account_data['spend_key'].encode('ascii')))
+                priv_view_key = crypto.decodeint(binascii.unhexlify(self.account_data['view_key'].encode('ascii')))
 
         if not acc_file_exists and self.args.spend_key:
             priv_view = self.args.view_key.encode('utf8')
