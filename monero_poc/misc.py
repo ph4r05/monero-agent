@@ -4,6 +4,7 @@
 
 import sys
 import os
+import re
 import time
 import json
 import asyncio
@@ -100,6 +101,51 @@ def gen_simple_passwd(n):
     :return:
     """
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(n))
+
+
+def parse_transfer_cmd(parts):
+    """
+    Parses transfer command format
+    :param parts:
+    :return:
+    """
+
+    priority = None
+    mixin = None
+    address = None
+    amount = None
+    payment_id = None
+
+    ln_parts = len(parts)
+    if ln_parts < 2:
+        raise ValueError('Invalid format')
+
+    addr_idx = 0
+    p1_num = re.match(r'^[0-9]+$', parts[0])
+    p2_num = re.match(r'^[0-9]+$', parts[1])
+    if p1_num and p2_num:
+        addr_idx = 2
+        priority = int(parts[0])
+        mixin = int(parts[1])
+
+    elif p1_num and not p2_num:
+        addr_idx = 1
+        mixin = int(parts[0])
+
+    else:
+        addr_idx = 0
+
+    if ln_parts == 2:
+        address = parts[0]
+        amount = float(parts[1])
+
+    address = parts[addr_idx]
+    amount = float(parts[addr_idx + 1])
+
+    if ln_parts == addr_idx + 3:
+        payment_id = parts[addr_idx + 2]
+
+    return priority, mixin, address, amount, payment_id
 
 
 class SargeLogFilter(logging.Filter):
