@@ -139,6 +139,18 @@ class TrezorServer(cli.BaseCli):
                       '\n' + \
                       '-' * self.get_term_width()
 
+    def update_prompt(self):
+        """
+        Prompt update
+        :return:
+        """
+        flags = []
+        flags_str = '|'.join(flags)
+        flags_suffix = '|' + flags_str if len(flags_str) > 0 else ''
+
+        addr_str = self.creds.address.decode('ascii')[-6:] if self.creds else 'UNINIT'
+        self.prompt = '[trezor %s%s]: ' % (addr_str, flags_suffix)
+
     #
     # Server related
     #
@@ -527,6 +539,7 @@ class TrezorServer(cli.BaseCli):
             with open(self.args.account_file, 'w+') as fh:
                 json.dump(self.account_data, fh, indent=2)
         print('Account generated')
+        self.update_prompt()
 
     async def open_account(self):
         """
@@ -534,6 +547,8 @@ class TrezorServer(cli.BaseCli):
         :return:
         """
         self.update_intro()
+        self.update_prompt()
+
         priv_spend_key = None
         priv_view_key = None
 
@@ -579,6 +594,7 @@ class TrezorServer(cli.BaseCli):
         self.trez = trezor_lite.TrezorLite()
         self.trez.creds = self.creds
         self.trez.iface = self.trez_iface
+        self.update_prompt()
 
     async def entry(self):
         """
