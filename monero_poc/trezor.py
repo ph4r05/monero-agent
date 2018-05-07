@@ -30,6 +30,7 @@ from flask import Flask, jsonify, request, abort
 from wsgiref.simple_server import make_server, WSGIServer
 from socketserver import ThreadingMixIn
 
+from . import cli
 from monero_poc import misc
 from monero_glue import trezor_lite, trezor_iface
 from monero_glue.xmr import monero, crypto, common
@@ -84,7 +85,7 @@ class TrezorInterface(trezor_iface.TrezorInterface):
         logger.debug('Transaction step: %s, sub step: %s' % (step, sub_step))
 
 
-class TrezorServer(Cmd):
+class TrezorServer(cli.BaseCli):
     """
     Trezor emulator server
     """
@@ -98,7 +99,6 @@ class TrezorServer(Cmd):
         self.network_type = None
         self.creds = None  # type: monero.AccountCreds
         self.port = 46123
-        self.t = Terminal()
         self.trez_iface = TrezorInterface(self)
         self.account_data = None
 
@@ -138,21 +138,6 @@ class TrezorServer(Cmd):
         self.intro += ('\n    Running on: 127.0.0.1:%s ' % self.port) + \
                       '\n' + \
                       '-' * self.get_term_width()
-
-    def get_term_width(self):
-        """
-        Returns terminal width
-        :return: terminal width in characters or 80 if exception encountered
-        """
-        try:
-            width = self.t.width
-            if width is None or width <= 0:
-                return 80
-
-            return width
-        except:
-            pass
-        return 80
 
     #
     # Server related

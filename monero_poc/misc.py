@@ -72,3 +72,11 @@ class CliPrompt(object):
         self.in_confirmation = False
 
 
+def py_raw_input(question=None):
+    """
+    Python compatibility wrapper for standard raw_input()
+    :param question:
+    :return:
+    """
+    return input(question)
+
