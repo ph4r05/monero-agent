@@ -302,7 +302,7 @@ class HostAgent(cli.BaseCli):
 
         key_file = '%s.keys' % self.args.watch_wallet
         if os.path.exists(key_file):
-            logger.debug('Watch onlly wallet key file exists: %s' % key_file)
+            logger.debug('Watch only wallet key file exists: %s' % key_file)
             return
 
         account_keys = xmrtypes.AccountKeys()
