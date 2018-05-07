@@ -33,6 +33,7 @@ from . import cli
 from . import misc
 
 from monero_glue import agent_lite, agent_misc, trezor_lite
+from monero_glue.misc import b58_mnr
 from monero_glue.xmr import wallet, monero, crypto, common
 from monero_glue.xmr.monero import TsxData
 from monero_serialize import xmrtypes
@@ -149,18 +150,19 @@ class WalletRpc(object):
         return resp.json()
 
     def balance(self):
-        """
-        Simple balance query
-        :return:
-        """
         return self.request('getbalance')
 
     def height(self):
-        """
-        Get height
-        :return:
-        """
         return self.request('getheight')
+
+    def get_transfers(self, params=None):
+        return self.request('get_transfers', params)
+
+    def transfer(self, params):
+        return self.request('transfer', params)
+
+    def submit_transfer(self, params):
+        return self.request('submit_transfer', params)
 
 
 class HostAgent(cli.BaseCli):
@@ -283,6 +285,22 @@ class HostAgent(cli.BaseCli):
         res = self.wallet_proxy.balance()
         print('Balance: %.5f' % wallet.conv_disp_amount(res['result']['balance']))
         print('Unlocked Balance: %.5f' % wallet.conv_disp_amount(res['result']['unlocked_balance']))
+
+    def do_height(self, line):
+        res = self.wallet_proxy.height()
+        print('Height: %s' % res['result']['height'])
+
+    def do_get_transfers(self, line):
+        res = self.wallet_proxy.get_transfers({'pool': True, 'in': True, 'out': True})
+        print(json.dumps(res, indent=2))
+
+    def do_transfer(self, line):
+        if len(line) == 0:
+            print('Usage: transfer [<priority>] [<ring_size>] <address> <amount> [<payment_id>]')
+        parts = [x for x in line.split(' ') if len(x.strip()) > 0]
+
+        res = misc.parse_transfer_cmd(parts)
+        return self.transfer_cmd(res)
 
     def do_sign(self, line):
         self.wait_coro(self.sign_wrap(line))
@@ -620,10 +638,104 @@ class HostAgent(cli.BaseCli):
         self.shutdown_rpc()
         logger.info('Terminating')
 
-    async def sign_wrap(self, file):
+    #
+    # Sign op
+    #
+
+    def transfer_cmd(self, parts):
+        """
+        Transfer logic
+        :param parts:
+        :return:
+        """
+        priority, mixin, address, amount, payment_id = parts
+        try:
+            address_b = address.encode('ascii')
+            version, pub_spend_key, pub_view_key = monero.decode_addr(address_b)
+
+        except Exception as e:
+            print('Address invalid: %s ' % address)
+            return
+
+        print('Sending %s monero to %s' % (amount, address))
+        print('Priority: %s, mixin: %s, payment_id: %s'
+              % (priority if priority else 'default',
+                 mixin if mixin else 'default',
+                 payment_id))
+
+        ask_res = self.ask_proceed_quit('Do you confirm (y/n) ? ')
+        if ask_res != self.PROCEED_YES:
+            return
+
+        params = {
+            "destinations":
+                [{"amount": int((10**monero.DISPLAY_DECIMAL_POINT) * amount),
+                  "address": address},
+                 ],
+            "account_index": 0,
+            "subaddr_indices": [],
+            "unlock_time": 0,
+            "get_tx_keys": True,
+            "do_not_relay": True,
+            "get_tx_hex": False,
+            "get_tx_metadata": False
+        }
+        if priority is not None:
+            params['priority'] = priority
+
+        if mixin is not None:
+            params['mixin'] = mixin
+
+        # Call RPC to prepare unsigned transaction
+        self.transfer_params(params)
+
+    def transfer_params(self, params):
+        res = self.wallet_proxy.transfer(params)
+        result = res['result']
+        print('Fee: %s' % wallet.conv_disp_amount(result['fee']))
+
+        ask_res = self.ask_proceed_quit('Do you confirm (y/n) ? ')
+        if ask_res != self.PROCEED_YES:
+            return
+
+        unsigned = binascii.unhexlify(result['unsigned_txset'])
+        self.wait_coro(self.sign_unsigned(unsigned))
+
+    async def sign_unsigned(self, unsigned_txset):
+        """
+        Signs unsigned txset with the Trezor
+        :param unsigned_txset:
+        :return:
+        """
+        res = await self.sign_wrap(fdata=unsigned_txset)
+        if isinstance(res, int):
+            logger.error('Error')
+            return
+
+        print('Transaction has been signed. ')
+        ask_res = self.ask_proceed_quit('Do you wish to submit (y/n) ? ')
+        if ask_res != self.PROCEED_YES:
+            return
+
+        params = {
+            'tx_data_hex': binascii.hexlify(res).decode('ascii')
+        }
+
+        res = self.wallet_proxy.submit_transfer(params)
+        try:
+            if len(res['result']['tx_hash_list']) == 0:
+                raise ValueError('Transaction submit failed')
+
+            print('SUCCESS: Transaction has been submitted!')
+
+        except Exception as e:
+            print('Transaction submit failed')
+
+    async def sign_wrap(self, file=None, fdata=None):
         """
         Sign wrapper
         :param file:
+        :param fdata:
         :return:
         """
         if not self.priv_view:
@@ -631,7 +743,7 @@ class HostAgent(cli.BaseCli):
             return -3
 
         try:
-            return await self.sign(file)
+            return await self.sign(file, fdata)
 
         except agent_misc.TrezorReturnedError as e:
             self.trace_logger.log(e)
@@ -642,10 +754,11 @@ class HostAgent(cli.BaseCli):
             logger.error('Trezor server is not running')
             return 2
 
-    async def sign(self, file):
+    async def sign(self, file=None, fdata=None):
         """
         Performs TX signature
         :param file:
+        :param fdata:
         :return:
         """
         try:
@@ -653,12 +766,13 @@ class HostAgent(cli.BaseCli):
         except Exception as e:
             raise agent_misc.TrezorNotRunning(e)
 
-        if not os.path.exists(file):
+        if file and not os.path.exists(file):
             raise ValueError('Could not find unsigned transaction file')
 
-        data = None
-        with open(file, 'rb') as fh:
-            data = fh.read()
+        data = fdata
+        if data is None:
+            with open(file, 'rb') as fh:
+                data = fh.read()
 
         msg = await wallet.load_unsigned_tx(self.priv_view, data)
 
@@ -705,23 +819,23 @@ class HostAgent(cli.BaseCli):
             with open(fname, 'wb+') as fh:
                 fh.write(tx)
 
-            relay_fname = 'transaction_%02d_relay.sh' % idx
-            hex_ctx = binascii.hexlify(tx).decode('utf8')
-            with open(relay_fname, 'w+') as fh:
-                fh.write('#!/bin/bash\n')
-                fh.write('curl -X POST http://%s/sendrawtransaction '
-                         '-d \'{"tx_as_hex":"%s", "do_not_relay":false}\' '
-                         '-H \'Content-Type: application/json\'\n' % (self.args.rpc_addr, hex_ctx))
-
-            print('Transaction %02d stored to %s, relay script: %s' % (idx, fname, relay_fname))
+            # relay_fname = 'transaction_%02d_relay.sh' % idx
+            # hex_ctx = binascii.hexlify(tx).decode('utf8')
+            # with open(relay_fname, 'w+') as fh:
+            #     fh.write('#!/bin/bash\n')
+            #     fh.write('curl -X POST http://%s/sendrawtransaction '
+            #              '-d \'{"tx_as_hex":"%s", "do_not_relay":false}\' '
+            #              '-H \'Content-Type: application/json\'\n' % (self.args.rpc_addr, hex_ctx))
+            #
+            # print('Transaction %02d stored to %s, relay script: %s' % (idx, fname, relay_fname))
 
             # Relay:
             # payload = {'tx_as_hex': hex_ctx, 'do_not_relay': False}
             # resp = requests.post('http://%s/sendrawtransaction' % (self.args.rpc_addr, ), json=payload)
             # print('Relay response: %s' % resp.json())
 
-        print('Please note that by manual relaying hot wallet key images get out of sync')
-        return 0
+        # print('Please note that by manual relaying hot wallet key images get out of sync')
+        return signed_data
 
     async def main(self):
         """
