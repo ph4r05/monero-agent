@@ -35,6 +35,7 @@ poc_extras = [
     'flask-socketio',
     'eventlet',
     'gevent',
+    'sarge',
 ]
 
 docs_extras = [
