@@ -515,7 +515,7 @@ class TrezorServer(cli.BaseCli):
         print('Seed bip39 words: %s' % ' '.join(seed_bip32_words))
         print('Seed bip32 b58:   %s' % seed_bip32_b58)
 
-        print('Seed Monero:      %s' % binascii.hexlify(hashed).decode('ascii'))
+        print('Seed Monero:      0x%s' % binascii.hexlify(hashed).decode('ascii'))
         print('Seed Monero wrds: %s' % electrum_words)
 
         print('')
