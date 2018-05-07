@@ -113,11 +113,23 @@ class WalletRpc(object):
     """
     RPC helper
     """
-    def __init__(self, agent, port, creds=None):
+    def __init__(self, agent, port=None, creds=None):
         self.agent = agent
         self.port = port
         self.creds = creds
-        self.url = 'http://127.0.0.1:%s/json_rpc' % port
+        self.url = None
+        self.set_addr('127.0.0.1:%s' % port)
+
+    def set_addr(self, addr):
+        self.url = 'http://%s/json_rpc' % addr
+
+    def set_creds(self, creds):
+        if creds is None or (isinstance(creds, (list, tuple)) and len(creds) == 2):
+            self.creds = creds
+        elif isinstance(creds, str):
+            self.creds = creds.split(':', 1)
+        else:
+            raise ValueError('Unknown creds type')
 
     def request(self, method, params=None):
         """
@@ -127,7 +139,7 @@ class WalletRpc(object):
         :param params:
         :return:
         """
-        auth = HTTPDigestAuth('trezor', self.creds) if self.creds else None
+        auth = HTTPDigestAuth(self.creds[0], self.creds[1]) if self.creds else None
         js = {'jsonrpc': '2.0', 'id': '0', 'method': method}
         if params:
             js['params'] = params
@@ -496,7 +508,7 @@ class HostAgent(cli.BaseCli):
             sys.exit(1)
 
         self.rpc_passwd = misc.gen_simple_passwd(16)
-        self.wallet_proxy.creds = self.rpc_passwd
+        self.wallet_proxy.creds = 'monero', self.rpc_passwd
 
         # TODO: pass via config-file. Passwords visible via proclist. ideally ENV VARS
         args = ['--daemon-address %s' % misc.escape_shell(self.rpc_addr),
@@ -562,6 +574,8 @@ class HostAgent(cli.BaseCli):
         Waits for rpc shutdown
         :return:
         """
+        if self.args.wallet_rpc_addr:  # using already running rpc
+            return
         if not self.rpc_running:
             return
 
@@ -575,6 +589,13 @@ class HostAgent(cli.BaseCli):
         Starts wallet RPC server
         :return:
         """
+        if self.args.wallet_rpc_addr:  # using existing RPC?
+            self.wallet_proxy.set_addr(self.args.wallet_rpc_addr)
+            self.wallet_proxy.set_creds(self.args.wallet_rpc_creds)
+            self.rpc_running = True
+            self.update_prompt()
+            return
+
         self.wallet_thread = threading.Thread(target=self.wallet_rpc_main, args=(None,))
         self.wallet_thread.setDaemon(False)
         self.wallet_thread.start()
@@ -726,6 +747,12 @@ class HostAgent(cli.BaseCli):
 
         parser.add_argument('--rpc-addr', dest='rpc_addr', default=None,
                             help='RPC address of full node')
+
+        parser.add_argument('--rpc-wallet', dest='wallet_rpc_addr', default=None,
+                            help='Use running monero-wallet-rpc')
+
+        parser.add_argument('--rpc-wallet-creds', dest='wallet_rpc_creds', default=None,
+                            help='Running monero-wallet-rpc credentials')
 
         parser.add_argument('--sign', dest='sign', default=None,
                             help='Sign the unsigned file')
