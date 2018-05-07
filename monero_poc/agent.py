@@ -188,6 +188,18 @@ class HostAgent(cli.BaseCli):
                      '\n' + \
                      '-' * self.get_term_width()
 
+    def update_prompt(self):
+        """
+        Prompt update
+        :return:
+        """
+        rpc_flag = '' if self.rpc_running else 'R!'
+        flags = [rpc_flag]
+        flags_str = '|'.join(flags)
+        flags_suffix = '|' + flags_str if len(flags_str) > 0 else ''
+
+        self.prompt = '[wallet %s%s]: ' % (self.address[-6:].decode('ascii'), flags_suffix)
+
     #
     # Handlers
     #
@@ -198,6 +210,9 @@ class HostAgent(cli.BaseCli):
 
     do_q = do_quit
     do_Q = do_quit
+
+    def do_address(self, line):
+        print(self.address.decode('ascii'))
 
     def do_ping(self, line):
         try:
@@ -283,6 +298,8 @@ class HostAgent(cli.BaseCli):
         print('Public spend key: %s' % binascii.hexlify(crypto.encodepoint(self.pub_spend)).decode('ascii'))
         print('Public view key : %s' % binascii.hexlify(crypto.encodepoint(self.pub_view)).decode('ascii'))
         print('Address:          %s' % self.address.decode('utf8'))
+        self.update_intro()
+        self.update_prompt()
 
     async def check_params(self, new_wallet=False):
         """
@@ -427,6 +444,7 @@ class HostAgent(cli.BaseCli):
 
         self.rpc_passwd = misc.gen_simple_passwd(16)
 
+        # TODO: pass via config-file. Passwords visible via proclist. ideally ENV VARS
         args = ['--daemon-address %s' % misc.escape_shell(self.rpc_addr),
                 '--wallet-file %s' % misc.escape_shell(self.wallet_file),
                 '--password %s' % misc.escape_shell(self.wallet_password),
@@ -451,6 +469,7 @@ class HostAgent(cli.BaseCli):
         out_acc, err_acc = [], []
         try:
             self.rpc_running = True
+            self.update_prompt()
             while len(p.commands) == 0:
                 time.sleep(0.15)
 
@@ -472,6 +491,7 @@ class HostAgent(cli.BaseCli):
             out_acc = misc.add_readlines(p.stdout.readlines(), out_acc)
             err_acc = misc.add_readlines(p.stderr.readlines(), err_acc)
             self.rpc_running = False
+            self.update_prompt()
 
             if not self.terminating:
                 logger.error('Wallet RPC ended prematurely with code: %s' % ret_code)
