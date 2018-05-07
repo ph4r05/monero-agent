@@ -283,6 +283,10 @@ class HostAgent(cli.BaseCli):
 
         if self.args.rpc_addr:
             self.rpc_addr = self.args.rpc_addr
+        if self.args.watch_wallet:
+            self.wallet_file = self.args.watch_wallet
+        if self.args.monero_bin:
+            self.monero_bin = self.args.monero_bin
 
         if account_file_set and not account_file_ex:
             await self.check_params(True)
@@ -448,7 +452,7 @@ class HostAgent(cli.BaseCli):
         args = ['--daemon-address %s' % misc.escape_shell(self.rpc_addr),
                 '--wallet-file %s' % misc.escape_shell(self.wallet_file),
                 '--password %s' % misc.escape_shell(self.wallet_password),
-                '--rpc-login trezor:%s' % misc.escape_shell(self.rpc_passwd),
+                '--rpc-login=%s' % ('trezor:%s' % self.rpc_passwd),
                 '--rpc-bind-port %s' % int(self.rpc_bind_port),
         ]
 
