@@ -16,6 +16,7 @@ import argparse
 import binascii
 import logging
 import requests
+from requests.auth import HTTPDigestAuth
 import functools
 import coloredlogs
 import pickle
@@ -108,6 +109,48 @@ class TrezorProxy(trezor_lite.TrezorLite):
         return await self.transfer_pickle('tx_sign', 'final', *args, **kwargs)
 
 
+class WalletRpc(object):
+    """
+    RPC helper
+    """
+    def __init__(self, agent, port, creds=None):
+        self.agent = agent
+        self.port = port
+        self.creds = creds
+        self.url = 'http://127.0.0.1:%s/json_rpc' % port
+
+    def request(self, method, params=None):
+        """
+        Request wrapper
+        {"jsonrpc":"2.0","id":"0","method":"get_address", "params":{"account_index": 0, "address_index": [0,1,2,3,4,5]}
+        :param method:
+        :param params:
+        :return:
+        """
+        auth = HTTPDigestAuth('trezor', self.creds) if self.creds else None
+        js = {'jsonrpc': '2.0', 'id': '0', 'method': method}
+        if params:
+            js['params'] = params
+
+        resp = requests.post(self.url, json=js, auth=auth)
+        resp.raise_for_status()
+        return resp.json()
+
+    def balance(self):
+        """
+        Simple balance query
+        :return:
+        """
+        return self.request('getbalance')
+
+    def height(self):
+        """
+        Get height
+        :return:
+        """
+        return self.request('getheight')
+
+
 class HostAgent(cli.BaseCli):
     """
     Host agent wrapper
@@ -143,6 +186,7 @@ class HostAgent(cli.BaseCli):
 
         self.trezor_proxy = TrezorProxy()
         self.agent = agent_lite.Agent(self.trezor_proxy)
+        self.wallet_proxy = WalletRpc(self, self.rpc_bind_port, self.rpc_passwd)
 
     def looper(self, loop):
         """
@@ -222,6 +266,11 @@ class HostAgent(cli.BaseCli):
         except Exception as e:
             print('Trezor not connected')
             logger.debug(e)
+
+    def do_balance(self, line):
+        res = self.wallet_proxy.balance()
+        print('Balance: %.5f' % wallet.conv_disp_amount(res['result']['balance']))
+        print('Unlocked Balance: %.5f' % wallet.conv_disp_amount(res['result']['unlocked_balance']))
 
     def do_sign(self, line):
         self.wait_coro(self.sign_wrap(line))
@@ -447,6 +496,7 @@ class HostAgent(cli.BaseCli):
             sys.exit(1)
 
         self.rpc_passwd = misc.gen_simple_passwd(16)
+        self.wallet_proxy.creds = self.rpc_passwd
 
         # TODO: pass via config-file. Passwords visible via proclist. ideally ENV VARS
         args = ['--daemon-address %s' % misc.escape_shell(self.rpc_addr),
