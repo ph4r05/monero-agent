@@ -508,7 +508,7 @@ class HostAgent(cli.BaseCli):
             sys.exit(1)
 
         self.rpc_passwd = misc.gen_simple_passwd(16)
-        self.wallet_proxy.creds = 'monero', self.rpc_passwd
+        self.wallet_proxy.set_creds(['trezor', self.rpc_passwd])
 
         # TODO: pass via config-file. Passwords visible via proclist. ideally ENV VARS
         args = ['--daemon-address %s' % misc.escape_shell(self.rpc_addr),
