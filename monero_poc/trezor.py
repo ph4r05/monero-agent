@@ -33,7 +33,7 @@ from socketserver import ThreadingMixIn
 from . import cli
 from monero_poc import misc
 from monero_glue import trezor_lite, trezor_iface
-from monero_glue.xmr import monero, crypto, common
+from monero_glue.xmr import monero, crypto, common, wallet
 from monero_glue.xmr.backend import mnemonic
 from monero_glue.misc.bip import bip32
 
@@ -378,7 +378,7 @@ class TrezorServer(cli.BaseCli):
         self.poutput('Transaction was successfully signed\n')
 
     def conv_disp_amount(self, amount):
-        return amount / float(10 ** monero.DISPLAY_DECIMAL_POINT)
+        return wallet.conv_disp_amount(amount)
 
     def do_T(self, line):
         if not self.trez_iface.in_confirmation:
