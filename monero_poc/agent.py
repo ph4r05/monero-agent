@@ -9,6 +9,7 @@
 #
 
 import os
+import re
 import getpass
 import asyncio
 import argparse
@@ -28,9 +29,10 @@ from cmd2 import Cmd
 
 from . import trace_logger
 from . import cli
+from . import misc
 
 from monero_glue import agent_lite, agent_misc, trezor_lite
-from monero_glue.xmr import wallet, monero, crypto
+from monero_glue.xmr import wallet, monero, crypto, common
 from monero_glue.xmr.monero import TsxData
 from monero_serialize import xmrtypes
 
@@ -125,6 +127,10 @@ class HostAgent(cli.BaseCli):
         self.wallet_password = b''
         self.wallet_file = None
         self.monero_bin = None
+        self.rpc_addr = '127.0.0.1:18081'
+        self.rpc_passwd = None
+        self.rpc_bind_port = 48084
+        self.rpc_running = False
 
         self.trace_logger = trace_logger.Tracelogger(logger)
         self.loop = asyncio.get_event_loop()
@@ -132,6 +138,8 @@ class HostAgent(cli.BaseCli):
         self.worker_thread = threading.Thread(target=self.looper, args=(self.worker_loop, ))
         self.worker_thread.setDaemon(True)
         self.worker_thread.start()
+        self.wallet_thread = None
+        self.terminating = False
 
         self.trezor_proxy = TrezorProxy()
         self.agent = agent_lite.Agent(self.trezor_proxy)
@@ -184,8 +192,12 @@ class HostAgent(cli.BaseCli):
     # Handlers
     #
 
-    do_q = quit
-    do_Q = quit
+    def do_quit(self, line):
+        self.terminating = True
+        return super().do_quit(line)
+
+    do_q = do_quit
+    do_Q = do_quit
 
     def do_ping(self, line):
         try:
@@ -254,6 +266,9 @@ class HostAgent(cli.BaseCli):
             await self.check_params(True)
             await self.load_watchonly()
 
+        if self.args.rpc_addr:
+            self.rpc_addr = self.args.rpc_addr
+
         if account_file_set and not account_file_ex:
             await self.check_params(True)
             await self.prompt_password(True)
@@ -305,7 +320,9 @@ class HostAgent(cli.BaseCli):
             data = {
                 'view_key': binascii.hexlify(crypto.encodeint(self.priv_view)).decode('ascii'),
                 'address': self.address.decode('ascii'),
+                'network_type': self.network_type,
                 'wallet_password': self.wallet_password.decode('utf8'),
+                'rpc_addr': self.rpc_addr,
                 'wallet_file': self.args.watch_wallet,
                 'monero_bin': self.args.monero_bin,
                 'WARNING': 'Agent file is not password encrypted in the PoC',
@@ -375,6 +392,8 @@ class HostAgent(cli.BaseCli):
         self.address = js['address'].encode('utf8')
         self.wallet_file = js['wallet_file']
         self.monero_bin = js['monero_bin']
+        self.network_type = js['network_type']
+        self.rpc_addr = js['rpc_addr']
 
         if self.wallet_password != js['wallet_password'].encode('utf8'):
             raise ValueError('Password didnt match')
@@ -396,6 +415,96 @@ class HostAgent(cli.BaseCli):
         if not crypto.point_eq(self.pub_view, crypto.decodepoint(pub_view)):
             raise ValueError('Computed view public key does not match the one from address')
 
+    def wallet_rpc_main(self, *args, **kwargs):
+        """
+        Wallet RPC thread
+        :return:
+        """
+        rpc_cmd = os.path.join(self.monero_bin, 'monero-wallet-rpc')
+        if not os.path.exists(rpc_cmd):
+            logger.error('Wallet rpc binary not found: %s' % rpc_cmd)
+            sys.exit(1)
+
+        self.rpc_passwd = misc.gen_simple_passwd(16)
+
+        args = ['--daemon-address %s' % misc.escape_shell(self.rpc_addr),
+                '--wallet-file %s' % misc.escape_shell(self.wallet_file),
+                '--password %s' % misc.escape_shell(self.wallet_password),
+                '--rpc-login trezor:%s' % misc.escape_shell(self.rpc_passwd),
+                '--rpc-bind-port %s' % int(self.rpc_bind_port),
+        ]
+
+        if self.args.testnet or self.network_type == monero.NetworkTypes.TESTNET:
+            args.append('--testnet')
+
+        cmd = '%s %s' % (rpc_cmd, ' '.join(args))
+
+        feeder = misc.Feeder()
+        p = misc.run(cmd, input=feeder, async=True,
+                     stdout=misc.Capture(timeout=1, buffer_size=1),
+                     stderr=misc.Capture(timeout=1, buffer_size=1),
+                     cwd=os.getcwd(),
+                     env=None,
+                     shell=True)
+
+        ret_code = 1
+        out_acc, err_acc = [], []
+        try:
+            self.rpc_running = True
+            while len(p.commands) == 0:
+                time.sleep(0.15)
+
+            while p.commands[0].returncode is None:
+                out, err = p.stdout.read(1), p.stderr.read(1)
+                if not common.is_empty(out):
+                    out_acc.append(out.decode('utf8'))
+                if not common.is_empty(err):
+                    err_acc.append(err.decode('utf8'))
+
+                p.commands[0].poll()
+                if self.terminating:
+                    feeder.feed('quit\n\n')
+                    p.commands[0].kill()
+                    p.close()
+
+                time.sleep(0.01)
+            ret_code = p.commands[0].returncode
+            out_acc = misc.add_readlines(p.stdout.readlines(), out_acc)
+            err_acc = misc.add_readlines(p.stderr.readlines(), err_acc)
+            self.rpc_running = False
+
+            if not self.terminating:
+                logger.error('Wallet RPC ended prematurely with code: %s' % ret_code)
+                logger.info('Command: %s' % cmd)
+                logger.info('Std out: %s' % ''.join(out_acc))
+                logger.info('Error out: %s' % ''.join(err_acc))
+
+        except Exception as e:
+            logger.error('Exception in wallet RPC command: %s' % e)
+            self.trace_logger.log(e)
+
+    def shutdown_rpc(self):
+        """
+        Waits for rpc shutdown
+        :return:
+        """
+        if not self.rpc_running:
+            return
+
+        logger.info('Waiting for wallet-RPC to terminate...')
+        self.terminating = True
+        while self.rpc_running:
+            time.sleep(0.1)
+
+    async def wallet_rpc(self):
+        """
+        Starts wallet RPC server
+        :return:
+        """
+        self.wallet_thread = threading.Thread(target=self.wallet_rpc_main, args=(None,))
+        self.wallet_thread.setDaemon(False)
+        self.wallet_thread.start()
+
     async def entry(self):
         """
         Entry point
@@ -403,14 +512,17 @@ class HostAgent(cli.BaseCli):
         """
         if self.args.debug:
             coloredlogs.install(level=logging.DEBUG, use_chroot=False)
+        misc.install_sarge_filter()
 
         await self.open_account()
+        await self.wallet_rpc()
 
         if self.args.sign:
             return await self.sign_wrap(self.args.sign)
 
         self.update_intro()
         self.cmdloop()
+        self.shutdown_rpc()
         logger.info('Terminating')
 
     async def sign_wrap(self, file):
@@ -508,11 +620,10 @@ class HostAgent(cli.BaseCli):
 
             print('Transaction %02d stored to %s, relay script: %s' % (idx, fname, relay_fname))
 
-            if self.args.relay:
-                print('Relaying...')
-                payload = {'tx_as_hex': hex_ctx, 'do_not_relay': False}
-                resp = requests.post('http://%s/sendrawtransaction' % (self.args.rpc_addr, ), json=payload)
-                print('Relay response: %s' % resp.json())
+            # Relay:
+            # payload = {'tx_as_hex': hex_ctx, 'do_not_relay': False}
+            # resp = requests.post('http://%s/sendrawtransaction' % (self.args.rpc_addr, ), json=payload)
+            # print('Relay response: %s' % resp.json())
 
         print('Please note that by manual relaying hot wallet key images get out of sync')
         return 0
@@ -539,11 +650,8 @@ class HostAgent(cli.BaseCli):
         parser.add_argument('--monero-bin', dest='monero_bin',
                             help='Directory with monero binaries')
 
-        parser.add_argument('--rpc-addr', dest='rpc_addr', default='127.0.0.1:18081',
-                            help='RPC address for tsx relay')
-
-        parser.add_argument('--relay', dest='relay', default=False, action='store_const', const=True,
-                            help='Relay constructed transactions. Warning! Key images will get out of sync')
+        parser.add_argument('--rpc-addr', dest='rpc_addr', default=None,
+                            help='RPC address of full node')
 
         parser.add_argument('--sign', dest='sign', default=None,
                             help='Sign the unsigned file')
@@ -556,6 +664,11 @@ class HostAgent(cli.BaseCli):
 
         args_src = sys.argv
         self.args, unknown = parser.parse_known_args(args=args_src[1:])
+
+        if self.args.rpc_addr:
+            if not re.match(r'^\[?([.0-9a-f:]+)\]?(:[0-9]+)?$', self.args.rpc_addr):
+                logger.error('Invalid deamon address: %s' % self.args.rpc_addr)
+                return -1
 
         sys.argv = [args_src[0]]
         res = await self.entry()
