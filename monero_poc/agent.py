@@ -123,6 +123,8 @@ class HostAgent(cli.BaseCli):
         self.pub_spend = None
         self.network_type = None
         self.wallet_password = b''
+        self.wallet_file = None
+        self.monero_bin = None
 
         self.trace_logger = trace_logger.Tracelogger(logger)
         self.loop = asyncio.get_event_loop()
@@ -249,9 +251,11 @@ class HostAgent(cli.BaseCli):
         elif account_file_ex:
             await self.open_account_file(self.args.account_file)
         else:
+            await self.check_params(True)
             await self.load_watchonly()
 
         if account_file_set and not account_file_ex:
+            await self.check_params(True)
             await self.prompt_password(True)
 
         # Create watch only wallet file for monero-wallet-rpc
@@ -264,6 +268,20 @@ class HostAgent(cli.BaseCli):
         print('Public spend key: %s' % binascii.hexlify(crypto.encodepoint(self.pub_spend)).decode('ascii'))
         print('Public view key : %s' % binascii.hexlify(crypto.encodepoint(self.pub_view)).decode('ascii'))
         print('Address:          %s' % self.address.decode('utf8'))
+
+    async def check_params(self, new_wallet=False):
+        """
+        All params correctly entered?
+        :return:
+        """
+        if not new_wallet:
+            return
+        if self.args.watch_wallet is None:
+            logger.error('--watch-wallet file is not set. Please specify path where to create the monero watch wallet')
+            sys.exit(1)
+        if self.args.monero_bin is None:
+            logger.error('--monero-bin is not set. Please specify path to the monero binaries')
+            sys.exit(1)
 
     async def prompt_password(self, new_wallet=False):
         """
@@ -288,6 +306,8 @@ class HostAgent(cli.BaseCli):
                 'view_key': binascii.hexlify(crypto.encodeint(self.priv_view)).decode('ascii'),
                 'address': self.address.decode('ascii'),
                 'wallet_password': self.wallet_password.decode('utf8'),
+                'wallet_file': self.args.watch_wallet,
+                'monero_bin': self.args.monero_bin,
                 'WARNING': 'Agent file is not password encrypted in the PoC',
             }
             json.dump(data, fh, indent=2)
@@ -335,6 +355,8 @@ class HostAgent(cli.BaseCli):
         self.priv_view = crypto.b16_to_scalar(priv_view)
         self.address = self.args.address.encode('ascii')
         self.network_type = monero.NetworkTypes.TESTNET if self.args.testnet else monero.NetworkTypes.MAINNET
+        self.wallet_file = self.args.watch_wallet
+        self.monero_bin = self.args.monero_bin
         await self.open_with_keys(self.priv_view, self.address)
 
     async def open_account_file(self, file):
@@ -351,6 +373,8 @@ class HostAgent(cli.BaseCli):
         # Note the agent is not encrypted for PoC - demo.
         self.priv_view = crypto.b16_to_scalar(js['view_key'].encode('utf8'))
         self.address = js['address'].encode('utf8')
+        self.wallet_file = js['wallet_file']
+        self.monero_bin = js['monero_bin']
 
         if self.wallet_password != js['wallet_password'].encode('utf8'):
             raise ValueError('Password didnt match')
@@ -511,6 +535,9 @@ class HostAgent(cli.BaseCli):
 
         parser.add_argument('--watch-wallet', dest='watch_wallet',
                             help='Watch-only wallet files')
+
+        parser.add_argument('--monero-bin', dest='monero_bin',
+                            help='Directory with monero binaries')
 
         parser.add_argument('--rpc-addr', dest='rpc_addr', default='127.0.0.1:18081',
                             help='RPC address for tsx relay')
