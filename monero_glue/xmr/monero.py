@@ -9,7 +9,7 @@ import binascii
 import struct
 
 
-DISPLAY_DECIMAL_POINT=12
+DISPLAY_DECIMAL_POINT = 12
 
 
 class XmrNoSuchAddressException(common.XmrException):

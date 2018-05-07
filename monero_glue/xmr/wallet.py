@@ -6,7 +6,7 @@ import binascii
 import json
 import re
 
-from monero_glue.xmr import crypto, common
+from monero_glue.xmr import crypto, common, monero
 from monero_glue.xmr.enc import chacha
 from monero_serialize import xmrboost, xmrtypes, xmrserialize, xmrrpc, xmrjson
 
@@ -222,4 +222,13 @@ def construct_pending_tsx(tx, cd):
                                           dests=cd.dests,
                                           multisig_sigs=[], construction_data=cd)
     return pending
+
+
+def conv_disp_amount(amount):
+    """
+    Monero uint64 to display val.
+    :param amount:
+    :return:
+    """
+    return amount / float(10 ** monero.DISPLAY_DECIMAL_POINT)
 
