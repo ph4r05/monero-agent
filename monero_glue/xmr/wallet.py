@@ -58,14 +58,23 @@ class WalletKeyFile(object):
 
 async def load_keys_file(file, password):
     """
-    Loads wallet keys file
+    Load wallet keys file
     :param file:
     :param password:
     :return:
     """
     with open(file, 'rb') as fh:
         data = fh.read()
+    return await load_keys_data(data, password)
 
+
+async def load_keys_data(data, password):
+    """
+    Loads wallet keys file passed as byte string
+    :param file:
+    :param password:
+    :return:
+    """
     reader = xmrserialize.MemoryReaderWriter(bytearray(data))
     ar = xmrserialize.Archive(reader, False)
     msg = xmrtypes.KeysFileData()
@@ -102,6 +111,18 @@ async def save_keys_file(file, password, wkeyfile):
     :type wkeyfile: WalletKeyFile
     :return:
     """
+    data = await gen_keys_file(password, wkeyfile)
+    with open(file, 'wb') as fh:
+        fh.write(data)
+
+
+async def gen_keys_file(password, wkeyfile):
+    """
+    Generates wallet keys file as bytestring
+    :param password:
+    :param wkeyfile:
+    :return:
+    """
     key_data = wkeyfile.key_data  # type: WalletKeyData
     js = wkeyfile.to_json()
     del js['key_data']
@@ -111,7 +132,7 @@ async def save_keys_file(file, password, wkeyfile):
 
     # key_data KV serialization. Message -> Model.
     modeler = xmrrpc.Modeler(writing=True, modelize=True)
-    mdl = await modeler.message(obj=None, msg=key_data)
+    mdl = await modeler.message(msg=key_data)
 
     # Model -> binary
     writer = xmrserialize.MemoryReaderWriter()
@@ -134,8 +155,7 @@ async def save_keys_file(file, password, wkeyfile):
     msg.account_data = enc_enc[8:]
     await ar.message(msg)
 
-    with open(file, 'wb') as fh:
-        fh.write(bytes(writer.buffer))
+    return bytes(writer.buffer)
 
 
 async def load_unsigned_tx(priv_key, data):
