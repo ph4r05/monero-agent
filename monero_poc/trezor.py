@@ -46,7 +46,7 @@ eventlet.monkey_patch(socket=True)
 class TrezorInterface(trezor_iface.TrezorInterface):
     def __init__(self, server=None):
         self.server = server
-        self.tsx_waiter = misc.CliPrompt()
+        self.tsx_waiter = misc.CliPrompt(pre_wait_hook=server.update_prompt)
         self.tsx_data = None
         self.confirmed_result = False
 
@@ -106,7 +106,7 @@ class TrezorServer(cli.BaseCli):
         self.running = True
         self.stop_event = threading.Event()
         self.local_data = threading.local()
-        self.watch_only_waiter = misc.CliPrompt()
+        self.watch_only_waiter = misc.CliPrompt(pre_wait_hook=self.update_prompt)
         self.ui_lock = threading.Lock()
         self.use_werkzeug = False
         self.thread_rest = None
@@ -145,6 +145,11 @@ class TrezorServer(cli.BaseCli):
         :return:
         """
         flags = []
+        if self.watch_only_waiter.in_confirmation:
+            flags.append('W?')
+        if self.trez_iface.in_confirmation:
+            flags.append('T?')
+
         flags_str = '|'.join(flags)
         flags_suffix = '|' + flags_str if len(flags_str) > 0 else ''
 
@@ -409,6 +414,7 @@ class TrezorServer(cli.BaseCli):
         result = self.select([(0, 'Confirm the transaction'), (1, 'Reject')], 'Do you confirm the transaction? ')
         self.poutput('\n')
         self.trez_iface.confirmation(result == 0)
+        self.update_prompt()
 
     def do_W(self, line):
         if not self.watch_only_waiter.in_confirmation:
@@ -420,6 +426,7 @@ class TrezorServer(cli.BaseCli):
 
         self.poutput('\n')
         self.watch_only_waiter.confirmation(result == 0)
+        self.update_prompt()
 
     do_t = do_T
     do_w = do_W
