@@ -133,7 +133,7 @@ class TrezorServer(cli.BaseCli):
         if self.creds:
             self.intro += ('\n    Account address: %s ' % self.creds.address.decode('utf8'))
         else:
-            self.intro += ('\n    Account not initialized, call gen_account')
+            self.intro += ('\n    Account not initialized, call new_wallet')
 
         self.intro += ('\n    Running on: 127.0.0.1:%s ' % self.port) + \
                       '\n' + \
@@ -352,8 +352,8 @@ class TrezorServer(cli.BaseCli):
     do_q = quit
     do_Q = quit
 
-    def do_gen_account(self, line):
-        self.create_account(line)
+    def do_new_wallet(self, line):
+        self.create_wallet(line)
 
     def do_address(self, line):
         self.poutput(self.creds.address.decode('ascii'))
@@ -483,17 +483,17 @@ class TrezorServer(cli.BaseCli):
         self.thread_rest.setDaemon(True)
         self.thread_rest.start()
 
-    def create_account(self, line):
+    def create_wallet(self, line):
         """
         Creates a new account
         :return:
         """
         if self.args.account_file:
             if os.path.exists(self.args.account_file):
-                logger.error('Account file exists, could not overwrite')
+                logger.error('Wallet file exists, could not overwrite')
                 return
 
-        print('Generating new account...')
+        print('Generating new wallet...')
         seed = common.random_bytes(32)
 
         wl = bip32.Wallet.from_master_secret(seed)
@@ -545,7 +545,7 @@ class TrezorServer(cli.BaseCli):
         if self.args.account_file:
             with open(self.args.account_file, 'w+') as fh:
                 json.dump(self.account_data, fh, indent=2)
-        print('Account generated')
+        print('Wallet generated')
         self.update_prompt()
 
     async def open_account(self):
