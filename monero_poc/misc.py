@@ -27,13 +27,15 @@ class CliPrompt(object):
     Synchronous CLI confirmation waiter.
     """
 
-    def __init__(self):
+    def __init__(self, pre_wait_hook=None, *args, **kwargs):
         self.in_confirmation = False
         self.conf_evt = None
         self.confirmed_result = False
+        self.pre_wait_hook = pre_wait_hook
 
     def confirmation(self, confirmed):
         self.confirmed_result = confirmed
+        self.in_confirmation = False
         self.conf_evt.set()
 
     def _init_wait(self):
@@ -47,6 +49,9 @@ class CliPrompt(object):
         :return:
         """
         self._init_wait()
+        if self.pre_wait_hook:
+            self.pre_wait_hook()
+
         try:
             self.conf_evt.wait()
             return self.confirmed_result
