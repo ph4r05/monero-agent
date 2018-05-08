@@ -153,7 +153,7 @@ class TrezorServer(cli.BaseCli):
         flags_str = '|'.join(flags)
         flags_suffix = '|' + flags_str if len(flags_str) > 0 else ''
 
-        addr_str = self.creds.address.decode('ascii')[-6:] if self.creds else 'UNINIT'
+        addr_str = self.creds.address.decode('ascii')[:6] if self.creds else 'UNINIT'
         self.prompt = '[trezor %s%s]: ' % (addr_str, flags_suffix)
 
     #

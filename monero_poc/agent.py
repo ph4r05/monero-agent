@@ -256,7 +256,7 @@ class HostAgent(cli.BaseCli):
         flags_str = '|'.join(flags)
         flags_suffix = '|' + flags_str if len(flags_str) > 0 else ''
 
-        self.prompt = '[wallet %s%s]: ' % (self.address[-6:].decode('ascii'), flags_suffix)
+        self.prompt = '[wallet %s%s]: ' % (self.address[:6].decode('ascii'), flags_suffix)
 
     #
     # Handlers
