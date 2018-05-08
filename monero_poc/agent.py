@@ -768,7 +768,8 @@ class HostAgent(cli.BaseCli):
             print('SUCCESS: Transaction has been submitted!')
 
         except Exception as e:
-            print('Transaction submit failed')
+            logger.debug('Res: %s' % res)
+            print('Transaction submit failed: %s' % e)
 
     async def sign_wrap(self, file=None, fdata=None):
         """
