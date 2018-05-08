@@ -8,9 +8,12 @@ There are the following components:
 - Agent spawns custom `monero-wallet-rpc`
 
 This code relies on the watch-only features implemented to `monero-wallet-rpc`.
+
 https://github.com/monero-project/monero/pull/3780
 
+
 In case the code is not yet merged pls compile my fork:
+
 https://github.com/ph4r05/monero/tree/ph4master
 
 ## Usage
