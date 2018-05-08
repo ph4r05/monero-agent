@@ -731,6 +731,12 @@ class HostAgent(cli.BaseCli):
         if ask_res != self.PROCEED_YES:
             return
 
+        if 'unsigned_txset' not in result:
+            logger.error('Unsigned transaction not found in the response. '
+                         'Please make sure you are using compatible monero-wallet-rpc')
+            logger.debug(res)
+            return
+        
         unsigned = binascii.unhexlify(result['unsigned_txset'])
         self.wait_coro(self.sign_unsigned(unsigned))
 
