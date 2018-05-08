@@ -84,7 +84,7 @@ async def load_keys_data(data, password):
     buff = bytes(msg.iv + msg.account_data)
     dec = chacha.decrypt(key, buff)
 
-    m = re.search(b'(.*)"key_data":"(.+?)",?(.*)', dec)
+    m = re.search(b'(.*)"key_data":"(.+?)",(.*)', dec)
     key_data = m.group(2)
 
     dat = xmrjson.unescape_json_str(key_data)
