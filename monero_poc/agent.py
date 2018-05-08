@@ -436,6 +436,22 @@ class HostAgent(cli.BaseCli):
             }
             json.dump(data, fh, indent=2)
 
+    async def check_existing_wallet_file(self, key_file):
+        """
+        Checks existing wallet file correctness
+        :param key_file:
+        :return:
+        """
+        wl = await wallet.load_keys_file(key_file, self.wallet_password)
+        addr = wl['key_data']['m_keys']['m_account_address']
+        spend_pub = addr['m_spend_public_key']
+        view_pub = addr['m_view_public_key']
+
+        match = spend_pub == crypto.encodepoint(self.pub_spend) and view_pub == crypto.encodepoint(self.pub_view)
+        net_ver = monero.net_version(self.network_type, False)
+        addr = monero.encode_addr(net_ver, spend_pub, view_pub)
+        return addr, match
+
     async def ensure_watch_only(self):
         """
         Ensures watch only wallet for monero exists
@@ -447,6 +463,16 @@ class HostAgent(cli.BaseCli):
         key_file = '%s.keys' % self.args.watch_wallet
         if os.path.exists(key_file):
             logger.debug('Watch only wallet key file exists: %s' % key_file)
+            match = False
+            try:
+                addr, match = await self.check_existing_wallet_file(key_file)
+            except Exception as e:
+                logger.error('Wallet key file processing exception: %s' % e)
+
+            if not match:
+                logger.error('Key file address is not correct: %s' % addr)
+                print('Please, move the file so Agent can create correct key file')
+                sys.exit(2)
             return
 
         account_keys = xmrtypes.AccountKeys()
