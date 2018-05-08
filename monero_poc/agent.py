@@ -736,7 +736,7 @@ class HostAgent(cli.BaseCli):
                          'Please make sure you are using compatible monero-wallet-rpc')
             logger.debug(res)
             return
-        
+
         unsigned = binascii.unhexlify(result['unsigned_txset'])
         self.wait_coro(self.sign_unsigned(unsigned))
 
@@ -881,7 +881,7 @@ class HostAgent(cli.BaseCli):
         Entry point
         :return:
         """
-        parser = argparse.ArgumentParser(description='Trezor CLI based host client')
+        parser = argparse.ArgumentParser(description='Trezor Agent')
 
         parser.add_argument('--address', dest='address',
                             help='Full address')

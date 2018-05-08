@@ -631,7 +631,7 @@ class TrezorServer(cli.BaseCli):
         Entry point
         :return:
         """
-        parser = argparse.ArgumentParser(description='Trezor wallet')
+        parser = argparse.ArgumentParser(description='Trezor server')
 
         parser.add_argument('--testnet', dest='testnet', default=False, action='store_const', const=True,
                             help='Testnet')
