@@ -600,7 +600,7 @@ class HostAgent(cli.BaseCli):
                 p.commands[0].poll()
                 if self.terminating:
                     feeder.feed('quit\n\n')
-                    p.commands[0].kill()
+                    misc.sarge_sigint(p.commands[0])
                     p.close()
 
                 time.sleep(0.01)

@@ -9,6 +9,7 @@ import time
 import json
 import asyncio
 import binascii
+import signal
 import logging
 import random
 import string
@@ -184,6 +185,18 @@ def install_sarge_filter():
     for handler in logging.getLogger().handlers:
         handler.addFilter(SargeLogFilter('hnd'))
     logging.getLogger().addFilter(SargeLogFilter('root'))
+
+
+def sarge_sigint(proc):
+    """
+    Sends sigint to sarge process
+    :return:
+    """
+    proc.process_ready.wait()
+    p = proc.process
+    if not p:  # pragma: no cover
+        raise ValueError('There is no subprocess')
+    p.send_signal(signal.SIGINT)
 
 
 def escape_shell(inp):
