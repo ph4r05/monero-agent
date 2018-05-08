@@ -158,6 +158,9 @@ class WalletRpc(object):
     def get_transfers(self, params=None):
         return self.request('get_transfers', params)
 
+    def rescan_bc(self):
+        return self.request('rescan_blockchain')
+
     def transfer(self, params):
         return self.request('transfer', params)
 
@@ -292,6 +295,10 @@ class HostAgent(cli.BaseCli):
 
     def do_get_transfers(self, line):
         res = self.wallet_proxy.get_transfers({'pool': True, 'in': True, 'out': True})
+        print(json.dumps(res, indent=2))
+
+    def do_rescan_bc(self, line):
+        res = self.wallet_proxy.rescan_bc()
         print(json.dumps(res, indent=2))
 
     def do_transfer(self, line):
