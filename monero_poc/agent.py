@@ -167,6 +167,9 @@ class WalletRpc(object):
     def submit_transfer(self, params):
         return self.request('submit_transfer', params)
 
+    def stop_wallet(self):
+        return self.request('stop_wallet')
+
 
 class HostAgent(cli.BaseCli):
     """
@@ -598,7 +601,7 @@ class HostAgent(cli.BaseCli):
                     err_acc.append(err.decode('utf8'))
 
                 p.commands[0].poll()
-                if self.terminating:
+                if self.terminating and p.commands[0].returncode is None:
                     feeder.feed('quit\n\n')
                     misc.sarge_sigint(p.commands[0])
                     p.close()
@@ -630,6 +633,15 @@ class HostAgent(cli.BaseCli):
         if not self.rpc_running:
             return
 
+        # Gracegul stop with save
+        try:
+            self.wallet_proxy.stop_wallet()
+            self.terminating = True
+            time.sleep(1)
+        except Exception as e:
+            logger.warning('Stopping wallet failed: %s' % e)
+
+        # Terminating with sigint
         logger.info('Waiting for wallet-RPC to terminate...')
         self.terminating = True
         while self.rpc_running:
