@@ -463,7 +463,7 @@ class HostAgent(cli.BaseCli):
         key_file = '%s.keys' % self.args.watch_wallet
         if os.path.exists(key_file):
             logger.debug('Watch only wallet key file exists: %s' % key_file)
-            match = False
+            match, addr = False, None
             try:
                 addr, match = await self.check_existing_wallet_file(key_file)
             except Exception as e:
