@@ -506,7 +506,7 @@ class TrezorServer(cli.BaseCli):
 
         # to_hash is initial seed in the Monero sense, recoverable from this seed
         hashed = crypto.cn_fast_hash(to_hash)
-        electrum_words = mnemonic.mn_encode(binascii.hexlify(hashed))
+        electrum_words = ' '.join(mnemonic.mn_encode(hashed))
 
         keys = monero.generate_monero_keys(hashed)
         spend_sec, spend_pub, view_sec, view_pub = keys
