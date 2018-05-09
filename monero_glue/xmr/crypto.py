@@ -69,6 +69,16 @@ REPR_EXT = 1
 POINT_REPR = REPR_EXT
 
 
+#
+# Zmod(2^255 - 19) operations, fe (field element)
+# Not constant time! PoC only.
+#
+
+
+def fe_1():
+    return 1
+
+
 def fe_mod(a):
     return a % q
 
@@ -77,12 +87,41 @@ def fe_add(a, b):
     return (a + b) % q
 
 
+def fe_sub(a, b):
+    return (a - b) % q
+
+
+def fe_sq(a):
+    return (a * a) % q
+
+
 def fe_mul(a, b):
     return (a * b) % q
 
 
 def fe_expmod(b, e):
     return ed25519.expmod(b, e, q)
+
+
+def fe_divpowm1(u, v):
+    """
+    uv^3(uv^7)^((q-5)/8)
+    :param u:
+    :param v:
+    :return:
+    """
+    uv3 = ((u*v)^3) % q
+    uv7 = ((u*v)^7) % q
+
+    return uv3 * fe_expmod(uv7, ((q - 5) / 8), q)
+
+
+def fe_isnegative(x):
+    return x < 0
+
+
+def fe_isnonzero(x):
+    return x != 0
 
 
 def b16_to_scalar(bts):
