@@ -47,6 +47,7 @@ class TrezorInterface(trezor_iface.TrezorInterface):
     def __init__(self, server=None):
         self.server = server
         self.tsx_waiter = misc.CliPrompt(pre_wait_hook=server.update_prompt)
+        self.ki_sync_waiter = misc.CliPrompt(pre_wait_hook=server.update_prompt)
         self.tsx_data = None
         self.confirmed_result = False
 
@@ -73,7 +74,7 @@ class TrezorInterface(trezor_iface.TrezorInterface):
             self.tsx_data = None
 
     async def transaction_signed(self):
-        pass
+        logger.debug('Transaction signed')
 
     async def transaction_error(self, *args, **kwargs):
         logger.error('Transaction error: %s %s' % (args, kwargs))
@@ -83,6 +84,20 @@ class TrezorInterface(trezor_iface.TrezorInterface):
 
     async def transaction_step(self, step, sub_step=None):
         logger.debug('Transaction step: %s, sub step: %s' % (step, sub_step))
+
+    async def confirm_ki_sync(self, init_msg):
+        self.server.on_confirm_ki_sync(init_msg)
+        self.ki_sync_waiter.wait_confirmation()
+        return self.ki_sync_waiter.confirmed_result
+
+    async def ki_error(self, e):
+        logger.error('ki sync error: %s' % e)
+
+    async def ki_step(self, i):
+        logger.debug('ki sync progress: %s' % i)
+
+    async def ki_finished(self):
+        logger.info('ki sync finished')
 
 
 class TrezorServer(cli.BaseCli):
@@ -101,6 +116,7 @@ class TrezorServer(cli.BaseCli):
         self.port = 46123
         self.trez_iface = TrezorInterface(self)
         self.account_data = None
+        self.ki_sync_data = None
 
         self.loop = asyncio.get_event_loop()
         self.running = True
@@ -149,6 +165,8 @@ class TrezorServer(cli.BaseCli):
             flags.append('W?')
         if self.trez_iface.in_confirmation:
             flags.append('T?')
+        if self.trez_iface.ki_sync_waiter.in_confirmation:
+            flags.append('K?')
 
         flags_str = '|'.join(flags)
         flags_suffix = '|' + flags_str if len(flags_str) > 0 else ''
@@ -212,7 +230,11 @@ class TrezorServer(cli.BaseCli):
 
         @self.flask.route('/api/v1.0/tx_sign', methods=['GET', 'POST'])
         def tx_sign():
-            return self.wait_coro(self.on_tx_sign(request=request))
+            return self.wait_coro(self.on_tx_sign(request=request)) \
+
+        @self.flask.route('/api/v1.0/ki_sync', methods=['GET', 'POST'])
+        def ki_sync():
+            return self.wait_coro(self.on_ki_sync(request=request))
 
     def wsgi_options(self):
         """
@@ -339,6 +361,36 @@ class TrezorServer(cli.BaseCli):
         else:
             return abort(405)
 
+    async def on_ki_sync(self, request=None):
+        """
+        Key image sync
+        :param request:
+        :return:
+        """
+        js = request.json
+        cmd = js['cmd']
+        logger.debug('Action: %s' % cmd)
+        args, kwargs = self.unpickle_args(js) if 'payload' in js else ([], {})
+
+        if not self.trez:
+            logger.warning('KeyImage sync request on unitialized Trezor')
+            return abort(404)
+
+        if cmd == 'ask':
+            res = await self.trez.key_image_sync_ask(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
+        elif cmd == 'transfer':
+            res = await self.trez.key_image_sync_transfer(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
+        elif cmd == 'final':
+            res = await self.trez.key_image_sync_final(*args, **kwargs)
+            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+
+        else:
+            return abort(405)
+
     def unpickle_args(self, js):
         return pickle.loads(binascii.unhexlify(js['payload'].encode('utf8')))
 
@@ -376,6 +428,11 @@ class TrezorServer(cli.BaseCli):
     def on_transaction_signed(self):
         self.poutput('-' * 80)
         self.poutput('Transaction was successfully signed\n')
+
+    def on_confirm_ki_sync(self, msg):
+        self.ki_sync_data = msg
+        self.poutput('-' * 80)
+        self.poutput('Key image sync procedure\nEnter K to start\n')
 
     def conv_disp_amount(self, amount):
         return wallet.conv_disp_amount(amount)
@@ -428,8 +485,24 @@ class TrezorServer(cli.BaseCli):
         self.watch_only_waiter.confirmation(result == 0)
         self.update_prompt()
 
+    def do_K(self, line):
+        if not self.trez_iface.ki_sync_waiter.in_confirmation:
+            self.poutput('No prompt')
+            return
+
+        self.poutput('Agent asks to perform key image sync.')
+        self.poutput('Syncing %s outputs' % self.ki_sync_data.num)
+
+        result = self.select([(0, 'Confirm'), (1, 'Reject')],
+                             'Do you want to proceed? ')
+
+        self.poutput('\n')
+        self.trez_iface.ki_sync_waiter.confirmation(result == 0)
+        self.update_prompt()
+
     do_t = do_T
     do_w = do_W
+    do_k = do_K
 
     #
     # Work
