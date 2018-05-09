@@ -728,7 +728,7 @@ def ge_frombytes_vartime(point):
     :return:
     """
     ge_frombytes_vartime_check(point)
-    return key
+    return point
 
 
 def precomp(point):
