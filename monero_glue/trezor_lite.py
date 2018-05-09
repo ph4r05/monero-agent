@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+import traceback
+import binascii
+
 from monero_serialize import xmrtypes, xmrserialize
 from monero_glue.xmr.monero import TsxData, classify_subaddresses
 from . import trezor_iface, trezor_misc
@@ -52,6 +55,7 @@ class TrezorLite(object):
         self.ki_sync = None  # type: KeyImageSync
         self.creds = None  # type: monero.AccountCreds
         self.iface = trezor_iface.TrezorInterface()
+        self.debug = True
 
     async def ki_exc_handler(self, e):
         """
@@ -60,6 +64,9 @@ class TrezorLite(object):
         :param e:
         :return:
         """
+        if self.debug:
+            traceback.print_exc()
+
         self.err_ctr += 1
         self.ki_sync = None  # clear transaction object
         await self.iface.transaction_error(e)
@@ -73,6 +80,9 @@ class TrezorLite(object):
         :param e:
         :return:
         """
+        if self.debug:
+            traceback.print_exc()
+
         self.err_ctr += 1
         self.tsx_obj = None  # clear transaction object
         await self.iface.transaction_error(e)
