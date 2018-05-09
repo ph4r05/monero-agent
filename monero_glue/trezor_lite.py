@@ -1234,13 +1234,13 @@ class TTransaction(object):
 
         # Encrypted tx keys under transaction specific key, derived from txhash and spend key.
         # Deterministic transaction key, so we can recover it just from transaction and the spend key.
-        tx_key, salt, rand_mult, = trezor_misc.compute_tx_key(self.creds.spend_key_private, self.tx_prefix_hash)
+        tx_key, salt, rand_mult = trezor_misc.compute_tx_key(self.creds.spend_key_private, self.tx_prefix_hash)
 
         key_buff = crypto.encodeint(self.r) + b''.join([crypto.encodeint(x) for x in self.additional_tx_private_keys])
         tx_enc_keys = aesgcm.encrypt(tx_key, key_buff)
 
         res.append((salt, rand_mult))
-        res.append(tx_enc_keys)
+        res.append(b''.join(list(tx_enc_keys)))
 
         await self.trezor.iface.transaction_finished()
         return TResponse(*res)
