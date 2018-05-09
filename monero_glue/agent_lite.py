@@ -4,7 +4,7 @@
 
 from monero_serialize import xmrserialize, xmrtypes
 from monero_glue import trezor_lite, agent_misc
-from monero_glue.xmr import monero, common
+from monero_glue.xmr import monero, common, key_image, crypto
 from monero_glue.xmr.enc import aesgcm
 from monero_glue.old import trezor
 
@@ -290,17 +290,36 @@ class Agent(object):
         key images. Thus importing is needed.
 
         Wallet2::import_outputs()
-        TODO: implement. Ask user permission to generate key images with Trezor for x inputs.
 
         :param outputs:
         :return:
         """
-        for idx, td in enumerate(outputs):  # type: xmrtypes.TransferDetails
-            if common.is_empty(td.m_tx.vout):
-                raise ValueError('Tx with no outputs %s' % idx)
+        ki_export_init = await key_image.generate_commitment(outputs, 0)
+        t_res = await self.trezor.key_image_sync_ask(ki_export_init)
+        self.handle_error(t_res)
 
-            tx_pub_key = await monero.get_tx_pub_key_from_received_outs(td)
-            extras = await monero.parse_extra_fields(td.m_tx.extra)
-            additional_pub_keys = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraAdditionalPubKeys)
-            out_key = td.m_tx.vout[td.m_internal_output_index].target.key
+        sub_res = []
+        iter = await key_image.yield_key_image_data(outputs)
+        for rr in iter:  # type: key_image.TransferDetails
+            t_res = await self.trezor.key_image_sync_transfer(rr)
+            self.handle_error(t_res)
+
+            sub_res.append(t_res.args[0])
+
+        t_res = await self.trezor.key_image_sync_final()
+        self.handle_error(t_res)
+
+        # Decrypting phase
+        enc_key = t_res.args[0]
+        final_res = []
+        for sub in sub_res:  # type: key_image.ExportedKeyImage
+            plain = aesgcm.decrypt(enc_key, sub.iv, sub.blob, sub.tag)
+            ki_bin = plain[:32]
+
+            # ki = crypto.decodepoint(ki_bin)
+            # sig = [crypto.decodeint(plain[32:64]), crypto.decodeint(plain[64:])]
+
+            final_res.append((ki_bin, (plain[32:64], plain[64:])))
+
+        return final_res
 
