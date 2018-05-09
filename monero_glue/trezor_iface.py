@@ -41,3 +41,31 @@ class TrezorInterface(object):
         :return:
         """
 
+    async def confirm_ki_sync(self, init_msg):
+        """
+        Ask confirmation on key image sync
+        :param init_msg:
+        :return:
+        """
+        return True
+
+    async def ki_error(self, e):
+        """
+        Key image sync error
+        :param e:
+        :return:
+        """
+
+    async def ki_step(self, i):
+        """
+        Key image sync step
+        :param i:
+        :return:
+        """
+
+    async def ki_finished(self):
+        """
+        Ki sync finished
+        :return:
+        """
+

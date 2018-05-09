@@ -5,7 +5,7 @@
 from monero_serialize import xmrtypes, xmrserialize
 from monero_glue.xmr.monero import TsxData, classify_subaddresses
 from . import trezor_iface, trezor_misc
-from monero_glue.xmr import monero, mlsag2, ring_ct, crypto, common
+from monero_glue.xmr import monero, mlsag2, ring_ct, crypto, common, key_image
 from monero_glue.xmr.enc import aesgcm
 
 
@@ -49,10 +49,22 @@ class TrezorLite(object):
         self.tsx_ctr = 0
         self.err_ctr = 0
         self.tsx_obj = None  # type: TTransaction
+        self.ki_sync = None  # type: KeyImageSync
         self.creds = None  # type: monero.AccountCreds
         self.iface = trezor_iface.TrezorInterface()
 
-    async def exc_handler(self, e):
+    async def ki_exc_handler(self, e):
+        """
+        Handles the exception thrown in the Trezor processing.
+
+        :param e:
+        :return:
+        """
+        self.err_ctr += 1
+        self.ki_sync = None  # clear transaction object
+        await self.iface.transaction_error(e)
+
+    async def tsx_exc_handler(self, e):
         """
         Handles the exception thrown in the Trezor processing. Clears transaction state.
         We could use decorator/wrapper for message calls but not sure how uPython handles them
@@ -72,12 +84,11 @@ class TrezorLite(object):
         :return:
         """
         self.tsx_ctr += 1
-        self.tsx_obj = TTransaction(self)
-        self.tsx_obj.creds = self.creds
+        self.tsx_obj = TTransaction(self, creds=self.creds)
         try:
             return await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
         except Exception as e:
-            await self.exc_handler(e)
+            await self.tsx_exc_handler(e)
             return TError(exc=e)
 
     async def set_tsx_input(self, src_entr):
@@ -96,7 +107,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.set_input(src_entr)
         except Exception as e:
-            await self.exc_handler(e)
+            await self.tsx_exc_handler(e)
             return TError(exc=e)
 
     async def tsx_inputs_permutation(self, permutation):
@@ -108,7 +119,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.tsx_inputs_permutation(permutation)
         except Exception as e:
-            await self.exc_handler(e)
+            await self.tsx_exc_handler(e)
             return TError(exc=e)
 
     async def tsx_input_vini(self, *args, **kwargs):
@@ -121,7 +132,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.tsx_input_vini(*args, **kwargs)
         except Exception as e:
-            await self.exc_handler(e)
+            await self.tsx_exc_handler(e)
             return TError(exc=e)
 
     async def set_tsx_output1(self, dst_entr, dst_entr_hmac):
@@ -137,7 +148,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.set_out1(dst_entr, dst_entr_hmac)
         except Exception as e:
-            await self.exc_handler(e)
+            await self.tsx_exc_handler(e)
             return TError(exc=e)
 
     async def all_out1_set(self):
@@ -152,11 +163,11 @@ class TrezorLite(object):
             return await self.tsx_obj.all_out1_set()
 
         except trezor_misc.TrezorTxPrefixHashNotMatchingError as e:
-            await self.exc_handler(e)
+            await self.tsx_exc_handler(e)
             return TTxHashNotMatchingError(exc=e)
 
         except Exception as e:
-            await self.exc_handler(e)
+            await self.tsx_exc_handler(e)
             return TError(exc=e)
 
     async def tsx_mlsag_done(self):
@@ -168,7 +179,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.tsx_mlsag_done()
         except Exception as e:
-            await self.exc_handler(e)
+            await self.tsx_exc_handler(e)
             return TError(exc=e)
 
     async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
@@ -180,7 +191,7 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.sign_input(src_entr, vini, hmac_vini, pseudo_out, alpha)
         except Exception as e:
-            await self.exc_handler(e)
+            await self.tsx_exc_handler(e)
             return TError(exc=e)
 
     async def tx_sign_final(self, *args, **kwargs):
@@ -193,25 +204,47 @@ class TrezorLite(object):
         try:
             return await self.tsx_obj.final_msg(*args, **kwargs)
         except Exception as e:
-            await self.exc_handler(e)
+            await self.tsx_exc_handler(e)
             return TError(exc=e)
 
-    async def key_image_sync_ask(self, *args, **kwargs):
+    async def key_image_sync_ask(self, init_msg, *args, **kwargs):
         """
         Ask for initial permission to sync key images
-        TODO: implement
 
         :return:
         """
+        self.ki_sync = KeyImageSync(self, creds=self.creds)
+        try:
+            return await self.ki_sync.init(init_msg)
+        except Exception as e:
+            await self.ki_exc_handler(e)
+            return TError(exc=e)
 
     async def key_image_sync_transfer(self, td, *args, **kwargs):
         """
         Generate key image for one transfer detail.
-        TODO: implement
 
         :param td:
         :return:
         """
+        try:
+            return await self.ki_sync.sync(td)
+        except Exception as e:
+            await self.ki_exc_handler(e)
+            return TError(exc=e)
+
+    async def key_image_sync_final(self, *args, **kwargs):
+        """
+        Final message releasing dec keys if everything is OK
+
+        :param td:
+        :return:
+        """
+        try:
+            return await self.ki_sync.final()
+        except Exception as e:
+            await self.ki_exc_handler(e)
+            return TError(exc=e)
 
 
 class TState(object):
@@ -320,9 +353,9 @@ class TTransaction(object):
     STEP_MLSAG = 600
     STEP_SIGN = 700
 
-    def __init__(self, trezor=None):
+    def __init__(self, trezor=None, creds=None, **kwargs):
         self.trezor = trezor  # type: TrezorLite
-        self.creds = None  # type: monero.AccountCreds
+        self.creds = creds  # type: monero.AccountCreds
         self.key_master = None
         self.key_hmac = None
         self.key_enc = None
@@ -1244,4 +1277,67 @@ class TTransaction(object):
 
         await self.trezor.iface.transaction_finished()
         return TResponse(*res)
+
+
+class KeyImageSync(object):
+    def __init__(self, trezor=None, creds=None):
+        self.trezor = trezor  # type: TrezorLite
+        self.creds = creds  # type: monero.AccountCreds
+
+        self.num = 0
+        self.c_idx = -1
+        self.hash = None
+        self.blocked = None
+        self.enc_key = None
+        self.subaddresses = {}
+        self.hasher = common.HashWrapper(common.get_keccak())
+
+    async def init(self, msg):
+        confirmation = await self.trezor.iface.confirm_ki_sync(msg)
+        if not confirmation:
+            return TError(reason='rejected')
+
+        self.num = msg.num
+        self.hash = msg.hash
+        self.enc_key = common.get_random_bytes(32)
+        monero.compute_subaddresses(self.trezor.creds, msg.account, msg.minor_indices, self.subaddresses)
+        return TResponse()
+
+    async def sync(self, td):
+        if self.blocked:
+            raise ValueError('Blocked')
+
+        self.c_idx += 1
+        if self.c_idx >= self.num:
+            raise ValueError('Too many outputs')
+
+        hash = key_image.compute_hash(td)
+        self.hasher.update(hash)
+
+        ki, sig = ring_ct.export_key_image(self.trezor.creds, self.subaddresses,
+                                           td.out_key, td.tx_pub_key,
+                                           td.additional_tx_pub_keys, td.m_internal_output_index)
+
+        buff = crypto.encodepoint(ki)
+        buff += crypto.encodeint(sig[0])
+        buff += crypto.encodeint(sig[1])
+
+        nonce, ciph, tag = aesgcm.encrypt(self.enc_key, buff)
+        eki = key_image.ExportedKeyImage(iv=nonce, tag=tag, blob=ciph)
+        return TResponse(eki)
+
+    async def final(self):
+        if self.blocked:
+            raise ValueError('Blocked')
+
+        if self.c_idx + 1 != self.num:
+            await self.trezor.iface.ki_error('Invalid number of outputs')
+            raise ValueError('Invalid number of outputs')
+
+        final_hash = self.hasher.digest()
+        if final_hash != self.hash:
+            await self.trezor.iface.ki_error('Invalid hash')
+            raise ValueError('Invalid hash')
+
+        return TResponse(self.enc_key)
 
