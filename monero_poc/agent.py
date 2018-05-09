@@ -319,6 +319,9 @@ class HostAgent(cli.BaseCli):
         res = self.wallet_proxy.rescan_bc()
         print(json.dumps(res, indent=2))
 
+    def do_key_image_sync(self, line):
+        self.wait_coro(self.key_image_sync(line))
+
     def do_transfer(self, line):
         if len(line) == 0:
             print('Usage: transfer [<priority>] [<ring_size>] <address> <amount> [<payment_id>]')
@@ -930,6 +933,35 @@ class HostAgent(cli.BaseCli):
         except Exception as e:
             self.trace_logger.log(e)
             print('Unable to save transaction data for transaction %s' % binascii.hexlify(hash).decode('ascii'))
+
+    async def key_image_sync(self, line):
+        """
+        Key image sync with Trezor
+        :param line:
+        :return:
+        """
+        res = self.wallet_proxy.export_outputs()
+        outputs_data_hex = res['result']['outputs_data_hex']
+
+        outs_data = binascii.unhexlify(outputs_data_hex)
+        exps = await wallet.load_exported_outputs(self.priv_view, outs_data)
+
+        # Check if for this address
+        match = exps.m_spend_public_key == crypto.encodepoint(self.pub_spend) and \
+                exps.m_view_public_key == crypto.encodepoint(self.pub_view)
+        net_ver = monero.net_version(self.network_type, False)
+        addr = monero.encode_addr(net_ver, exps.m_spend_public_key, exps.m_view_public_key)
+        if not match:
+            logger.error('Exported outputs from different wallet: %s' % addr.decode('ascii'))
+            return
+
+        self.poutput('Exported outputs loaded.')
+        self.poutput('Please confirm the key image sync on the Trezor ')
+        res = await self.agent.import_outputs(exps.tds)
+        print(res)
+
+        # res2 = self.wallet_proxy.import_outputs({'outputs_data_hex': outputs_data_hex})
+        # print(res2)
 
     async def main(self):
         """
