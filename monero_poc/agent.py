@@ -856,6 +856,7 @@ class HostAgent(cli.BaseCli):
 
             res = await self.agent.sign_transaction_data(tx)
             cdata = self.agent.last_transaction_data()
+            await self.store_cdata(cdata)
 
             # obj = await xmrobj.dump_message(None, res)
             # print(xmrjson.json_dumps(obj, indent=2))
