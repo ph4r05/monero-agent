@@ -327,7 +327,10 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
     buff = prefix_hash
     sum = crypto.sc_0()
     k = crypto.sc_0()
-    sig = [None] * len(pubs)  # c, r
+    sig = []
+    for i in range(len(pubs)):
+        sig.append([crypto.sc_0(), crypto.sc_0(), ])  # c, r
+
     for i in range(len(pubs)):
         if i == sec_idx:
             k = crypto.random_scalar()
