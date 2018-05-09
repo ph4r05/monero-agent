@@ -26,6 +26,7 @@ class TData(object):
         self.alphas = []
         self.pseudo_outs = []
         self.couts = []
+        self.tx_prefix_hash = None
         self.enc_salt1 = None
         self.enc_salt2 = None
         self.enc_keys = None  # encrypted tx keys
@@ -218,8 +219,8 @@ class Agent(object):
         self.ct.tx.extra = list(bytearray(tx_extra))
 
         # Verify transaction prefix hash correctness, tx hash in one pass
-        tx_prefix_hash_computed = await monero.get_transaction_prefix_hash(self.ct.tx)
-        if tx_prefix_hash != tx_prefix_hash_computed:
+        self.ct.tx_prefix_hash = await monero.get_transaction_prefix_hash(self.ct.tx)
+        if tx_prefix_hash != self.ct.tx_prefix_hash:
             raise ValueError('Transaction prefix has does not match')
 
         # RctSig
