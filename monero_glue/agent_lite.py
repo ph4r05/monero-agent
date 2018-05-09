@@ -294,7 +294,7 @@ class Agent(object):
         :param outputs:
         :return:
         """
-        ki_export_init = await key_image.generate_commitment(outputs, 0)
+        ki_export_init = await key_image.generate_commitment(outputs)
         t_res = await self.trezor.key_image_sync_ask(ki_export_init)
         self.handle_error(t_res)
 

@@ -1310,7 +1310,10 @@ class KeyImageSync(object):
         self.num = msg.num
         self.hash = msg.hash
         self.enc_key = common.get_random_bytes(32)
-        monero.compute_subaddresses(self.trezor.creds, msg.account, msg.minor_indices, self.subaddresses)
+        # Sub address precomputation
+        if msg.subs and len(msg.subs) > 0:
+            for sub in msg.subs:  # type: key_image.SubAddrIndicesList
+                monero.compute_subaddresses(self.trezor.creds, sub.account, sub.minor_indices, self.subaddresses)
         return TResponse()
 
     async def sync(self, td):
@@ -1324,13 +1327,11 @@ class KeyImageSync(object):
         hash = key_image.compute_hash(td)
         self.hasher.update(hash)
 
-        ki, sig = ring_ct.export_key_image(self.trezor.creds, self.subaddresses,
-                                           td.out_key, td.tx_pub_key,
-                                           td.additional_tx_pub_keys, td.m_internal_output_index)
+        ki, sig = await key_image.export_key_image(self.trezor.creds, self.subaddresses, td)
 
         buff = crypto.encodepoint(ki)
-        buff += crypto.encodeint(sig[0])
-        buff += crypto.encodeint(sig[1])
+        buff += crypto.encodeint(sig[0][0])
+        buff += crypto.encodeint(sig[0][1])
 
         nonce, ciph, tag = aesgcm.encrypt(self.enc_key, buff)
         eki = key_image.ExportedKeyImage(iv=nonce, tag=tag, blob=ciph)
