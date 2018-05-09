@@ -6,7 +6,7 @@
 import logging
 
 from monero_serialize import xmrtypes
-from monero_glue.xmr import mlsag2, crypto, common, asnl
+from monero_glue.xmr import mlsag2, crypto, common, asnl, monero
 
 logger = logging.getLogger(__name__)
 ATOMS = 64
@@ -271,28 +271,6 @@ def ecdh_decode(masked, receiver_sk=None, derivation=None):
 #
 
 
-def ver_rct(rv):
-    """
-    Verifies that all signatures (rangeProogs, MG sig, sum inputs = outputs) are correct
-
-    Inputs:
-        - rangesigs is a list of one rangeproof for each output
-        - MG is the mgsig [ss, cc, II]
-        - mixRing is a ctkeyMatrix
-        - ecdhInfo is a list of masks / amounts for each output
-        - outPk is a vector of ctkeys (since we have computed the commitment for each amount)
-    :param rv: [rangesigs, MG, mixRing, ecdhInfo, outPk]
-    :return: true / false
-    """
-    rvb = True 
-    tmp = True 
-    for i in range(0, len(rv.outPk)): 
-        tmp = ver_range(rv.outPk[i].mask, rv.rangeSigs[i])
-        rvb = rvb and tmp
-    mgVerd = verify_rct_mg(rv.MG, rv.mixRing, rv.outPk)
-    return rvb and mgVerd
-
-
 def decode_rct(rv, sk, i):
     """
     c.f. http:#eprint.iacr.org/2015/1098 section 5.1.1
@@ -313,4 +291,118 @@ def decode_rct(rv, sk, i):
     if not crypto.point_eq(crypto.point_sub(C, Ctmp), crypto.identity()):
         logger.warning("warning, amount decoded incorrectly, will be unable to spend")
     return amount
+
+
+#
+# Key image import / export
+#
+
+
+def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
+    """
+    Generates ring signature with key image.
+    void crypto_ops::generate_ring_signature()
+
+    :param prefix_hash:
+    :param image:
+    :param pubs:
+    :param sec:
+    :param sec_idx:
+    :return:
+    """
+    if test:
+        t = crypto.scalarmult_base(sec)
+        if crypto.point_eq(t, pubs[sec_idx]):
+            raise ValueError('Invalid sec key')
+
+        k_i = monero.generate_key_image(pubs[sec_idx], sec)
+        if crypto.point_eq(k_i, image):
+            raise ValueError('Key image invalid')
+        for k in pubs:
+            crypto.ge_frombytes_vartime_check(k)
+
+    image_unp = crypto.ge_frombytes_vartime(image)
+    image_pre = crypto.ge_dsm_precomp(image_unp)
+
+    buff = prefix_hash
+    sum = crypto.sc_0()
+    k = crypto.sc_0()
+    sig = [None] * len(pubs)  # c, r
+    for i in range(len(pubs)):
+        if i == sec_idx:
+            k = crypto.random_scalar()
+            tmp3 = crypto.scalarmult_base(k)
+            buff += crypto.encodepoint(tmp3)
+            tmp3 = crypto.hash_to_ec(crypto.encodepoint(pubs[i]))
+            tmp2 = crypto.scalarmult(tmp3, k)
+            buff += crypto.encodepoint(tmp2)
+        else:
+            sig[i] = crypto.random_scalar(), crypto.random_scalar()
+            tmp3 = crypto.ge_frombytes_vartime(pubs[i])
+            tmp2 = crypto.ge_double_scalarmult_base_vartime(sig[i][0], tmp3, sig[i][1])
+            buff += crypto.encodepoint(tmp2)
+            tmp3 = crypto.hash_to_ec(crypto.encodepoint(tmp3))
+            tmp2 = crypto.ge_double_scalarmult_precomp_vartime(sig[i][1], tmp3, sig[i][0], image_pre)
+            buff += crypto.encodepoint(tmp2)
+            sum = crypto.sc_add(sum, sig[i][0])
+
+    h = crypto.hash_to_scalar(buff)
+    sig[sec_idx][0] = crypto.sc_sub(h, sum)
+    sig[sec_idx][1] = crypto.sc_mulsub(k, sig[sec_idx][0], sec)
+    return sig
+
+
+def check_ring_singature(prefix_hash, image, pubs, sig):
+    """
+    Checks ring signature generated with generate_ring_signature
+    :param prefix_hash:
+    :param image:
+    :param pubs:
+    :param sig:
+    :return:
+    """
+    image_unp = crypto.ge_frombytes_vartime(image)
+    image_pre = crypto.ge_dsm_precomp(image_unp)
+
+    buff = prefix_hash
+    sum = crypto.sc_0()
+    for i in range(len(pubs)):
+        if crypto.sc_check(sig[i][0]) != 0 or crypto.sc_check(sig[i][1]) != 0:
+            return False
+
+        tmp3 = crypto.ge_frombytes_vartime(pubs[i])
+        tmp2 = crypto.ge_double_scalarmult_base_vartime(sig[i][0], tmp3, sig[i][1])
+        buff += crypto.encodepoint(tmp2)
+        tmp3 = crypto.hash_to_ec(crypto.encodepoint(pubs[i]))
+        tmp2 = crypto.ge_double_scalarmult_precomp_vartime(sig[i][1], tmp3, sig[i][0], image_pre)
+        buff += crypto.encodepoint(tmp2)
+        sum = crypto.sc_add(sum, sig[i][0])
+
+    h = crypto.hash_to_scalar(buff)
+    h = crypto.sc_sub(h, sum)
+    return crypto.sc_isnonzero(h) == 0
+
+
+def export_key_image(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_keys, out_idx):
+    """
+    Generates key image for the TXO + signature for the key image
+    :param creds:
+    :param subaddresses:
+    :param pkey:
+    :param tx_pub_key:
+    :param additional_tx_pub_keys:
+    :param out_idx:
+    :return:
+    """
+    r = monero.generate_key_image_helper(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_keys, out_idx)
+    xi, ki, recv_derivation = r[:3]
+
+    phash = crypto.encodepoint(ki)
+    sig = generate_ring_signature(phash, ki, [pkey], xi, 0)
+
+    if __debug__:
+        if check_ring_singature(phash, ki, [pkey], sig) != 1:
+            raise ValueError('Signature error')
+
+    return ki, sig
 
