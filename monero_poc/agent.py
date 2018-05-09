@@ -185,6 +185,9 @@ class WalletRpc(object):
     def import_outputs(self, params=None):
         return self.request('import_outputs', params)
 
+    def import_key_images(self, params=None):
+        return self.request('import_key_images', params)
+
 
 class HostAgent(cli.BaseCli):
     """
@@ -958,10 +961,23 @@ class HostAgent(cli.BaseCli):
         self.poutput('Exported outputs loaded.')
         self.poutput('Please confirm the key image sync on the Trezor ')
         res = await self.agent.import_outputs(exps.tds)
-        print(res)
 
-        # res2 = self.wallet_proxy.import_outputs({'outputs_data_hex': outputs_data_hex})
-        # print(res2)
+        # Generate import key image requests
+        key_images = []
+        for kie in res:
+            key_images.append({
+                'key_image': binascii.hexlify(kie[0]).decode('ascii'),
+                'signature': binascii.hexlify(kie[1][0] + kie[1][1]).decode('ascii'),
+            })
+
+        import_req = {
+            'signed_key_images': key_images
+        }
+
+        res = self.wallet_proxy.import_key_images(import_req)
+        print('Height: %s' % res['result']['height'])
+        print('Spent: %s' % res['result']['spent'])
+        print('Unspent: %s' % res['result']['unspent'])
 
     async def main(self):
         """
