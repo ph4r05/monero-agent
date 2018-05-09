@@ -861,8 +861,6 @@ class HostAgent(cli.BaseCli):
             pending = wallet.construct_pending_tsx(res, tx)
             pendings.append(pending)
 
-            # TODO: store cdata.enc_salt1, cdata.enc_salt2, cdata.enc_keys
-
         # Key images array has to cover all transfers sent.
         # Watch only wallet does not have key images.
         signed_tx = xmrtypes.SignedTxSet(ptx=pendings, key_images=key_images)
@@ -894,6 +892,34 @@ class HostAgent(cli.BaseCli):
 
         # print('Please note that by manual relaying hot wallet key images get out of sync')
         return signed_data
+
+    async def store_cdata(self, cdata):
+        """
+        Stores transaction data for later usage.
+            - cdata.enc_salt1, cdata.enc_salt2, cdata.enc_keys
+        TODO: sign with view key
+
+        :param cdata:
+        :return:
+        """
+        hash = cdata.tx_prefix_hash
+        prefix = binascii.hexlify(hash[:12])
+        try:
+            js = {
+                'time': int(time.time()),
+                'hash': binascii.hexlify(hash).decode('ascii'),
+                'enc_salt1': binascii.hexlify(cdata.enc_salt1).decode('ascii'),
+                'enc_salt2': binascii.hexlify(cdata.enc_salt2).decode('ascii'),
+                'tx_keys': binascii.hexlify(cdata.enc_keys).decode('ascii'),
+            }
+
+            with open('transaction_%s.json' % prefix.decode('ascii'), 'w') as fh:
+                json.dump(js, fh, indent=2)
+                fh.write('\n')
+
+        except Exception as e:
+            self.trace_logger.log(e)
+            print('Unable to save transaction data for transaction %s' % binascii.hexlify(hash).decode('ascii'))
 
     async def main(self):
         """
