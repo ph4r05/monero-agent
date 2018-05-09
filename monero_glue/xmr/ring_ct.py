@@ -324,7 +324,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
     image_unp = crypto.ge_frombytes_vartime(image)
     image_pre = crypto.ge_dsm_precomp(image_unp)
 
-    buff = prefix_hash
+    buff = b'' + prefix_hash
     sum = crypto.sc_0()
     k = crypto.sc_0()
     sig = []
@@ -367,7 +367,7 @@ def check_ring_singature(prefix_hash, image, pubs, sig):
     image_unp = crypto.ge_frombytes_vartime(image)
     image_pre = crypto.ge_dsm_precomp(image_unp)
 
-    buff = prefix_hash
+    buff = b'' + prefix_hash
     sum = crypto.sc_0()
     for i in range(len(pubs)):
         if crypto.sc_check(sig[i][0]) != 0 or crypto.sc_check(sig[i][1]) != 0:
