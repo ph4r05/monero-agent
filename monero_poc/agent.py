@@ -976,8 +976,8 @@ class HostAgent(cli.BaseCli):
 
         res = self.wallet_proxy.import_key_images(import_req)
         print('Height: %s' % res['result']['height'])
-        print('Spent: %s' % res['result']['spent'])
-        print('Unspent: %s' % res['result']['unspent'])
+        print('Spent: %.5f' % wallet.conv_disp_amount(res['result']['spent']))
+        print('Unspent: %.5f' % wallet.conv_disp_amount(res['result']['unspent']))
 
     async def main(self):
         """
