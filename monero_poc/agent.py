@@ -109,6 +109,15 @@ class TrezorProxy(trezor_lite.TrezorLite):
     async def tx_sign_final(self, *args, **kwargs):
         return await self.transfer_pickle('tx_sign', 'final', *args, **kwargs)
 
+    async def key_image_sync_ask(self, *args, **kwargs):
+        return await self.transfer_pickle('ki_sync', 'ask', *args, **kwargs)
+
+    async def key_image_sync_transfer(self, *args, **kwargs):
+        return await self.transfer_pickle('ki_sync', 'transfer', *args, **kwargs)
+
+    async def key_image_sync_final(self, *args, **kwargs):
+        return await self.transfer_pickle('ki_sync', 'final', *args, **kwargs)
+
 
 class WalletRpc(object):
     """
