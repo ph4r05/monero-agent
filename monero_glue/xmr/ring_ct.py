@@ -308,15 +308,16 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
     :param pubs:
     :param sec:
     :param sec_idx:
+    :param test:
     :return:
     """
     if test:
         t = crypto.scalarmult_base(sec)
-        if crypto.point_eq(t, pubs[sec_idx]):
+        if not crypto.point_eq(t, pubs[sec_idx]):
             raise ValueError('Invalid sec key')
 
-        k_i = monero.generate_key_image(pubs[sec_idx], sec)
-        if crypto.point_eq(k_i, image):
+        k_i = monero.generate_key_image(crypto.encodepoint(pubs[sec_idx]), sec)
+        if not crypto.point_eq(k_i, image):
             raise ValueError('Key image invalid')
         for k in pubs:
             crypto.ge_frombytes_vartime_check(k)
@@ -329,7 +330,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
     k = crypto.sc_0()
     sig = []
     for i in range(len(pubs)):
-        sig.append([crypto.sc_0(), crypto.sc_0(), ])  # c, r
+        sig.append([crypto.sc_0(), crypto.sc_0()])  # c, r
 
     for i in range(len(pubs)):
         if i == sec_idx:
@@ -340,7 +341,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
             tmp2 = crypto.scalarmult(tmp3, k)
             buff += crypto.encodepoint(tmp2)
         else:
-            sig[i] = crypto.random_scalar(), crypto.random_scalar()
+            sig[i] = [crypto.random_scalar(), crypto.random_scalar()]
             tmp3 = crypto.ge_frombytes_vartime(pubs[i])
             tmp2 = crypto.ge_double_scalarmult_base_vartime(sig[i][0], tmp3, sig[i][1])
             buff += crypto.encodepoint(tmp2)
@@ -386,7 +387,7 @@ def check_ring_singature(prefix_hash, image, pubs, sig):
     return crypto.sc_isnonzero(h) == 0
 
 
-def export_key_image(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_keys, out_idx):
+def export_key_image(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_keys, out_idx, test=True, verify=True):
     """
     Generates key image for the TXO + signature for the key image
     :param creds:
@@ -395,15 +396,17 @@ def export_key_image(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_ke
     :param tx_pub_key:
     :param additional_tx_pub_keys:
     :param out_idx:
+    :param test:
+    :param verify:
     :return:
     """
     r = monero.generate_key_image_helper(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_keys, out_idx)
     xi, ki, recv_derivation = r[:3]
 
     phash = crypto.encodepoint(ki)
-    sig = generate_ring_signature(phash, ki, [pkey], xi, 0)
+    sig = generate_ring_signature(phash, ki, [pkey], xi, 0, test)
 
-    if __debug__:
+    if verify:
         if check_ring_singature(phash, ki, [pkey], sig) != 1:
             raise ValueError('Signature error')
 
