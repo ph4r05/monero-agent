@@ -13,6 +13,7 @@ from monero_serialize import xmrboost, xmrtypes, xmrserialize, xmrrpc, xmrjson
 UNSIGNED_TX_PREFIX = b"Monero unsigned tx set\004"
 SIGNED_TX_PREFIX = b"Monero signed tx set\004"
 MULTISIG_UNSIGNED_TX_PREFIX = b"Monero multisig unsigned tx set\001"
+OUTPUTS_PREFIX = b"Monero output export\003"
 
 
 class WalletKeyData(xmrtypes.WalletKeyData):
@@ -54,6 +55,18 @@ class WalletKeyFile(object):
 
     def to_json(self):
         return self.__dict__
+
+
+class ExportedOutputs(xmrserialize.ContainerType):
+    BOOST_VERSION = 0
+    ELEM_TYPE = xmrtypes.TransferDetails
+
+
+class OutputsDump(object):
+    def __init__(self, **kwargs):
+        self.m_spend_public_key = kwargs.get('m_spend_public_key', None)
+        self.m_view_public_key = kwargs.get('m_view_public_key', None)
+        self.tds = kwargs.get('tds', None)
 
 
 async def load_keys_file(file, password):
@@ -231,4 +244,35 @@ def conv_disp_amount(amount):
     :return:
     """
     return amount / float(10 ** monero.DISPLAY_DECIMAL_POINT)
+
+
+async def load_exported_outputs(priv_key, data):
+    """
+    Loads exported outputs file
+    :param data:
+    :return:
+    """
+    magic_len = len(OUTPUTS_PREFIX)
+    magic = data[:magic_len - 1]
+    version = int(data[magic_len - 1])
+    data = data[magic_len:]
+
+    if magic != OUTPUTS_PREFIX[:-1]:
+        raise ValueError('Invalid file header')
+    if version != 3:
+        raise ValueError('Exported outputs v3 is supported only')
+
+    data_dec = chacha.decrypt_xmr(priv_key, data, authenticated=True)
+
+    spend_pub = data_dec[:32]
+    view_pub = data_dec[32:64]
+    data_dec = data_dec[64:]
+
+    reader = xmrserialize.MemoryReaderWriter(bytearray(data_dec))
+    ar = xmrboost.Archive(reader, False)
+
+    await ar.root()
+    exps = await ar.container(container_type=ExportedOutputs)
+
+    return OutputsDump(m_spend_public_key=spend_pub, m_view_public_key=view_pub, tds=exps)
 
