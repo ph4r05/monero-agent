@@ -221,7 +221,7 @@ async def parse_extra_fields(extra_buff):
     :return:
     """
     extras = []
-    rw = xmrserialize.MemoryReaderWriter(extra_buff)
+    rw = xmrserialize.MemoryReaderWriter(list(extra_buff))
     ar2 = xmrserialize.Archive(rw, False)
     while len(rw.buffer) > 0:
         extras.append(await ar2.variant(elem_type=xmrtypes.TxExtraField))
@@ -1002,7 +1002,7 @@ async def get_tx_pub_key_from_received_outs(td):
     :type td: xmrtypes.TransferDetails
     :return:
     """
-    extras = await parse_extra_fields(td.m_tx.extra)
+    extras = await parse_extra_fields(list(td.m_tx.extra))
     tx_pub = find_tx_extra_field_by_type(extras, xmrtypes.TxExtraPubKey, 0)
 
     # Due to a previous bug, there might be more than one tx pubkey in extra, one being
