@@ -627,6 +627,42 @@ def ge_scalarmult_base(a):
     return scalarmult_base(a)
 
 
+def ge_double_scalarmult_base_vartime(a, A, b):
+    """
+    void ge_double_scalarmult_base_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A, const unsigned char *b)
+    r = a * A + b * B
+        where a = a[0]+256*a[1]+...+256^31 a[31].
+        and b = b[0]+256*b[1]+...+256^31 b[31].
+        B is the Ed25519 base point (x,4/5) with x positive.
+
+    :param a:
+    :param A:
+    :param b:
+    :return:
+    """
+    return point_add(scalarmult(A, a), scalarmult_base(b))
+
+
+def ge_double_scalarmult_precomp_vartime(a, A, b, Bi):
+    """
+    void ge_double_scalarmult_precomp_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A, const unsigned char *b, const ge_dsmp Bi)
+    :return:
+    """
+    return ge_double_scalarmult_precomp_vartime2(a, A, b, Bi)
+
+
+def ge_double_scalarmult_precomp_vartime2(a, Ai, b, Bi):
+    """
+    void ge_double_scalarmult_precomp_vartime2(ge_p2 *r, const unsigned char *a, const ge_dsmp Ai, const unsigned char *b, const ge_dsmp Bi)
+    :param a:
+    :param Ai:
+    :param b:
+    :param Bi:
+    :return:
+    """
+    return point_add(scalarmult(Ai, a), scalarmult(Bi, b))
+
+
 def scalarmult_h(a):
     """
     Returns aH
@@ -645,9 +681,11 @@ def identity(byte_enc=False):
     return idd if not byte_enc else encodepoint(idd)
 
 
-def ge_frombytes_vartime(key):
+def ge_frombytes_vartime_check(point):
     """
     https://www.imperialviolet.org/2013/12/25/elligator.html
+    http://elligator.cr.yp.to/
+    http://elligator.cr.yp.to/elligator-20130828.pdf
 
     Basically it takes some bytes of data
     converts to a point on the edwards curve
@@ -656,15 +694,55 @@ def ge_frombytes_vartime(key):
     ex. your secret key has to be at least >= 4294967277
     also it rejects certain curve points, i.e. "if x = 0, sign must be positive"
 
+    sqrt(s) = s^((q+3) / 8) if s^((q+3)/4) == s
+            = sqrt(-1) s ^((q+3) / 8) otherwise
+
     :param key:
     :return:
     """
+    x, y = point[:2]
+    z = fe_1()
+    u = fe_sq(y)
+    v = fe_mul(u, d)
+    u = fe_sub(u, 1)  # u = y^2-1
+    v = fe_add(v, 1)  # v = dy^2+1
+
+    # x = uv^3(uv^7)^((q-5)/8)
+
+    vxx = fe_sq(x)
+    vxx = fe_mul(vxx, v)
+    check = fe_sub(vxx, u)  # vx^2-u
+    if fe_isnonzero(check):
+        check = fe_add(vxx, u)
+        if fe_isnegative(check):
+            # return -1
+            raise ValueError('Point check failed')
     return 0
+
+
+def ge_frombytes_vartime(point):
+    """
+    https://www.imperialviolet.org/2013/12/25/elligator.html
+
+    :param key:
+    :return:
+    """
+    ge_frombytes_vartime_check(point)
+    return key
 
 
 def precomp(point):
     """
     Precomputation placeholder
+    :param point:
+    :return:
+    """
+    return point
+
+
+def ge_dsm_precomp(point):
+    """
+    void ge_dsm_precomp(ge_dsmp r, const ge_p3 *s)
     :param point:
     :return:
     """
@@ -737,7 +815,7 @@ def generate_key_derivation(key1, key2):
     if sc_check(key2) != 0:
         # checks that the secret key is uniform enough...
         raise ValueError("error in sc_check in keyder")
-    if ge_frombytes_vartime(key1) != 0:
+    if ge_frombytes_vartime_check(key1) != 0:
         raise ValueError("didn't pass curve checks in keyder")
 
     check_ed25519point(key1)
@@ -768,7 +846,7 @@ def derive_public_key(derivation, output_index, base):
     :param base:
     :return:
     """
-    if ge_frombytes_vartime(base) != 0:  # check some conditions on the point
+    if ge_frombytes_vartime_check(base) != 0:  # check some conditions on the point
         raise ValueError("derive pub key bad point")
     check_ed25519point(base)
 
