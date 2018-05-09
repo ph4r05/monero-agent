@@ -170,6 +170,12 @@ class WalletRpc(object):
     def stop_wallet(self):
         return self.request('stop_wallet')
 
+    def export_outputs(self):
+        return self.request('export_outputs')
+
+    def import_outputs(self, params=None):
+        return self.request('import_outputs', params)
+
 
 class HostAgent(cli.BaseCli):
     """
