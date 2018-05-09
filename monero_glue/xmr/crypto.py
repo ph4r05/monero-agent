@@ -490,14 +490,24 @@ def check_ed25519point(P):
         raise ValueError('P is not on ed25519 curve')
 
 
+def sc_0():
+    """
+    Sets 0 to the scalar value Zmod(m)
+    :return:
+    """
+    return 0
+
+
 def sc_check(key):
     """
     sc_check is not relevant for long-integer scalar representation.
-    TODO: scalar value check
+
     :param key:
     :return:
     """
-    return 0 if key > 1000 else 1
+    if key % l == 0:
+        return -1
+    return 0 if key == sc_reduce32(key) else -1
 
 
 def check_sc(key):
