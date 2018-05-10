@@ -6,7 +6,7 @@ import unittest
 
 import aiounittest
 
-from monero_glue.xmr import crypto
+from monero_glue.xmr import crypto, common
 
 
 class CryptoTest(aiounittest.AsyncTestCase):
@@ -143,6 +143,18 @@ class CryptoTest(aiounittest.AsyncTestCase):
 
             res2 = crypto.check_signature(data, c + 1, r, pub)
             self.assertEqual(res2, 0)
+
+    def test_edhex(self):
+        inputs = [
+            crypto.q - 2**9, crypto.q - 10, 0, 100, 2**200 + 10
+        ] + [
+            common.rand.randrange(0, crypto.q - 2) for _ in range(20)
+        ]
+
+        for x in inputs:
+            l = crypto.encode_ed25519_hex(x)
+            d = crypto.decode_ed25519_hex(l)
+            self.assertEqual(x, d)
 
 
 if __name__ == "__main__":
