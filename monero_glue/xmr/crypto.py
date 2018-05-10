@@ -113,7 +113,7 @@ def fe_divpowm1(u, v):
     uv3 = ((u*v)^3) % q
     uv7 = ((u*v)^7) % q
 
-    return uv3 * fe_expmod(uv7, ((q - 5) / 8), q)
+    return uv3 * fe_expmod(uv7, ((q - 5) / 8))
 
 
 def fe_isnegative(x):
