@@ -18,7 +18,7 @@ from monero_glue.xmr.backend import ed25519_2
 
 from monero_glue.xmr.backend.ed25519 import b, q, l, d
 
-from monero_glue.xmr.backend import keccak2, ed25519
+from monero_glue.xmr.backend import keccak2, ed25519, trezor_types as tty
 from monero_serialize import xmrserialize
 from monero_glue.xmr import common as common
 
@@ -853,6 +853,52 @@ def decode_modm(limbs):
         c = limbs[i] >> 30
         shift += 30
     return n
+
+
+def ge25519_to_point(ge):
+    """
+    Converts Trezor-crypto point to pyec
+    :param ge:
+    :return:
+    """
+    return (
+        decode_ed25519(ge.x),
+        decode_ed25519(ge.y),
+        decode_ed25519(ge.z),
+        decode_ed25519(ge.t),
+    )
+
+
+def ge25519_from_point(p):
+    """
+    Converts py EC point to trezor-crypto point ge25519_t
+    :param p:
+    :return:
+    """
+    return tty.Ge25519(
+        x=tty.FE(*encode_ed25519(p[0])),
+        y=tty.FE(*encode_ed25519(p[1])),
+        z=tty.FE(*encode_ed25519(p[2])),
+        t=tty.FE(*encode_ed25519(p[3])),
+    )
+
+
+def sc_to_modm(sc):
+    """
+    Scalar value to modm in trezor crypto
+    :param sc:
+    :return:
+    """
+    return tty.MODM(*encode_modm(sc))
+
+
+def sc_from_modm(modm):
+    """
+    Decodes modm to scalar value
+    :param modm:
+    :return:
+    """
+    return decodeint(modm.data)
 
 
 def generate_key_derivation(key1, key2):
