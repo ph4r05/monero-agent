@@ -830,7 +830,7 @@ def encode_modm(n):
     """
     n = n % l
     mask = ((1 << 30) - 1)
-    limbs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    limbs = [0, 0, 0, 0, 0, 0, 0, 0, 0]
     for i in range(9):
         limbs[i] = n & mask
         n >>= 30
@@ -848,7 +848,7 @@ def decode_modm(limbs):
     shift = 0
     mask = (1 << 30) - 1
 
-    for i in range(10):
+    for i in range(9):
         n += ((limbs[i] & mask) + c) << shift
         c = limbs[i] >> 30
         shift += 30
