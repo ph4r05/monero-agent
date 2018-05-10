@@ -762,7 +762,7 @@ def encode_edd25519_xmr_const(arr):
     for i, x in enumerate(arr):
         r = x + c
         if x < 0:
-            r = r + 2**bits[i]
+            r = r + (1 << bits[i])
             c = x >> bits[i]
         else:
             c = 0
@@ -781,9 +781,27 @@ def encode_ed25519_hex(n):
     limbs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     bits = [26, 25, 26, 25, 26, 25, 26, 25, 26, 25]
     for i in range(10):
-        limbs[i] = n & (2**bits[i]-1)
+        limbs[i] = n & ((1 << bits[i])-1)
         n >>= bits[i]
     return limbs
+
+
+def decode_ed25519_hex(limbs):
+    """
+    Decodes hexcoded limbs with 25.5 radix to Zmod(2^255-19) integer
+
+    :param n:
+    :return:
+    """
+    n = 0
+    c = 0
+    shift = 0
+    bits = [26, 25, 26, 25, 26, 25, 26, 25, 26, 25]
+    for i in range(10):
+        n += (limbs[i] & ((1 << bits[i])-1) + c) << shift
+        c = limbs[i] >> bits[i]
+        shift += bits[i]
+    return n
 
 
 def encode_ed25519_sign(x):
@@ -798,8 +816,8 @@ def encode_ed25519_sign(x):
     x = [x, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     bits = [26, 25, 26, 25, 26, 25, 26, 25, 26, 25]
     for i in range(9):
-        carry = (x[i] + 2**(bits[i]-1)) // 2**bits[i]
-        x[i] -= carry * 2**bits[i]
+        carry = (x[i] + (1 << (bits[i]-1))) // (1 << bits[i])
+        x[i] -= carry * (1 << bits[i])
         x[i + 1] += carry
     return x
 
