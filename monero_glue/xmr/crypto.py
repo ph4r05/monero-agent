@@ -770,7 +770,7 @@ def encode_edd25519_xmr_const(arr):
     return limbs
 
 
-def encode_ed25519_hex(n):
+def encode_ed25519(n):
     """
     Encodes Zmod(2^255-19) integer to hexcoded limbs with 25.5 radix
 
@@ -786,7 +786,7 @@ def encode_ed25519_hex(n):
     return limbs
 
 
-def decode_ed25519_hex(limbs):
+def decode_ed25519(limbs):
     """
     Decodes hexcoded limbs with 25.5 radix to Zmod(2^255-19) integer
 
@@ -798,7 +798,7 @@ def decode_ed25519_hex(limbs):
     shift = 0
     bits = [26, 25, 26, 25, 26, 25, 26, 25, 26, 25]
     for i in range(10):
-        n += (limbs[i] & ((1 << bits[i])-1) + c) << shift
+        n += ((limbs[i] & ((1 << bits[i])-1)) + c) << shift
         c = limbs[i] >> bits[i]
         shift += bits[i]
     return n
@@ -820,6 +820,39 @@ def encode_ed25519_sign(x):
         x[i] -= carry * (1 << bits[i])
         x[i + 1] += carry
     return x
+
+
+def encode_modm(n):
+    """
+    Encodes scalar mod m to limbs with base 30
+    :param x:
+    :return:
+    """
+    n = n % l
+    mask = ((1 << 30) - 1)
+    limbs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    for i in range(9):
+        limbs[i] = n & mask
+        n >>= 30
+    return limbs
+
+
+def decode_modm(limbs):
+    """
+    Decodes scalar mod m from limbs with base 30
+    :param n:
+    :return:
+    """
+    n = 0
+    c = 0
+    shift = 0
+    mask = (1 << 30) - 1
+
+    for i in range(10):
+        n += ((limbs[i] & mask) + c) << shift
+        c = limbs[i] >> 30
+        shift += 30
+    return n
 
 
 def generate_key_derivation(key1, key2):

@@ -152,8 +152,20 @@ class CryptoTest(aiounittest.AsyncTestCase):
         ]
 
         for x in inputs:
-            l = crypto.encode_ed25519_hex(x)
-            d = crypto.decode_ed25519_hex(l)
+            l = crypto.encode_ed25519(x)
+            d = crypto.decode_ed25519(l)
+            self.assertEqual(x, d)
+
+    def test_modm(self):
+        inputs = [
+            crypto.l - 2**9, crypto.l - 10, 0, 100, 2**200 + 10
+        ] + [
+            common.rand.randrange(0, crypto.l - 2) for _ in range(20)
+        ]
+
+        for x in inputs:
+            l = crypto.encode_modm(x)
+            d = crypto.decode_modm(l)
             self.assertEqual(x, d)
 
 
