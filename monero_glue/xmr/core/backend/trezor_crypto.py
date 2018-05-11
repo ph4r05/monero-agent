@@ -162,19 +162,9 @@ def init_lib():
     return res
 
 
-def ge25519_pack(p):
-    buff = tt.KEY_BUFF()
-    CLIB.ge25519_pack(buff, p)
-    return bytes(bytearray(buff))
-
-
-def ge25519_unpack_vartime(buff):
-    pt = tt.Ge25519()
-    buff = tt.KEY_BUFF(*buff)
-    r = CLIB.ge25519_unpack_vartime(ct.byref(pt), buff)
-    if r != 1:
-        raise ValueError('Point decoding error')
-    return pt
+#
+# SC
+#
 
 
 def expand256_modm(buff):
@@ -265,6 +255,45 @@ def mulsub256_modm(a, b, c):
     CLIB.mulsub256_modm(r, a, b, c)
     return r
 
+
+#
+# FE
+#
+
+
+def curve25519_copy(a, b):
+    return CLIB.curve25519_copy(ct.byref(a), ct.byref(b))
+
+
+def curve25519_clone(a):
+    r = tt.Ge25519()
+    CLIB.curve25519_copy(ct.byref(r), ct.byref(a))
+    return r
+
+
+#
+# GE
+#
+
+
+def ge25519_pack(p):
+    buff = tt.KEY_BUFF()
+    CLIB.ge25519_pack(buff, p)
+    return bytes(bytearray(buff))
+
+
+def ge25519_unpack_vartime(buff):
+    pt = tt.Ge25519()
+    buff = tt.KEY_BUFF(*buff)
+    r = CLIB.ge25519_unpack_vartime(ct.byref(pt), buff)
+    if r != 1:
+        raise ValueError('Point decoding error')
+    return pt
+
+
+#
+# XMR
+#
 
 def xmr_hash_to_ec(buff):
     """
