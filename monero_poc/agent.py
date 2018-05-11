@@ -188,6 +188,9 @@ class WalletRpc(object):
     def import_key_images(self, params=None):
         return self.request('import_key_images', params)
 
+    def refresh(self, params=None):
+        return self.request('refresh', params)
+
 
 class HostAgent(cli.BaseCli):
     """
@@ -324,6 +327,10 @@ class HostAgent(cli.BaseCli):
 
     def do_key_image_sync(self, line):
         self.wait_coro(self.key_image_sync(line))
+
+    def do_refresh(self, line):
+        res = self.wallet_proxy.refresh()
+        print(json.dumps(res, indent=2))
 
     def do_transfer(self, line):
         if len(line) == 0:
