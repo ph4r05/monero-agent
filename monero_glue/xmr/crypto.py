@@ -13,32 +13,15 @@ import sys
 import operator
 
 from Crypto.Random import random as rand
-import binascii  # conversion between hex, int, and binary. Also for the crc32 thing
-from monero_glue.xmr.backend import ed25519_2
+import binascii
 
-from monero_glue.xmr.backend.ed25519 import b, q, l, d
+from monero_glue.xmr.core.backend import ed25519_2, trezor_types as tty
+from monero_glue.xmr.core.backend.ed25519 import b, q, l, d
+from monero_glue.xmr.core.backend import keccak2, ed25519
+from monero_glue.xmr.core.pycompat import *
 
-from monero_glue.xmr.backend import keccak2, ed25519, trezor_types as tty
 from monero_serialize import xmrserialize
 from monero_glue.xmr import common as common
-
-# Useful for very coarse version differentiation.
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    indexbytes = operator.getitem
-    intlist2bytes = bytes
-    int2byte = operator.methodcaller('to_bytes', 1, 'big')
-
-else:
-    int2byte = chr
-    range = xrange
-
-    def indexbytes(buf, i):
-        return ord(buf[i])
-
-    def intlist2bytes(l):
-        return b"".join(chr(c) for c in l)
 
 
 # Extended curve coordinates

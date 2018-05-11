@@ -4,7 +4,7 @@
 
 import unittest
 
-from monero_glue.xmr.backend import ed25519
+from monero_glue.xmr.core.backend import ed25519
 
 
 class Basetest(unittest.TestCase):

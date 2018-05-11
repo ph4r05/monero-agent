@@ -7,6 +7,7 @@ from . import trezor_types as tt
 CLIB = ct.cdll.LoadLibrary(os.path.join(os.path.dirname(__file__), './libtrezor-crypto.so'))
 
 # Functions
+CLIB.random_init.restype = ct.c_int
 CLIB.xmr_hash_to_ec.argtypes = [ct.c_void_p, ct.c_size_t, ct.POINTER(tt.Ge25519)]
 
 # void xmr_gen_range_sig(xmr_range_sig_t * sig, xmr_key_t * C, xmr_key_t * mask, xmr_amount amount, bignum256modm * last_mask);
@@ -17,6 +18,16 @@ CLIB.xmr_gen_range_sig.argtypes = [ct.POINTER(tt.XmrRangeSig), ct.POINTER(tt.Xmr
 #
 # Wrappers
 #
+
+def init_lib():
+    """
+    Initializes Trezor crypto library
+    :return:
+    """
+    res = CLIB.random_init()
+    if res < 0:
+        raise ValueError('Library initialization error: %s' % res)
+    return res
 
 
 def xmr_hash_to_ec(buff):

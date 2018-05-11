@@ -21,20 +21,16 @@ import threading
 import coloredlogs
 import pickle
 import collections
-from blessed import Terminal
-from cmd2 import Cmd
 
 import eventlet
 from eventlet import wsgi
 from flask import Flask, jsonify, request, abort
-from wsgiref.simple_server import make_server, WSGIServer
-from socketserver import ThreadingMixIn
 
 from . import cli
 from monero_poc import misc
 from monero_glue import trezor_lite, trezor_iface
 from monero_glue.xmr import monero, crypto, common, wallet
-from monero_glue.xmr.backend import mnemonic
+from monero_glue.xmr.core import mnemonic
 from monero_glue.misc.bip import bip32
 
 logger = logging.getLogger(__name__)

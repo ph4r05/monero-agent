@@ -4,10 +4,11 @@
 
 
 from monero_serialize import xmrserialize, protobuf as xproto
-from monero_glue.xmr.backend import keccak2
+from monero_glue.xmr.core.backend import keccak2
 from Crypto.Protocol.KDF import PBKDF2
-from Crypto.Random import random as rand
+
 from Crypto.Random import get_random_bytes
+from Crypto.Random import random as rand
 
 import hmac
 import functools
