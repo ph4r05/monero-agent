@@ -167,38 +167,32 @@ def init_lib():
 #
 
 
-def expand256_modm(buff):
-    m = tt.MODM()
-    CLIB.expand256_modm(m, buff, len(buff))
-    return m
+def expand256_modm(r, buff):
+    CLIB.expand256_modm(r, buff, len(buff))
+    return r
 
 
-def contract256_modm(sc):
-    buff = tt.KEY_BUFF()
+def contract256_modm(buff, sc):
     CLIB.contract256_modm(buff, sc)
     return bytes(bytearray(buff))
 
 
-def add256_modm(a, b):
-    r = tt.MODM()
+def add256_modm(r, a, b):
     CLIB.add256_modm(r, a, b)
     return r
 
 
-def neg256_modm(a):
-    r = tt.MODM()
+def neg256_modm(r, a):
     CLIB.neg256_modm(r, a)
     return r
 
 
-def sub256_modm(a, b):
-    r = tt.MODM()
+def sub256_modm(r, a, b):
     CLIB.sub256_modm(r, a, b)
     return r
 
 
-def mul256_modm(a, b):
-    r = tt.MODM()
+def mul256_modm(r, a, b):
     CLIB.mul256_modm(r, a, b)
     return r
 
@@ -208,8 +202,7 @@ def reduce256_modm(a):
     return a
 
 
-def barrett_reduce256_modm(a, b):
-    r = tt.MODM()
+def barrett_reduce256_modm(r, a, b):
     CLIB.barrett_reduce256_modm(r, a, b)
     return r
 
@@ -218,8 +211,7 @@ def set256_modm(a, b):
     CLIB.set256_modm(a, ct.c_uint64(b))
 
 
-def init256_modm(a):
-    r = tt.MODM()
+def init256_modm(r, a):
     CLIB.set256_modm(r, ct.c_uint64(a))
     return r
 
@@ -250,7 +242,60 @@ def check256_modm(a):
     return CLIB.copy256_modm(a)
 
 
-def mulsub256_modm(a, b, c):
+def mulsub256_modm(r, a, b, c):
+    CLIB.mulsub256_modm(r, a, b, c)
+    return r
+
+
+def expand256_modm_r(buff):
+    m = tt.MODM()
+    CLIB.expand256_modm(m, buff, len(buff))
+    return m
+
+
+def contract256_modm_r(sc):
+    buff = tt.KEY_BUFF()
+    CLIB.contract256_modm(buff, sc)
+    return bytes(bytearray(buff))
+
+
+def add256_modm_r(a, b):
+    r = tt.MODM()
+    CLIB.add256_modm(r, a, b)
+    return r
+
+
+def neg256_modm_r(a):
+    r = tt.MODM()
+    CLIB.neg256_modm(r, a)
+    return r
+
+
+def sub256_modm_r(a, b):
+    r = tt.MODM()
+    CLIB.sub256_modm(r, a, b)
+    return r
+
+
+def mul256_modm_r(a, b):
+    r = tt.MODM()
+    CLIB.mul256_modm(r, a, b)
+    return r
+
+
+def barrett_reduce256_modm_r(a, b):
+    r = tt.MODM()
+    CLIB.barrett_reduce256_modm(r, a, b)
+    return r
+
+
+def init256_modm_r(a):
+    r = tt.MODM()
+    CLIB.set256_modm(r, ct.c_uint64(a))
+    return r
+
+
+def mulsub256_modm_r(a, b, c):
     r = tt.MODM()
     CLIB.mulsub256_modm(r, a, b, c)
     return r
