@@ -20,27 +20,32 @@ from monero_glue.xmr.core.backend.ed25519 import b, q, l, d
 from monero_glue.xmr.core.backend import keccak2, ed25519
 from monero_glue.xmr.core.pycompat import *
 
+# py constants
+py_b = b
+py_q = q
+py_l = l
+py_d = d
 
 # Extended curve coordinates
-B_ext = (ed25519.Bx % q, ed25519.By % q, 1, (ed25519.Bx * ed25519.By) % q)
-I_ext = (0, 1, 1, 0)
+py_B_ext = B_ext = (ed25519.Bx % q, ed25519.By % q, 1, (ed25519.Bx * ed25519.By) % q)
+py_I_ext = I_ext = (0, 1, 1, 0)
 
-fe_m1 = 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffec      # -1
-fe_sqrtm1 = 0x2B8324804FC1DF0B2B4D00993DFBD7A72F431806AD2FE478C4EE1B274A0EA0B0  # sqrt(-1)
-fe_d2 = (2 * ed25519.d) % q
+py_fe_m1 = fe_m1 = 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffec      # -1
+py_fe_sqrtm1 = fe_sqrtm1 = 0x2B8324804FC1DF0B2B4D00993DFBD7A72F431806AD2FE478C4EE1B274A0EA0B0  # sqrt(-1)
+py_fe_d2 = fe_d2 = (2 * ed25519.d) % q
 
 # fe_A = 2 * (1 - ed25519.d) * ed25519.inv(1 + ed25519.d)
-fe_A = 486662
-fe_ma = -486662
-fe_ma2 = -1 * fe_A * fe_A
+py_fe_A = fe_A = 486662
+py_fe_ma = fe_ma = -486662
+py_fe_ma2 = fe_ma2 = -1 * fe_A * fe_A
 
 # k.<a> = FiniteField(2**255-19, 'a')
 # A = fe_A * a
 # Monero C-values: ed25519.radix255(fe_fffb1)
-fe_fffb1 = 0x018e04102529e4e8df563ac8be04e61c2e6bfb5746d58c72dd58968acde3bdff   # sqrt(-2 * A * (A + 2))
-fe_fffb2 = 0x32f9e1f5fba5d3096e2bae483fe9a041ae21fcb9fba908202d219b7c9f83650d   # sqrt( 2 * A * (A + 2))
-fe_fffb3 = 0x18b5eef2eb3df710476ab9bfc0f25d12bfdb00b15a69bdd6a7e48278e8cfd387   # sqrt(-sqrt(-1*a) * A * (A + 2))
-fe_fffb4 = 0x1a43f3031067dbf926c0f4887ef7432eee46fc08a13f4a49853d1903b6b39186   # sqrt( sqrt(-1*a) * A * (A + 2))
+py_fe_fffb1 = fe_fffb1 = 0x018e04102529e4e8df563ac8be04e61c2e6bfb5746d58c72dd58968acde3bdff   # sqrt(-2 * A * (A + 2))
+py_fe_fffb2 = fe_fffb2 = 0x32f9e1f5fba5d3096e2bae483fe9a041ae21fcb9fba908202d219b7c9f83650d   # sqrt( 2 * A * (A + 2))
+py_fe_fffb3 = fe_fffb3 = 0x18b5eef2eb3df710476ab9bfc0f25d12bfdb00b15a69bdd6a7e48278e8cfd387   # sqrt(-sqrt(-1*a) * A * (A + 2))
+py_fe_fffb4 = fe_fffb4 = 0x1a43f3031067dbf926c0f4887ef7432eee46fc08a13f4a49853d1903b6b39186   # sqrt( sqrt(-1*a) * A * (A + 2))
 
 NULL_KEY_ENC = [0]*32
 
