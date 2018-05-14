@@ -405,7 +405,7 @@ def gen_H():
 
 
 def scalarmult_h(i):
-    return scalarmult(gen_H(), i)
+    return scalarmult(gen_H(), sc_init(i) if isinstance(i, int) else i)
 
 
 def gen_c(a, amount):
