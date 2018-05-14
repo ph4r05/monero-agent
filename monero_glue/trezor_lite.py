@@ -964,7 +964,7 @@ class TTransaction(object):
                 self.assrt(ring_ct.ver_range(C, rsig))
                 self.assrt(crypto.point_eq(C, crypto.point_add(
                     crypto.scalarmult_base(mask),
-                    crypto.scalarmult_h(amount))))
+                    crypto.scalarmult_h(crypto.sc_init(amount)))))
 
             # Recoding to structure
             monero.recode_rangesig(rsig, encode=True)
