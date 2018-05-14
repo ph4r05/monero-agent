@@ -461,8 +461,9 @@ def scan_output(creds, tx, i, tx_scan_info, tx_money_got_in_outs, outs, multisig
     if tx_scan_info.money_transfered == 0:
         res2 = ecdh_decode_rv(tx.rct_signatures, tx_scan_info.received[1], i)
         tx_scan_info.money_transfered, tx_scan_info.mask = res2
+        tx_scan_info.money_transfered = crypto.sc_get64(tx_scan_info.money_transfered)
 
-    tx_money_got_in_outs[tx_scan_info.received.index] += tx_scan_info.money_transfered
+    tx_money_got_in_outs[tx_scan_info.received[0]] += tx_scan_info.money_transfered
     tx_scan_info.amount = tx_scan_info.money_transfered
     return tx_scan_info
 
