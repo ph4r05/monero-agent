@@ -27,11 +27,6 @@ from monero_glue.xmr.core.ec import *
 from monero_glue.xmr.core.ec_conv import *
 
 
-#from monero_glue.xmr.core.backend import trezor_crypto as tcry
-#print(tcry.init_lib())
-#print(tcry.init_lib())
-
-
 def b16_to_scalar(bts):
     """
     Converts hexcoded bytearray to the scalar
