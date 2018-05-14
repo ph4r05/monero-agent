@@ -216,6 +216,12 @@ def init256_modm(r, a):
     return r
 
 
+def init256_modm_r(a):
+    r = tt.MODM()
+    CLIB.set256_modm(r, ct.c_uint64(a))
+    return r
+
+
 def eq256_modm(a, b):
     return CLIB.eq256_modm(a, b)
 
@@ -224,8 +230,8 @@ def cmp256_modm(a, b):
     return CLIB.cmp256_modm(a, b)
 
 
-def iszero256_modm(a, b):
-    return CLIB.iszero256_modm(a, b)
+def iszero256_modm(a):
+    return CLIB.iszero256_modm(a)
 
 
 def copy256_modm(a, b):
