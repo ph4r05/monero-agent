@@ -425,7 +425,7 @@ class TTransaction(object):
         rv.ecdhInfo = [None] * len(destinations)
 
         # Output processing
-        sumout = 0
+        sumout = crypto.sc_0()
         out_sk = [None] * len(destinations)
         for idx in range(len(destinations)):
             rv.outPk[idx] = xmrtypes.CtKey(dest=crypto.encodepoint(destinations[idx]))
@@ -549,7 +549,7 @@ class TTransaction(object):
         # Pseudooutputs
         pseudo_outs = [None] * len(inamounts)
         rv.p.MGs = [None] * len(inamounts)
-        sumpouts = 0
+        sumpouts = crypto.sc_0()
         a = []
         for idx in range(len(inamounts)-1):
             a.append(crypto.random_scalar())
