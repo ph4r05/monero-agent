@@ -255,7 +255,7 @@ def mulsub256_modm(r, a, b, c):
 
 def expand256_modm_r(buff):
     m = tt.MODM()
-    CLIB.expand256_modm(m, buff, len(buff))
+    CLIB.expand256_modm(m, bytes(buff), len(buff))
     return m
 
 
@@ -827,32 +827,32 @@ def xmr_random_scalar_r():
 
 
 def xmr_fast_hash(r, a, b):
-    return CLIB.xmr_fast_hash(r, a, b)
+    return CLIB.xmr_fast_hash(r, bytes(a), b)
 
 
 def xmr_fast_hash_r(a):
     r = tt.KEY_BUFF()
-    CLIB.xmr_fast_hash(r, a, len(a))
+    CLIB.xmr_fast_hash(r, bytes(a), len(a))
     return bytes(bytearray(r))
 
 
 def xmr_hash_to_scalar(r, a):
-    return CLIB.xmr_hash_to_scalar(r, a, len(a))
+    return CLIB.xmr_hash_to_scalar(r, bytes(a), len(a))
 
 
 def xmr_hash_to_scalar_r(a):
     r = tt.MODM()
-    CLIB.xmr_hash_to_scalar(r, a, len(a))
+    CLIB.xmr_hash_to_scalar(r, bytes(a), len(a))
     return r
 
 
 def xmr_hash_to_ec(r, a):
-    return CLIB.xmr_hash_to_ec(ct.byref(r), a, len(a))
+    return CLIB.xmr_hash_to_ec(ct.byref(r), bytes(a), len(a))
 
 
 def xmr_hash_to_ec_r(a):
     r = tt.Ge25519()
-    CLIB.xmr_hash_to_ec(ct.byref(r), a, len(a))
+    CLIB.xmr_hash_to_ec(ct.byref(r), bytes(a), len(a))
     return r
 
 
