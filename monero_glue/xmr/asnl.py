@@ -72,7 +72,7 @@ def gen_asnl(x, P1, P2, indices):
     L1 = [None] * n
     s1 = [None] * n
     s2 = [None] * n
-    s = 0
+    s = crypto.sc_0()
     for j in range(0, n):
         L1[j], s1[j], s2[j] = gen_schnorr_non_linkable(x[j], P1[j], P2[j], indices[j])
         s = crypto.sc_add(s, s1[j])
@@ -92,7 +92,7 @@ def ver_asnl(P1, P2, L1, s2, s):
     logger.info("Verifying Aggregate Schnorr Non-linkable Ring Signature")
 
     n = len(P1)
-    LHS = crypto.scalarmult_base(0)
+    LHS = crypto.scalarmult_base(crypto.sc_0())
     RHS = crypto.scalarmult_base(s)
     for j in range(0, n):
         c2 = crypto.hash_to_scalar(crypto.encodepoint(L1[j]))
