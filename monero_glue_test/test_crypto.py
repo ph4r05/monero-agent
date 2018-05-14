@@ -7,6 +7,7 @@ import unittest
 import aiounittest
 
 from monero_glue.xmr import crypto, common
+from monero_glue.xmr.core import ec_py
 
 
 class CryptoTest(aiounittest.AsyncTestCase):
@@ -15,17 +16,22 @@ class CryptoTest(aiounittest.AsyncTestCase):
     def __init__(self, *args, **kwargs):
         super(CryptoTest, self).__init__(*args, **kwargs)
 
-    def test_ed_crypto(self):
-        sqr = crypto.fe_expmod(crypto.fe_sqrtm1, 2)
-        self.assertEqual(sqr, crypto.fe_mod(-1))
-        self.assertEqual(crypto.fe_A, crypto.fe_mod(2 * (1 - crypto.d) * crypto.inv(1 + crypto.d)))
+    def init_sc(self, x):
+        if x < (1<<64):
+            return crypto.sc_init(x)
+        return crypto.decodeint(ec_py.encodeint(x))
 
-        self.assertEqual(crypto.fe_expmod(crypto.fe_fffb1, 2), crypto.fe_mod(-2 * crypto.fe_A * (crypto.fe_A + 2)))
-        self.assertEqual(crypto.fe_expmod(crypto.fe_fffb2, 2), crypto.fe_mod(2 * crypto.fe_A * (crypto.fe_A + 2)))
-        self.assertEqual(crypto.fe_expmod(crypto.fe_fffb3, 2),
-                         crypto.fe_mod(-crypto.fe_sqrtm1 * crypto.fe_A * (crypto.fe_A + 2)))
-        self.assertEqual(crypto.fe_expmod(crypto.fe_fffb4, 2),
-                         crypto.fe_mod(crypto.fe_sqrtm1 * crypto.fe_A * (crypto.fe_A + 2)))
+    def test_ed_crypto(self):
+        sqr = ec_py.fe_expmod(ec_py.py_fe_sqrtm1, 2)
+        self.assertEqual(sqr, ec_py.fe_mod(-1))
+        self.assertEqual(ec_py.py_fe_A, ec_py.fe_mod(2 * (1 - ec_py.d) * ec_py.inv(1 + ec_py.py_d)))
+
+        self.assertEqual(ec_py.fe_expmod(ec_py.py_fe_fffb1, 2), ec_py.fe_mod(-2 * ec_py.py_fe_A * (ec_py.py_fe_A + 2)))
+        self.assertEqual(ec_py.fe_expmod(ec_py.py_fe_fffb2, 2), ec_py.fe_mod(2 * ec_py.py_fe_A * (ec_py.py_fe_A + 2)))
+        self.assertEqual(ec_py.fe_expmod(ec_py.py_fe_fffb3, 2),
+                         ec_py.fe_mod(-ec_py.py_fe_sqrtm1 * ec_py.py_fe_A * (ec_py.py_fe_A + 2)))
+        self.assertEqual(ec_py.fe_expmod(ec_py.py_fe_fffb4, 2),
+                         ec_py.fe_mod(ec_py.py_fe_sqrtm1 * ec_py.py_fe_A * (ec_py.py_fe_A + 2)))
 
     def test_encoding(self):
         point = bytes(
@@ -84,7 +90,8 @@ class CryptoTest(aiounittest.AsyncTestCase):
             [0x25, 0x9e, 0xf2, 0xab, 0xa8, 0xfe, 0xb4, 0x73, 0xcf, 0x39, 0x05, 0x8a, 0x0f, 0xe3, 0x0b, 0x9f, 0xf6, 0xd2,
              0x45, 0xb4, 0x2b, 0x68, 0x26, 0x68, 0x7e, 0xbd, 0x6b, 0x63, 0x12, 0x8a, 0xff, 0x64, 0x05])
         res = crypto.hash_to_scalar(inp)
-        self.assertEqual(res, 0x6eca331dd53c2ca07650ed1b005d6a42aef0ffd0dfc092616124e255b920799)
+        exp = self.init_sc(0x6eca331dd53c2ca07650ed1b005d6a42aef0ffd0dfc092616124e255b920799)
+        self.assertTrue(crypto.sc_eq(res, exp))
 
     def test_hash_to_point(self):
         data = bytes(
@@ -130,7 +137,7 @@ class CryptoTest(aiounittest.AsyncTestCase):
             crypto.check_ed25519point(hp[i])
             self.assertEqual(
                 crypto.encodepoint(hp[i]),
-                crypto.encodepoint(crypto.scalarmult(crypto.gen_H(), 2 ** i)))
+                crypto.encodepoint(crypto.scalarmult(crypto.gen_H(), crypto.sc_init(2 ** i))))
 
     def test_signature(self):
         for i in range(10):
@@ -141,7 +148,7 @@ class CryptoTest(aiounittest.AsyncTestCase):
             res = crypto.check_signature(data, c, r, pub)
             self.assertEqual(res, 1)
 
-            res2 = crypto.check_signature(data, c + 1, r, pub)
+            res2 = crypto.check_signature(data, crypto.sc_add(c, crypto.sc_init(1)), r, pub)
             self.assertEqual(res2, 0)
 
     def test_edhex(self):
