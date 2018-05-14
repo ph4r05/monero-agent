@@ -24,6 +24,8 @@ CLIB.mul256_modm.argtypes = [tt.MODM, tt.MODM, tt.MODM]
 CLIB.reduce256_modm.argtypes = [tt.MODM]
 CLIB.barrett_reduce256_modm.argtypes = [tt.MODM, tt.MODM, tt.MODM]
 CLIB.set256_modm.argtypes = [tt.MODM, ct.c_uint64]
+CLIB.get256_modm.argtypes = [ct.POINTER(ct.c_uint64), tt.MODM]
+CLIB.get256_modm.restype = ct.c_int
 
 CLIB.eq256_modm.argtypes = [tt.MODM, tt.MODM]
 CLIB.eq256_modm.restype = ct.c_int
@@ -209,6 +211,18 @@ def barrett_reduce256_modm(r, a, b):
 
 def set256_modm(a, b):
     CLIB.set256_modm(a, ct.c_uint64(b))
+
+
+def get256_modm(a, b):
+    return CLIB.get256_modm(a, b)
+
+
+def get256_modm_r(a):
+    r = ct.c_uint64()
+    res = CLIB.get256_modm(ct.byref(r), a)
+    if not res:
+        raise ValueError('Get256_modm failed')
+    return r
 
 
 def init256_modm(r, a):
