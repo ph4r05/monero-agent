@@ -704,7 +704,7 @@ class TTransaction(object):
         writer = common.get_keccak_writer()
         ar1 = xmrserialize.Archive(writer, True)
         await ar1.message(tsx_data)
-        await xmrserialize.dump_uvarint(writer, self.r)
+        await writer.awrite(crypto.encodeint(self.r))
         await xmrserialize.dump_uvarint(writer, tsx_ctr)
         self.key_master = common.keccak_2hash(writer.get_digest() + crypto.encodeint(crypto.random_scalar()))
         self.key_hmac = common.keccak_2hash(b'hmac' + self.key_master)
