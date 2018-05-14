@@ -1,4 +1,6 @@
-standard Monero license applies (see github.com/bitmonero)
+Some files in this package may be taken from mininero package which uses Monero License (see github.com/bitmonero).
+Please check particular files for license information.
+
 # Copyright (c) 2014-2016, The Monero Project
 #
 # All rights reserved.
