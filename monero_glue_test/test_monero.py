@@ -98,8 +98,8 @@ class MoneroTest(aiounittest.AsyncTestCase):
             monero.recode_ecdh(ecdh, encode=False)
 
             ecdh = ring_ct.ecdh_decode(ecdh, derivation=binascii.unhexlify(tx_js['amount_keys'][i]))
-            self.assertEqual(ecdh.amount, tx_js['outamounts'][i])
-            self.assertEqual(ecdh.mask, crypto.decodeint(binascii.unhexlify(tx_js['outSk'][i])[32:]))
+            self.assertEqual(crypto.sc_get64(ecdh.amount), tx_js['outamounts'][i])
+            self.assertTrue(crypto.sc_eq(ecdh.mask, crypto.decodeint(binascii.unhexlify(tx_js['outSk'][i])[32:])))
 
             C = crypto.decodepoint(rv.outPk[i].mask)
             rsig = rv.p.rangeSigs[i]
@@ -108,7 +108,7 @@ class MoneroTest(aiounittest.AsyncTestCase):
             res = ring_ct.ver_range(C, rsig)
             self.assertTrue(res)
 
-            res = ring_ct.ver_range(crypto.point_add(C, crypto.scalarmult_base(3)), rsig)
+            res = ring_ct.ver_range(crypto.point_add(C, crypto.scalarmult_base(crypto.sc_init(3))), rsig)
             self.assertFalse(res)
 
         is_simple = len(tx.vin) > 1
