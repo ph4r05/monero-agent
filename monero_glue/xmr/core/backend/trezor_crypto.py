@@ -130,8 +130,8 @@ CLIB.xmr_fast_hash.argtypes = [tt.KEY_BUFF, ct.c_void_p, ct.c_size_t]
 # CLIB.xmr_hasher_update.argtypes = [Hasher * hasher, ct.c_void_p, ct.c_size_t]
 # CLIB.xmr_hasher_final.argtypes = [Hasher * hasher, uint8_t * hash]
 
-CLIB.xmr_hash_to_scalar.argtypes = [ct.c_void_p, ct.c_size_t, tt.MODM]
-CLIB.xmr_hash_to_ec.argtypes = [ct.c_void_p, ct.c_size_t, ct.POINTER(tt.Ge25519)]
+CLIB.xmr_hash_to_scalar.argtypes = [tt.MODM, ct.c_void_p, ct.c_size_t]
+CLIB.xmr_hash_to_ec.argtypes = [ct.POINTER(tt.Ge25519), ct.c_void_p, ct.c_size_t]
 CLIB.xmr_derivation_to_scalar.argtypes = [tt.MODM, ct.POINTER(tt.Ge25519), ct.c_uint32]
 CLIB.xmr_generate_key_derivation.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM]
 CLIB.xmr_derive_private_key.argtypes = [tt.MODM, ct.POINTER(tt.Ge25519), ct.c_uint32, tt.MODM]
@@ -245,7 +245,7 @@ def clone256_modm(a):
 
 
 def check256_modm(a):
-    return CLIB.copy256_modm(a)
+    return CLIB.check256_modm(a)
 
 
 def mulsub256_modm(r, a, b, c):
@@ -477,6 +477,16 @@ def curve25519_set(r, a):
 def curve25519_set_r(a):
     r = tt.FE()
     CLIB.curve25519_set(r, a)
+    return r
+
+
+def curve25519_set_d(r):
+    return CLIB.curve25519_set_d(r)
+
+
+def curve25519_set_d_r():
+    r = tt.FE()
+    CLIB.curve25519_set_d(r)
     return r
 
 
