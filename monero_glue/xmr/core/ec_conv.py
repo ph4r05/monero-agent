@@ -3,7 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 from monero_glue.xmr.core.ec_base import *
-from monero_glue.xmr.core.ec_py import decodeint
+from monero_glue.xmr.core import ec_py
 
 
 def ge25519_to_point(ge):
@@ -49,5 +49,5 @@ def sc_from_modm(modm):
     :param modm:
     :return:
     """
-    return decodeint(modm.data)
+    return ec_py.decodeint(modm.data)
 
