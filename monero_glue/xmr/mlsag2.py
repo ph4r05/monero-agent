@@ -408,9 +408,7 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
     Ip = key_vector(dsRows)
     rv.II = key_vector(dsRows)
     alpha = key_vector(rows)
-    aG = key_vector(rows)
     rv.ss = key_matrix(rows, cols)
-    aHP = key_vector(dsRows)
 
     hasher = hasher_message(message)
 
@@ -425,19 +423,19 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
         else:
             Hi = crypto.hash_to_ec(crypto.encodepoint(pk[index][i]))  # originally hashToPoint()
             alpha[i] = crypto.random_scalar()
-            aG[i] = crypto.scalarmult_base(alpha[i])
-            aHP[i] = crypto.scalarmult(Hi, alpha[i])
+            aGi = crypto.scalarmult_base(alpha[i])
+            aHPi = crypto.scalarmult(Hi, alpha[i])
             rv.II[i] = crypto.scalarmult(Hi, xx[i])
-            hasher.update(crypto.encodepoint(aG[i]))
-            hasher.update(crypto.encodepoint(aHP[i]))
+            hasher.update(crypto.encodepoint(aGi))
+            hasher.update(crypto.encodepoint(aHPi))
 
         Ip[i] = crypto.precomp(rv.II[i])
 
     for i in range(dsRows, rows):
         alpha[i] = crypto.random_scalar()
-        aG[i] = crypto.scalarmult_base(alpha[i])
+        aGi = crypto.scalarmult_base(alpha[i])
         hasher.update(crypto.encodepoint(pk[index][i]))
-        hasher.update(crypto.encodepoint(aG[i]))
+        hasher.update(crypto.encodepoint(aGi))
 
     c_old = hasher.digest()
     c_old = crypto.sc_reduce32(crypto.decodeint(c_old))
