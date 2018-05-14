@@ -574,8 +574,8 @@ def ge_frombytes_vartime_check(point):
     z = fe_1()
     u = fe_sq(y)
     v = fe_mul(u, d)
-    u = fe_sub(u, 1)  # u = y^2-1
-    v = fe_add(v, 1)  # v = dy^2+1
+    u = fe_sub(u, z)  # u = y^2-1
+    v = fe_add(v, z)  # v = dy^2+1
 
     # x = uv^3(uv^7)^((q-5)/8)
 
