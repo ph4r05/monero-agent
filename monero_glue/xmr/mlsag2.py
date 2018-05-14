@@ -66,6 +66,7 @@ def scalar_mult_base_vector(v):
 def key_image_vector(x):
     """
     Takes as input a keyvector, returns the keyimage-vector
+    TODO: use crypto for generating key images
     :param x:
     :return:
     """
@@ -97,6 +98,7 @@ def scalar_gen_matrix(r, c):
 def add_keys1(a, b, B):
     """
     aG + bB, G is basepoint
+    TODO: use crypto
     :param a:
     :param b:
     :param B:
@@ -108,6 +110,7 @@ def add_keys1(a, b, B):
 def add_keys2(a, A, b, B):
     """
     aA + bB
+    TODO: use crypto
     :param a:
     :param A:
     :param b:

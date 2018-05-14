@@ -104,6 +104,8 @@ def prove_range_orig(amount, last_mask=None, use_asnl=False):
 def prove_range_mem(amount, last_mask=None):
     """
     Memory optimized range proof.
+    TODO: use one in trezor_crypto! Encoded by default.
+
     Gives C, and mask such that \sumCi = C
     c.f. http:#eprint.iacr.org/2015/1098 section 5.1
 
@@ -302,6 +304,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
     """
     Generates ring signature with key image.
     void crypto_ops::generate_ring_signature()
+    TODO: test
 
     :param prefix_hash:
     :param image:
