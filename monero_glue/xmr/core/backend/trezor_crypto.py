@@ -124,7 +124,7 @@ CLIB.ge25519_unpack_vartime.restype = ct.c_int
 
 
 CLIB.xmr_random_scalar.argtypes = [tt.MODM]
-CLIB.xmr_fast_hash.argtypes = [ct.c_void_p, ct.c_size_t, tt.KEY_BUFF]
+CLIB.xmr_fast_hash.argtypes = [tt.KEY_BUFF, ct.c_void_p, ct.c_size_t]
 
 # CLIB.xmr_hasher_init.argtypes = [Hasher * hasher]
 # CLIB.xmr_hasher_update.argtypes = [Hasher * hasher, ct.c_void_p, ct.c_size_t]
@@ -306,13 +306,199 @@ def mulsub256_modm_r(a, b, c):
 #
 
 
-def curve25519_copy(a, b):
-    return CLIB.curve25519_copy(ct.byref(a), ct.byref(b))
-
-
 def curve25519_clone(a):
     r = tt.Ge25519()
-    CLIB.curve25519_copy(ct.byref(r), ct.byref(a))
+    CLIB.curve25519_copy(r, a)
+    return r
+
+
+def curve25519_copy(r, a):
+    return CLIB.curve25519_copy(r, a)
+
+
+def curve25519_copy_r(a):
+    r = tt.FE()
+    CLIB.curve25519_copy(r, a)
+    return r
+
+
+def curve25519_add(r, a, b):
+    return CLIB.curve25519_add(r, a, b)
+
+
+def curve25519_add_r(a, b):
+    r = tt.FE()
+    CLIB.curve25519_add(r, a, b)
+    return r
+
+
+def curve25519_add_after_basic(r, a, b):
+    return CLIB.curve25519_add_after_basic(r, a, b)
+
+
+def curve25519_add_after_basic_r(a, b):
+    r = tt.FE()
+    CLIB.curve25519_add_after_basic(r, a, b)
+    return r
+
+
+def curve25519_add_reduce(r, a, b):
+    return CLIB.curve25519_add_reduce(r, a, b)
+
+
+def curve25519_add_reduce_r(a, b):
+    r = tt.FE()
+    CLIB.curve25519_add_reduce(r, a, b)
+    return r
+
+
+def curve25519_sub(r, a, b):
+    return CLIB.curve25519_sub(r, a, b)
+
+
+def curve25519_sub_r(a, b):
+    r = tt.FE()
+    CLIB.curve25519_sub(r, a, b)
+    return r
+
+
+def curve25519_scalar_product(r, a, b):
+    return CLIB.curve25519_scalar_product(r, a, b)
+
+
+def curve25519_scalar_product_r(a, b):
+    r = tt.FE()
+    CLIB.curve25519_scalar_product(r, a, b)
+    return r
+
+
+def curve25519_sub_after_basic(r, a, b):
+    return CLIB.curve25519_sub_after_basic(r, a, b)
+
+
+def curve25519_sub_after_basic_r(a, b):
+    r = tt.FE()
+    CLIB.curve25519_sub_after_basic(r, a, b)
+    return r
+
+
+def curve25519_sub_reduce(r, a, b):
+    return CLIB.curve25519_sub_reduce(r, a, b)
+
+
+def curve25519_sub_reduce_r(a, b):
+    r = tt.FE()
+    CLIB.curve25519_sub_reduce(r, a, b)
+    return r
+
+
+def curve25519_neg(r, a):
+    return CLIB.curve25519_neg(r, a)
+
+
+def curve25519_neg_r(a):
+    r = tt.FE()
+    CLIB.curve25519_neg(r, a)
+    return r
+
+
+def curve25519_mul(r, a, b):
+    return CLIB.curve25519_mul(r, a, b)
+
+
+def curve25519_mul_r(a, b):
+    r = tt.FE()
+    CLIB.curve25519_mul(r, a, b)
+    return r
+
+
+def curve25519_square(r, a):
+    return CLIB.curve25519_square(r, a)
+
+
+def curve25519_square_r(a):
+    r = tt.FE()
+    CLIB.curve25519_square(r, a)
+    return r
+
+
+def curve25519_square_times(r, a, b):
+    return CLIB.curve25519_square_times(r, a, b)
+
+
+def curve25519_square_times_r(a, b):
+    r = tt.FE()
+    CLIB.curve25519_square_times(r, a, b)
+    return r
+
+
+def curve25519_expand(r, a):
+    a = tt.KEY_BUFF(*a)
+    return CLIB.curve25519_expand(r, a)
+
+
+def curve25519_expand_r(a):
+    r = tt.FE()
+    a = tt.KEY_BUFF(*a)
+    CLIB.curve25519_expand(r, a)
+    return r
+
+
+def curve25519_contract(r, a):
+    return CLIB.curve25519_contract(r, a)
+
+
+def curve25519_contract_r(a):
+    r = tt.KEY_BUFF()
+    CLIB.curve25519_contract(r, a)
+    return bytes(bytearray(r))
+
+
+def curve25519_recip(r, a):
+    return CLIB.curve25519_recip(r, a)
+
+
+def curve25519_recip_r(a):
+    r = tt.FE()
+    CLIB.curve25519_recip(r, a)
+    return r
+
+
+def curve25519_set(r, a):
+    return CLIB.curve25519_set(r, a)
+
+
+def curve25519_set_r(a):
+    r = tt.FE()
+    CLIB.curve25519_set(r, a)
+    return r
+
+
+def curve25519_isnegative(a):
+    return CLIB.curve25519_isnegative(a)
+
+
+def curve25519_isnonzero(a):
+    return CLIB.curve25519_isnonzero(a)
+
+
+def curve25519_reduce(r, a):
+    return CLIB.curve25519_reduce(r, a)
+
+
+def curve25519_reduce_r(a):
+    r = tt.FE()
+    CLIB.curve25519_reduce(r, a)
+    return r
+
+
+def curve25519_expand_reduce(r, a):
+    return CLIB.curve25519_expand_reduce(r, a)
+
+
+def curve25519_expand_reduce_r(a):
+    r = tt.FE()
+    CLIB.curve25519_expand_reduce(r, a)
     return r
 
 
@@ -321,13 +507,261 @@ def curve25519_clone(a):
 #
 
 
-def ge25519_pack(p):
-    buff = tt.KEY_BUFF()
-    CLIB.ge25519_pack(buff, p)
-    return bytes(bytearray(buff))
+def ed25519_verify(a, b, c):
+    return CLIB.ed25519_verify(a, b, c)
 
 
-def ge25519_unpack_vartime(buff):
+def ge25519_p1p1_to_partial(r, a):
+    return CLIB.ge25519_p1p1_to_partial(ct.byref(r), ct.byref(a))
+
+
+def ge25519_p1p1_to_partial_r(a):
+    r = tt.Ge25519()
+    CLIB.ge25519_p1p1_to_partial(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_p1p1_to_full(r, a):
+    return CLIB.ge25519_p1p1_to_full(ct.byref(r), ct.byref(a))
+
+
+def ge25519_p1p1_to_full_r(a):
+    r = tt.Ge25519()
+    CLIB.ge25519_p1p1_to_full(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_full_to_pniels(r, a):
+    return CLIB.ge25519_full_to_pniels(ct.byref(r), ct.byref(a))
+
+
+def ge25519_full_to_pniels_r(a):
+    r = tt.Ge25519_pniels()
+    CLIB.ge25519_full_to_pniels(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_double_p1p1(r, a):
+    return CLIB.ge25519_double_p1p1(ct.byref(r), ct.byref(a))
+
+
+def ge25519_double_p1p1_r(a):
+    r = tt.Ge25519_p1p1()
+    CLIB.ge25519_double_p1p1(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_nielsadd2_p1p1(r, a, b, c):
+    return CLIB.ge25519_nielsadd2_p1p1(ct.byref(r), ct.byref(a), ct.byref(b), c)
+
+
+def ge25519_nielsadd2_p1p1_r(a, b, c):
+    r = tt.Ge25519_p1p1()
+    CLIB.ge25519_nielsadd2_p1p1(ct.byref(r), ct.byref(a), ct.byref(b), c)
+    return r
+
+
+def ge25519_pnielsadd_p1p1(r, a, b, c):
+    return CLIB.ge25519_pnielsadd_p1p1(ct.byref(r), ct.byref(a), ct.byref(b), c)
+
+
+def ge25519_pnielsadd_p1p1_r(a, b, c):
+    r = tt.Ge25519_p1p1()
+    CLIB.ge25519_pnielsadd_p1p1(ct.byref(r), ct.byref(a), ct.byref(b), c)
+    return r
+
+
+def ge25519_double_partial(r, a):
+    return CLIB.ge25519_double_partial(ct.byref(r), ct.byref(a))
+
+
+def ge25519_double_partial_r(a):
+    r = tt.Ge25519()
+    CLIB.ge25519_double_partial(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_double(r, a):
+    return CLIB.ge25519_double(ct.byref(r), ct.byref(a))
+
+
+def ge25519_double_r(a):
+    r = tt.Ge25519()
+    CLIB.ge25519_double(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_nielsadd2(r, a):
+    return CLIB.ge25519_nielsadd2(ct.byref(r), ct.byref(a))
+
+
+def ge25519_nielsadd2_r(a):
+    r = tt.Ge25519()
+    CLIB.ge25519_nielsadd2(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_pnielsadd(r, a, b):
+    return CLIB.ge25519_pnielsadd(ct.byref(r), ct.byref(a), ct.byref(b))
+
+
+def ge25519_pnielsadd_r(a, b):
+    r = tt.Ge25519_pniels()
+    CLIB.ge25519_pnielsadd(ct.byref(r), ct.byref(a), ct.byref(b))
+    return r
+
+
+def ge25519_pack(r, a):
+    return CLIB.ge25519_pack(r, ct.byref(a))
+
+
+def ge25519_pack_r(a):
+    r = tt.KEY_BUFF()
+    CLIB.ge25519_pack(r, ct.byref(a))
+    return bytes(bytearray(r))
+
+
+def ge25519_unpack_negative_vartime(a, b):
+    b = tt.KEY_BUFF(*b)
+    return CLIB.ge25519_unpack_negative_vartime(ct.byref(a), b)
+
+
+def ge25519_set_neutral(r):
+    return CLIB.ge25519_set_neutral(ct.byref(r))
+
+
+def ge25519_set_neutral_r():
+    r = tt.Ge25519()
+    CLIB.ge25519_set_neutral(ct.byref(r))
+    return r
+
+
+def ge25519_double_scalarmult_vartime(r, a, b, c):
+    return CLIB.ge25519_double_scalarmult_vartime(ct.byref(r), ct.byref(a), b, c)
+
+
+def ge25519_double_scalarmult_vartime_r(a, b, c):
+    r = tt.Ge25519()
+    CLIB.ge25519_double_scalarmult_vartime(ct.byref(r), ct.byref(a), b, c)
+    return r
+
+
+def ge25519_scalarmult(r, a, b):
+    return CLIB.ge25519_scalarmult(ct.byref(r), ct.byref(a), b)
+
+
+def ge25519_scalarmult_r(a, b):
+    r = tt.Ge25519()
+    CLIB.ge25519_scalarmult(ct.byref(r), ct.byref(a), b)
+    return r
+
+
+def ge25519_check(a):
+    return CLIB.ge25519_check(ct.byref(a))
+
+
+def ge25519_eq(a, b):
+    return CLIB.ge25519_eq(ct.byref(a), ct.byref(b))
+
+
+def ge25519_copy(r, a):
+    return CLIB.ge25519_copy(ct.byref(r), ct.byref(a))
+
+
+def ge25519_copy_r(a):
+    r = tt.Ge25519()
+    CLIB.ge25519_copy(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_set_base(r):
+    return CLIB.ge25519_set_base(ct.byref(r))
+
+
+def ge25519_set_base_r():
+    r = tt.Ge25519()
+    CLIB.ge25519_set_base(ct.byref(r))
+    return r
+
+
+def ge25519_mul8(r, a):
+    return CLIB.ge25519_mul8(ct.byref(r), ct.byref(a))
+
+
+def ge25519_mul8_r(a):
+    r = tt.Ge25519()
+    CLIB.ge25519_mul8(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_neg_partial(r):
+    return CLIB.ge25519_neg_partial(ct.byref(r))
+
+
+def ge25519_neg_partial_r():
+    r = tt.Ge25519()
+    CLIB.ge25519_neg_partial(ct.byref(r))
+    return r
+
+
+def ge25519_neg_full(r):
+    return CLIB.ge25519_neg_full(ct.byref(r))
+
+
+def ge25519_neg_full_r():
+    r = tt.Ge25519()
+    CLIB.ge25519_neg_full(ct.byref(r))
+    return r
+
+
+def ge25519_reduce(r, a):
+    return CLIB.ge25519_reduce(ct.byref(r), ct.byref(a))
+
+
+def ge25519_reduce_r(a):
+    r = tt.Ge25519()
+    CLIB.ge25519_reduce(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_norm(r, a):
+    return CLIB.ge25519_norm(ct.byref(r), ct.byref(a))
+
+
+def ge25519_norm_r(a):
+    r = tt.Ge25519()
+    CLIB.ge25519_norm(ct.byref(r), ct.byref(a))
+    return r
+
+
+def ge25519_add(r, a, b, c):
+    return CLIB.ge25519_add(ct.byref(r), ct.byref(a), ct.byref(b), c)
+
+
+def ge25519_add_r(a, b, c):
+    r = tt.Ge25519()
+    CLIB.ge25519_add(ct.byref(r), ct.byref(a), ct.byref(b), c)
+    return r
+
+
+def ge25519_fromfe_frombytes_vartime(r, a):
+    a = tt.KEY_BUFF(*a)
+    return CLIB.ge25519_fromfe_frombytes_vartime(ct.byref(r), a)
+
+
+def ge25519_fromfe_frombytes_vartime_r(a):
+    a = tt.KEY_BUFF(*a)
+    r = tt.Ge25519()
+    CLIB.ge25519_fromfe_frombytes_vartime(ct.byref(r), a)
+    return r
+
+
+def ge25519_unpack_vartime(a, b):
+    b = tt.KEY_BUFF(*b)
+    return CLIB.ge25519_unpack_vartime(ct.byref(a), b)
+
+
+def ge25519_unpack_vartime_r(buff):
     pt = tt.Ge25519()
     buff = tt.KEY_BUFF(*buff)
     r = CLIB.ge25519_unpack_vartime(ct.byref(pt), buff)
@@ -336,21 +770,159 @@ def ge25519_unpack_vartime(buff):
     return pt
 
 
+def ge25519_scalarmult_base_wrapper(r, a):
+    return CLIB.ge25519_scalarmult_base_wrapper(ct.byref(r), a)
+
+
+def ge25519_scalarmult_base_wrapper_r(a):
+    r = tt.Ge25519()
+    CLIB.ge25519_scalarmult_base_wrapper(ct.byref(r), a)
+    return r
+
+
+def ge25519_scalarmult_wrapper(r, a, b):
+    return CLIB.ge25519_scalarmult_wrapper(ct.byref(r), ct.byref(a), b)
+
+
+def ge25519_scalarmult_wrapper_r(a, b):
+    r = tt.Ge25519()
+    CLIB.ge25519_scalarmult_wrapper(ct.byref(r), ct.byref(a), b)
+    return r
+
+
+def ge25519_set_xmr_h(r):
+    return CLIB.ge25519_set_xmr_h(ct.byref(r))
+
+
+def ge25519_set_xmr_h_r():
+    r = tt.Ge25519()
+    CLIB.ge25519_set_xmr_h(ct.byref(r))
+    return r
+
+
+def xmr_random_scalar(r):
+    return CLIB.xmr_random_scalar(r)
+
+
+def xmr_random_scalar_r():
+    r = tt.MODM()
+    CLIB.xmr_random_scalar(r)
+    return r
+
+
+def xmr_fast_hash(r, a, b):
+    return CLIB.xmr_fast_hash(r, a, b)
+
+
+def xmr_fast_hash_r(a):
+    r = tt.KEY_BUFF()
+    CLIB.xmr_fast_hash(r, a, len(a))
+    return bytes(bytearray(r))
+
+
+def xmr_hash_to_scalar(r, a):
+    return CLIB.xmr_hash_to_scalar(r, a, len(a))
+
+
+def xmr_hash_to_scalar_r(a):
+    r = tt.MODM()
+    CLIB.xmr_hash_to_scalar(r, a, len(a))
+    return r
+
+
+def xmr_hash_to_ec(r, a):
+    return CLIB.xmr_hash_to_ec(ct.byref(r), a, len(a))
+
+
+def xmr_hash_to_ec_r(a):
+    r = tt.Ge25519()
+    CLIB.xmr_hash_to_ec(ct.byref(r), a, len(a))
+    return r
+
+
+def xmr_derivation_to_scalar(r, a, b):
+    return CLIB.xmr_derivation_to_scalar(r, ct.byref(a), b)
+
+
+def xmr_derivation_to_scalar_r(a, b):
+    r = tt.MODM()
+    CLIB.xmr_derivation_to_scalar(r, ct.byref(a), b)
+    return r
+
+
+def xmr_generate_key_derivation(r, a, b):
+    return CLIB.xmr_generate_key_derivation(ct.byref(r), ct.byref(a), b)
+
+
+def xmr_generate_key_derivation_r(a, b):
+    r = tt.Ge25519()
+    CLIB.xmr_generate_key_derivation(ct.byref(r), ct.byref(a), b)
+    return r
+
+
+def xmr_derive_private_key(r, a, b, c):
+    return CLIB.xmr_derive_private_key(r, ct.byref(a), b, c)
+
+
+def xmr_derive_private_key_r(a, b, c):
+    r = tt.MODM()
+    CLIB.xmr_derive_private_key(r, ct.byref(a), b, c)
+    return r
+
+
+def xmr_derive_public_key(r, a, b, c):
+    return CLIB.xmr_derive_public_key(ct.byref(r), ct.byref(a), b, ct.byref(c))
+
+
+def xmr_derive_public_key_r(a, b, c):
+    r = tt.Ge25519()
+    CLIB.xmr_derive_public_key(ct.byref(r), ct.byref(a), b, ct.byref(c))
+    return r
+
+
+def xmr_gen_c(r, a, b):
+    return CLIB.xmr_gen_c(ct.byref(r), a, b)
+
+
+def xmr_gen_c_r(a, b):
+    r = tt.Ge25519()
+    CLIB.xmr_gen_c(ct.byref(r), a, b)
+    return r
+
+
+def xmr_add_keys1(r, a, b, c):
+    return CLIB.xmr_add_keys1(ct.byref(r), a, b, ct.byref(c))
+
+
+def xmr_add_keys1_r(a, b, c):
+    r = tt.Ge25519()
+    CLIB.xmr_add_keys1(ct.byref(r), a, b, ct.byref(c))
+    return r
+
+
+def xmr_add_keys2(r, a, b, c, d):
+    return CLIB.xmr_add_keys2(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
+
+
+def xmr_add_keys2_r(a, b, c, d):
+    r = tt.Ge25519()
+    CLIB.xmr_add_keys2(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
+    return r
+
+
+def xmr_get_subaddress_secret_key(r, a, b, c):
+    return CLIB.xmr_get_subaddress_secret_key(r, a, b, c)
+
+
+def xmr_get_subaddress_secret_key_r(a, b, c):
+    r = tt.MODM()
+    CLIB.xmr_get_subaddress_secret_key(r, a, b, c)
+    return r
+
+
 #
 # XMR
 #
-
-def xmr_hash_to_ec(buff):
-    """
-    Hash_to_ec wrapper
-    Accepts python byte array.
-
-    :param buff:
-    :return:
-    """
-    pt = tt.Ge25519()
-    CLIB.xmr_hash_to_ec(buff, len(buff), ct.byref(pt))
-    return pt
 
 
 def gen_range_proof(amount, last_mask):
