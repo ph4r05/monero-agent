@@ -758,3 +758,70 @@ def gen_c(a, amount):
     aG = scalarmult_base(a)
     return point_add(aG, scalarmult_h(amount))
 
+
+def generate_key_derivation(key1, key2):
+    """
+    Key derivation: 8*(key2*key1)
+
+    :param key1: public key of receiver Bob (see page 7)
+    :param key2: Alice's private
+    :return:
+    """
+    if sc_check(key2) != 0:
+        # checks that the secret key is uniform enough...
+        raise ValueError("error in sc_check in keyder")
+    if ge_frombytes_vartime_check(key1) != 0:
+        raise ValueError("didn't pass curve checks in keyder")
+
+    check_ed25519point(key1)
+    point2 = ge_scalarmult(key2, key1)
+    point3 = ge_mul8(point2)  # This has to do with n==0 mod 8 by dedfinition, c.f. the top paragraph of page 5 of http://cr.yp.to/ecdh/curve25519-20060209.pdf
+    # and also c.f. middle of page 8 in same document (Bernstein)
+    return point3
+
+
+def derivation_to_scalar(derivation, output_index):
+    """
+    H_s(derivation || varint(output_index))
+    :param derivation:
+    :param output_index:
+    :return:
+    """
+    check_ed25519point(derivation)
+    buf2 = encodepoint(derivation) + xmrserialize.dump_uvarint_b(output_index)
+    return hash_to_scalar(buf2, len(buf2))
+
+
+def derive_public_key(derivation, output_index, base):
+    """
+    H_s(derivation || varint(output_index))G + base
+
+    :param derivation:
+    :param output_index:
+    :param base:
+    :return:
+    """
+    if ge_frombytes_vartime_check(base) != 0:  # check some conditions on the point
+        raise ValueError("derive pub key bad point")
+    check_ed25519point(base)
+
+    scalar = derivation_to_scalar(derivation, output_index)
+    point2 = scalarmult_base(scalar)
+    point4 = point_add(base, point2)
+    return point4
+
+
+def derive_secret_key(derivation, output_index, base):
+    """
+    base + H_s(derivation || varint(output_index))
+    :param derivation:
+    :param output_index:
+    :param base:
+    :return:
+    """
+    if sc_check(base) != 0:
+        raise ValueError("cs_check in derive_secret_key")
+    scalar = derivation_to_scalar(derivation, output_index)
+    return sc_add(base, scalar)
+
+

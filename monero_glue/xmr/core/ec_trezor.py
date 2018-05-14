@@ -429,5 +429,62 @@ def gen_c(a, amount):
     return tcry.xmr_gen_c_r(a, amount)
 
 
+def generate_key_derivation(key1, key2):
+    """
+    Key derivation: 8*(key2*key1)
+
+    :param key1: public key of receiver Bob (see page 7)
+    :param key2: Alice's private
+    :return:
+    """
+    if sc_check(key2) != 0:
+        # checks that the secret key is uniform enough...
+        raise ValueError("error in sc_check in keyder")
+    if ge_frombytes_vartime_check(key1) != 0:
+        raise ValueError("didn't pass curve checks in keyder")
+
+    return tcry.xmr_generate_key_derivation_r(key1, key2)
+
+
+def derivation_to_scalar(derivation, output_index):
+    """
+    H_s(derivation || varint(output_index))
+    :param derivation:
+    :param output_index:
+    :return:
+    """
+    check_ed25519point(derivation)
+    return tcry.xmr_derivation_to_scalar_r(derivation, output_index);
+
+
+def derive_public_key(derivation, output_index, base):
+    """
+    H_s(derivation || varint(output_index))G + base
+
+    :param derivation:
+    :param output_index:
+    :param base:
+    :return:
+    """
+    if ge_frombytes_vartime_check(base) != 0:  # check some conditions on the point
+        raise ValueError("derive pub key bad point")
+    check_ed25519point(base)
+
+    return tcry.xmr_derive_public_key_r(derivation, output_index, base)
+    
+
+def derive_secret_key(derivation, output_index, base):
+    """
+    base + H_s(derivation || varint(output_index))
+    :param derivation:
+    :param output_index:
+    :param base:
+    :return:
+    """
+    if sc_check(base) != 0:
+        raise ValueError("cs_check in derive_secret_key")
+    return tcry.xmr_derive_private_key_r(derivation, output_index, base)
+
+
 
 
