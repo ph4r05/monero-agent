@@ -3,6 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 #
 # Limbs computation from: https://www.imperialviolet.org/2010/12/04/ecc.html
+# Used to implement sub256_modm() - computation of 2xM, 4xM for modular reduction and underflow protection.
 #
 
 import math
