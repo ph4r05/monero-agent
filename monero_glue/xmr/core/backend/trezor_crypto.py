@@ -222,7 +222,7 @@ def get256_modm_r(a):
     res = CLIB.get256_modm(ct.byref(r), a)
     if not res:
         raise ValueError('Get256_modm failed')
-    return r
+    return r.value
 
 
 def init256_modm(r, a):
