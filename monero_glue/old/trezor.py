@@ -454,7 +454,7 @@ class TTransaction(object):
 
             # ECDH masking
             amount_key = crypto.encodeint(self.output_secrets[idx][0])
-            rv.ecdhInfo[idx] = xmrtypes.EcdhTuple(mask=mask, amount=outamounts[idx])
+            rv.ecdhInfo[idx] = xmrtypes.EcdhTuple(mask=mask, amount=crypto.sc_init(outamounts[idx]))
             rv.ecdhInfo[idx] = ring_ct.ecdh_encode(rv.ecdhInfo[idx], derivation=amount_key)
             monero.recode_ecdh(rv.ecdhInfo[idx], encode=True)
 
