@@ -5,6 +5,7 @@
 from monero_glue.xmr.core.ec_base import *
 from monero_glue.xmr.core.backend.ed25519_2 import inv
 from monero_glue.xmr.core.backend.ed25519 import expmod
+from monero_serialize import xmrserialize
 
 
 REPR_XY = 0
