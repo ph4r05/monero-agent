@@ -396,8 +396,8 @@ class TTransaction(object):
         self.input_pseudo_outs = []
         self.output_sk = []
         self.output_pk = []
-        self.sumout = 0
-        self.sumpouts_alphas = 0
+        self.sumout = crypto.sc_0()
+        self.sumpouts_alphas = crypto.sc_0()
         self.subaddresses = {}
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=b'')
         self.source_permutation = []  # sorted by key images
@@ -964,7 +964,7 @@ class TTransaction(object):
                 self.assrt(ring_ct.ver_range(C, rsig))
                 self.assrt(crypto.point_eq(C, crypto.point_add(
                     crypto.scalarmult_base(mask),
-                    crypto.scalarmult_h(crypto.sc_init(amount)))))
+                    crypto.scalarmult_h(amount))))
 
             # Recoding to structure
             monero.recode_rangesig(rsig, encode=True)
@@ -978,7 +978,7 @@ class TTransaction(object):
         self.output_sk.append(xmrtypes.CtKey(mask=mask))
 
         # ECDH masking
-        ecdh_info = xmrtypes.EcdhTuple(mask=mask, amount=amount)
+        ecdh_info = xmrtypes.EcdhTuple(mask=mask, amount=crypto.sc_init(amount))
         ecdh_info = ring_ct.ecdh_encode(ecdh_info, derivation=crypto.encodeint(amount_key))
         monero.recode_ecdh(ecdh_info, encode=True)
         return rsig, out_pk, ecdh_info
