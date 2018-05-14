@@ -361,6 +361,15 @@ def sc_init(x):
     return sc_reduce32(x)
 
 
+def sc_get64(x):
+    """
+    Returns 64bit value from the sc
+    :param x:
+    :return:
+    """
+    return x
+
+
 def sc_check(key):
     """
     sc_check is not relevant for long-integer scalar representation.

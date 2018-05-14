@@ -124,6 +124,15 @@ def sc_init(x):
     return tcry.init256_modm_r(x)
 
 
+def sc_get64(x):
+    """
+    Returns 64bit value from the sc
+    :param x:
+    :return:
+    """
+    return tcry.get256_modm_r(x)
+
+
 def sc_check(key):
     """
     sc_check is not relevant for long-integer scalar representation.
