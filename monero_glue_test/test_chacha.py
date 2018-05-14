@@ -44,7 +44,7 @@ class ChachaTest(aiounittest.AsyncTestCase):
             self.assertEqual(data, plaintext)
 
             try:
-                plaintext2 = chacha.decrypt_xmr(priv_key + 1, blob, authenticated=authenticated)
+                plaintext2 = chacha.decrypt_xmr(crypto.sc_add(priv_key, crypto.sc_init(1)), blob, authenticated=authenticated)
                 if authenticated:
                     self.fail('Signature error expected')
                 else:
