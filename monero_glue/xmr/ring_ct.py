@@ -73,7 +73,7 @@ def prove_range_orig(amount, last_mask=None, use_asnl=False):
     Ci = [None] * len(bb)
     CiH = [None] * len(bb)  # this is like Ci - 2^i H
     H2 = crypto.gen_Hpow(ATOMS)
-    a = 0
+    a = crypto.sc_0()
     for i in range(0, ATOMS):
         ai[i] = crypto.random_scalar()
         if last_mask is not None and i == ATOMS - 1:
@@ -121,7 +121,7 @@ def prove_range_mem(amount, last_mask=None):
     bb = d2b(amount, n)  # gives binary form of bb in "digits" binary digits
     ai = [None] * len(bb)
     Ci = [None] * len(bb)
-    a = 0
+    a = crypto.sc_0()
 
     C = crypto.identity()
     alpha = mlsag2.key_zero_vector(n)
@@ -155,7 +155,7 @@ def prove_range_mem(amount, last_mask=None):
         else:
             kck.update(crypto.encodepoint(L))
 
-        c_H = crypto.scalarmult(c_H, 2)
+        c_H = crypto.point_double(c_H)
 
     # Compute ee, memory cleanup
     ee = crypto.sc_reduce32(crypto.decodeint(kck.digest()))
@@ -174,7 +174,7 @@ def prove_range_mem(amount, last_mask=None):
             LL = mlsag2.add_keys1(s0[jj], ee, Ci[jj])
             cc = crypto.hash_to_scalar(crypto.encodepoint(LL))
             s1[jj] = crypto.sc_mulsub(alpha[jj], ai[jj], cc)
-        c_H = crypto.scalarmult(c_H, 2)
+        c_H = crypto.point_double(c_H)
 
     A = xmrtypes.BoroSig()
     A.s0, A.s1, A.ee = s0, s1, ee
