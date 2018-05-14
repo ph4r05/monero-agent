@@ -17,7 +17,10 @@ def key_zero_vector(rows):
     :param rows:
     :return:
     """
-    return [0] * rows
+    vct = []
+    for i in range(rows):
+        vct.append(crypto.sc_0())
+    return vct
 
 
 def key_vector(rows):
@@ -609,7 +612,7 @@ def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn
     sk = key_vector(rows + 1)
     M = key_matrix(rows + 1, cols)
     for i in range(rows + 1):
-        sk[i] = 0
+        sk[i] = crypto.sc_0()
 
     for i in range(cols):
         M[i][rows] = crypto.identity()
@@ -617,7 +620,7 @@ def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn
             M[i][j] = crypto.decodepoint(pubs[i][j].dest)
             M[i][rows] = crypto.point_add(M[i][rows], crypto.decodepoint(pubs[i][j].mask))
 
-    sk[rows] = 0
+    sk[rows] = crypto.sc_0()
     for j in range(rows):
         sk[j] = in_sk[j].dest
         sk[rows] = crypto.sc_add(sk[rows], in_sk[j].mask)  # add masks in last row
