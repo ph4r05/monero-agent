@@ -352,6 +352,14 @@ def sc_0():
     return 0
 
 
+def sc_init(x):
+    """
+    Sets x to the scalar value Zmod(m)
+    :return:
+    """
+    return sc_reduce32(x)
+
+
 def sc_check(key):
     """
     sc_check is not relevant for long-integer scalar representation.
@@ -438,9 +446,21 @@ def sc_mulsub(aa, bb, cc):
     return (aa - bb * cc) % l
 
 
+def random_scalar():
+    """
+    Generates random scalar (secret key)
+    :return:
+    """
+    return sc_reduce32(rand.getrandbits(64 * 8))
+
+
 #
 # GE - ed25519 group
 #
+
+
+def point_double(P):
+    return scalarmult(P, 2)
 
 
 def ge_scalarmult(a, A):
@@ -615,6 +635,18 @@ def cn_fast_hash(buff):
     return kc2.digest()
 
 
+def hash_to_scalar(data, length=None):
+    """
+    H_s(P)
+    :param data:
+    :param length:
+    :return:
+    """
+    hash = cn_fast_hash(data[:length] if length else data)
+    res = decodeint(hash)
+    return sc_reduce32(res)
+
+
 def hash_to_ec(buf):
     """
     H_p(buf)
@@ -683,4 +715,36 @@ def hash_to_ec(buf):
     P = conv_from_ext((rx, ry, rz, rt))
     P8 = scalarmult(P, 8)
     return P8
+
+
+#
+# XMR
+#
+
+
+def gen_H():
+    """
+    Returns point H
+    8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94
+    :return:
+    """
+    h = cn_fast_hash(encodepoint(scalarmult_base(1)))
+    return scalarmult(decodepoint(h), 8)
+
+
+def scalarmult_h(i):
+    return scalarmult(gen_H(), i)
+
+
+def gen_c(a, amount):
+    """
+    Generates Pedersen commitment
+    C = aG + bH
+
+    :param a:
+    :param amount:
+    :return:
+    """
+    aG = scalarmult_base(a)
+    return point_add(aG, scalarmult_h(amount))
 
