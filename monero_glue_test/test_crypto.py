@@ -175,6 +175,31 @@ class CryptoTest(aiounittest.AsyncTestCase):
             d = crypto.decode_modm(l)
             self.assertEqual(x, d)
 
+    def test_ge25519_double_scalarmult_vartime2(self):
+        for i in range(10):
+            ap = crypto.random_scalar()
+            bp = crypto.random_scalar()
+            A = crypto.scalarmult_base(ap)
+            B = crypto.scalarmult_base(bp)
+            a = crypto.random_scalar()
+            b = crypto.random_scalar()
+
+            R = crypto.ge_double_scalarmult_base_vartime2(a, A, b, B)
+            R_exp = crypto.point_add(crypto.scalarmult(A, a), crypto.scalarmult(B, b))
+            self.assertTrue(crypto.point_eq(R, R_exp))
+
+    def test_ge25519_double_scalarmult_vartime(self):
+        for i in range(10):
+            ap = crypto.random_scalar()
+            A = crypto.scalarmult_base(ap)
+            a = crypto.random_scalar()
+            b = crypto.random_scalar()
+
+            R = crypto.ge_double_scalarmult_base_vartime(a, A, b)
+            R_exp = crypto.point_add(crypto.scalarmult(A, a), crypto.scalarmult_base(b))
+            self.assertTrue(crypto.point_eq(R, R_exp))
+
+
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
