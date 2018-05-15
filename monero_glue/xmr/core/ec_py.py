@@ -770,6 +770,29 @@ def scalarmult_h(i):
     return scalarmult(gen_H(), i)
 
 
+def add_keys2(a, b, B):
+    """
+    aG + bB, G is basepoint
+    :param a:
+    :param b:
+    :param B:
+    :return:
+    """
+    return point_add(scalarmult_base(a), scalarmult(B, b))
+
+
+def add_keys3(a, A, b, B):
+    """
+    aA + bB
+    :param a:
+    :param A:
+    :param b:
+    :param B:
+    :return:
+    """
+    return point_add(scalarmult(A, a), scalarmult(B, b))
+
+
 def gen_c(a, amount):
     """
     Generates Pedersen commitment

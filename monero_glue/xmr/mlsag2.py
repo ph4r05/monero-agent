@@ -95,31 +95,6 @@ def scalar_gen_matrix(r, c):
     return rv
 
 
-def add_keys1(a, b, B):
-    """
-    aG + bB, G is basepoint
-    TODO: use crypto
-    :param a:
-    :param b:
-    :param B:
-    :return:
-    """
-    return crypto.point_add(crypto.scalarmult_base(a), crypto.scalarmult(B, b))
-
-
-def add_keys2(a, A, b, B):
-    """
-    aA + bB
-    TODO: use crypto
-    :param a:
-    :param A:
-    :param b:
-    :param B:
-    :return:
-    """
-    return crypto.point_add(crypto.scalarmult(A, a), crypto.scalarmult(B, b))
-
-
 def decode_points(vct):
     """
     Decodes vector of points
@@ -219,10 +194,10 @@ def gen_mlsag(pk, xx, index):
 
     while i != index:
         s[i] = scalar_gen_vector(rows)
-        L[i] = [add_keys1(s[i][j], c[i], pk[i][j]) for j in range(0, rows)]
+        L[i] = [crypto.add_keys2(s[i][j], c[i], pk[i][j]) for j in range(0, rows)]
 
         Hi = hash_key_vector(pk[i])
-        R[i] = [add_keys2(s[i][j], Hi[j], c[i], I[j]) for j in range(0, rows)]
+        R[i] = [crypto.add_keys3(s[i][j], Hi[j], c[i], I[j]) for j in range(0, rows)]
         oldi = i
         i = (i + 1) % cols
         c[i] = crypto.cn_fast_hash(m + ''.join(L[oldi]) + ''.join(R[oldi]))
@@ -254,10 +229,10 @@ def ver_mlsag(pk, I, c0, s):
 
     i = 0
     while i < cols:
-        L[i] = [add_keys1(s[i][j], c[i], pk[i][j]) for j in range(0, rows)]
+        L[i] = [crypto.add_keys2(s[i][j], c[i], pk[i][j]) for j in range(0, rows)]
 
         Hi = hash_key_vector(pk[i])
-        R[i] = [add_keys2( s[i][j], Hi[j], c[i], I[j]) for j in range(0, rows)]
+        R[i] = [crypto.add_keys3(s[i][j], Hi[j], c[i], I[j]) for j in range(0, rows)]
 
         oldi = i
         i = i + 1
@@ -288,7 +263,7 @@ def gen_borromean(x, P1, P2, indices):
         if indices[ii] == 0:
             s1[ii] = crypto.random_scalar()
             c = crypto.hash_to_scalar(crypto.encodepoint(L))
-            L = add_keys1(s1[ii], c, P2[ii])
+            L = crypto.add_keys2(s1[ii], c, P2[ii])
             kck.update(crypto.encodepoint(L))
 
         else:
@@ -304,7 +279,7 @@ def gen_borromean(x, P1, P2, indices):
             s0[jj] = crypto.sc_mulsub(alpha[jj], x[jj], ee)
         else:
             s0[jj] = crypto.random_scalar()
-            LL = add_keys1(s0[jj], ee, P1[jj])
+            LL = crypto.add_keys2(s0[jj], ee, P1[jj])
             cc = crypto.hash_to_scalar(crypto.encodepoint(LL))
             s1[jj] = crypto.sc_mulsub(alpha[jj], x[jj], cc)
 
@@ -325,9 +300,9 @@ def ver_borromean(P1, P2, s0, s1, ee):
     n = len(P1)
     Lv1 = key_vector(n)
     for ii in range(n):
-        LL = add_keys1(s0[ii], ee, P1[ii])
+        LL = crypto.add_keys2(s0[ii], ee, P1[ii])
         chash = crypto.hash_to_scalar(crypto.encodepoint(LL))
-        Lv1[ii] = add_keys1(s1[ii], chash, P2[ii])
+        Lv1[ii] = crypto.add_keys2(s1[ii], chash, P2[ii])
 
     kck = common.get_keccak()
     for ii in range(n):
@@ -471,15 +446,15 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
         hasher = hasher_message(message)
 
         for j in range(dsRows):
-            L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
+            L = crypto.add_keys2(rv.ss[i][j], c_old, pk[i][j])
             Hi = crypto.hash_to_ec(crypto.encodepoint(pk[i][j]))  # originally hashToPoint()
-            R = add_keys2(rv.ss[i][j], Hi, c_old, Ip[j])
+            R = crypto.add_keys3(rv.ss[i][j], Hi, c_old, Ip[j])
             hasher.update(crypto.encodepoint(pk[i][j]))
             hasher.update(crypto.encodepoint(L))
             hasher.update(crypto.encodepoint(R))
 
         for j in range(dsRows, rows):
-            L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
+            L = crypto.add_keys2(rv.ss[i][j], c_old, pk[i][j])
             hasher.update(crypto.encodepoint(pk[i][j]))
             hasher.update(crypto.encodepoint(L))
 
@@ -556,15 +531,15 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
         c = 0
         hasher = hasher_message(message)
         for j in range(dsRows):
-            L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
+            L = crypto.add_keys2(rv.ss[i][j], c_old, pk[i][j])
             Hi = crypto.hash_to_ec(crypto.encodepoint(pk[i][j]))  # originally hashToPoint()
-            R = add_keys2(rv.ss[i][j], Hi, c_old, Ip[j])
+            R = crypto.add_keys3(rv.ss[i][j], Hi, c_old, Ip[j])
             hasher.update(crypto.encodepoint(pk[i][j]))
             hasher.update(crypto.encodepoint(L))
             hasher.update(crypto.encodepoint(R))
 
         for j in range(dsRows, rows):
-            L = add_keys1(rv.ss[i][j], c_old, pk[i][j])
+            L = crypto.add_keys2(rv.ss[i][j], c_old, pk[i][j])
             hasher.update(crypto.encodepoint(pk[i][j]))
             hasher.update(crypto.encodepoint(L))
 

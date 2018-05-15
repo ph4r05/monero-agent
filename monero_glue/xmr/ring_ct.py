@@ -151,7 +151,7 @@ def prove_range_mem(amount, last_mask=None):
         if bb[ii] == 0:
             s1[ii] = crypto.random_scalar()
             c = crypto.hash_to_scalar(crypto.encodepoint(L))
-            L = mlsag2.add_keys1(s1[ii], c, crypto.point_sub(Ci[ii], c_H))
+            L = crypto.add_keys2(s1[ii], c, crypto.point_sub(Ci[ii], c_H))
             kck.update(crypto.encodepoint(L))
 
         else:
@@ -173,7 +173,7 @@ def prove_range_mem(amount, last_mask=None):
 
         else:
             s0[jj] = crypto.random_scalar()
-            LL = mlsag2.add_keys1(s0[jj], ee, Ci[jj])
+            LL = crypto.add_keys2(s0[jj], ee, Ci[jj])
             cc = crypto.hash_to_scalar(crypto.encodepoint(LL))
             s1[jj] = crypto.sc_mulsub(alpha[jj], ai[jj], cc)
         c_H = crypto.point_double(c_H)

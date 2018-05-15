@@ -505,7 +505,7 @@ def ecdh_decode_simple(rv, sk, i):
     ecdh_info = rv.ecdhInfo[i]
     ecdh_info = recode_ecdh(ecdh_info, False)
     ecdh_info = ring_ct.ecdh_decode(ecdh_info, derivation=crypto.encodeint(sk))
-    c_tmp = mlsag2.add_keys1(ecdh_info.mask, ecdh_info.amount, crypto.gen_H())
+    c_tmp = crypto.add_keys2(ecdh_info.mask, ecdh_info.amount, crypto.gen_H())
     if not crypto.point_eq(c_tmp, crypto.decodepoint(rv.outPk[i].mask)):
         raise ValueError('Amount decoded incorrectly')
 

@@ -445,6 +445,29 @@ def scalarmult_h(i):
     return scalarmult(gen_H(), sc_init(i) if isinstance(i, int) else i)
 
 
+def add_keys2(a, b, B):
+    """
+    aG + bB, G is basepoint
+    :param a:
+    :param b:
+    :param B:
+    :return:
+    """
+    return tcry.xmr_add_keys2_vartime_r(a, b, B)
+
+
+def add_keys3(a, A, b, B):
+    """
+    aA + bB
+    :param a:
+    :param A:
+    :param b:
+    :param B:
+    :return:
+    """
+    return tcry.xmr_add_keys3_vartime_r(a, A, b, B)
+
+
 def gen_c(a, amount):
     """
     Generates Pedersen commitment
