@@ -184,7 +184,7 @@ def expand256_modm(r, buff):
 
 def contract256_modm(buff, sc):
     CLIB.contract256_modm(buff, sc)
-    return bytes(bytearray(buff))
+    return bytes(buff)
 
 
 def add256_modm(r, a, b):
@@ -289,7 +289,7 @@ def expand256_modm_r(buff):
 def contract256_modm_r(sc):
     buff = tt.KEY_BUFF()
     CLIB.contract256_modm(buff, sc)
-    return bytes(bytearray(buff))
+    return bytes(buff)
 
 
 def add256_modm_r(a, b):
@@ -490,7 +490,7 @@ def curve25519_contract(r, a):
 def curve25519_contract_r(a):
     r = tt.KEY_BUFF()
     CLIB.curve25519_contract(r, a)
-    return bytes(bytearray(r))
+    return bytes(r)
 
 
 def curve25519_recip(r, a):
@@ -667,7 +667,7 @@ def ge25519_pack(r, a):
 def ge25519_pack_r(a):
     r = tt.KEY_BUFF()
     CLIB.ge25519_pack(r, ct.byref(a))
-    return bytes(bytearray(r))
+    return bytes(r)
 
 
 def ge25519_unpack_negative_vartime(a, b):
@@ -876,7 +876,7 @@ def xmr_fast_hash(r, a, b):
 def xmr_fast_hash_r(a):
     r = tt.KEY_BUFF()
     CLIB.xmr_fast_hash(r, bytes(a), len(a))
-    return bytes(bytearray(r))
+    return bytes(r)
 
 
 def xmr_hash_to_scalar(r, a):
