@@ -143,6 +143,7 @@ CLIB.xmr_gen_c.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.c_uint64]
 CLIB.xmr_add_keys1.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM, ct.POINTER(tt.Ge25519)]
 CLIB.xmr_add_keys1_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM, ct.POINTER(tt.Ge25519)]
 CLIB.xmr_add_keys2.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519)]
+CLIB.xmr_add_keys2_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519)]
 CLIB.xmr_get_subaddress_secret_key.argtypes = [tt.MODM, ct.c_uint32, ct.c_uint32, tt.MODM]
 
 
@@ -959,6 +960,16 @@ def xmr_add_keys2(r, a, b, c, d):
 def xmr_add_keys2_r(a, b, c, d):
     r = tt.Ge25519()
     CLIB.xmr_add_keys2(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
+    return r
+
+
+def xmr_add_keys2_vartime(r, a, b, c, d):
+    return CLIB.xmr_add_keys2_vartime(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
+
+
+def xmr_add_keys2_vartime_r(a, b, c, d):
+    r = tt.Ge25519()
+    CLIB.xmr_add_keys2_vartime(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
     return r
 
 
