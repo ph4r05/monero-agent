@@ -12,6 +12,10 @@ CLIB = ct.cdll.LoadLibrary(LIBTREZOR_CRYPTO_PATH)
 
 # Functions
 CLIB.random_init.restype = ct.c_int
+CLIB.random_buffer.argtypes = [ct.c_void_p, ct.c_size_t]
+CLIB.random_uniform.argtypes = [ct.c_uint32]
+CLIB.random_uniform.restype = ct.c_uint32
+CLIB.random32.restype = ct.c_uint32
 
 
 #
@@ -167,6 +171,12 @@ def init_lib():
     if res < 0:
         raise ValueError('Library initialization error: %s' % res)
     return res
+
+
+def random_buffer(sz):
+    buff = (ct.c_uint8 * sz)()
+    CLIB.random_buffer(ct.byref(buff), sz)
+    return bytes(buff)
 
 
 #

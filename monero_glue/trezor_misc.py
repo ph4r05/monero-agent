@@ -37,7 +37,7 @@ def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None)
     :return:
     """
     if not salt:
-        salt = common.random_bytes(32)
+        salt = crypto.random_bytes(32)
 
     if not rand_mult:
         rand_mult_num = crypto.random_scalar()

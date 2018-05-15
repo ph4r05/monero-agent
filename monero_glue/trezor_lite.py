@@ -1306,7 +1306,7 @@ class KeyImageSync(object):
 
         self.num = msg.num
         self.hash = msg.hash
-        self.enc_key = common.get_random_bytes(32)
+        self.enc_key = crypto.random_bytes(32)
         # Sub address precomputation
         if msg.subs and len(msg.subs) > 0:
             for sub in msg.subs:  # type: key_image.SubAddrIndicesList

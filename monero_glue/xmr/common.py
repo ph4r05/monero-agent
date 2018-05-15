@@ -2,11 +2,6 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-
-from monero_serialize import xmrserialize, protobuf as xproto
-from monero_glue.xmr.core.backend import keccak2
-from Crypto.Protocol.KDF import PBKDF2
-
 from Crypto.Random import get_random_bytes
 from Crypto.Random import random as rand
 

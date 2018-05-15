@@ -4,7 +4,7 @@ from hashlib import sha256
 from hashlib import sha512
 import hmac
 
-from monero_glue.xmr import common
+from monero_glue.xmr import crypto
 from monero_glue.misc import b58 as base58
 from monero_glue.misc.bip import bip39
 from os import urandom
@@ -734,7 +734,7 @@ class Wallet(object):
         wallet. If you're even saving `user_entropy` at all, you're doing it
         wrong.
         """
-        seed = common.random_bytes(64)
+        seed = crypto.random_bytes(64)
         if user_entropy:
             user_entropy = str(user_entropy)  # allow for int/long
             seed += user_entropy

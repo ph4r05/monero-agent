@@ -15,6 +15,15 @@ from monero_glue.xmr.core import ec_py
 tcry.init_lib()
 
 
+def random_bytes(by):
+    """
+    Generates X random bytes, returns byte-string
+    :param by:
+    :return:
+    """
+    return tcry.random_buffer(by)
+
+
 class KeccakWrapper(object):
     """
     Simple Keccak hasher wrapper. OOP interface to xmr_hasher_*

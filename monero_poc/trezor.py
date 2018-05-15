@@ -563,7 +563,7 @@ class TrezorServer(cli.BaseCli):
                 return
 
         print('Generating new wallet...')
-        seed = common.random_bytes(32)
+        seed = crypto.random_bytes(32)
 
         wl = bip32.Wallet.from_master_secret(seed)
         seed_bip32_words, seed_bip32_words_indices = wl.to_seed_words()

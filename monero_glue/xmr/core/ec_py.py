@@ -4,6 +4,8 @@
 
 import hmac
 from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Random import get_random_bytes
+from Crypto.Random import random as rand
 
 from monero_glue.xmr.core.ec_base import *
 from monero_glue.xmr.core.backend.ed25519_2 import inv
@@ -14,6 +16,15 @@ from monero_serialize import xmrserialize
 REPR_XY = 0
 REPR_EXT = 1
 POINT_REPR = REPR_EXT
+
+
+def random_bytes(by):
+    """
+    Generates X random bytes, returns byte-string
+    :param by:
+    :return:
+    """
+    return get_random_bytes(by)
 
 
 def get_keccak():
