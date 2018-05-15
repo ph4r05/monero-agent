@@ -658,11 +658,18 @@ def prove_range(amount, last_mask=None):
 
     # Rewrap to serializable structures
     nrsig = xmrtypes.RangeSig()
-    nrsig.Ci = R.Ci
     nrsig.asig = xmrtypes.BoroSig()
-    nrsig.asig.s0 = R.asig.s0
-    nrsig.asig.s1 = R.asig.s1
-    nrsig.asig.ee = R.asig.ee
+    nrsig.asig.ee = bytes(R.asig.ee)
+    nrsig.Ci = list(R.Ci)
+    nrsig.asig.s0 = list(R.asig.s0)
+    nrsig.asig.s1 = list(R.asig.s1)
+    del R
+
+    for i in range(64):
+        nrsig.Ci[i] = bytes(nrsig.Ci[i])
+        nrsig.asig.s0[i] = bytes(nrsig.asig.s0[i])
+        nrsig.asig.s1[i] = bytes(nrsig.asig.s1[i])
+
     return C, a, nrsig
 
 #
