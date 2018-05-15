@@ -444,9 +444,6 @@ class TTransaction(object):
                         crypto.scalarmult_base(mask),
                         crypto.scalarmult_h(outamounts[idx])))
 
-                # Recoding to structure
-                monero.recode_rangesig(rsig, encode=True)
-
             # Mask sum
             rv.outPk[idx].mask = crypto.encodepoint(C)
             sumout = crypto.sc_add(sumout, mask)

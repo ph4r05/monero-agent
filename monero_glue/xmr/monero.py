@@ -698,24 +698,32 @@ def recode_ecdh(ecdh, encode=True):
     return ecdh
 
 
-def recode_rangesig(rsig, encode=True):
+def recode_rangesig(rsig, encode=True, copy=False):
     """
     In - place rsig recoding
     :param rsig:
     :param encode: if true encodes to byte representation, otherwise decodes from byte representation
+    :param copy:
     :return:
     """
     recode_int = crypto.encodeint if encode else crypto.decodeint
     recode_point = crypto.encodepoint if encode else crypto.decodepoint
+    nrsig = rsig
+    if copy:
+        nrsig = xmrtypes.RangeSig()
+        nrsig.Ci = [None] * 64
+        nrsig.asig = xmrtypes.BoroSig()
+        nrsig.asig.s0 = [None] * 64
+        nrsig.asig.s1 = [None] * 64
 
     for i in range(len(rsig.Ci)):
-        rsig.Ci[i] = recode_point(rsig.Ci[i])
+        nrsig.Ci[i] = recode_point(rsig.Ci[i])
     for i in range(len(rsig.asig.s0)):
-        rsig.asig.s0[i] = recode_int(rsig.asig.s0[i])
+        nrsig.asig.s0[i] = recode_int(rsig.asig.s0[i])
     for i in range(len(rsig.asig.s1)):
-        rsig.asig.s1[i] = recode_int(rsig.asig.s1[i])
-    rsig.asig.ee = recode_int(rsig.asig.ee)
-    return rsig
+        nrsig.asig.s1[i] = recode_int(rsig.asig.s1[i])
+    nrsig.asig.ee = recode_int(rsig.asig.ee)
+    return nrsig
 
 
 def recode_msg(mgs, encode=True):

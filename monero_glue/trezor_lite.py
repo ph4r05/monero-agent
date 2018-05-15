@@ -958,16 +958,13 @@ class TTransaction(object):
             raise ValueError('Bulletproof not yet supported')
 
         else:
-            C, mask, rsig = ring_ct.prove_range(amount, last_mask)
+            C, mask, rsig = ring_ct.prove_range(amount, last_mask, backend_impl=True)
 
             if __debug__:
                 self.assrt(ring_ct.ver_range(C, rsig))
                 self.assrt(crypto.point_eq(C, crypto.point_add(
                     crypto.scalarmult_base(mask),
                     crypto.scalarmult_h(amount))))
-
-            # Recoding to structure
-            monero.recode_rangesig(rsig, encode=True)
 
             # Incremental hashing
             await self.full_message_hasher.rsig_val(rsig, self.use_bulletproof)

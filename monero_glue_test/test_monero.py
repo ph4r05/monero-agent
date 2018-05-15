@@ -103,7 +103,6 @@ class MoneroTest(aiounittest.AsyncTestCase):
 
             C = crypto.decodepoint(rv.outPk[i].mask)
             rsig = rv.p.rangeSigs[i]
-            monero.recode_rangesig(rsig, encode=False)
 
             res = ring_ct.ver_range(C, rsig)
             self.assertTrue(res)

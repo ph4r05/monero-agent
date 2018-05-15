@@ -25,12 +25,25 @@ class RingCtTest(aiounittest.AsyncTestCase):
         res = ring_ct.ver_range(proof[0], proof[2])
         self.assertTrue(res)
 
+    def test_range_proof_back(self):
+        proof = ring_ct.prove_range(0, backend_impl=True)
+        res = ring_ct.ver_range(proof[0], proof[2])
+        self.assertTrue(res)
+
     def test_range_proof2(self):
         proof = ring_ct.prove_range(123456789)
         res = ring_ct.ver_range(proof[0], proof[2])
         self.assertTrue(res)
 
-        proof = ring_ct.prove_range(123456789, mem_opt=False)
+        proof = ring_ct.prove_range(123456789, mem_opt=False, decode=True)
+        res = ring_ct.ver_range(proof[0], proof[2], decode=False)
+        self.assertTrue(res)
+
+        res = ring_ct.ver_range(crypto.point_add(proof[0], crypto.scalarmult_base(crypto.sc_init(4))), proof[2], decode=False)
+        self.assertFalse(res)
+
+    def test_range_proof2_back(self):
+        proof = ring_ct.prove_range(123456789, backend_impl=True)
         res = ring_ct.ver_range(proof[0], proof[2])
         self.assertTrue(res)
 
@@ -41,21 +54,21 @@ class RingCtTest(aiounittest.AsyncTestCase):
         proof = ring_ct.prove_range(123456789)
         rsig = proof[2]
 
-        monero.recode_rangesig(rsig, encode=True)
         monero.recode_rangesig(rsig, encode=False)
+        monero.recode_rangesig(rsig, encode=True)
         res = ring_ct.ver_range(proof[0], rsig)
         self.assertTrue(res)
 
     def test_range_proof_old(self):
-        proof = ring_ct.prove_range(0, use_asnl=True, mem_opt=False)
-        res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True)
+        proof = ring_ct.prove_range(0, use_asnl=True, mem_opt=False, decode=True)
+        res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True, decode=False)
         self.assertTrue(res)
 
     def test_range_proof2_old(self):
-        proof = ring_ct.prove_range(123456789, use_asnl=True, mem_opt=False)
-        res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True)
+        proof = ring_ct.prove_range(123456789, use_asnl=True, mem_opt=False, decode=True)
+        res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True, decode=False)
         self.assertTrue(res)
-        res = ring_ct.ver_range(crypto.point_add(proof[0], crypto.scalarmult_base(crypto.sc_init(4))), proof[2], use_asnl=True)
+        res = ring_ct.ver_range(crypto.point_add(proof[0], crypto.scalarmult_base(crypto.sc_init(4))), proof[2], use_asnl=True, decode=False)
         self.assertFalse(res)
 
     def test_key_image_signature(self):

@@ -34,22 +34,43 @@ def sum_Ci(Cis):
     return CSum
 
 
-def prove_range(amount, last_mask=None, use_asnl=False, mem_opt=True):
+def prove_range(amount, last_mask=None, use_asnl=False, mem_opt=True, backend_impl=False, decode=False):
     """
     Range proof generator.
+    In order to minimize the memory consumption and CPU usage during transaction generation the returned values
+    are returned encoded.
+
     :param amount:
     :param last_mask:
-    :param use_asnl:
+    :param use_asnl: ASNL range proof, insecure
     :param mem_opt: memory optimized
+    :param backend_impl: backend implementation, if available
+    :param decode: decodes output
     :return:
     """
     if use_asnl and mem_opt:
         raise ValueError('ASNL not in memory optimized variant')
+    if backend_impl and use_asnl:
+        raise ValueError('ASNL not supported in backend')
 
+    if backend_impl and crypto.get_backend().has_rangeproof_borromean():
+        C, a, R = crypto.prove_range(amount, last_mask)[:3]  # backend returns encoded
+        if decode:
+            R = monero.recode_rangesig(R, encode=False)
+            return C, a, R
+        return C, a, R
+
+    ret = None
     if use_asnl and not mem_opt:
-        return prove_range_orig(amount, last_mask=last_mask, use_asnl=True)
+        ret = prove_range_orig(amount, last_mask=last_mask, use_asnl=True)
     else:
-        return prove_range_mem(amount, last_mask=last_mask)
+        ret = prove_range_mem(amount, last_mask=last_mask)
+
+    # Encoding
+    C, a, R = ret[:3]
+    if not decode:
+        R = monero.recode_rangesig(R, encode=True)
+    return C, a, R
 
 
 def prove_range_orig(amount, last_mask=None, use_asnl=False):
@@ -62,7 +83,7 @@ def prove_range_orig(amount, last_mask=None, use_asnl=False):
     mask is a such that C = aG + bH, and b = amount
     :param amount:
     :param last_mask: ai[ATOMS-1] will be computed as \sum_{i=0}^{ATOMS-2} a_i - last_mask
-    :param use_asnl: use ASNL, used before Borromean
+    :param use_asnl: use ASNL, used before Borromean, insecure
     :return: sumCi, mask, RangeSig.
         sumCi is Pedersen commitment on the amount value. sumCi = aG + amount*H
         mask is "a" from the Pedersent commitment above.
@@ -104,7 +125,6 @@ def prove_range_orig(amount, last_mask=None, use_asnl=False):
 def prove_range_mem(amount, last_mask=None):
     """
     Memory optimized range proof.
-    TODO: use one in trezor_crypto! Encoded by default.
 
     Gives C, and mask such that \sumCi = C
     c.f. http:#eprint.iacr.org/2015/1098 section 5.1
@@ -188,29 +208,35 @@ def prove_range_mem(amount, last_mask=None):
     return C, a, R
 
 
-def ver_range(Ci, ags, use_asnl=False):
+def ver_range(C=None, rsig=None, use_asnl=False, decode=True):
     """
     Verifies that \sum Ci = C and that each Ci is a commitment to 0 or 2^i
-    :param Ci:
-    :param ags:
-    :param use_asnl: use ASNL, used before Borromean
+    :param C:
+    :param rsig:
+    :param use_asnl: use ASNL, used before Borromean, insecure!
+    :param decode: decodes encoded range proof
     :return:
     """
     n = ATOMS
     CiH = [None] * n
     C_tmp = crypto.identity()
-    H2 = crypto.gen_Hpow(ATOMS)
-    for i in range(0, n):
-        CiH[i] = crypto.point_sub(ags.Ci[i], H2[i])
-        C_tmp = crypto.point_add(C_tmp, ags.Ci[i])
+    c_H = crypto.gen_H()
 
-    if not crypto.point_eq(C_tmp, Ci):
+    if decode:
+        rsig = monero.recode_rangesig(rsig, encode=False, copy=True)
+
+    for i in range(0, n):
+        CiH[i] = crypto.point_sub(rsig.Ci[i], c_H)
+        C_tmp = crypto.point_add(C_tmp, rsig.Ci[i])
+        c_H = crypto.point_double(c_H)
+
+    if C is not None and not crypto.point_eq(C_tmp, C):
         return 0
 
     if use_asnl:
-        return asnl.ver_asnl(ags.Ci, CiH, ags.asig.s0, ags.asig.s1, ags.asig.ee)
+        return asnl.ver_asnl(rsig.Ci, CiH, rsig.asig.s0, rsig.asig.s1, rsig.asig.ee)
     else:
-        return mlsag2.ver_borromean(ags.Ci, CiH, ags.asig.s0, ags.asig.s1, ags.asig.ee)
+        return mlsag2.ver_borromean(rsig.Ci, CiH, rsig.asig.s0, rsig.asig.s1, rsig.asig.ee)
 
 
 # Ring-ct MG sigs

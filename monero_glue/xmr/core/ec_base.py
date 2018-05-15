@@ -168,3 +168,22 @@ def decode_modm(limbs):
         shift += 30
     return n
 
+
+#
+# Backend config
+#
+
+
+class ECBackendBase(object):
+    """
+    Base EC backend specs
+    """
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def has_rangeproof_borromean(self):
+        return False
+
+    def has_rangeproof_bulletproof(self):
+        return False
+

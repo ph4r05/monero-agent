@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+from monero_serialize import xmrtypes
 from monero_glue.xmr.core.ec_base import *
 from monero_glue.xmr.core.backend import trezor_crypto as tcry
 from monero_glue.xmr.core import ec_py
@@ -547,6 +548,50 @@ def derive_secret_key(derivation, output_index, base):
         raise ValueError("cs_check in derive_secret_key")
     return tcry.xmr_derive_private_key_r(derivation, output_index, base)
 
+
+def prove_range(amount, last_mask=None):
+    """
+    Range proof provided by the backend. Implemented in C for speed.
+
+    :param amount:
+    :param last_mask:
+    :return:
+    """
+    C, a, R = tcry.gen_range_proof(amount, last_mask)
+
+    # Rewrap to serializable structures
+    nrsig = xmrtypes.RangeSig()
+    nrsig.Ci = R.Ci
+    nrsig.asig = xmrtypes.BoroSig()
+    nrsig.asig.s0 = R.asig.s0
+    nrsig.asig.s1 = R.asig.s1
+    nrsig.asig.ee = R.asig.ee
+    return C, a, nrsig
+
+#
+# Backend config
+#
+
+
+class TcryECBackend(ECBackendBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def has_rangeproof_borromean(self):
+        return True
+
+    def has_rangeproof_bulletproof(self):
+        return False
+
+
+BACKEND_OBJ = None
+
+
+def get_backend():
+    global BACKEND_OBJ
+    if BACKEND_OBJ is None:
+        BACKEND_OBJ = TcryECBackend()
+    return BACKEND_OBJ
 
 
 

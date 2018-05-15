@@ -883,3 +883,23 @@ def derive_secret_key(derivation, output_index, base):
     return sc_add(base, scalar)
 
 
+#
+# Backend config
+#
+
+
+class PyECBackend(ECBackendBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+BACKEND_OBJ = None
+
+
+def get_backend():
+    global BACKEND_OBJ
+    if BACKEND_OBJ is None:
+        BACKEND_OBJ = PyECBackend()
+    return BACKEND_OBJ
+
+
