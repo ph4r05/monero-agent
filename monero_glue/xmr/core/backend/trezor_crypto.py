@@ -4,7 +4,11 @@ from . import trezor_types as tt
 
 
 # Open Trezor-crypto
-CLIB = ct.cdll.LoadLibrary(os.path.join(os.path.dirname(__file__), './libtrezor-crypto.so'))
+LIBTREZOR_PATH = os.getenv('LIBTREZOR_PATH', None)
+if LIBTREZOR_PATH is None:
+    LIBTREZOR_PATH = os.path.join(os.path.dirname(__file__), './libtrezor-crypto.so')
+
+CLIB = ct.cdll.LoadLibrary(LIBTREZOR_PATH)
 
 # Functions
 CLIB.random_init.restype = ct.c_int
