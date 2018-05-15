@@ -302,7 +302,7 @@ def ge_double_scalarmult_precomp_vartime2(a, Ai, b, Bi):
     :param Bi:
     :return:
     """
-    return tcry.xmr_add_keys2_r(a, Ai, b, Bi)
+    return tcry.xmr_add_keys3_r(a, Ai, b, Bi)
 
 
 def identity(byte_enc=False):

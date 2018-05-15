@@ -144,10 +144,10 @@ CLIB.xmr_generate_key_derivation.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(
 CLIB.xmr_derive_private_key.argtypes = [tt.MODM, ct.POINTER(tt.Ge25519), ct.c_uint32, tt.MODM]
 CLIB.xmr_derive_public_key.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), ct.c_uint32, ct.POINTER(tt.Ge25519)]
 CLIB.xmr_gen_c.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.c_uint64]
-CLIB.xmr_add_keys1.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM, ct.POINTER(tt.Ge25519)]
-CLIB.xmr_add_keys1_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM, ct.POINTER(tt.Ge25519)]
-CLIB.xmr_add_keys2.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519)]
-CLIB.xmr_add_keys2_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519)]
+CLIB.xmr_add_keys2.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM, ct.POINTER(tt.Ge25519)]
+CLIB.xmr_add_keys2_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM, ct.POINTER(tt.Ge25519)]
+CLIB.xmr_add_keys3.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519)]
+CLIB.xmr_add_keys3_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519)]
 CLIB.xmr_get_subaddress_secret_key.argtypes = [tt.MODM, ct.c_uint32, ct.c_uint32, tt.MODM]
 
 
@@ -937,43 +937,43 @@ def xmr_gen_c_r(a, b):
     return r
 
 
-def xmr_add_keys1(r, a, b, c):
-    return CLIB.xmr_add_keys1(ct.byref(r), a, b, ct.byref(c))
+def xmr_add_keys2(r, a, b, c):
+    return CLIB.xmr_add_keys2(ct.byref(r), a, b, ct.byref(c))
 
 
-def xmr_add_keys1_r(a, b, c):
+def xmr_add_keys2_r(a, b, c):
     r = tt.Ge25519()
-    CLIB.xmr_add_keys1(ct.byref(r), a, b, ct.byref(c))
+    CLIB.xmr_add_keys2(ct.byref(r), a, b, ct.byref(c))
     return r
 
 
-def xmr_add_keys1_vartime(r, a, b, c):
-    return CLIB.xmr_add_keys1_vartime(ct.byref(r), a, b, ct.byref(c))
+def xmr_add_keys2_vartime(r, a, b, c):
+    return CLIB.xmr_add_keys2_vartime(ct.byref(r), a, b, ct.byref(c))
 
 
-def xmr_add_keys1_vartime_r(a, b, c):
+def xmr_add_keys2_vartime_r(a, b, c):
     r = tt.Ge25519()
-    CLIB.xmr_add_keys1_vartime(ct.byref(r), a, b, ct.byref(c))
+    CLIB.xmr_add_keys2_vartime(ct.byref(r), a, b, ct.byref(c))
     return r
 
 
-def xmr_add_keys2(r, a, b, c, d):
-    return CLIB.xmr_add_keys2(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
+def xmr_add_keys3(r, a, b, c, d):
+    return CLIB.xmr_add_keys3(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
 
 
-def xmr_add_keys2_r(a, b, c, d):
+def xmr_add_keys3_r(a, b, c, d):
     r = tt.Ge25519()
-    CLIB.xmr_add_keys2(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
+    CLIB.xmr_add_keys3(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
     return r
 
 
-def xmr_add_keys2_vartime(r, a, b, c, d):
-    return CLIB.xmr_add_keys2_vartime(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
+def xmr_add_keys3_vartime(r, a, b, c, d):
+    return CLIB.xmr_add_keys3_vartime(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
 
 
-def xmr_add_keys2_vartime_r(a, b, c, d):
+def xmr_add_keys3_vartime_r(a, b, c, d):
     r = tt.Ge25519()
-    CLIB.xmr_add_keys2_vartime(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
+    CLIB.xmr_add_keys3_vartime(ct.byref(r), a, ct.byref(b), c, ct.byref(d))
     return r
 
 
