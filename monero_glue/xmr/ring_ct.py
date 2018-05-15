@@ -169,13 +169,13 @@ def prove_range_mem(amount, last_mask=None):
 
     for jj in range(n):
         if not bb[jj]:
-            s0[jj] = crypto.sc_mulsub(alpha[jj], ai[jj], ee)
+            s0[jj] = crypto.sc_mulsub(ai[jj], ee, alpha[jj])
 
         else:
             s0[jj] = crypto.random_scalar()
             LL = crypto.add_keys2(s0[jj], ee, Ci[jj])
             cc = crypto.hash_to_scalar(crypto.encodepoint(LL))
-            s1[jj] = crypto.sc_mulsub(alpha[jj], ai[jj], cc)
+            s1[jj] = crypto.sc_mulsub(ai[jj], cc, alpha[jj])
         c_H = crypto.point_double(c_H)
 
     A = xmrtypes.BoroSig()
@@ -355,7 +355,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
 
     h = crypto.hash_to_scalar(buff)
     sig[sec_idx][0] = crypto.sc_sub(h, sum)
-    sig[sec_idx][1] = crypto.sc_mulsub(k, sig[sec_idx][0], sec)
+    sig[sec_idx][1] = crypto.sc_mulsub(sig[sec_idx][0], sec, k)
     return sig
 
 

@@ -90,7 +90,7 @@ def generate_signature(data, priv):
 
     buff = data + encodepoint(pub) + encodepoint(comm)
     c = hash_to_scalar(buff)
-    r = sc_mulsub(k, priv, c)
+    r = sc_mulsub(priv, c, k)
     return c, r, pub
 
 

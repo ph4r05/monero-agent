@@ -447,13 +447,24 @@ def sc_eq(a, b):
 
 def sc_mulsub(aa, bb, cc):
     """
-    (aa - bb * cc) % l
+    (cc - aa * bb) % l
     :param aa:
     :param bb:
     :param cc:
     :return:
     """
-    return (aa - bb * cc) % l
+    return (cc - aa * bb) % l
+
+
+def sc_muladd(aa, bb, cc):
+    """
+    (cc + aa * bb) % l
+    :param aa:
+    :param bb:
+    :param cc:
+    :return:
+    """
+    return (cc + aa * bb) % l
 
 
 def random_scalar():

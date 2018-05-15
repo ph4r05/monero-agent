@@ -202,7 +202,7 @@ def gen_mlsag(pk, xx, index):
         i = (i + 1) % cols
         c[i] = crypto.cn_fast_hash(m + ''.join(L[oldi]) + ''.join(R[oldi]))
 
-    s[index] = [crypto.sc_mulsub(alpha[j], c[index], xx[j]) for j in range(0, rows)]  # alpha - c * x
+    s[index] = [crypto.sc_mulsub(c[index], xx[j], alpha[j]) for j in range(0, rows)]  # alpha - c * x
     return I, c[0], s
 
 
@@ -276,12 +276,12 @@ def gen_borromean(x, P1, P2, indices):
 
     for jj in range(n):
         if not indices[jj]:
-            s0[jj] = crypto.sc_mulsub(alpha[jj], x[jj], ee)
+            s0[jj] = crypto.sc_mulsub(x[jj], ee, alpha[jj])
         else:
             s0[jj] = crypto.random_scalar()
             LL = crypto.add_keys2(s0[jj], ee, P1[jj])
             cc = crypto.hash_to_scalar(crypto.encodepoint(LL))
-            s1[jj] = crypto.sc_mulsub(alpha[jj], x[jj], cc)
+            s1[jj] = crypto.sc_mulsub(x[jj], cc, alpha[jj])
 
     return s0, s1, ee
 
@@ -466,7 +466,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
             rv.cc = c_old
 
     for j in range(rows):
-        rv.ss[index][j] = crypto.sc_mulsub(alpha[j], c, xx[j])  # alpha[j] - c * xx[j]; sc_mulsub in original does c-ab
+        rv.ss[index][j] = crypto.sc_mulsub(c, xx[j], alpha[j])  # alpha[j] - c * xx[j]; sc_mulsub in original does c-ab
 
     if mscout:
         mscout(c)

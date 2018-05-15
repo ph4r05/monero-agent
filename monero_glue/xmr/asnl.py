@@ -25,7 +25,7 @@ def gen_schnorr_non_linkable(x, P1, P2, index):
     c2 = crypto.cn_fast_hash(crypto.encodepoint(L1))
     L2 = crypto.point_add(crypto.scalarmult_base(s2), crypto.scalarmult(P2 if index == 0 else P1, crypto.decodeint(c2)))
     c1 = crypto.cn_fast_hash(crypto.encodepoint(L2))
-    s1 = crypto.sc_mulsub(a, x, crypto.decodeint(c1))
+    s1 = crypto.sc_mulsub(x, crypto.decodeint(c1), a)
 
     return (L1, s1, s2) if index == 0 else (L2, s2, s1)
 

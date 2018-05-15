@@ -218,13 +218,24 @@ def sc_eq(a, b):
 
 def sc_mulsub(aa, bb, cc):
     """
-    (aa - bb * cc) % l
+    (cc - aa * bb) % l
     :param aa:
     :param bb:
     :param cc:
     :return:
     """
     return tcry.mulsub256_modm_r(aa, bb, cc)
+
+
+def sc_muladd(aa, bb, cc):
+    """
+    (cc + aa * bb) % l
+    :param aa:
+    :param bb:
+    :param cc:
+    :return:
+    """
+    return tcry.muladd256_modm_r(aa, bb, cc)
 
 
 def random_scalar():

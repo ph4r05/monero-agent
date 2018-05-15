@@ -46,6 +46,7 @@ CLIB.check256_modm.argtypes = [tt.MODM]
 CLIB.check256_modm.restype = ct.c_int
 
 CLIB.mulsub256_modm.argtypes = [tt.MODM, tt.MODM, tt.MODM, tt.MODM]
+CLIB.muladd256_modm.argtypes = [tt.MODM, tt.MODM, tt.MODM, tt.MODM]
 
 
 #
@@ -274,6 +275,11 @@ def mulsub256_modm(r, a, b, c):
     return r
 
 
+def muladd256_modm(r, a, b, c):
+    CLIB.muladd256_modm(r, a, b, c)
+    return r
+
+
 def expand256_modm_r(buff):
     m = tt.MODM()
     CLIB.expand256_modm(m, bytes(buff), len(buff))
@@ -325,6 +331,12 @@ def init256_modm_r(a):
 def mulsub256_modm_r(a, b, c):
     r = tt.MODM()
     CLIB.mulsub256_modm(r, a, b, c)
+    return r
+
+
+def muladd256_modm_r(a, b, c):
+    r = tt.MODM()
+    CLIB.muladd256_modm(r, a, b, c)
     return r
 
 
