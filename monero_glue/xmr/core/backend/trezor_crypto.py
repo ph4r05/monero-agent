@@ -96,6 +96,7 @@ CLIB.ge25519_pack.argtypes = [tt.KEY_BUFF, ct.POINTER(tt.Ge25519)]
 CLIB.ge25519_unpack_negative_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.KEY_BUFF]
 CLIB.ge25519_set_neutral.argtypes = [ct.POINTER(tt.Ge25519)]
 CLIB.ge25519_double_scalarmult_vartime.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM]
+CLIB.ge25519_double_scalarmult_vartime2.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM]
 CLIB.ge25519_scalarmult.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM]
 CLIB.ge25519_check.argtypes = [ct.POINTER(tt.Ge25519)]
 CLIB.ge25519_eq.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519)]
@@ -674,6 +675,16 @@ def ge25519_double_scalarmult_vartime(r, a, b, c):
 def ge25519_double_scalarmult_vartime_r(a, b, c):
     r = tt.Ge25519()
     CLIB.ge25519_double_scalarmult_vartime(ct.byref(r), ct.byref(a), b, c)
+    return r
+
+
+def ge25519_double_scalarmult_vartime2(r, a, b, c, d):
+    return CLIB.ge25519_double_scalarmult_vartime2(ct.byref(r), ct.byref(a), b, ct.byref(c), d)
+
+
+def ge25519_double_scalarmult_vartime2_r(a, b, c, d):
+    r = tt.Ge25519()
+    CLIB.ge25519_double_scalarmult_vartime2(ct.byref(r), ct.byref(a), b, ct.byref(c), d)
     return r
 
 
