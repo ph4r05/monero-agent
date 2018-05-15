@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+import hmac
+from Crypto.Protocol.KDF import PBKDF2
+
 from monero_serialize import xmrtypes
 from monero_glue.xmr.core.ec_base import *
 from monero_glue.xmr.core.backend import trezor_crypto as tcry
@@ -10,6 +13,102 @@ from monero_glue.xmr.core import ec_py
 
 # Initialize randomn number generator / libsodium component in the library
 tcry.init_lib()
+
+
+class KeccakWrapper(object):
+    """
+    Simple Keccak hasher wrapper. OOP interface to xmr_hasher_*
+    """
+    digest_size = 32
+    block_size = 136  # 1088 bits
+
+    def __init__(self, h=None):
+        self.h = tcry.xmr_hasher_init() if h is None else h
+
+    def __repr__(self):
+        return '<KeccakHash: %s>' % self.h
+
+    def copy(self):
+        h_copy = tcry.xmr_hasher_copy_r(self.h)
+        return KeccakWrapper(h_copy)
+
+    def update(self, s):
+        tcry.xmr_hasher_update(self.h, bytes(s))
+
+    def digest(self):
+        r = tcry.xmr_hasher_final_r(self.h)
+        self.h = None
+        return r
+
+    def hexdigest(self):
+        return self.digest().encode('hex')
+
+
+def get_keccak():
+    """
+    Simple keccak 256
+    :return:
+    """
+    return KeccakWrapper()
+
+
+def keccak_hash(inp):
+    """
+    Hashesh input in one call
+    :return:
+    """
+    return tcry.xmr_fast_hash_r(inp)
+
+
+def keccak_2hash(inp):
+    """
+    Keccak double hashing
+    :param inp:
+    :return:
+    """
+    return keccak_hash(keccak_hash(inp))
+
+
+def get_hmac(key, msg=None):
+    """
+    Returns HMAC object (uses Keccak256)
+    :param key:
+    :param msg:
+    :return:
+    """
+    return hmac.new(key, msg=msg, digestmod=get_keccak)
+
+
+def compute_hmac(key, msg=None):
+    """
+    Computes and returns HMAC of the msg using Keccak256
+    :param key:
+    :param msg:
+    :return:
+    """
+    h = hmac.new(key, msg=msg, digestmod=get_keccak)
+    return h.digest()
+
+
+def pbkdf2(inp, salt, length=32, count=1000, prf=None):
+    """
+    PBKDF2 with default PRF as HMAC-KECCAK-256
+    :param inp:
+    :param salt:
+    :param length:
+    :param count:
+    :param prf:
+    :return:
+    """
+
+    if prf is None:
+        prf = lambda p, s: hmac.new(p, msg=s, digestmod=get_keccak).digest()
+    return PBKDF2(inp, salt, length, count, prf)
+
+
+#
+# EC
+#
 
 
 def decodepoint(x):
@@ -411,9 +510,7 @@ def cn_fast_hash(buff):
     :param buff:
     :return:
     """
-    kc2 = keccak2.Keccak256()
-    kc2.update(buff)
-    return kc2.digest()
+    return keccak_hash(buff)
 
 
 def hash_to_scalar(data, length=None):

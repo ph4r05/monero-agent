@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+from monero_serialize import protobuf as xproto
 from monero_serialize import xmrtypes, xmrserialize
 from monero_glue.xmr import mlsag2, ring_ct, crypto, common
 from monero_glue.xmr.core.tsx_helper import *
@@ -109,6 +110,21 @@ class TxScanInfo(object):
     struct tx_scan_info_t
     """
     __slots__ = ['in_ephemeral', 'ki', 'mask', 'amount', 'money_transfered', 'error', 'received']
+
+
+class KeccakArchive(object):
+    def __init__(self):
+        self.kwriter = get_keccak_writer()
+        self.ar = xmrserialize.Archive(self.kwriter, True)
+
+
+def get_keccak_writer(sub_writer=None):
+    """
+    Creates new fresh async Keccak writer
+    :param sub_writer:
+    :return:
+    """
+    return xproto.AHashWriter(common.HashWrapper(crypto.get_keccak()), sub_writer=sub_writer)
 
 
 def net_version(network_type=NetworkTypes.MAINNET, is_subaddr=False):
@@ -518,7 +534,7 @@ async def get_transaction_prefix_hash(tx):
     :param tx:
     :return:
     """
-    writer = common.get_keccak_writer()
+    writer = get_keccak_writer()
     ar1 = xmrserialize.Archive(writer, True)
     await ar1.message(tx, msg_type=xmrtypes.TransactionPrefixExtraBlob)
     return writer.get_digest()
@@ -531,9 +547,9 @@ class PreMlsagHasher(object):
     def __init__(self):
         self.is_simple = None
         self.state = 0
-        self.kc_master = common.HashWrapper(common.get_keccak())
-        self.rtcsig_hasher = common.KeccakArchive()
-        self.rsig_hasher = common.get_keccak()
+        self.kc_master = common.HashWrapper(crypto.get_keccak())
+        self.rtcsig_hasher = KeccakArchive()
+        self.rsig_hasher = crypto.get_keccak()
 
     def init(self, is_simple):
         if self.state != 0:
@@ -631,20 +647,20 @@ async def get_pre_mlsag_hash(rv):
     :type rv: xmrtypes.RctSig
     :return:
     """
-    kc_master = common.HashWrapper(common.get_keccak())
+    kc_master = common.HashWrapper(crypto.get_keccak())
     kc_master.update(rv.message)
 
     is_simple = rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.SimpleBulletproof]
     inputs = len(rv.pseudoOuts) if is_simple else 0
     outputs = len(rv.ecdhInfo)
 
-    kwriter = common.get_keccak_writer()
+    kwriter = get_keccak_writer()
     ar = xmrserialize.Archive(kwriter, True)
     await rv.serialize_rctsig_base(ar, inputs, outputs)
     c_hash = kwriter.get_digest()
     kc_master.update(c_hash)
 
-    kc = common.get_keccak()
+    kc = crypto.get_keccak()
     if rv.type in [xmrtypes.RctType.FullBulletproof, xmrtypes.RctType.SimpleBulletproof]:
         for p in rv.p.bulletproofs:
             kc.update(p.A)

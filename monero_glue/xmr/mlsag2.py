@@ -254,7 +254,7 @@ def gen_borromean(x, P1, P2, indices):
     n = len(P1)
     alpha = key_zero_vector(n)
     s1 = key_zero_vector(n)
-    kck = common.get_keccak()  # ee computation
+    kck = crypto.get_keccak()  # ee computation
 
     for ii in range(n):
         alpha[ii] = crypto.random_scalar()
@@ -304,7 +304,7 @@ def ver_borromean(P1, P2, s0, s1, ee):
         chash = crypto.hash_to_scalar(crypto.encodepoint(LL))
         Lv1[ii] = crypto.add_keys2(s1[ii], chash, P2[ii])
 
-    kck = common.get_keccak()
+    kck = crypto.get_keccak()
     for ii in range(n):
         kck.update(crypto.encodepoint(Lv1[ii]))
 
@@ -326,7 +326,7 @@ def hasher_message(message):
     :param message:
     :return:
     """
-    ctx = common.HashWrapper(common.get_keccak())
+    ctx = common.HashWrapper(crypto.get_keccak())
     ctx.update(message)
     return ctx
 

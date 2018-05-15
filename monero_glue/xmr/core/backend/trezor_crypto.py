@@ -134,9 +134,10 @@ CLIB.ge25519_unpack_vartime.restype = ct.c_int
 CLIB.xmr_random_scalar.argtypes = [tt.MODM]
 CLIB.xmr_fast_hash.argtypes = [tt.KEY_BUFF, ct.c_void_p, ct.c_size_t]
 
-# CLIB.xmr_hasher_init.argtypes = [Hasher * hasher]
-# CLIB.xmr_hasher_update.argtypes = [Hasher * hasher, ct.c_void_p, ct.c_size_t]
-# CLIB.xmr_hasher_final.argtypes = [Hasher * hasher, uint8_t * hash]
+CLIB.xmr_hasher_init.argtypes = [ct.POINTER(tt.Hasher)]
+CLIB.xmr_hasher_update.argtypes = [ct.POINTER(tt.Hasher), ct.c_void_p, ct.c_size_t]
+CLIB.xmr_hasher_final.argtypes = [ct.POINTER(tt.Hasher), tt.KEY_BUFF]
+CLIB.xmr_hasher_copy.argtypes = [ct.POINTER(tt.Hasher), ct.POINTER(tt.Hasher)]
 
 CLIB.xmr_hash_to_scalar.argtypes = [tt.MODM, ct.c_void_p, ct.c_size_t]
 CLIB.xmr_hash_to_ec.argtypes = [ct.POINTER(tt.Ge25519), ct.c_void_p, ct.c_size_t]
@@ -873,6 +874,28 @@ def xmr_fast_hash_r(a):
     r = tt.KEY_BUFF()
     CLIB.xmr_fast_hash(r, bytes(a), len(a))
     return bytes(r)
+
+
+def xmr_hasher_init():
+    h = tt.Hasher()
+    CLIB.xmr_hasher_init(ct.byref(h))
+    return h
+
+
+def xmr_hasher_update(h, buff):
+    CLIB.xmr_hasher_update(ct.byref(h), bytes(buff), len(buff))
+
+
+def xmr_hasher_final_r(h):
+    r = tt.KEY_BUFF()
+    CLIB.xmr_hasher_final(ct.byref(h), r)
+    return bytes(r)
+
+
+def xmr_hasher_copy_r(h):
+    hd = tt.Hasher()
+    CLIB.xmr_hasher_copy(ct.byref(hd), ct.byref(h))
+    return hd
 
 
 def xmr_hash_to_scalar(r, a):

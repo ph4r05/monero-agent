@@ -47,69 +47,6 @@ class HashWrapper(object):
         return self.ctx.hexdigest()
 
 
-class KeccakArchive(object):
-    def __init__(self):
-        self.kwriter = get_keccak_writer()
-        self.ar = xmrserialize.Archive(self.kwriter, True)
-
-
-def get_keccak():
-    """
-    Simple keccak 256
-    :return:
-    """
-    return keccak2.Keccak256()
-
-
-def keccak_hash(inp):
-    """
-    Hashesh input in one call
-    :return:
-    """
-    ctx = get_keccak()
-    ctx.update(inp)
-    return ctx.digest()
-
-
-def keccak_2hash(inp):
-    """
-    Keccak double hashing
-    :param inp:
-    :return:
-    """
-    return keccak_hash(keccak_hash(inp))
-
-
-def get_keccak_writer(sub_writer=None):
-    """
-    Creates new fresh async Keccak writer
-    :param sub_writer:
-    :return:
-    """
-    return xproto.AHashWriter(HashWrapper(get_keccak()), sub_writer=sub_writer)
-
-
-def get_hmac(key, msg=None):
-    """
-    Returns HMAC object (uses Keccak256)
-    :param key:
-    :param msg:
-    :return:
-    """
-    return hmac.new(key, msg=msg, digestmod=get_keccak)
-
-
-def compute_hmac(key, msg=None):
-    """
-    Computes and returns HMAC of the msg using Keccak256
-    :param key:
-    :param msg:
-    :return:
-    """
-    h = hmac.new(key, msg=msg, digestmod=get_keccak)
-    return h.digest()
-
-
 def random_bytes(by):
     """
     Generates X random bytes, returns byte-string
@@ -117,22 +54,6 @@ def random_bytes(by):
     :return:
     """
     return get_random_bytes(by)
-
-
-def pbkdf2(inp, salt, length=32, count=1000, prf=None):
-    """
-    PBKDF2 with default PRF as HMAC-KECCAK-256
-    :param inp:
-    :param salt:
-    :param length:
-    :param count:
-    :param prf:
-    :return:
-    """
-
-    if prf is None:
-        prf = lambda p, s: hmac.new(p, msg=s, digestmod=get_keccak).digest()
-    return PBKDF2(inp, salt, length, count, prf)
 
 
 def ct_equal(a, b):

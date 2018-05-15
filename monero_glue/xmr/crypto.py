@@ -71,7 +71,7 @@ def hmac_point(key, point):
     :param point:
     :return:
     """
-    return common.compute_hmac(key, encodepoint(point))
+    return compute_hmac(key, encodepoint(point))
 
 
 def generate_signature(data, priv):

@@ -152,13 +152,13 @@ class TTransaction(object):
         Generate master key H(TsxData || r || c_tsx)
         :return:
         """
-        writer = common.get_keccak_writer()
+        writer = monero.get_keccak_writer()
         ar1 = xmrserialize.Archive(writer, True)
         await ar1.message(self.tsx_data)
         await writer.awrite(crypto.encodeint(self.r))
         await xmrserialize.dump_uvarint(writer, tsx_ctr)
         self.key_master = writer.get_digest()
-        self.key_hmac = common.keccak_hash(b'hmac' + self.key_master)
+        self.key_hmac = crypto.keccak_hash(b'hmac' + self.key_master)
 
     def precompute_subaddr(self, account, indices):
         """
@@ -210,13 +210,13 @@ class TTransaction(object):
         self.tx.vin.append(vini)
 
         # HMAC(T_in,i || vin_i)
-        kwriter = common.get_keccak_writer()
+        kwriter = monero.get_keccak_writer()
         ar = xmrserialize.Archive(kwriter, True)
         await ar.message(src_entr, xmrtypes.TxSourceEntry)
         await ar.message(vini, xmrtypes.TxinToKey)
 
-        hmac_key_vini = common.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
-        hmac_vini = common.compute_hmac(hmac_key_vini, kwriter.get_digest())
+        hmac_key_vini = crypto.keccak_hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(self.inp_idx))
+        hmac_vini = crypto.compute_hmac(hmac_key_vini, kwriter.get_digest())
 
         return vini, hmac_vini
 

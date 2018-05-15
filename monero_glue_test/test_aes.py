@@ -5,7 +5,7 @@
 import unittest
 import aiounittest
 
-from monero_glue.xmr import common
+from monero_glue.xmr import crypto
 from monero_glue.xmr.enc import aesgcm
 
 
@@ -16,7 +16,7 @@ class AesTest(aiounittest.AsyncTestCase):
         super(AesTest, self).__init__(*args, **kwargs)
 
     def test_enc(self):
-        key = common.keccak_hash(b'0')
+        key = crypto.keccak_hash(b'0')
         plain = b'1234'
         assoc = b'4567'
         iv, cip, tag = aesgcm.encrypt(key, plain, assoc)

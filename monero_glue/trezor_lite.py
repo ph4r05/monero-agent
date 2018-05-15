@@ -401,7 +401,7 @@ class TTransaction(object):
         self.subaddresses = {}
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=b'')
         self.source_permutation = []  # sorted by key images
-        self.tx_prefix_hasher = common.KeccakArchive()
+        self.tx_prefix_hasher = monero.KeccakArchive()
         self.tx_prefix_hash = None
         self.full_message_hasher = monero.PreMlsagHasher()
         self.full_message = None
@@ -506,7 +506,7 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        return common.keccak_2hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(idx))
+        return crypto.keccak_2hash(self.key_hmac + b'txin' + xmrserialize.dump_uvarint_b(idx))
 
     def hmac_key_txin_comm(self, idx):
         """
@@ -514,7 +514,7 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        return common.keccak_2hash(self.key_hmac + b'txin-comm' + xmrserialize.dump_uvarint_b(idx))
+        return crypto.keccak_2hash(self.key_hmac + b'txin-comm' + xmrserialize.dump_uvarint_b(idx))
 
     def hmac_key_txdst(self, idx):
         """
@@ -522,7 +522,7 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        return common.keccak_2hash(self.key_hmac + b'txdest' + xmrserialize.dump_uvarint_b(idx))
+        return crypto.keccak_2hash(self.key_hmac + b'txdest' + xmrserialize.dump_uvarint_b(idx))
 
     def hmac_key_txout(self, idx):
         """
@@ -530,7 +530,7 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        return common.keccak_2hash(self.key_hmac + b'txout' + xmrserialize.dump_uvarint_b(idx))
+        return crypto.keccak_2hash(self.key_hmac + b'txout' + xmrserialize.dump_uvarint_b(idx))
 
     def hmac_key_txout_asig(self, idx):
         """
@@ -538,7 +538,7 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        return common.keccak_2hash(self.key_hmac + b'txout-asig' + xmrserialize.dump_uvarint_b(idx))
+        return crypto.keccak_2hash(self.key_hmac + b'txout-asig' + xmrserialize.dump_uvarint_b(idx))
 
     def enc_key_txin_alpha(self, idx):
         """
@@ -546,7 +546,7 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        return common.keccak_2hash(self.key_enc + b'txin-alpha' + xmrserialize.dump_uvarint_b(idx))
+        return crypto.keccak_2hash(self.key_enc + b'txin-alpha' + xmrserialize.dump_uvarint_b(idx))
 
     def enc_key_cout(self, idx=None):
         """
@@ -554,7 +554,7 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        return common.keccak_2hash(self.key_enc + b'cout' + (xmrserialize.dump_uvarint_b(idx) if idx else ''))
+        return crypto.keccak_2hash(self.key_enc + b'cout' + (xmrserialize.dump_uvarint_b(idx) if idx else ''))
 
     async def gen_hmac_vini(self, src_entr, vini, idx):
         """
@@ -564,13 +564,13 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        kwriter = common.get_keccak_writer()
+        kwriter = monero.get_keccak_writer()
         ar = xmrserialize.Archive(kwriter, True)
         await ar.message(src_entr, xmrtypes.TxSourceEntry)
         await ar.message(vini, xmrtypes.TxinToKey)
 
         hmac_key_vini = self.hmac_key_txin(idx)
-        hmac_vini = common.compute_hmac(hmac_key_vini, kwriter.get_digest())
+        hmac_vini = crypto.compute_hmac(hmac_key_vini, kwriter.get_digest())
         return hmac_vini
 
     async def gen_hmac_vouti(self, dst_entr, tx_out, idx):
@@ -581,13 +581,13 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        kwriter = common.get_keccak_writer()
+        kwriter = monero.get_keccak_writer()
         ar = xmrserialize.Archive(kwriter, True)
         await ar.message(dst_entr, xmrtypes.TxDestinationEntry)
         await ar.message(tx_out, xmrtypes.TxOut)
 
         hmac_key_vouti = self.hmac_key_txout(idx)
-        hmac_vouti = common.compute_hmac(hmac_key_vouti, kwriter.get_digest())
+        hmac_vouti = crypto.compute_hmac(hmac_key_vouti, kwriter.get_digest())
         return hmac_vouti
 
     async def gen_hmac_tsxdest(self, dst_entr, idx):
@@ -597,12 +597,12 @@ class TTransaction(object):
         :param idx:
         :return:
         """
-        kwriter = common.get_keccak_writer()
+        kwriter = monero.get_keccak_writer()
         ar = xmrserialize.Archive(kwriter, True)
         await ar.message(dst_entr, xmrtypes.TxDestinationEntry)
 
         hmac_key = self.hmac_key_txdst(idx)
-        hmac_tsxdest = common.compute_hmac(hmac_key, kwriter.get_digest())
+        hmac_tsxdest = crypto.compute_hmac(hmac_key, kwriter.get_digest())
         return hmac_tsxdest
 
     async def init_transaction(self, tsx_data, tsx_ctr):
@@ -701,14 +701,14 @@ class TTransaction(object):
         Generate master key H(TsxData || r || c_tsx)
         :return:
         """
-        writer = common.get_keccak_writer()
+        writer = monero.get_keccak_writer()
         ar1 = xmrserialize.Archive(writer, True)
         await ar1.message(tsx_data)
         await writer.awrite(crypto.encodeint(self.r))
         await xmrserialize.dump_uvarint(writer, tsx_ctr)
-        self.key_master = common.keccak_2hash(writer.get_digest() + crypto.encodeint(crypto.random_scalar()))
-        self.key_hmac = common.keccak_2hash(b'hmac' + self.key_master)
-        self.key_enc = common.keccak_2hash(b'enc' + self.key_master)
+        self.key_master = crypto.keccak_2hash(writer.get_digest() + crypto.encodeint(crypto.random_scalar()))
+        self.key_hmac = crypto.keccak_2hash(b'hmac' + self.key_master)
+        self.key_enc = crypto.keccak_2hash(b'enc' + self.key_master)
 
     def precompute_subaddr(self, account, indices):
         """
@@ -785,7 +785,7 @@ class TTransaction(object):
                 self.input_alphas.append(alpha)
                 self.input_pseudo_outs.append(pseudo_out)
             else:
-                pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(self.inp_idx), pseudo_out)
+                pseudo_out_hmac = crypto.compute_hmac(self.hmac_key_txin_comm(self.inp_idx), pseudo_out)
                 alpha_enc = aesgcm.encrypt(self.enc_key_txin_alpha(self.inp_idx), crypto.encodeint(alpha))
 
         # All inputs done?
@@ -904,7 +904,7 @@ class TTransaction(object):
         if not self.in_memory():
             idx = self.source_permutation[inp_idx]
             pseudo_out, pseudo_out_hmac_provided = pseudo_out
-            pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(idx), pseudo_out)
+            pseudo_out_hmac = crypto.compute_hmac(self.hmac_key_txin_comm(idx), pseudo_out)
             if not common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
                 raise ValueError('HMAC invalid for pseudo outs')
         else:
@@ -1050,7 +1050,7 @@ class TTransaction(object):
 
         # Range proof, out_pk, ecdh_info
         rsig, out_pk, ecdh_info = await self.range_proof(self.out_idx, dest_pub_key=tk.key, amount=dst_entr.amount, amount_key=amount_key)
-        kwriter = common.get_keccak_writer()
+        kwriter = monero.get_keccak_writer()
         ar = xmrserialize.Archive(kwriter, True)
         await ar.message(rsig)
 
@@ -1193,7 +1193,7 @@ class TTransaction(object):
             raise ValueError('HMAC is not correct')
 
         if not self.in_memory():
-            pseudo_out_hmac = common.compute_hmac(self.hmac_key_txin_comm(inv_idx), pseudo_out[0])
+            pseudo_out_hmac = crypto.compute_hmac(self.hmac_key_txin_comm(inv_idx), pseudo_out[0])
             if not common.ct_equal(pseudo_out_hmac, pseudo_out[1]):
                 raise ValueError('HMAC is not correct')
 
@@ -1297,7 +1297,7 @@ class KeyImageSync(object):
         self.blocked = None
         self.enc_key = None
         self.subaddresses = {}
-        self.hasher = common.HashWrapper(common.get_keccak())
+        self.hasher = common.HashWrapper(crypto.get_keccak())
 
     async def init(self, msg):
         confirmation = await self.trezor.iface.confirm_ki_sync(msg)

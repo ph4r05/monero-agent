@@ -149,7 +149,7 @@ def prove_range_mem(amount, last_mask=None):
     alpha = mlsag2.key_zero_vector(n)
     s1 = mlsag2.key_zero_vector(n)
     c_H = crypto.gen_H()
-    kck = common.get_keccak()  # ee computation
+    kck = crypto.get_keccak()  # ee computation
 
     # First pass, generates: ai, alpha, Ci, ee, s1
     for ii in range(n):
