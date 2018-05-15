@@ -935,7 +935,7 @@ def xmr_add_keys1_vartime(r, a, b, c):
     return CLIB.xmr_add_keys1_vartime(ct.byref(r), a, b, ct.byref(c))
 
 
-def xmr_add_keys1_vartime(a, b, c):
+def xmr_add_keys1_vartime_r(a, b, c):
     r = tt.Ge25519()
     CLIB.xmr_add_keys1_vartime(ct.byref(r), a, b, ct.byref(c))
     return r
