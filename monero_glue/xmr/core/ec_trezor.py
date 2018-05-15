@@ -253,7 +253,7 @@ def ge_scalarmult_base(a):
 
 def ge_double_scalarmult_base_vartime(a, A, b):
     """
-    void ge_double_scalarmult_base_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A, const unsigned char *b)
+    void ge25519_double_scalarmult_vartime(ge25519 *r, const ge25519 *p1, const bignum256modm s1, const bignum256modm s2);
     r = a * A + b * B
         where a = a[0]+256*a[1]+...+256^31 a[31].
         and b = b[0]+256*b[1]+...+256^31 b[31].
@@ -264,7 +264,25 @@ def ge_double_scalarmult_base_vartime(a, A, b):
     :param b:
     :return:
     """
-    return tcry.ge25519_double_scalarmult_vartime_r(A, a, b)
+    R = tcry.ge25519_double_scalarmult_vartime_r(A, a, b)
+    tcry.ge25519_norm(R, R)
+    return R
+
+
+def ge_double_scalarmult_base_vartime2(a, A, b, B):
+    """
+    void ge25519_double_scalarmult_vartime2(ge25519 *r, const ge25519 *p1, const bignum256modm s1, const ge25519 *p2, const bignum256modm s2);
+    r = a * A + b * B
+
+    :param a:
+    :param A:
+    :param b:
+    :param B:
+    :return:
+    """
+    R = tcry.ge25519_double_scalarmult_vartime2_r(A, a, B, b)
+    tcry.ge25519_norm(R, R)
+    return R
 
 
 def ge_double_scalarmult_precomp_vartime(a, A, b, Bi):

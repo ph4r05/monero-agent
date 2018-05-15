@@ -542,6 +542,20 @@ def ge_double_scalarmult_base_vartime(a, A, b):
     return point_add(scalarmult(A, a), scalarmult_base(b))
 
 
+def ge_double_scalarmult_base_vartime2(a, A, b, B):
+    """
+    void ge_double_scalarmult_base_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A, const unsigned char *b)
+    r = a * A + b * B
+
+    :param a:
+    :param A:
+    :param b:
+    :param B:
+    :return:
+    """
+    return point_add(scalarmult(A, a), scalarmult(B, b))
+
+
 def ge_double_scalarmult_precomp_vartime(a, A, b, Bi):
     """
     void ge_double_scalarmult_precomp_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A, const unsigned char *b, const ge_dsmp Bi)
