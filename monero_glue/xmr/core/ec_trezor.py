@@ -56,6 +56,16 @@ def point_double(P):
     return tcry.ge25519_double_r(P)
 
 
+def point_norm(P):
+    """
+    Normalizes point after multiplication
+    Extended edwards coordinates (X,Y,Z,T)
+    :param P:
+    :return:
+    """
+    return tcry.ge25519_norm_r(P)
+
+
 #
 # Zmod(2^255 - 19) operations, fe (field element)
 # Not constant time! PoC only.

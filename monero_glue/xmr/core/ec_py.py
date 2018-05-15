@@ -473,6 +473,16 @@ def point_double(P):
     return scalarmult(P, 2)
 
 
+def point_norm(P):
+    """
+    Normalizes point after multiplication
+    Extended edwards coordinates (X,Y,Z,T)
+    :param P:
+    :return:
+    """
+    return P
+
+
 def ge_scalarmult(a, A):
     """
     a*A
