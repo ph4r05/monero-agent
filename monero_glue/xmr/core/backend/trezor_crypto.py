@@ -150,11 +150,7 @@ CLIB.xmr_add_keys2_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM,
 CLIB.xmr_add_keys3.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519)]
 CLIB.xmr_add_keys3_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519)]
 CLIB.xmr_get_subaddress_secret_key.argtypes = [tt.MODM, ct.c_uint32, ct.c_uint32, tt.MODM]
-
-
-# void xmr_gen_range_sig(xmr_range_sig_t * sig, xmr_key_t * C, xmr_key_t * mask, xmr_amount amount, bignum256modm * last_mask);
-CLIB.xmr_gen_range_sig.argtypes = [ct.POINTER(tt.XmrRangeSig), ct.POINTER(tt.XmrKey), ct.POINTER(tt.XmrKey),
-                                   tt.XmrAmount, ct.POINTER(tt.MODM)]
+CLIB.xmr_gen_range_sig.argtypes = [ct.POINTER(tt.XmrRangeSig), ct.POINTER(tt.Ge25519), tt.MODM, tt.XmrAmount, ct.POINTER(tt.MODM)]
 
 
 #
@@ -1012,17 +1008,11 @@ def gen_range_proof(amount, last_mask):
     :return:
     """
     rsig = tt.XmrRangeSig()
-    C = tt.XmrKey()
-    mask = tt.XmrKey()
+    C = tt.Ge25519()
+    mask = tt.MODM()
     last_mask_ptr = ct.byref(last_mask) if last_mask else None
 
-    CLIB.xmr_gen_range_sig(ct.byref(rsig), ct.byref(C), ct.byref(mask), amount, last_mask_ptr)
+    CLIB.xmr_gen_range_sig(ct.byref(rsig), ct.byref(C), mask, amount, last_mask_ptr)
 
-    return rsig, C, mask
-
-
-
-
-
-
+    return C, mask, rsig
 

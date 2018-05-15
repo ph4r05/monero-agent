@@ -6,7 +6,7 @@
 # you would probably not want to install it like this.
 
 set -e
-export RELEASE_NAME="lib_v0.0.4"
+export RELEASE_NAME="lib_v0.0.5"
 
 # check if libsodium is already installed
 #if [ ! -d "$HOME/libsodium/lib" ]; then

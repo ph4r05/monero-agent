@@ -43,11 +43,9 @@ class Ge25519_pniels(ct.Structure):  # projective Cached / Deuis
 
 XmrAmount = ct.c_uint64
 
-
-class XmrKey(ct.Structure):
-    _fields_ = [
-        ('data', KEY_BUFF),
-    ]
+# XmrKey is not a structure but a direct buffer so it can be used
+# in the transaction in a straightforward way.
+XmrKey = KEY_BUFF
 
 
 class XmrCtKey(ct.Structure):
