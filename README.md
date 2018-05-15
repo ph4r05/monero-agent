@@ -17,6 +17,7 @@ Moreover, the code will probably be subject to a major refactoring and cleaning.
  - Full RingCT (one UTXO)
  - Simple RingCT (more than 1 UTXOs)
  - Sub-addresses
+ - Key image sync
 
 ## Roadmap
 
@@ -87,6 +88,45 @@ The opaque point representation can be converted to bytearray representation sui
 Scalars are represented as integers (no encoding / decoding is needed). However, we are working in modular ring so
 for scalar operations such as addition, division, comparison use the `crypto.sc_*` methods.
 
+## Trezor-crypto
+
+A new crypto backend was added, `trezor-crypto`.
+I implemented missing cryptographic algorithms to the [trezor-crypto], branch `lib` (abbrev. TCRY).
+Compiled shared library `libtrezor-crypto.so` can be used instead of the Python crypto backend.
+TCRY implements constant-time curve operations, uses [libsodium] to generate random values.
+
+Range proof was reimplemented in C for CPU and memory efficiency.
+
+Travis tests with both crypto backends. In order to test with TCRY install all its dependencies. `libsodium` is the only one
+dependency for the shared lib. For more info take a look at `travis-install-libtrezor-crypto.sh`.
+
+Crypto dependency is selected based on the `EC_BACKEND` env var. `0` is for Python backend, `1` for TCRY.
+Path to the TCRY is specified via `LIBTREZOR_CRYPTO_PATH` env var. If the TCRY is not found or could not be loaded
+the code fallbacks to python backend. This behaviour can be changed by setting `EC_BACKEND_FORCE` env var to `1`.
+
+TCRY is also 20 times faster (unit tests).
+
+```bash
+$> EC_BACKEND=0 ./venv/bin/python3 -m unittest discover
+.....................................................
+----------------------------------------------------------------------
+Ran 53 tests in 142.363s
+
+OK
+```
+
+TCRY backend:
+
+```bash
+$> LIBTREZOR_CRYPTO_PATH="$HOME/libtrezor-crypto/libtrezor-crypto.so" EC_BACKEND_FORCE=1 EC_BACKEND=1 \
+    ./venv/bin/python3 -m unittest discover
+.....................................................
+----------------------------------------------------------------------
+Ran 53 tests in 7.252s
+
+OK
+```
+
 ### Memory considerations
 
 Python uses arbitrary precision integers with a memory overhead.
@@ -115,4 +155,8 @@ For scalars it is apparently more effective to store integers naturally, saving 
 EC point arithmetics can use classic point coordinates `(x, y)` or extended Edwards point coordinates `(x,y,z,t)`.
 It takes 64 and 80 B to store tuple of 2 and 4 elements respectively.
 It thus take 184 B and 320 B to store an EC point in the natural form compared to the 65 B byte representation.
+
+
+[trezor-crypto]: https://github.com/ph4r05/trezor-crypto
+[libsodium]: https://github.com/jedisct1/libsodium
 
