@@ -701,10 +701,12 @@ class HostAgent(cli.BaseCli):
         misc.install_sarge_filter()
 
         await self.open_account()
-        await self.wallet_rpc()
 
         if self.args.sign:
-            return await self.sign_wrap(self.args.sign)
+            res = await self.sign_wrap(self.args.sign)
+            return res if isinstance(res, int) else 0
+
+        await self.wallet_rpc()
 
         self.update_intro()
         self.cmdloop()
@@ -890,7 +892,7 @@ class HostAgent(cli.BaseCli):
         signed_data = await wallet.dump_signed_tx(self.priv_view, signed_tx)
         with open('signed_monero_tx', 'wb+') as fh:
             fh.write(signed_data)
-            logger.info('Signed transaction file: signed_monero_tx')
+            print('Signed transaction file: signed_monero_tx')
 
         print('Key images: %s' % [binascii.hexlify(ff).decode('utf8') for ff in key_images])
         for idx, tx in enumerate(txes):
