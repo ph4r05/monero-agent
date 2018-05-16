@@ -390,6 +390,7 @@ class HostAgent(cli.BaseCli):
         creds_passed = self.args.view_key is not None and self.args.address is not None
         account_file_set = self.args.account_file is not None
         account_file_ex = os.path.exists(self.args.account_file) if account_file_set else False
+
         if creds_passed:
             await self.open_account_passed()
         elif account_file_ex:
@@ -429,10 +430,12 @@ class HostAgent(cli.BaseCli):
         """
         if not new_wallet:
             return
-        if self.args.watch_wallet is None:
+        if self.args.sign is not None:
+            return
+        if self.wallet_file is None:
             logger.error('--watch-wallet file is not set. Please specify path where to create the monero watch wallet')
             sys.exit(1)
-        if self.args.monero_bin is None:
+        if self.monero_bin is None:
             logger.error('--monero-bin is not set. Please specify path to the monero binaries')
             sys.exit(1)
 
@@ -461,8 +464,8 @@ class HostAgent(cli.BaseCli):
                 'network_type': self.network_type,
                 'wallet_password': self.wallet_password.decode('utf8'),
                 'rpc_addr': self.rpc_addr,
-                'wallet_file': self.args.watch_wallet,
-                'monero_bin': self.args.monero_bin,
+                'wallet_file': self.wallet_file,
+                'monero_bin': self.monero_bin,
                 'WARNING': 'Agent file is not password encrypted in the PoC',
             }
             json.dump(data, fh, indent=2)
@@ -488,10 +491,10 @@ class HostAgent(cli.BaseCli):
         Ensures watch only wallet for monero exists
         :return:
         """
-        if self.args.watch_wallet is None:
+        if self.wallet_file is None:
             return
 
-        key_file = '%s.keys' % self.args.watch_wallet
+        key_file = '%s.keys' % self.wallet_file
         if os.path.exists(key_file):
             logger.debug('Watch only wallet key file exists: %s' % key_file)
             match, addr = False, None
