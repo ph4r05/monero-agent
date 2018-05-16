@@ -382,6 +382,18 @@ class HostAgent(cli.BaseCli):
         except Exception as e:
             raise ValueError(e)
 
+    def load_params(self):
+        """
+        Args
+        :return:
+        """
+        if self.args.rpc_addr:
+            self.rpc_addr = self.args.rpc_addr
+        if self.args.watch_wallet:
+            self.wallet_file = self.args.watch_wallet
+        if self.args.monero_bin:
+            self.monero_bin = self.args.monero_bin
+
     async def open_account(self):
         """
         Opens the watch only account
@@ -396,16 +408,11 @@ class HostAgent(cli.BaseCli):
         elif account_file_ex:
             await self.open_account_file(self.args.account_file)
         else:
+            self.load_params()
             await self.check_params(True)
             await self.load_watchonly()
 
-        if self.args.rpc_addr:
-            self.rpc_addr = self.args.rpc_addr
-        if self.args.watch_wallet:
-            self.wallet_file = self.args.watch_wallet
-        if self.args.monero_bin:
-            self.monero_bin = self.args.monero_bin
-
+        self.load_params()
         if account_file_set and not account_file_ex:
             await self.check_params(True)
             await self.prompt_password(True)
@@ -524,7 +531,7 @@ class HostAgent(cli.BaseCli):
             m_spend_public_key=crypto.encodepoint(self.pub_spend),
             m_view_public_key=crypto.encodepoint(self.pub_view),
         )
-        account_keys.m_spend_secret_key = crypto.encodeint(0)
+        account_keys.m_spend_secret_key = crypto.encodeint(crypto.sc_0())
         account_keys.m_view_secret_key = crypto.encodeint(self.priv_view)
 
         await wallet.save_keys_file(key_file, self.wallet_password, wallet_data)
