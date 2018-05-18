@@ -458,25 +458,7 @@ def ge_frombytes_vartime_check(point):
     #
     # return 0
 
-    x, y = point.x, point.y
-    d = tcry.curve25519_set_d_r()
-    z = fe_1()
-    u = fe_sq(y)
-    v = fe_mul(u, d)
-    u = fe_sub(u, z)  # u = y^2-1
-    v = fe_add(v, z)  # v = dy^2+1
-
-    # x = uv^3(uv^7)^((q-5)/8)
-
-    vxx = fe_sq(x)
-    vxx = fe_mul(vxx, v)
-    check = fe_sub(vxx, u)  # vx^2-u
-    if fe_isnonzero(check):
-        check = fe_add(vxx, u)
-        if fe_isnegative(check):
-            # return -1
-            raise ValueError('Point check failed')
-    return 0
+    return 0 if tcryr.ge25519_fromfe_check(point) == 1 else -1
 
 
 def ge_frombytes_vartime(point):

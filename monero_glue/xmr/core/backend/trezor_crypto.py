@@ -108,6 +108,7 @@ CLIB.ge25519_double_scalarmult_vartime.argtypes = [ct.POINTER(tt.Ge25519), ct.PO
 CLIB.ge25519_double_scalarmult_vartime2.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM]
 CLIB.ge25519_scalarmult.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM]
 CLIB.ge25519_check.argtypes = [ct.POINTER(tt.Ge25519)]
+CLIB.ge25519_fromfe_check.argtypes = [ct.POINTER(tt.Ge25519)]
 CLIB.ge25519_eq.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519)]
 CLIB.ge25519_copy.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519)]
 CLIB.ge25519_set_base.argtypes = [ct.POINTER(tt.Ge25519)]
@@ -126,6 +127,7 @@ CLIB.ge25519_set_xmr_h.argtypes = [ct.POINTER(tt.Ge25519)]
 CLIB.ed25519_verify.restype = ct.c_int
 CLIB.ge25519_unpack_negative_vartime.restype = ct.c_int
 CLIB.ge25519_check.restype = ct.c_int
+CLIB.ge25519_fromfe_check.restype = ct.c_int
 CLIB.ge25519_eq.restype = ct.c_int
 CLIB.ge25519_unpack_vartime.restype = ct.c_int
 
@@ -718,6 +720,10 @@ def ge25519_scalarmult_r(a, b):
 
 def ge25519_check(a):
     return CLIB.ge25519_check(ct.byref(a))
+
+
+def ge25519_fromfe_check(a):
+    return CLIB.ge25519_fromfe_check(ct.byref(a))
 
 
 def ge25519_eq(a, b):
