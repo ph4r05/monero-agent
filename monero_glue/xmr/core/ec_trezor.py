@@ -11,6 +11,10 @@ from monero_glue.xmr.core.backend import trezor_crypto as tcry
 from monero_glue.xmr.core import ec_py
 
 
+# Load library
+tcry.open_lib()
+
+
 # Initialize randomn number generator / libsodium component in the library
 tcry.init_lib()
 
