@@ -15,7 +15,6 @@ import binascii
 
 from Crypto.Random import random as rand
 from monero_glue.xmr.core.backend import ed25519_2
-from monero_glue.xmr.core.backend import trezor_types as tty
 from monero_glue.xmr.core.backend.ed25519 import b, q, l, d
 from monero_glue.xmr.core.backend import keccak2, ed25519
 from monero_glue.xmr.core.pycompat import *
