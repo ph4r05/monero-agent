@@ -7,10 +7,14 @@ from Crypto.Protocol.KDF import PBKDF2
 
 from monero_serialize import xmrtypes
 from monero_glue.xmr.core.ec_base import *
-from monero_glue.xmr.core.backend import trezor_crypto as tcry
-from monero_glue.xmr.core import ec_py
+
+#from monero_glue.xmr.core.backend import trezor_crypto as tcryr
+from trezor_crypto import trezor_cfunc as tcryr
 
 
+#from monero_glue.misc.devel.call_tracker import CallTracker
+#tcry = CallTracker(tcryr, print_on_end=True)
+tcry = tcryr
 
 
 # Load & init the library
