@@ -20,10 +20,16 @@ class RingCtTest(aiounittest.AsyncTestCase):
         proof = ring_ct.prove_range(0)
         res = ring_ct.ver_range(proof[0], proof[2])
         self.assertTrue(res)
+        self.assertTrue(crypto.point_eq(proof[0], crypto.point_add(
+            crypto.scalarmult_base(proof[1]),
+            crypto.scalarmult_h(0))))
 
         proof = ring_ct.prove_range(0, mem_opt=False)
         res = ring_ct.ver_range(proof[0], proof[2])
         self.assertTrue(res)
+        self.assertTrue(crypto.point_eq(proof[0], crypto.point_add(
+            crypto.scalarmult_base(proof[1]),
+            crypto.scalarmult_h(0))))
 
     def test_range_proof_back(self):
         proof = ring_ct.prove_range(0, backend_impl=True)
@@ -31,11 +37,15 @@ class RingCtTest(aiounittest.AsyncTestCase):
         self.assertTrue(res)
 
     def test_range_proof2(self):
-        proof = ring_ct.prove_range(123456789)
+        amount = 17 + (1 << 60)
+        proof = ring_ct.prove_range(amount)
         res = ring_ct.ver_range(proof[0], proof[2])
         self.assertTrue(res)
+        self.assertTrue(crypto.point_eq(proof[0], crypto.point_add(
+            crypto.scalarmult_base(proof[1]),
+            crypto.scalarmult_h(amount))))
 
-        proof = ring_ct.prove_range(123456789, mem_opt=False, decode=True)
+        proof = ring_ct.prove_range(amount, mem_opt=False, decode=True)
         res = ring_ct.ver_range(proof[0], proof[2], decode=False)
         self.assertTrue(res)
 
