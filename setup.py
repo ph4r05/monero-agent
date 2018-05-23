@@ -3,7 +3,7 @@ import sys
 from setuptools import setup
 from setuptools import find_packages
 
-version = '1.3.2'
+version = '1.3.3'
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
@@ -21,6 +21,8 @@ dev_extras = [
     'pympler',
     'pypandoc',
     'pandoc',
+    'pycparser',
+    'ctypeslib2',
 ]
 
 poc_extras = [
