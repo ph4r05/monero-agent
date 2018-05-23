@@ -127,6 +127,17 @@ Ran 53 tests in 7.252s
 OK
 ```
 
+UPDATE: I created a python binding [py-trezor-crypto] which can be installed from pip. The pip builds [trezor-crypto]
+library. Please refer to the readme of the [py-trezor-crypto] for installation details (dependencies).
+
+To install python bindings with agent run:
+
+```bash
+pip install monero_agent[tcry]
+```
+
+Libsodium, pkg-config, gcc, python-dev are required for the installation.
+
 ### Memory considerations
 
 Python uses arbitrary precision integers with a memory overhead.
@@ -159,4 +170,5 @@ It thus take 184 B and 320 B to store an EC point in the natural form compared t
 
 [trezor-crypto]: https://github.com/ph4r05/trezor-crypto
 [libsodium]: https://github.com/jedisct1/libsodium
+[py-trezor-crypto]: https://github.com/ph4r05/py-trezor-crypto
 
