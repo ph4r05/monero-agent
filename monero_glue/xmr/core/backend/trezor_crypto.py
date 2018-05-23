@@ -1,6 +1,7 @@
 import ctypes as ct
 import os
 from . import trezor_types as tt
+from .trezor_types import *
 
 
 # Loaded library instance
@@ -167,6 +168,7 @@ def open_lib(lib_path=None, try_env=True):
     CLIB.xmr_get_subaddress_secret_key.argtypes = [tt.MODM, ct.c_uint32, ct.c_uint32, tt.MODM]
     CLIB.xmr_gen_range_sig.argtypes = [ct.POINTER(tt.XmrRangeSig), ct.POINTER(tt.Ge25519), tt.MODM, tt.XmrAmount, ct.POINTER(tt.MODM)]
 
+    init_lib()
 
 #
 # Wrappers
@@ -187,6 +189,8 @@ def random_buffer(sz):
     buff = (ct.c_uint8 * sz)()
     CLIB.random_buffer(ct.byref(buff), sz)
     return bytes(buff)
+
+random_buffer_r = random_buffer
 
 
 #
@@ -837,7 +841,7 @@ def ge25519_unpack_vartime(a, b):
 
 def ge25519_unpack_vartime_r(buff):
     pt = tt.Ge25519()
-    buff = tt.KEY_BUFF(*buff)
+    #buff = tt.KEY_BUFF(*buff)
     r = CLIB.ge25519_unpack_vartime(ct.byref(pt), buff)
     if r != 1:
         raise ValueError('Point decoding error')
@@ -894,7 +898,7 @@ def xmr_fast_hash_r(a):
     return bytes(r)
 
 
-def xmr_hasher_init():
+def xmr_hasher_init_r():
     h = tt.Hasher()
     CLIB.xmr_hasher_init(ct.byref(h))
     return h
