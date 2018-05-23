@@ -9,7 +9,7 @@ set -e
 export RELEASE_NAME="lib_v0.0.8"
 
 # check if libsodium is already installed
-#if [ ! -d "$HOME/libsodium/lib" ]; then
+#if [ ! -d "$HOME/libtrezor-crypto/lib" ]; then
   wget "https://github.com/ph4r05/trezor-crypto/archive/${RELEASE_NAME}.tar.gz"
   tar xvfz "${RELEASE_NAME}.tar.gz"
   cd "trezor-crypto-${RELEASE_NAME}"
