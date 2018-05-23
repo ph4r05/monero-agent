@@ -23,7 +23,7 @@ def random_bytes(by):
     :param by:
     :return:
     """
-    return tcry.random_buffer(by)
+    return tcry.random_buffer_r(by)
 
 
 class KeccakWrapper(object):
@@ -34,7 +34,7 @@ class KeccakWrapper(object):
     block_size = 136  # 1088 bits
 
     def __init__(self, h=None):
-        self.h = tcry.xmr_hasher_init() if h is None else h
+        self.h = tcry.xmr_hasher_init_r() if h is None else h
 
     def __repr__(self):
         return '<KeccakHash: %s>' % self.h
@@ -123,7 +123,7 @@ def pbkdf2(inp, salt, length=32, count=1000, prf=None):
 
 
 def decodepoint(x):
-    return tcry.ge25519_unpack_vartime_r(x)
+    return tcry.ge25519_unpack_vartime_r(tcry.KEY_BUFF(*x))
 
 
 def encodepoint(pt):
@@ -131,7 +131,7 @@ def encodepoint(pt):
 
 
 def decodeint(x):
-    return tcry.expand256_modm_r(x)
+    return tcry.expand256_modm_r(tcry.KEY_BUFF(*x))
 
 
 def encodeint(x):
@@ -513,7 +513,8 @@ def hash_to_scalar(data, length=None):
     :param length:
     :return:
     """
-    return tcry.xmr_hash_to_scalar_r(data[:length] if length else data)
+    dt = data[:length] if length else data
+    return tcry.xmr_hash_to_scalar_r(bytes(dt))
 
 
 def hash_to_ec(buf):
