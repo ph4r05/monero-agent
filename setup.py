@@ -38,7 +38,7 @@ poc_extras = [
     'sarge',
 ]
 
-tcry = [
+tcry_extras = [
     'py_trezor_crypto_ph4'
 ]
 
@@ -86,5 +86,6 @@ setup(
         'dev': dev_extras,
         'poc': poc_extras,
         'docs': docs_extras,
+        'tcry': tcry_extras,
     },
 )
