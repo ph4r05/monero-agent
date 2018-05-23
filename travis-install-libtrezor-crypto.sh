@@ -6,7 +6,7 @@
 # you would probably not want to install it like this.
 
 set -e
-export RELEASE_NAME="lib_v0.0.8"
+export RELEASE_NAME="lib_v0.0.9"
 
 # check if libsodium is already installed
 #if [ ! -d "$HOME/libtrezor-crypto/lib" ]; then
