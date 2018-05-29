@@ -776,6 +776,10 @@ class HostAgent(cli.BaseCli):
 
     def transfer_params(self, params):
         res = self.wallet_proxy.transfer(params)
+        if 'result' not in res:
+            logger.error('Transfer error: %s' % res)
+            raise ValueError('Could not transfer')
+        
         result = res['result']
         print('Fee: %s' % wallet.conv_disp_amount(result['fee']))
 
