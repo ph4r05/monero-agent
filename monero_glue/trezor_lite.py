@@ -87,7 +87,7 @@ class TrezorLite(object):
         self.tsx_obj = None  # clear transaction object
         await self.iface.transaction_error(e)
 
-    async def init_transaction(self, tsx_data: TsxData):
+    async def tsx_init(self, tsx_data: TsxData):
         """
         Initialize transaction state.
         :param tsx_data:
@@ -101,7 +101,7 @@ class TrezorLite(object):
             await self.tsx_exc_handler(e)
             return TError(exc=e)
 
-    async def set_tsx_input(self, src_entr):
+    async def tsx_set_input(self, src_entr):
         """
         Sets UTXO one by one.
         Computes spending secret key, key image. tx.vin[i] + HMAC, Pedersen commitment on amount.
@@ -140,12 +140,12 @@ class TrezorLite(object):
         :return:
         """
         try:
-            return await self.tsx_obj.tsx_input_vini(*args, **kwargs)
+            return await self.tsx_obj.input_vini(*args, **kwargs)
         except Exception as e:
             await self.tsx_exc_handler(e)
             return TError(exc=e)
 
-    async def set_tsx_output1(self, dst_entr, dst_entr_hmac):
+    async def tsx_set_output1(self, dst_entr, dst_entr_hmac):
         """
         Set destination entry one by one.
         Computes destination stealth address, amount key, range proof + HMAC, out_pk, ecdh_info.
@@ -161,7 +161,7 @@ class TrezorLite(object):
             await self.tsx_exc_handler(e)
             return TError(exc=e)
 
-    async def all_out1_set(self):
+    async def tsx_all_out1_set(self):
         """
         All outputs were set in this phase. Computes additional public keys (if needed), tx.extra and
         transaction prefix hash.
@@ -187,12 +187,12 @@ class TrezorLite(object):
         :return:
         """
         try:
-            return await self.tsx_obj.tsx_mlsag_done()
+            return await self.tsx_obj.mlsag_done()
         except Exception as e:
             await self.tsx_exc_handler(e)
             return TError(exc=e)
 
-    async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
+    async def tsx_sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
         """
         Generates a signature for one input.
         
@@ -204,7 +204,7 @@ class TrezorLite(object):
             await self.tsx_exc_handler(e)
             return TError(exc=e)
 
-    async def tx_sign_final(self, *args, **kwargs):
+    async def tsx_sign_final(self, *args, **kwargs):
         """
         Final message.
         Offloading tx related data, encrypted.
@@ -857,7 +857,7 @@ class TTransaction(object):
             for idx in range(self.num_inputs()):
                 await self.hash_vini_pseudo_out(self.tx.vin[idx], idx)
 
-    async def tsx_input_vini(self, src_entr, vini, hmac, pseudo_out):
+    async def input_vini(self, src_entr, vini, hmac, pseudo_out):
         """
         Set tx.vin[i] for incremental tx prefix hash computation.
         After sorting by key images on host.
@@ -1138,7 +1138,7 @@ class TTransaction(object):
         for out in self.output_pk:
             await self.full_message_hasher.set_out_pk(out)
 
-    async def tsx_mlsag_done(self):
+    async def mlsag_done(self):
         """
         MLSAG message computed.
 

@@ -20,7 +20,7 @@ class Trezor(object):
         self.tsx_obj = None  # type: TTransaction
         self.creds = None  # type: WalletCreds
 
-    async def init_transaction(self, tsx_data: TsxData):
+    async def tsx_init(self, tsx_data: TsxData):
         self.tsx_ctr += 1
         self.tsx_obj = TTransaction(self)
         self.tsx_obj.creds = self.creds
@@ -35,7 +35,7 @@ class Trezor(object):
         """
         return self.tsx_obj.precompute_subaddr(account, indices)
 
-    async def set_tsx_input(self, src_entr):
+    async def tsx_set_input(self, src_entr):
         """
         :param src_entr
         :type src_entr: xmrtypes.TxSourceEntry
@@ -50,7 +50,7 @@ class Trezor(object):
         """
         return await self.tsx_obj.tsx_inputs_done()
 
-    async def set_tsx_output1(self, dst_entr):
+    async def tsx_set_output1(self, dst_entr):
         """
         :param src_entr
         :type src_entr: xmrtypes.TxDestinationEntry

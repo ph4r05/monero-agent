@@ -158,7 +158,7 @@ class Agent(object):
         self.ct.tx.unlock_time = tx.unlock_time
 
         self.ct.tsx_data = tsx_data
-        t_res = await self.trezor.init_transaction(tsx_data)
+        t_res = await self.trezor.tsx_init(tsx_data)
         self.handle_error(t_res)
 
         in_memory = t_res.args[0]
@@ -166,7 +166,7 @@ class Agent(object):
 
         # Set transaction inputs
         for idx, src in enumerate(tx.sources):
-            t_res = await self.trezor.set_tsx_input(src)
+            t_res = await self.trezor.tsx_set_input(src)
             self.handle_error(t_res)
 
             vini, vini_hmac, pseudo_out, alpha_enc = t_res.args
@@ -202,7 +202,7 @@ class Agent(object):
 
         # Set transaction outputs
         for idx, dst in enumerate(tx.splitted_dsts):
-            t_res = await self.trezor.set_tsx_output1(dst, self.ct.tx_out_entr_hmacs[idx])
+            t_res = await self.trezor.tsx_set_output1(dst, self.ct.tx_out_entr_hmacs[idx])
             self.handle_error(t_res)
 
             vouti, vouti_mac, rsig, out_pk, ecdh_info = t_res.args
@@ -212,7 +212,7 @@ class Agent(object):
             self.ct.tx_out_pk.append(out_pk)
             self.ct.tx_out_ecdh.append(ecdh_info)
 
-        t_res = await self.trezor.all_out1_set()
+        t_res = await self.trezor.tsx_all_out1_set()
         self.handle_error(t_res)
 
         tx_extra, tx_prefix_hash, rv = t_res.args
@@ -252,9 +252,9 @@ class Agent(object):
         couts = []
         rv.p.MGs = []
         for idx, src in enumerate(tx.sources):
-            t_res = await self.trezor.sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
-                                                   self.ct.pseudo_outs[idx],
-                                                   self.ct.alphas[idx])
+            t_res = await self.trezor.tsx_sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
+                                                     self.ct.pseudo_outs[idx],
+                                                     self.ct.alphas[idx])
             self.handle_error(t_res)
 
             mg, msc = t_res.args
@@ -264,7 +264,7 @@ class Agent(object):
         self.ct.tx.signatures = []
         self.ct.tx.rct_signatures = rv
 
-        t_res = await self.trezor.tx_sign_final()
+        t_res = await self.trezor.tsx_sign_final()
         self.handle_error(t_res)
 
         if multisig:

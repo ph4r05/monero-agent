@@ -82,11 +82,11 @@ class TrezorProxy(trezor_lite.TrezorLite):
         res = pickle.loads(pickle_data)
         return res
 
-    async def init_transaction(self, tsx_data: TsxData):
-        return await self.transfer_pickle('tx_sign', 'init_transaction', tsx_data)
+    async def tsx_init(self, tsx_data: TsxData):
+        return await self.transfer_pickle('tx_sign', 'tsx_init', tsx_data)
 
-    async def set_tsx_input(self, src_entr):
-        return await self.transfer_pickle('tx_sign', 'set_tsx_input', src_entr)
+    async def tsx_set_input(self, src_entr):
+        return await self.transfer_pickle('tx_sign', 'tsx_set_input', src_entr)
 
     async def tsx_inputs_permutation(self, permutation):
         return await self.transfer_pickle('tx_sign', 'tsx_inputs_permutation', permutation)
@@ -94,19 +94,19 @@ class TrezorProxy(trezor_lite.TrezorLite):
     async def tsx_input_vini(self, *args, **kwargs):
         return await self.transfer_pickle('tx_sign', 'tsx_input_vini', *args, **kwargs)
 
-    async def set_tsx_output1(self, dst_entr, dst_entr_hmac):
-        return await self.transfer_pickle('tx_sign', 'set_tsx_output1', dst_entr, dst_entr_hmac)
+    async def tsx_set_output1(self, dst_entr, dst_entr_hmac):
+        return await self.transfer_pickle('tx_sign', 'tsx_set_output1', dst_entr, dst_entr_hmac)
 
-    async def all_out1_set(self):
-        return await self.transfer_pickle('tx_sign', 'all_out1_set')
+    async def tsx_all_out1_set(self):
+        return await self.transfer_pickle('tx_sign', 'tsx_all_out1_set')
 
     async def tsx_mlsag_done(self):
         return await self.transfer_pickle('tx_sign', 'tsx_mlsag_done')
 
-    async def sign_input(self, *args, **kwargs):
-        return await self.transfer_pickle('tx_sign', 'sign_input', *args, **kwargs)
+    async def tsx_sign_input(self, *args, **kwargs):
+        return await self.transfer_pickle('tx_sign', 'tsx_sign_input', *args, **kwargs)
 
-    async def tx_sign_final(self, *args, **kwargs):
+    async def tsx_sign_final(self, *args, **kwargs):
         return await self.transfer_pickle('tx_sign', 'final', *args, **kwargs)
 
     async def key_image_sync_ask(self, *args, **kwargs):

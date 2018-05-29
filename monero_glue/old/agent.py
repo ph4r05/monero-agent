@@ -53,21 +53,21 @@ class Agent(object):
             tsx_data.fee = sum([x.amount for x in tx.sources]) - sum([x.amount for x in tx.splitted_dsts])
 
             self.ct.tsx_data = tsx_data
-            await self.trezor.init_transaction(tsx_data)
+            await self.trezor.tsx_init(tsx_data)
 
             # Subaddresses
             await self.trezor.precompute_subaddr(tx.subaddr_account, tx.subaddr_indices)
 
             # Set transaction inputs
             for idx, src in enumerate(tx.sources):
-                vini, vini_hmac = await self.trezor.set_tsx_input(src)
+                vini, vini_hmac = await self.trezor.tsx_set_input(src)
                 self.ct.tx.vin.append(vini)
                 self.ct.tx_in_hmacs.append(vini_hmac)
 
             await self.trezor.tsx_inputs_done()
 
             for dst in tx.splitted_dsts:
-                await self.trezor.set_tsx_output1(dst)
+                await self.trezor.tsx_set_output1(dst)
 
             # One pass protocol, python Monero implementation / port
             buf = await self.trezor.tsx_obj.signature(tx)

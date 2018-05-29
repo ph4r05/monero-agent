@@ -318,12 +318,12 @@ class TrezorServer(cli.BaseCli):
             logger.warning('Transaction signing request on unitialized Trezor')
             return abort(404)
 
-        if cmd == 'init_transaction':
-            res = await self.trez.init_transaction(*args, **kwargs)
+        if cmd == 'tsx_init':
+            res = await self.trez.tsx_init(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
-        elif cmd == 'set_tsx_input':
-            res = await self.trez.set_tsx_input(*args, **kwargs)
+        elif cmd == 'tsx_set_input':
+            res = await self.trez.tsx_set_input(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
         elif cmd == 'tsx_inputs_permutation':
@@ -334,24 +334,24 @@ class TrezorServer(cli.BaseCli):
             res = await self.trez.tsx_input_vini(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
-        elif cmd == 'set_tsx_output1':
-            res = await self.trez.set_tsx_output1(*args, **kwargs)
+        elif cmd == 'tsx_set_output1':
+            res = await self.trez.tsx_set_output1(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
-        elif cmd == 'all_out1_set':
-            res = await self.trez.all_out1_set(*args, **kwargs)
+        elif cmd == 'tsx_all_out1_set':
+            res = await self.trez.tsx_all_out1_set(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
         elif cmd == 'tsx_mlsag_done':
             res = await self.trez.tsx_mlsag_done(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
-        elif cmd == 'sign_input':
-            res = await self.trez.sign_input(*args, **kwargs)
+        elif cmd == 'tsx_sign_input':
+            res = await self.trez.tsx_sign_input(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
         elif cmd == 'final':
-            res = await self.trez.tx_sign_final(*args, **kwargs)
+            res = await self.trez.tsx_sign_final(*args, **kwargs)
             return jsonify({'result': True, 'payload': self.pickle_res(res)})
 
         else:
