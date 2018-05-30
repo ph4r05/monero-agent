@@ -25,11 +25,11 @@ message MoneroTsxInitResp {
 
 message MoneroTsxSetInput {
     optional uint32 version = 1;
-    optional bytes src_entr = 2;  // TODO: xmr vs. protobuf
+    optional bytes src_entr = 2;  // xmrtypes.TxSourceEntry
 }
 
 message MoneroTsxSetInputResp {
-    optional bytes vini = 1;      // TODO: xmr vs. protobuf, xmrtypes.TxinToKey
+    optional bytes vini = 1;      // xmrtypes.TxinToKey
     optional bytes vini_hmac = 2;
     optional bytes pseudo_out = 3;
     optional bytes pseudo_out_hmac = 4;
@@ -45,8 +45,8 @@ message MoneroTsxInputsPermutationResp {
 }
 
 message MoneroTsxInputVini {
-    optional bytes src_entr = 1;  // TODO: xmr vs. protobuf, xmrtypes.TxSourceEntry
-    optional bytes vini = 2;      // TODO: xmr vs. protobuf, xmrtypes.TxinToKey
+    optional bytes src_entr = 1;  // xmrtypes.TxSourceEntry
+    optional bytes vini = 2;      // xmrtypes.TxinToKey
     optional bytes vini_hmac = 3;
     optional bytes pseudo_out = 4;
     optional bytes pseudo_out_hmac = 5;
@@ -57,16 +57,16 @@ message MoneroTsxInputViniResp {
 }
 
 message MoneroTsxSetOutput {
-    optional bytes dst_entr = 1;  // TODO: xmr vs. protobuf, xmrtypes.TxDestinationEntry
+    optional bytes dst_entr = 1;  // xmrtypes.TxDestinationEntry
     optional bytes dst_entr_hmac = 2;
 }
 
 message MoneroTsxSetOutputResp {
-    optional bytes tx_out = 1; // TODO: xmr. vs protobuf, xmrtypes.TxOut
+    optional bytes tx_out = 1;  // xmrtypes.TxOut
     optional bytes vouti_hmac = 2;
     optional bytes rsig = 3;
     optional bytes out_pk = 4;
-    optional bytes ecdh_info = 5;  // TODO: xmr vs. protobuf
+    optional bytes ecdh_info = 5;
 }
 
 message MoneroTsxAllOutSet {
@@ -88,8 +88,8 @@ message MoneroTsxMlsagDoneResp {
 }
 
 message MoneroTsxSignInput {
-    optional bytes src_entr = 1; // TODO: xmr vs. protobuf, xmrtypes.TxSourceEntry
-    optional bytes vini = 2;     // TODO: xmr vs. protobuf, xmrtypes.TxinToKey
+    optional bytes src_entr = 1; // xmrtypes.TxSourceEntry
+    optional bytes vini = 2;     // xmrtypes.TxinToKey
     optional bytes vini_hmac = 3;
     optional bytes pseudo_out = 4;
     optional bytes pseudo_out_hmac = 5;
