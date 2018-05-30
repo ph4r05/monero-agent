@@ -16,6 +16,10 @@ class TMessage(object):
     def __init__(self, *args, **kwargs):
         self.status = 0
 
+    def __repr__(self):
+        dct = xmrserialize.slot_obj_dict(self) if hasattr(self, '__slots__') else self.__dict__
+        return '<%s: %s>' % (self.__class__.__name__, dct)
+
 
 class TError(TMessage):
     def __init__(self, *args, **kwargs):
