@@ -168,7 +168,23 @@ It takes 64 and 80 B to store tuple of 2 and 4 elements respectively.
 It thus take 184 B and 320 B to store an EC point in the natural form compared to the 65 B byte representation.
 
 
+# Related projects
+
+- [monero-trezor-doc]
+- [monero-serialize]
+- [trezor-crypto]
+- [py-trezor-crypto]
+- [py-cryptonight]
+- [trezor-core]
+- [trezor-crypto]
+- [trezor-common]
+
+
+[trezor-core]: https://github.com/ph4r05/trezor-core
 [trezor-crypto]: https://github.com/ph4r05/trezor-crypto
+[trezor-common]: https://github.com/ph4r05/trezor-common
 [libsodium]: https://github.com/jedisct1/libsodium
 [py-trezor-crypto]: https://github.com/ph4r05/py-trezor-crypto
-
+[py-cryptonight]: https://github.com/ph4r05/py-cryptonight
+[monero-serialize]: https://github.com/ph4r05/monero-serialize
+[monero-trezor-doc]: https://github.com/ph4r05/monero-trezor-doc
