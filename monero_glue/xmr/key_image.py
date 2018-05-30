@@ -12,7 +12,7 @@ import binascii
 
 class SubAddrIndicesList(xmrserialize.MessageType):
     __slots__ = ['account', 'minor_indices']
-    FIELDS = [
+    MFIELDS = [
         ('account', xmrserialize.UVarintType),
         ('minor_indices', xmrserialize.ContainerType, xmrserialize.UVarintType),
     ]
@@ -23,7 +23,7 @@ class KeyImageExportInit(xmrserialize.MessageType):
     Initializes key image sync. Commitment
     """
     __slots__ = ['num', 'hash', 'subs']
-    FIELDS = [
+    MFIELDS = [
         ('num', xmrserialize.UVarintType),  # number of outputs to gen
         ('hash', xmrtypes.Hash),  # aggregate hash commitment
         ('subs', xmrserialize.ContainerType, SubAddrIndicesList),  # aggregated sub addresses indices
@@ -35,7 +35,7 @@ class TransferDetails(xmrserialize.MessageType):
     Transfer details for key image sync needs
     """
     __slots__ = ['out_key', 'tx_pub_key', 'additional_tx_pub_keys', 'm_internal_output_index']
-    FIELDS = [
+    MFIELDS = [
         ('out_key', xmrtypes.ECPublicKey),
         ('tx_pub_key', xmrtypes.ECPublicKey),
         ('additional_tx_pub_keys', xmrserialize.ContainerType, xmrtypes.ECPublicKey),
@@ -48,7 +48,7 @@ class ExportedKeyImage(xmrserialize.MessageType):
     Exported key image
     """
     __slots__ = ['iv', 'tag', 'blob']
-    FIELDS = [
+    MFIELDS = [
         ('iv', xmrserialize.BlobType),   # enc IV
         ('tag', xmrserialize.BlobType),  # enc tag
         ('blob', xmrserialize.BlobType),  # encrypted ki || sig

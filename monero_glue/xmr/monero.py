@@ -51,7 +51,7 @@ class TsxData(xmrserialize.MessageType):
     """
     __slots__ = ['version', 'payment_id', 'unlock_time', 'outputs', 'change_dts', 'num_inputs', 'mixin', 'fee',
                  'account', 'minor_indices', 'is_multisig', 'exp_tx_prefix_hash', 'use_tx_keys']
-    FIELDS = [
+    MFIELDS = [
         ('version', xmrserialize.UVarintType),
         ('payment_id', xmrserialize.BlobType),
         ('unlock_time', xmrserialize.UVarintType),
@@ -566,8 +566,8 @@ class PreMlsagHasher(object):
             raise ValueError('State error')
         self.state = 2
 
-        await self.rtcsig_hasher.ar.message_field(None, field=xmrtypes.RctSigBase.FIELDS[0], fvalue=rv_type)
-        await self.rtcsig_hasher.ar.message_field(None, field=xmrtypes.RctSigBase.FIELDS[1], fvalue=fee)
+        await self.rtcsig_hasher.ar.message_field(None, field=xmrtypes.RctSigBase.MFIELDS[0], fvalue=rv_type)
+        await self.rtcsig_hasher.ar.message_field(None, field=xmrtypes.RctSigBase.MFIELDS[1], fvalue=fee)
 
     async def set_pseudo_out(self, out):
         if self.state != 2 and self.state != 3:
