@@ -1317,26 +1317,30 @@ class KeyImageSync(object):
                 monero.compute_subaddresses(self.trezor.creds, sub.account, sub.minor_indices, self.subaddresses)
         return TResponse()
 
-    async def sync(self, td):
+    async def sync(self, tds):
         if self.blocked:
             raise ValueError('Blocked')
+        if len(tds) == 0:
+            raise ValueError('Empty')
+        resp = []
+        for td in tds:
+            self.c_idx += 1
+            if self.c_idx >= self.num:
+                raise ValueError('Too many outputs')
 
-        self.c_idx += 1
-        if self.c_idx >= self.num:
-            raise ValueError('Too many outputs')
+            hash = key_image.compute_hash(td)
+            self.hasher.update(hash)
 
-        hash = key_image.compute_hash(td)
-        self.hasher.update(hash)
+            ki, sig = await key_image.export_key_image(self.trezor.creds, self.subaddresses, td)
 
-        ki, sig = await key_image.export_key_image(self.trezor.creds, self.subaddresses, td)
+            buff = crypto.encodepoint(ki)
+            buff += crypto.encodeint(sig[0][0])
+            buff += crypto.encodeint(sig[0][1])
 
-        buff = crypto.encodepoint(ki)
-        buff += crypto.encodeint(sig[0][0])
-        buff += crypto.encodeint(sig[0][1])
-
-        nonce, ciph, tag = aesgcm.encrypt(self.enc_key, buff)
-        eki = key_image.ExportedKeyImage(iv=nonce, tag=tag, blob=ciph)
-        return TResponse(eki)
+            nonce, ciph, tag = aesgcm.encrypt(self.enc_key, buff)
+            eki = key_image.ExportedKeyImage(iv=nonce, tag=tag, blob=ciph)
+            resp.append(eki)
+        return TResponse(resp)
 
     async def final(self):
         if self.blocked:

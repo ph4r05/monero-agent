@@ -300,11 +300,12 @@ class Agent(object):
 
         sub_res = []
         iter = await key_image.yield_key_image_data(outputs)
-        for rr in iter:  # type: key_image.TransferDetails
+        batches = common.chunk(iter, 10)
+        for rr in batches:  # type: key_image.TransferDetails
             t_res = await self.trezor.key_image_sync_transfer(rr)
             self.handle_error(t_res)
 
-            sub_res.append(t_res.args[0])
+            sub_res += t_res.args[0]
 
         t_res = await self.trezor.key_image_sync_final()
         self.handle_error(t_res)

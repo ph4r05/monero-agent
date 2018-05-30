@@ -163,3 +163,16 @@ def defvalkeys(js, key, default=None):
         pass
     return default
 
+
+def chunk(arr, size=1):
+    res = []
+    idx = 0
+    while True:
+        c = arr[idx:idx+size]
+        res.append(c)
+        idx += size
+        if len(c) != size:
+            break
+    return res
+
+
