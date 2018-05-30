@@ -1,0 +1,140 @@
+syntax = "proto2";
+import "types.proto";
+
+/////////////
+// Monero  //
+/////////////
+
+message MoneroRespError {
+	optional uint32 status = 1;
+	optional string reason = 2;
+	optional string exc = 3;
+}
+
+message MoneroTsxInit {
+    optional uint32 version = 1;
+    optional MoneroTsxData tsx_data = 2;
+}
+
+message MoneroTsxInitResp {
+    optional uint32 version = 1;
+    optional uint32 status = 2;
+    optional bool in_memory = 3;
+    repeated bytes hmacs = 4;
+}
+
+message MoneroTsxSetInput {
+    optional uint32 version = 1;
+    optional bytes src_entr = 2;  // TODO: xmr vs. protobuf
+}
+
+message MoneroTsxSetInputResp {
+    optional bytes vini = 1;      // TODO: xmr vs. protobuf, xmrtypes.TxinToKey
+    optional bytes vini_hmac = 2;
+    optional bytes pseudo_out = 3;
+    optional bytes pseudo_out_hmac = 4;
+    optional bytes alpha_enc = 5;
+}
+
+message MoneroTsxInputsPermutation {
+    repeated uint32 perm = 1;
+}
+
+message MoneroTsxInputsPermutationResp {
+
+}
+
+message MoneroTsxInputVini {
+    optional bytes src_entr = 1;  // TODO: xmr vs. protobuf, xmrtypes.TxSourceEntry
+    optional bytes vini = 2;      // TODO: xmr vs. protobuf, xmrtypes.TxinToKey
+    optional bytes vini_hmac = 3;
+    optional bytes pseudo_out = 4;
+    optional bytes pseudo_out_hmac = 5;
+}
+
+message MoneroTsxInputViniResp {
+
+}
+
+message MoneroTsxSetOutput {
+    optional bytes dst_entr = 1;  // TODO: xmr vs. protobuf, xmrtypes.TxDestinationEntry
+    optional bytes dst_entr_hmac = 2;
+}
+
+message MoneroTsxSetOutputResp {
+    optional bytes tx_out = 1; // TODO: xmr. vs protobuf, xmrtypes.TxOut
+    optional bytes vouti_hmac = 2;
+    optional bytes rsig = 3;
+    optional bytes out_pk = 4;
+    optional bytes ecdh_info = 5;  // TODO: xmr vs. protobuf
+}
+
+message MoneroTsxAllOutSet {
+
+}
+
+message MoneroTsxAllOutSetResp {
+    optional bytes extra = 1;
+    optional bytes tx_prefix_hash = 2;
+    optional bytes rv = 3;  // xmrtypes.RctSig
+}
+
+message MoneroTsxMlsagDone {
+
+}
+
+message MoneroTsxMlsagDoneResp {
+    optional bytes full_message_hash = 1;
+}
+
+message MoneroTsxSignInput {
+    optional bytes src_entr = 1; // TODO: xmr vs. protobuf, xmrtypes.TxSourceEntry
+    optional bytes vini = 2;     // TODO: xmr vs. protobuf, xmrtypes.TxinToKey
+    optional bytes vini_hmac = 3;
+    optional bytes pseudo_out = 4;
+    optional bytes pseudo_out_hmac = 5;
+    optional bytes alpha = 6;
+}
+
+message MoneroTsxSignInputResp {
+    optional bytes signature = 1;
+    optional bytes cout = 2;
+}
+
+message MoneroTsxFinal {
+
+}
+
+message MoneroTsxFinalResp {
+    optional bytes cout_key = 1;
+    optional bytes salt = 2;
+    optional bytes rand_mult = 3;
+    optional bytes tx_enc_keys = 4;
+}
+
+message MoneroKeyImageExportInit {
+    optional uint64 num = 1;
+    optional bytes hash = 2;
+    repeated MoneroSubAddrIndicesList subs = 3;
+}
+
+message MoneroKeyImageExportInitResp {
+
+}
+
+message MoneroKeyImageSync {
+    repeated MoneroTransferDetails tdis = 1;
+}
+
+message MoneroKeyImageSyncResp {
+    repeated MoneroExportedKeyImage kis = 1;
+}
+
+message MoneroKeyImageSyncFinal {
+
+}
+
+message MoneroKeyImageSyncFinalResp {
+    optional bytes enc_key = 1;
+}
+
