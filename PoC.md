@@ -192,7 +192,7 @@ Do you confirm (y/n) ? y
 Signing transaction with Trezor
 Please check the Trezor and confirm / reject the transaction
 
-2018-05-08 02:52:44 phx.local __main__[42948] DEBUG Action: init_transaction
+2018-05-08 02:52:44 phx.local __main__[42948] DEBUG Action: tsx_init
 2018-05-08 02:52:44 phx.local urllib3.connectionpool[42948] DEBUG Starting new HTTP connection (1): 127.0.0.1
 ```
 
@@ -221,22 +221,22 @@ Do you confirm the transaction? 1
 [trezor 9vAJfX]: 127.0.0.1 - - [08/May/2018 02:53:12] "POST /api/v1.0/tx_sign HTTP/1.1" 200 486 27.396638
 (36839) accepted ('127.0.0.1', 54537)
 2018-05-08 02:53:12 phx.local asyncio[36839] DEBUG Using selector: KqueueSelector
-2018-05-08 02:53:12 phx.local __main__[36839] DEBUG Action: set_tsx_input
+2018-05-08 02:53:12 phx.local __main__[36839] DEBUG Action: tsx_set_input
 2018-05-08 02:53:12 phx.local __main__[36839] DEBUG Transaction step: 100, sub step: 0
 127.0.0.1 - - [08/May/2018 02:53:12] "POST /api/v1.0/tx_sign HTTP/1.1" 200 736 0.076256
 (36839) accepted ('127.0.0.1', 54538)
 2018-05-08 02:53:12 phx.local asyncio[36839] DEBUG Using selector: KqueueSelector
-2018-05-08 02:53:12 phx.local __main__[36839] DEBUG Action: set_tsx_output1
+2018-05-08 02:53:12 phx.local __main__[36839] DEBUG Action: tsx_set_output1
 2018-05-08 02:53:12 phx.local __main__[36839] DEBUG Transaction step: 400, sub step: 0
 127.0.0.1 - - [08/May/2018 02:53:14] "POST /api/v1.0/tx_sign HTTP/1.1" 200 15468 1.884146
 (36839) accepted ('127.0.0.1', 54539)
 2018-05-08 02:53:14 phx.local asyncio[36839] DEBUG Using selector: KqueueSelector
-2018-05-08 02:53:14 phx.local __main__[36839] DEBUG Action: set_tsx_output1
+2018-05-08 02:53:14 phx.local __main__[36839] DEBUG Action: tsx_set_output1
 2018-05-08 02:53:14 phx.local __main__[36839] DEBUG Transaction step: 400, sub step: 1
 127.0.0.1 - - [08/May/2018 02:53:15] "POST /api/v1.0/tx_sign HTTP/1.1" 200 15468 1.889318
 (36839) accepted ('127.0.0.1', 54540)
 2018-05-08 02:53:15 phx.local asyncio[36839] DEBUG Using selector: KqueueSelector
-2018-05-08 02:53:15 phx.local __main__[36839] DEBUG Action: all_out1_set
+2018-05-08 02:53:15 phx.local __main__[36839] DEBUG Action: tsx_all_out1_set
 2018-05-08 02:53:15 phx.local __main__[36839] DEBUG Transaction step: 500, sub step: None
 127.0.0.1 - - [08/May/2018 02:53:15] "POST /api/v1.0/tx_sign HTTP/1.1" 200 792 0.007530
 (36839) accepted ('127.0.0.1', 54541)
@@ -246,7 +246,7 @@ Do you confirm the transaction? 1
 127.0.0.1 - - [08/May/2018 02:53:15] "POST /api/v1.0/tx_sign HTTP/1.1" 200 402 0.014496
 (36839) accepted ('127.0.0.1', 54542)
 2018-05-08 02:53:16 phx.local asyncio[36839] DEBUG Using selector: KqueueSelector
-2018-05-08 02:53:16 phx.local __main__[36839] DEBUG Action: sign_input
+2018-05-08 02:53:16 phx.local __main__[36839] DEBUG Action: tsx_sign_input
 2018-05-08 02:53:16 phx.local __main__[36839] DEBUG Transaction step: 700, sub step: None
 127.0.0.1 - - [08/May/2018 02:53:16] "POST /api/v1.0/tx_sign HTTP/1.1" 200 1725 0.546059
 (36839) accepted ('127.0.0.1', 54543)
@@ -322,7 +322,7 @@ Address:          9yBfm6wd3beKaVBv3BU9SfJNXhwksKMByVhpazXFS6TKcqFksNUZHtpcsyaDhe
 Signing transaction with Trezor
 Please check the Trezor and confirm / reject the transaction
 
-2018-05-15 21:42:07 phx.local __main__[20798] DEBUG Action: init_transaction
+2018-05-15 21:42:07 phx.local __main__[20798] DEBUG Action: tsx_init
 2018-05-15 21:42:07 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 ```
 
@@ -353,12 +353,12 @@ Do you confirm the transaction? 1
 [trezor 9yBfm6]: 127.0.0.1 - - [15/May/2018 21:42:20] "POST /api/v1.0/tx_sign HTTP/1.1" 200 486 13.264746
 (18494) accepted ('127.0.0.1', 63637)
 2018-05-15 21:42:20 phx.local asyncio[18494] DEBUG Using selector: KqueueSelector
-2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: set_tsx_input
+2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: tsx_set_input
 2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Transaction step: 100, sub step: 0
 127.0.0.1 - - [15/May/2018 21:42:20] "POST /api/v1.0/tx_sign HTTP/1.1" 200 1034 0.006508
 (18494) accepted ('127.0.0.1', 63638)
 2018-05-15 21:42:20 phx.local asyncio[18494] DEBUG Using selector: KqueueSelector
-2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: set_tsx_input
+2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: tsx_set_input
 2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Transaction step: 100, sub step: 1
 127.0.0.1 - - [15/May/2018 21:42:20] "POST /api/v1.0/tx_sign HTTP/1.1" 200 1026 0.007608
 (18494) accepted ('127.0.0.1', 63639)
@@ -378,17 +378,17 @@ Do you confirm the transaction? 1
 127.0.0.1 - - [15/May/2018 21:42:20] "POST /api/v1.0/tx_sign HTTP/1.1" 200 332 0.004619
 (18494) accepted ('127.0.0.1', 63642)
 2018-05-15 21:42:20 phx.local asyncio[18494] DEBUG Using selector: KqueueSelector
-2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: set_tsx_output1
+2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: tsx_set_output1
 2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Transaction step: 400, sub step: 0
 127.0.0.1 - - [15/May/2018 21:42:20] "POST /api/v1.0/tx_sign HTTP/1.1" 200 15468 0.066715
 (18494) accepted ('127.0.0.1', 63643)
 2018-05-15 21:42:20 phx.local asyncio[18494] DEBUG Using selector: KqueueSelector
-2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: set_tsx_output1
+2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: tsx_set_output1
 2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Transaction step: 400, sub step: 1
 127.0.0.1 - - [15/May/2018 21:42:20] "POST /api/v1.0/tx_sign HTTP/1.1" 200 15468 0.066210
 (18494) accepted ('127.0.0.1', 63644)
 2018-05-15 21:42:20 phx.local asyncio[18494] DEBUG Using selector: KqueueSelector
-2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: all_out1_set
+2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: tsx_all_out1_set
 2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Transaction step: 500, sub step: None
 127.0.0.1 - - [15/May/2018 21:42:20] "POST /api/v1.0/tx_sign HTTP/1.1" 200 792 0.002638
 (18494) accepted ('127.0.0.1', 63645)
@@ -398,12 +398,12 @@ Do you confirm the transaction? 1
 127.0.0.1 - - [15/May/2018 21:42:20] "POST /api/v1.0/tx_sign HTTP/1.1" 200 402 0.002878
 (18494) accepted ('127.0.0.1', 63646)
 2018-05-15 21:42:20 phx.local asyncio[18494] DEBUG Using selector: KqueueSelector
-2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: sign_input
+2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: tsx_sign_input
 2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Transaction step: 700, sub step: None
 127.0.0.1 - - [15/May/2018 21:42:20] "POST /api/v1.0/tx_sign HTTP/1.1" 200 1725 0.017701
 (18494) accepted ('127.0.0.1', 63647)
 2018-05-15 21:42:20 phx.local asyncio[18494] DEBUG Using selector: KqueueSelector
-2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: sign_input
+2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Action: tsx_sign_input
 2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Transaction step: 700, sub step: None
 2018-05-15 21:42:20 phx.local __main__[18494] DEBUG Transaction signed
 127.0.0.1 - - [15/May/2018 21:42:20] "POST /api/v1.0/tx_sign HTTP/1.1" 200 1725 0.018710
@@ -419,15 +419,15 @@ Transaction was successfully signed
 After confirming the transaction agent should produce the following output:
 
 ```
-2018-05-15 21:42:07 phx.local __main__[20798] DEBUG Action: init_transaction
+2018-05-15 21:42:07 phx.local __main__[20798] DEBUG Action: tsx_init
 2018-05-15 21:42:07 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG http://127.0.0.1:46123 "POST /api/v1.0/tx_sign HTTP/1.1" 200 353
 2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Req size: 930, response size: 157
-2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: set_tsx_input
+2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: tsx_set_input
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG http://127.0.0.1:46123 "POST /api/v1.0/tx_sign HTTP/1.1" 200 901
 2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Req size: 1484, response size: 431
-2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: set_tsx_input
+2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: tsx_set_input
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG http://127.0.0.1:46123 "POST /api/v1.0/tx_sign HTTP/1.1" 200 893
 2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Req size: 1484, response size: 427
@@ -442,15 +442,15 @@ After confirming the transaction agent should produce the following output:
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG http://127.0.0.1:46123 "POST /api/v1.0/tx_sign HTTP/1.1" 200 199
 2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Req size: 1742, response size: 80
-2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: set_tsx_output1
+2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: tsx_set_output1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG http://127.0.0.1:46123 "POST /api/v1.0/tx_sign HTTP/1.1" 200 15333
 2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Req size: 385, response size: 7647
-2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: set_tsx_output1
+2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: tsx_set_output1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG http://127.0.0.1:46123 "POST /api/v1.0/tx_sign HTTP/1.1" 200 15333
 2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Req size: 385, response size: 7647
-2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: all_out1_set
+2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: tsx_all_out1_set
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG http://127.0.0.1:46123 "POST /api/v1.0/tx_sign HTTP/1.1" 200 659
 2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Req size: 10, response size: 310
@@ -458,11 +458,11 @@ After confirming the transaction agent should produce the following output:
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG http://127.0.0.1:46123 "POST /api/v1.0/tx_sign HTTP/1.1" 200 269
 2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Req size: 10, response size: 115
-2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: sign_input
+2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: tsx_sign_input
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG http://127.0.0.1:46123 "POST /api/v1.0/tx_sign HTTP/1.1" 200 1591
 2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Req size: 1825, response size: 776
-2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: sign_input
+2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Action: tsx_sign_input
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG Starting new HTTP connection (1): 127.0.0.1
 2018-05-15 21:42:20 phx.local urllib3.connectionpool[20798] DEBUG http://127.0.0.1:46123 "POST /api/v1.0/tx_sign HTTP/1.1" 200 1591
 2018-05-15 21:42:20 phx.local __main__[20798] DEBUG Req size: 1821, response size: 776
