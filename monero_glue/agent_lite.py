@@ -5,7 +5,7 @@
 from monero_serialize import xmrserialize, xmrtypes
 from monero_glue import trezor_lite, agent_misc
 from monero_glue.xmr import monero, common, key_image, crypto
-from monero_glue.xmr.enc import aesgcm
+from monero_glue.xmr.enc import aesgcm, chacha_poly
 from monero_glue.old import trezor
 
 
@@ -271,7 +271,7 @@ class Agent(object):
         if multisig:
             cout_key = t_res.args[0]
             for ccout in couts:
-                self.ct.couts.append(aesgcm.decrypt(cout_key, ccout[0], ccout[1], ccout[2]))
+                self.ct.couts.append(chacha_poly.decrypt(cout_key, ccout[0], ccout[1], ccout[2]))
 
         self.ct.enc_salt1, self.ct.enc_salt2 = t_res.args[1]
         self.ct.enc_keys = t_res.args[2]
@@ -315,7 +315,7 @@ class Agent(object):
         enc_key = t_res.args[0]
         final_res = []
         for sub in sub_res:  # type: key_image.ExportedKeyImage
-            plain = aesgcm.decrypt(enc_key, sub.iv, sub.blob, sub.tag)
+            plain = chacha_poly.decrypt(enc_key, sub.iv, sub.blob, sub.tag)
             ki_bin = plain[:32]
 
             # ki = crypto.decodepoint(ki_bin)

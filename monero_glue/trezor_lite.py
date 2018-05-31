@@ -9,7 +9,7 @@ from monero_serialize import xmrtypes, xmrserialize
 from monero_glue.xmr.monero import TsxData, classify_subaddresses
 from . import trezor_iface, trezor_misc
 from monero_glue.xmr import monero, mlsag2, ring_ct, crypto, common, key_image
-from monero_glue.xmr.enc import aesgcm
+from monero_glue.xmr.enc import aesgcm, chacha_poly
 
 
 class TMessage(object):
@@ -790,7 +790,7 @@ class TTransaction(object):
                 self.input_pseudo_outs.append(pseudo_out)
             else:
                 pseudo_out_hmac = crypto.compute_hmac(self.hmac_key_txin_comm(self.inp_idx), pseudo_out)
-                alpha_enc = aesgcm.encrypt(self.enc_key_txin_alpha(self.inp_idx), crypto.encodeint(alpha))
+                alpha_enc = chacha_poly.encrypt(self.enc_key_txin_alpha(self.inp_idx), crypto.encodeint(alpha))
 
         # All inputs done?
         if self.inp_idx + 1 == self.num_inputs():
@@ -1202,7 +1202,7 @@ class TTransaction(object):
             if not common.ct_equal(pseudo_out_hmac, pseudo_out[1]):
                 raise ValueError('HMAC is not correct')
 
-            alpha_c = aesgcm.decrypt(self.enc_key_txin_alpha(inv_idx), alpha[0], alpha[1], alpha[2])
+            alpha_c = chacha_poly.decrypt(self.enc_key_txin_alpha(inv_idx), alpha[0], alpha[1], alpha[2])
             alpha_c = crypto.decodeint(alpha_c)
             pseudo_out_c = crypto.decodepoint(pseudo_out[0])
 
@@ -1255,7 +1255,7 @@ class TTransaction(object):
 
         # Multisig values returned encrypted, keys returned after finished successfully.
         if self.multi_sig:
-            cout = aesgcm.encrypt(self.enc_key_cout(), crypto.encodeint(msc))
+            cout = chacha_poly.encrypt(self.enc_key_cout(), crypto.encodeint(msc))
 
         # Final state transition
         if self.inp_idx + 1 == self.num_inputs():
@@ -1282,7 +1282,7 @@ class TTransaction(object):
         tx_key, salt, rand_mult = trezor_misc.compute_tx_key(self.creds.spend_key_private, self.tx_prefix_hash)
 
         key_buff = crypto.encodeint(self.r) + b''.join([crypto.encodeint(x) for x in self.additional_tx_private_keys])
-        tx_enc_keys = aesgcm.encrypt(tx_key, key_buff)
+        tx_enc_keys = chacha_poly.encrypt(tx_key, key_buff)
 
         res.append((salt, rand_mult))
         res.append(b''.join(list(tx_enc_keys)))
@@ -1338,7 +1338,7 @@ class KeyImageSync(object):
             buff += crypto.encodeint(sig[0][0])
             buff += crypto.encodeint(sig[0][1])
 
-            nonce, ciph, tag = aesgcm.encrypt(self.enc_key, buff)
+            nonce, ciph, tag = chacha_poly.encrypt(self.enc_key, buff)
             eki = key_image.ExportedKeyImage(iv=nonce, tag=tag, blob=ciph)
             resp.append(eki)
         return TResponse(resp)

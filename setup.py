@@ -9,6 +9,7 @@ version = '1.3.3'
 install_requires = [
     'monero-serialize>=1.3.0',
     'pycryptodome',
+    'cryptography',
     'py-cryptonight>=0.1.2',
 ]
 
