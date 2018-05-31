@@ -112,6 +112,18 @@ message MoneroTsxFinalResp {
     optional bytes tx_enc_keys = 4;
 }
 
+message MoneroTsxSign {
+    optional MoneroTsxInit init = 1;
+    optional MoneroTsxSetInput set_input = 2;
+    optional MoneroTsxInputsPermutation input_permutation = 3;
+    optional MoneroTsxInputVini input_vini = 4;
+    optional MoneroTsxSetOutput set_output = 5;
+    optional MoneroTsxAllOutSet all_out_set = 6;
+    optional MoneroTsxMlsagDone mlsag_done = 7;
+    optional MoneroTsxSignInput sign_input = 8;
+    optional MoneroTsxFinal final_msg = 9;
+}
+
 message MoneroKeyImageExportInit {
     optional uint64 num = 1;
     optional bytes hash = 2;
@@ -122,11 +134,11 @@ message MoneroKeyImageExportInitResp {
 
 }
 
-message MoneroKeyImageSync {
+message MoneroKeyImageSyncStep {
     repeated MoneroTransferDetails tdis = 1;
 }
 
-message MoneroKeyImageSyncResp {
+message MoneroKeyImageSyncStepResp {
     repeated MoneroExportedKeyImage kis = 1;
 }
 
@@ -138,3 +150,8 @@ message MoneroKeyImageSyncFinalResp {
     optional bytes enc_key = 1;
 }
 
+message MoneroKeyImageSync {
+    optional MoneroKeyImageExportInit init = 1;
+    optional MoneroKeyImageSyncStep step = 2;
+    optional MoneroKeyImageSyncFinal final_msg = 3;
+}
