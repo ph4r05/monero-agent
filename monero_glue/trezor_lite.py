@@ -796,7 +796,7 @@ class TTransaction(object):
         if self.inp_idx + 1 == self.num_inputs():
             await self.tsx_inputs_done()
 
-        return TResponse(vini, hmac_vini, (pseudo_out, pseudo_out_hmac), alpha_enc)
+        return TResponse(vini, hmac_vini, pseudo_out, pseudo_out_hmac, alpha_enc)
 
     async def tsx_inputs_done(self):
         """
@@ -861,7 +861,7 @@ class TTransaction(object):
             for idx in range(self.num_inputs()):
                 await self.hash_vini_pseudo_out(self.tx.vin[idx], idx)
 
-    async def input_vini(self, src_entr, vini, hmac, pseudo_out):
+    async def input_vini(self, src_entr, vini, hmac, pseudo_out, pseudo_out_hmac):
         """
         Set tx.vin[i] for incremental tx prefix hash computation.
         After sorting by key images on host.
@@ -871,6 +871,7 @@ class TTransaction(object):
         :param vini: tx.vin[i]
         :param hmac: HMAC of tx.vin[i]
         :param pseudo_out: pseudo_out for the current entry
+        :param pseudo_out_hmac: hmac of pseudo_out
         :return:
         """
         await self.trezor.iface.transaction_step(self.STEP_VINI, self.inp_idx + 1)
@@ -888,14 +889,15 @@ class TTransaction(object):
         if not common.ct_equal(hmac_vini, hmac):
             raise ValueError('HMAC is not correct')
 
-        return TResponse(await self.hash_vini_pseudo_out(vini, self.inp_idx, pseudo_out))
+        return TResponse(await self.hash_vini_pseudo_out(vini, self.inp_idx, pseudo_out, pseudo_out_hmac))
 
-    async def hash_vini_pseudo_out(self, vini, inp_idx, pseudo_out=None):
+    async def hash_vini_pseudo_out(self, vini, inp_idx, pseudo_out=None, pseudo_out_hmac=None):
         """
         Incremental hasing of tx.vin[i] and pseudo output
         :param vini:
-        :param pseudo_out:
         :param inp_idx:
+        :param pseudo_out:
+        :param pseudo_out_hmac:
         :return:
         """
         # Serialize particular input type
@@ -907,9 +909,8 @@ class TTransaction(object):
 
         if not self.in_memory():
             idx = self.source_permutation[inp_idx]
-            pseudo_out, pseudo_out_hmac_provided = pseudo_out
-            pseudo_out_hmac = crypto.compute_hmac(self.hmac_key_txin_comm(idx), pseudo_out)
-            if not common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_provided):
+            pseudo_out_hmac_comp = crypto.compute_hmac(self.hmac_key_txin_comm(idx), pseudo_out)
+            if not common.ct_equal(pseudo_out_hmac, pseudo_out_hmac_comp):
                 raise ValueError('HMAC invalid for pseudo outs')
         else:
             pseudo_out = self.input_pseudo_outs[inp_idx]

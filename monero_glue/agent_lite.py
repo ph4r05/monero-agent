@@ -169,10 +169,10 @@ class Agent(object):
             t_res = await self.trezor.tsx_set_input(src)
             self.handle_error(t_res)
 
-            vini, vini_hmac, pseudo_out, alpha_enc = t_res.args
+            vini, vini_hmac, pseudo_out, pseudo_out_hmac, alpha_enc = t_res.args
             self.ct.tx.vin.append(vini)
             self.ct.tx_in_hmacs.append(vini_hmac)
-            self.ct.pseudo_outs.append(pseudo_out)
+            self.ct.pseudo_outs.append((pseudo_out, pseudo_out_hmac))
             self.ct.alphas.append(alpha_enc)
 
         # Sort key image
@@ -197,7 +197,8 @@ class Agent(object):
         if not in_memory:
             for idx in range(len(self.ct.tx.vin)):
                 t_res = await self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
-                                                         self.ct.pseudo_outs[idx] if not in_memory else None)
+                                                         self.ct.pseudo_outs[idx][0] if not in_memory else None,
+                                                         self.ct.pseudo_outs[idx][1] if not in_memory else None,)
                 self.handle_error(t_res)
 
         # Set transaction outputs
