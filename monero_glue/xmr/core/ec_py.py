@@ -3,6 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import hmac
+import hashlib
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 from Crypto.Random import random as rand
@@ -77,7 +78,8 @@ def compute_hmac(key, msg=None):
 
 def pbkdf2(inp, salt, length=32, count=1000, prf=None):
     """
-    PBKDF2 with default PRF as HMAC-KECCAK-256
+    PBKDF2 with default PRF as SHA256
+    HMAC-KECCAK-256 was used before but trezor-crypto does not have pbkdf2 with keccak256.
     :param inp:
     :param salt:
     :param length:
@@ -87,7 +89,7 @@ def pbkdf2(inp, salt, length=32, count=1000, prf=None):
     """
 
     if prf is None:
-        prf = lambda p, s: hmac.new(p, msg=s, digestmod=get_keccak).digest()
+        prf = lambda p, s: hmac.new(p, msg=s, digestmod=hashlib.sha256).digest()
     return PBKDF2(inp, salt, length, count, prf)
 
 
