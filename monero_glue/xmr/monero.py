@@ -133,14 +133,14 @@ def net_version(network_type=NetworkTypes.MAINNET, is_subaddr=False):
     :return:
     """
     c_net = None
-    if network_type == NetworkTypes.MAINNET:
+    if network_type is None or network_type == NetworkTypes.MAINNET:
         c_net = MainNet
     elif network_type == NetworkTypes.TESTNET:
         c_net = TestNet
     elif network_type == NetworkTypes.STAGENET:
         c_net = StageNet
     else:
-        raise ValueError()
+        raise ValueError('Unknown network type: %s' % network_type)
 
     prefix = c_net.PUBLIC_ADDRESS_BASE58_PREFIX if not is_subaddr else c_net.PUBLIC_SUBADDRESS_BASE58_PREFIX
     return bytes([prefix])
