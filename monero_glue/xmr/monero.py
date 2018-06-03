@@ -599,9 +599,13 @@ class PreMlsagHasher(object):
         self.kc_master.update(c_hash)
         del self.rtcsig_hasher
 
-    async def rsig_val(self, p, bulletproof):
+    async def rsig_val(self, p, bulletproof, raw=False):
         if self.state == 8:
             raise ValueError('State error')
+
+        if raw:
+            self.rsig_hasher.update(p)
+            return
 
         if bulletproof:
             self.rsig_hasher.update(p.A)
