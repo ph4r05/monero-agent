@@ -353,6 +353,9 @@ class TState(object):
     def set_fail(self):
         self.s = self.FAIL
 
+    def is_terminal(self):
+        return self.s in [self.FINAL, self.FAIL]
+
 
 class TTransaction(object):
     """
