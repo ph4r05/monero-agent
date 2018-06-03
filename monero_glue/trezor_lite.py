@@ -196,14 +196,14 @@ class TrezorLite(object):
             await self.tsx_exc_handler(e)
             return TError(exc=e)
 
-    async def tsx_sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
+    async def tsx_sign_input(self, src_entr, vini, hmac_vini, pseudo_out, pseudo_out_hmac, alpha):
         """
         Generates a signature for one input.
         
         :return:
         """
         try:
-            return await self.tsx_obj.sign_input(src_entr, vini, hmac_vini, pseudo_out, alpha)
+            return await self.tsx_obj.sign_input(src_entr, vini, hmac_vini, pseudo_out, pseudo_out_hmac, alpha)
         except Exception as e:
             await self.tsx_exc_handler(e)
             return TError(exc=e)
@@ -1163,7 +1163,7 @@ class TTransaction(object):
 
         return TResponse(self.full_message)
 
-    async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, alpha):
+    async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, pseudo_out_hmac, alpha):
         """
         Generates a signature for one input.
 
@@ -1173,6 +1173,7 @@ class TTransaction(object):
         :param hmac_vini: HMAC for the tx.vin[i] as returned from Trezor
         :param pseudo_out: pedersen commitment for the current input, uses alpha as the mask.
         Only in memory offloaded scenario. Tuple containing HMAC, as returned from the Trezor.
+        :param pseudo_out_hmac:
         :param alpha: alpha mask for the current input. Only in memory offloaded scenario,
         tuple as returned from the Trezor
         :return: Generated signature MGs[i]
@@ -1185,7 +1186,7 @@ class TTransaction(object):
             raise ValueError('Invalid ins')
         if not self.in_memory() and alpha is None:
             raise ValueError('Inconsistent')
-        if not self.in_memory() and pseudo_out[0] is None:
+        if not self.in_memory() and pseudo_out is None:
             raise ValueError('Inconsistent')
         if self.inp_idx >= 1 and not self.use_simple_rct:
             raise ValueError('Inconsistent')
@@ -1198,13 +1199,13 @@ class TTransaction(object):
             raise ValueError('HMAC is not correct')
 
         if not self.in_memory():
-            pseudo_out_hmac = crypto.compute_hmac(self.hmac_key_txin_comm(inv_idx), pseudo_out[0])
-            if not common.ct_equal(pseudo_out_hmac, pseudo_out[1]):
+            pseudo_out_hmac_comp = crypto.compute_hmac(self.hmac_key_txin_comm(inv_idx), pseudo_out)
+            if not common.ct_equal(pseudo_out_hmac_comp, pseudo_out_hmac):
                 raise ValueError('HMAC is not correct')
 
             alpha_c = chacha_poly.decrypt(self.enc_key_txin_alpha(inv_idx), alpha[0], alpha[1], alpha[2])
             alpha_c = crypto.decodeint(alpha_c)
-            pseudo_out_c = crypto.decodepoint(pseudo_out[0])
+            pseudo_out_c = crypto.decodepoint(pseudo_out)
 
         elif self.use_simple_rct:
             alpha_c = self.input_alphas[self.inp_idx]

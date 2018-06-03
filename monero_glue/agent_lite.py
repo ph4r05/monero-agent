@@ -254,7 +254,8 @@ class Agent(object):
         rv.p.MGs = []
         for idx, src in enumerate(tx.sources):
             t_res = await self.trezor.tsx_sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
-                                                     self.ct.pseudo_outs[idx],
+                                                     self.ct.pseudo_outs[idx][0] if not in_memory else None,
+                                                     self.ct.pseudo_outs[idx][1] if not in_memory else None,
                                                      self.ct.alphas[idx])
             self.handle_error(t_res)
 
