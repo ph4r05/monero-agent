@@ -1058,9 +1058,6 @@ class TTransaction(object):
 
         # Range proof, out_pk, ecdh_info
         rsig, out_pk, ecdh_info = await self.range_proof(self.out_idx, dest_pub_key=tk.key, amount=dst_entr.amount, amount_key=amount_key)
-        kwriter = monero.get_keccak_writer()
-        ar = xmrserialize.Archive(kwriter, True)
-        await ar.message(rsig)
 
         # Incremental hashing of the ECDH info.
         # RctSigBase allows to hash only one of the (ecdh, out_pk) as they are serialized
@@ -1070,7 +1067,7 @@ class TTransaction(object):
         # Output_pk is stored to the state as it is used during the signature and hashed to the
         # RctSigBase later.
         self.output_pk.append(out_pk)
-        return TResponse(tx_out, hmac_vouti, (rsig, None), out_pk, ecdh_info)
+        return TResponse(tx_out, hmac_vouti, rsig, out_pk, ecdh_info)
 
     async def all_out1_set(self):
         """

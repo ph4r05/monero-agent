@@ -236,7 +236,7 @@ class Agent(object):
         rv.outPk = []
         rv.ecdhInfo = []
         for idx in range(len(self.ct.tx_out_rsigs)):
-            rv.p.rangeSigs.append(self.ct.tx_out_rsigs[idx][0])
+            rv.p.rangeSigs.append(self.ct.tx_out_rsigs[idx])
             rv.outPk.append(self.ct.tx_out_pk[idx])
             rv.ecdhInfo.append(self.ct.tx_out_ecdh[idx])
 
