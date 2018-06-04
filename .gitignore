@@ -92,4 +92,7 @@ ENV/
 .idea
 
 alembic.ini
+agent*.json
+trezor*.json
+transaction_*.json
 
