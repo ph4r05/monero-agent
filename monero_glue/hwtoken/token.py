@@ -4,17 +4,14 @@
 
 import traceback
 
-from monero_serialize import xmrtypes
-from monero_glue.xmr.monero import TsxData
-from monero_glue import trezor_iface, trezor_misc
+from monero_glue.hwtoken import iface, misc
 from monero_glue.xmr import monero
-from monero_glue.protocol.base import TError, TTxHashNotMatchingError
 from monero_glue.protocol.key_image_sync import KeyImageSync
 from monero_glue.protocol.tsx_sign import TsxSigner
 from monero_glue.messages import MoneroKeyImageSync, MoneroTsxSign, MoneroRespError
 
 
-class TrezorLite(object):
+class TokenLite(object):
     """
     Main Trezor object.
     Provides interface to the host, packages messages.
@@ -25,7 +22,7 @@ class TrezorLite(object):
         self.tsx_obj = None  # type: TsxSigner
         self.ki_sync = None  # type: KeyImageSync
         self.creds = None  # type: monero.AccountCreds
-        self.iface = trezor_iface.TrezorInterface()
+        self.iface = iface.TokenInterface()
         self.debug = True
 
     async def ki_exc_handler(self, e):
@@ -81,8 +78,8 @@ class TrezorLite(object):
         if not __debug__:
             return
 
-        pb = await trezor_misc.dump_pb_msg(msg)
-        await trezor_misc.parse_pb_msg(pb, msg.__class__)
+        pb = await misc.dump_pb_msg(msg)
+        await misc.parse_pb_msg(pb, msg.__class__)
 
     async def tsx_sign(self, msg: MoneroTsxSign):
         if self.tsx_obj is None or msg.init:

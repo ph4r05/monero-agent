@@ -3,7 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 
-class TrezorInterface(object):
+class TokenInterface(object):
     def __init__(self, ctx=None):
         self.ctx = ctx
 
@@ -75,6 +75,6 @@ class TrezorInterface(object):
 
 
 def get_iface(ctx=None):
-    return TrezorInterface(ctx)
+    return TokenInterface(ctx)
 
 

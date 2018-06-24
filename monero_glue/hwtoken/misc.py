@@ -8,6 +8,7 @@ from monero_glue.xmr.monero import TsxData
 from monero_glue.messages import MoneroTxDestinationEntry, MoneroTsxData, MoneroAccountPublicAddress
 from monero_glue import protobuf
 
+
 class TrezorError(Exception):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

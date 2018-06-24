@@ -28,9 +28,9 @@ from . import trace_logger
 from . import cli
 from . import misc
 
-from monero_glue import agent_lite, agent_misc, trezor_lite
+from monero_glue.hwtoken import token
+from monero_glue.agent import agent_misc, agent_lite
 from monero_glue.xmr import wallet, monero, crypto, common
-from monero_glue.xmr.monero import TsxData
 from monero_glue.protocol import messages
 from monero_glue import protobuf
 from monero_serialize import xmrtypes, xmrserialize
@@ -40,7 +40,7 @@ coloredlogs.CHROOT_FILES = []
 coloredlogs.install(level=logging.WARNING, use_chroot=False)
 
 
-class TrezorProxy(trezor_lite.TrezorLite):
+class TokenProxy(token.TokenLite):
     """
     Trezor proxy calls to the remote server
     """
@@ -208,7 +208,7 @@ class HostAgent(cli.BaseCli):
         self.wallet_thread = None
         self.terminating = False
 
-        self.trezor_proxy = TrezorProxy()
+        self.trezor_proxy = TokenProxy()
         self.agent = agent_lite.Agent(self.trezor_proxy)
         self.wallet_proxy = WalletRpc(self, self.rpc_bind_port, self.rpc_passwd)
 
@@ -351,7 +351,7 @@ class HostAgent(cli.BaseCli):
         """
         if not await self.is_connected():
             logger.error('Trezor is not connected')
-            raise agent_misc.TrezorNotRunning('Could not load watch-only credentials')
+            raise misc.TrezorNotRunning('Could not load watch-only credentials')
 
         try:
             print('Loading watch-only credentials from Trezor. Please, confirm the request on Trezor.')
@@ -824,12 +824,12 @@ class HostAgent(cli.BaseCli):
         try:
             return await self.sign(file, fdata)
 
-        except agent_misc.TrezorReturnedError as e:
+        except misc.TrezorReturnedError as e:
             self.trace_logger.log(e)
             print('Trezor returned an error: %s' % e)
             return 1
 
-        except agent_misc.TrezorNotRunning as e:
+        except misc.TrezorNotRunning as e:
             logger.error('Trezor server is not running')
             return 2
 
@@ -843,7 +843,7 @@ class HostAgent(cli.BaseCli):
         try:
             await self.trezor_proxy.ping()
         except Exception as e:
-            raise agent_misc.TrezorNotRunning(e)
+            raise misc.TrezorNotRunning(e)
 
         if file and not os.path.exists(file):
             raise ValueError('Could not find unsigned transaction file')

@@ -28,7 +28,8 @@ from flask import Flask, jsonify, request, abort
 
 from . import cli
 from monero_poc import misc
-from monero_glue import trezor_lite, trezor_iface, protobuf
+from monero_glue import protobuf
+from monero_glue.hwtoken import token, iface
 from monero_glue.xmr import monero, crypto, wallet
 from monero_glue.xmr.core import mnemonic
 from monero_glue.misc.bip import bip32
@@ -41,7 +42,7 @@ coloredlogs.install(level=logging.WARNING, use_chroot=False)
 eventlet.monkey_patch(socket=True)
 
 
-class TrezorInterface(trezor_iface.TrezorInterface):
+class TokenInterface(iface.TokenInterface):
     def __init__(self, server=None):
         self.server = server
         self.tsx_waiter = misc.CliPrompt(pre_wait_hook=server.update_prompt)
@@ -112,7 +113,7 @@ class TrezorServer(cli.BaseCli):
         self.network_type = None
         self.creds = None  # type: monero.AccountCreds
         self.port = 46123
-        self.trez_iface = TrezorInterface(self)
+        self.trez_iface = TokenInterface(self)
         self.account_data = None
         self.ki_sync_data = None
 
@@ -653,7 +654,7 @@ class TrezorServer(cli.BaseCli):
         self.creds = monero.AccountCreds.new_wallet(priv_view_key, priv_spend_key, self.network_type)
         self.update_intro()
 
-        self.trez = trezor_lite.TrezorLite()
+        self.trez = token.TokenLite()
         self.trez.creds = self.creds
         self.trez.iface = self.trez_iface
         self.update_prompt()

@@ -3,15 +3,14 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 
-from monero_glue import trezor_iface, trezor_misc
 from monero_glue.xmr import monero, crypto, common, key_image
 from monero_glue.xmr.enc import chacha_poly
 from monero_glue.trezor import wrapper as twrap
 
-from monero_glue.messages import MoneroKeyImageSync, MoneroExportedKeyImage, \
+from monero_glue.messages import MoneroExportedKeyImage, \
     MoneroKeyImageExportInit, MoneroKeyImageExportInitResp, \
     MoneroKeyImageSyncStep, MoneroKeyImageSyncStepResp, \
-    MoneroKeyImageSyncFinal, MoneroKeyImageSyncFinalResp, \
+    MoneroKeyImageSyncFinalResp, \
     MoneroRespError
 
 

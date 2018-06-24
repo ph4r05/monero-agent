@@ -10,7 +10,8 @@ import binascii
 import collections
 
 from monero_serialize import xmrserialize, xmrtypes, xmrboost
-from monero_glue import trezor_lite, agent_lite
+from monero_glue.hwtoken import token
+from monero_glue.agent import agent_lite
 from monero_glue.xmr import wallet, monero, crypto
 import zlib
 
@@ -239,7 +240,7 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         Initialize new trezor instance
         :return:
         """
-        trez = trezor_lite.TrezorLite()
+        trez = token.TokenLite()
         trez.creds = self.get_creds()
         return trez
 
