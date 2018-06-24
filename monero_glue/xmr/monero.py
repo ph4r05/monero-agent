@@ -746,6 +746,47 @@ def recode_rangesig(rsig, encode=True, copy=False):
     return nrsig
 
 
+def flatten_rsig(rsig):
+    """
+    Rsig -> byte array
+    :param rsig:
+    :return:
+    """
+    res = b''
+
+    for i in range(len(rsig.asig.s0)):
+        res += bytes(rsig.asig.s0[i])
+    for i in range(len(rsig.asig.s1)):
+        res += bytes(rsig.asig.s1[i])
+    res += bytes(rsig.asig.ee)
+    for i in range(len(rsig.Ci)):
+        res += bytes(rsig.Ci[i])
+    return res
+
+
+def inflate_rsig(buff, rsig=None):
+    """
+    Rsig binary repr -> byte encoded repr
+    :param rsig:
+    :return:
+    """
+    if rsig is None:
+        rsig = xmrtypes.RangeSig()
+        rsig.Ci = [None]*64
+        rsig.asig = xmrtypes.BoroSig()
+        rsig.asig.s0 = [None]*64
+        rsig.asig.s1 = [None]*64
+
+    for i in range(64):
+        rsig.asig.s0[i], buff = buff[:32], buff[32:]
+    for i in range(64):
+        rsig.asig.s1[i], buff = buff[:32], buff[32:]
+    rsig.asig.ee, buff = buff[:32], buff[32:]
+    for i in range(64):
+        rsig.Ci[i], buff = buff[:32], buff[32:]
+    return rsig
+
+
 def recode_msg(mgs, encode=True):
     """
     Recodes MGs signatures from raw forms to bytearrays so it works with serialization

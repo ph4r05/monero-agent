@@ -34,7 +34,7 @@ def sum_Ci(Cis):
     return CSum
 
 
-def prove_range(amount, last_mask=None, use_asnl=False, mem_opt=True, backend_impl=False, decode=False):
+def prove_range(amount, last_mask=None, use_asnl=False, mem_opt=True, backend_impl=False, decode=False, byte_enc=False):
     """
     Range proof generator.
     In order to minimize the memory consumption and CPU usage during transaction generation the returned values
@@ -46,6 +46,7 @@ def prove_range(amount, last_mask=None, use_asnl=False, mem_opt=True, backend_im
     :param mem_opt: memory optimized
     :param backend_impl: backend implementation, if available
     :param decode: decodes output
+    :param byte_enc: decodes output
     :return:
     """
     if use_asnl and mem_opt:
@@ -54,10 +55,16 @@ def prove_range(amount, last_mask=None, use_asnl=False, mem_opt=True, backend_im
         raise ValueError('ASNL not supported in backend')
 
     if backend_impl and crypto.get_backend().has_rangeproof_borromean():
+        if byte_enc and decode:
+            raise ValueError('Conflicting options byte_enc, decode')
+
         C, a, R = crypto.prove_range(amount, last_mask)[:3]  # backend returns encoded
+        if not byte_enc:
+            R = monero.inflate_rsig(R)
         if decode:
+            R = monero.inflate_rsig(R)
             R = monero.recode_rangesig(R, encode=False)
-            return C, a, R
+
         return C, a, R
 
     ret = None
@@ -70,6 +77,9 @@ def prove_range(amount, last_mask=None, use_asnl=False, mem_opt=True, backend_im
     C, a, R = ret[:3]
     if not decode:
         R = monero.recode_rangesig(R, encode=True)
+    if byte_enc:
+        R = monero.recode_rangesig(R, encode=True)
+        R = monero.flatten_rsig(R)
     return C, a, R
 
 

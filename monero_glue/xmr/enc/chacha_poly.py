@@ -35,5 +35,12 @@ def decrypt(key, iv, ciphertext, tag=None, associated_data=None):
     return plaintext
 
 
+def encrypt_pack(key, plaintext, associated_data=None):
+    return b''.join(encrypt(key, plaintext, associated_data))
+
+
+def decrypt_pack(key, ciphertext):
+    return decrypt(key, ciphertext[:12], ciphertext[12:], None)
+
 
 

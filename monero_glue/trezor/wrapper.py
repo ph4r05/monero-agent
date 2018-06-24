@@ -20,3 +20,6 @@ async def monero_get_creds(ctx, address_n=None, network_type=None):
     return await ctx.monero_get_creds(address_n=address_n, network_type=network_type)
 
 
+def get_interface(ctx):
+    return ctx.get_iface()
+

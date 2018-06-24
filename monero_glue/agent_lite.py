@@ -3,11 +3,23 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 from monero_serialize import xmrserialize, xmrtypes
-from monero_glue import trezor_lite, agent_misc
+from monero_glue import trezor_lite, agent_misc, trezor_misc
 from monero_glue.xmr import monero, common, key_image, crypto
 from monero_glue.xmr.enc import aesgcm, chacha_poly
 from monero_glue.old import trezor
-from monero_glue.messages import MoneroRespError, MoneroKeyImageSync, MoneroKeyImageSyncStep, MoneroKeyImageSyncFinal
+from monero_glue.messages import MoneroRespError, MoneroTsxSign, \
+    MoneroTsxInit, MoneroTsxInitResp, \
+    MoneroTsxData, MoneroTsxSetInput, MoneroTsxSetInputResp, \
+    MoneroTsxInputsPermutation, MoneroTsxInputsPermutationResp, \
+    MoneroTsxInputVini, MoneroTsxInputViniResp, \
+    MoneroTsxSetOutput, MoneroTsxSetOutputResp, \
+    MoneroTsxAllOutSet, MoneroTsxAllOutSetResp, \
+    MoneroTsxMlsagDone, MoneroTsxMlsagDoneResp, \
+    MoneroTsxSignInput, MoneroTsxSignInputResp, \
+    MoneroTsxFinal, MoneroTsxFinalResp, \
+    MoneroKeyImageSync, \
+    MoneroKeyImageSyncStep, MoneroKeyImageSyncStepResp, \
+    MoneroKeyImageSyncFinal, MoneroKeyImageSyncFinalResp
 
 
 class TData(object):
@@ -37,9 +49,11 @@ class Agent(object):
     """
     Glue agent, running on host
     """
-    def __init__(self, trezor):
+    def __init__(self, trezor, address_n=None, network_type=None, **kwargs):
         self.trezor = trezor  # type: trezor_lite.TrezorLite
         self.ct = None  # type: TData
+        self.address_n = address_n
+        self.network_type = network_type
 
     def is_simple(self, rv):
         """
@@ -159,22 +173,28 @@ class Agent(object):
         self.ct.tx.unlock_time = tx.unlock_time
 
         self.ct.tsx_data = tsx_data
-        t_res = await self.trezor.tsx_init(tsx_data)
+        tsx_data_pb = await trezor_misc.translate_tsx_data_pb(tsx_data)
+        init_msg = MoneroTsxInit(version=0, address_n=self.address_n, network_type=self.network_type, tsx_data=tsx_data_pb)
+
+        t_res = await self.trezor.tsx_sign(MoneroTsxSign(init=init_msg))  # type: MoneroTsxInitResp
         self.handle_error(t_res)
 
-        in_memory = t_res.args[0]
-        self.ct.tx_out_entr_hmacs = t_res.args[1]
+        in_memory = t_res.in_memory
+        self.ct.tx_out_entr_hmacs = t_res.hmacs
 
         # Set transaction inputs
         for idx, src in enumerate(tx.sources):
-            t_res = await self.trezor.tsx_set_input(src)
+            src_bin = await trezor_misc.dump_msg(src)
+            msg = MoneroTsxSetInput(src_entr=src_bin)
+
+            t_res = await self.trezor.tsx_sign(MoneroTsxSign(set_input=msg))  # type: MoneroTsxSetInputResp
             self.handle_error(t_res)
 
-            vini, vini_hmac, pseudo_out, pseudo_out_hmac, alpha_enc = t_res.args
+            vini = await trezor_misc.parse_msg(t_res.vini, xmrtypes.TxinToKey())
             self.ct.tx.vin.append(vini)
-            self.ct.tx_in_hmacs.append(vini_hmac)
-            self.ct.pseudo_outs.append((pseudo_out, pseudo_out_hmac))
-            self.ct.alphas.append(alpha_enc)
+            self.ct.tx_in_hmacs.append(t_res.vini_hmac)
+            self.ct.pseudo_outs.append((t_res.pseudo_out, t_res.pseudo_out_hmac))
+            self.ct.alphas.append(t_res.alpha_enc)
 
         # Sort key image
         self.ct.source_permutation = list(range(len(tx.sources)))
@@ -190,39 +210,48 @@ class Agent(object):
         common.apply_permutation(self.ct.source_permutation, swapper)
 
         if not in_memory:
-            t_res = await self.trezor.tsx_inputs_permutation(self.ct.source_permutation)
+            msg = MoneroTsxInputsPermutation(perm=self.ct.source_permutation)
+            t_res = await self.trezor.tsx_sign(MoneroTsxSign(input_permutation=msg))
             self.handle_error(t_res)
 
         # Set vin_i back - tx prefix hashing
         # Done only if not in-memory.
         if not in_memory:
             for idx in range(len(self.ct.tx.vin)):
-                t_res = await self.trezor.tsx_input_vini(tx.sources[idx], self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
-                                                         self.ct.pseudo_outs[idx][0] if not in_memory else None,
-                                                         self.ct.pseudo_outs[idx][1] if not in_memory else None,)
+                msg = MoneroTsxInputVini(src_entr=await trezor_misc.dump_msg(tx.sources[idx]),
+                                         vini=await trezor_misc.dump_msg(self.ct.tx.vin[idx]),
+                                         vini_hmac=self.ct.tx_in_hmacs[idx],
+                                         pseudo_out=self.ct.pseudo_outs[idx][0] if not in_memory else None,
+                                         pseudo_out_hmac=self.ct.pseudo_outs[idx][1] if not in_memory else None,)
+                t_res = await self.trezor.tsx_sign(MoneroTsxSign(input_vini=msg))
                 self.handle_error(t_res)
 
         # Set transaction outputs
         for idx, dst in enumerate(tx.splitted_dsts):
-            t_res = await self.trezor.tsx_set_output1(dst, self.ct.tx_out_entr_hmacs[idx])
+            msg = MoneroTsxSetOutput(dst_entr=await trezor_misc.dump_msg(dst),
+                                     dst_entr_hmac=self.ct.tx_out_entr_hmacs[idx])
+            t_res = await self.trezor.tsx_sign(MoneroTsxSign(set_output=msg))  # type: MoneroTsxSetOutputResp
             self.handle_error(t_res)
 
-            vouti, vouti_mac, rsig, out_pk, ecdh_info = t_res.args
-            self.ct.tx.vout.append(vouti)
-            self.ct.tx_out_hmacs.append(vouti_mac)
-            self.ct.tx_out_rsigs.append(rsig)
-            self.ct.tx_out_pk.append(out_pk)
-            self.ct.tx_out_ecdh.append(ecdh_info)
+            self.ct.tx.vout.append(await trezor_misc.parse_msg(t_res.tx_out, xmrtypes.TxOut()))
+            self.ct.tx_out_hmacs.append(t_res.vouti_hmac)
+            self.ct.tx_out_rsigs.append(await trezor_misc.parse_msg(t_res.rsig, xmrtypes.RangeSig()))
+            self.ct.tx_out_pk.append(await trezor_misc.parse_msg(t_res.out_pk, xmrtypes.CtKey()))
+            self.ct.tx_out_ecdh.append(await trezor_misc.parse_msg(t_res.ecdh_info, xmrtypes.EcdhTuple()))
 
-        t_res = await self.trezor.tsx_all_out1_set()
+        t_res = await self.trezor.tsx_sign(MoneroTsxSign(all_out_set=MoneroTsxAllOutSet()))  # type: MoneroTsxAllOutSetResp
         self.handle_error(t_res)
 
-        tx_extra, tx_prefix_hash, rv = t_res.args
-        self.ct.tx.extra = list(bytearray(tx_extra))
+        rv = xmrtypes.RctSig()
+        rv.p = xmrtypes.RctSigPrunable()
+        rv.txnFee = t_res.rv.txn_fee
+        rv.message = t_res.rv.message
+        rv.type = t_res.rv.rv_type
+        self.ct.tx.extra = list(bytearray(t_res.extra))
 
         # Verify transaction prefix hash correctness, tx hash in one pass
         self.ct.tx_prefix_hash = await monero.get_transaction_prefix_hash(self.ct.tx)
-        if tx_prefix_hash != self.ct.tx_prefix_hash:
+        if not common.ct_equal(t_res.tx_prefix_hash, self.ct.tx_prefix_hash):
             raise ValueError('Transaction prefix has does not match')
 
         # RctSig
@@ -242,41 +271,44 @@ class Agent(object):
             rv.ecdhInfo.append(self.ct.tx_out_ecdh[idx])
 
         # MLSAG message check
-        t_res = await self.trezor.tsx_mlsag_done()
+        t_res = await self.trezor.tsx_sign(MoneroTsxSign(mlsag_done=MoneroTsxMlsagDone()))  # type: MoneroTsxMlsagDoneResp
         self.handle_error(t_res)
 
-        mlsag_hash = t_res.args[0]
+        mlsag_hash = t_res.full_message_hash
         mlsag_hash_computed = await monero.get_pre_mlsag_hash(rv)
-        if mlsag_hash != mlsag_hash_computed:
+        if not common.ct_equal(mlsag_hash, mlsag_hash_computed):
             raise ValueError('Pre MLSAG hash has does not match')
 
         # Sign each input
         couts = []
         rv.p.MGs = []
         for idx, src in enumerate(tx.sources):
-            t_res = await self.trezor.tsx_sign_input(src, self.ct.tx.vin[idx], self.ct.tx_in_hmacs[idx],
-                                                     self.ct.pseudo_outs[idx][0] if not in_memory else None,
-                                                     self.ct.pseudo_outs[idx][1] if not in_memory else None,
-                                                     self.ct.alphas[idx])
+            msg = MoneroTsxSignInput(await trezor_misc.dump_msg(src),
+                                     await trezor_misc.dump_msg(self.ct.tx.vin[idx]),
+                                     self.ct.tx_in_hmacs[idx],
+                                     self.ct.pseudo_outs[idx][0] if not in_memory else None,
+                                     self.ct.pseudo_outs[idx][1] if not in_memory else None,
+                                     self.ct.alphas[idx])
+            t_res = await self.trezor.tsx_sign(MoneroTsxSign(sign_input=msg))  # type: MoneroTsxSignInputResp
             self.handle_error(t_res)
 
-            mg, msc = t_res.args
+            mg = await trezor_misc.parse_msg(t_res.signature, xmrtypes.MgSig())
             rv.p.MGs.append(mg)
-            couts.append(msc)
+            couts.append(t_res.cout)
 
         self.ct.tx.signatures = []
         self.ct.tx.rct_signatures = rv
 
-        t_res = await self.trezor.tsx_sign_final()
+        t_res = await self.trezor.tsx_sign(MoneroTsxSign(final_msg=MoneroTsxFinal()))  # type: MoneroTsxFinalResp
         self.handle_error(t_res)
 
         if multisig:
-            cout_key = t_res.args[0]
+            cout_key = t_res.cout_key
             for ccout in couts:
                 self.ct.couts.append(chacha_poly.decrypt(cout_key, ccout[0], ccout[1], ccout[2]))
 
-        self.ct.enc_salt1, self.ct.enc_salt2 = t_res.args[1]
-        self.ct.enc_keys = t_res.args[2]
+        self.ct.enc_salt1, self.ct.enc_salt2 = t_res.salt, t_res.rand_mult
+        self.ct.enc_keys = t_res.tx_enc_keys
         return self.ct.tx
 
     def last_transaction_data(self):

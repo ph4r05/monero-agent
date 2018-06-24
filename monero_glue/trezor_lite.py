@@ -3,17 +3,15 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import traceback
-import binascii
 
-from monero_serialize import xmrtypes, xmrserialize
-from monero_glue.xmr.monero import TsxData, classify_subaddresses
-from . import trezor_iface, trezor_misc
-from monero_glue.xmr import monero, mlsag2, ring_ct, crypto, common, key_image
-from monero_glue.xmr.enc import aesgcm, chacha_poly
-from monero_glue.trezor.base import TMessage, TError, TResponse, TTxHashNotMatchingError
-from monero_glue.trezor.key_image_sync import KeyImageSync
-from monero_glue.trezor.tsx_sign import TTransactionBuilder
-from monero_glue.messages import MoneroKeyImageSync
+from monero_serialize import xmrtypes
+from monero_glue.xmr.monero import TsxData
+from monero_glue import trezor_iface, trezor_misc
+from monero_glue.xmr import monero
+from monero_glue.protocol.base import TError, TTxHashNotMatchingError
+from monero_glue.protocol.key_image_sync import KeyImageSync
+from monero_glue.protocol.tsx_sign import TsxSigner
+from monero_glue.messages import MoneroKeyImageSync, MoneroTsxSign, MoneroRespError
 
 
 class TrezorLite(object):
@@ -24,7 +22,7 @@ class TrezorLite(object):
     def __init__(self):
         self.tsx_ctr = 0
         self.err_ctr = 0
-        self.tsx_obj = None  # type: TTransactionBuilder
+        self.tsx_obj = None  # type: TsxSigner
         self.ki_sync = None  # type: KeyImageSync
         self.creds = None  # type: monero.AccountCreds
         self.iface = trezor_iface.TrezorInterface()
@@ -68,135 +66,42 @@ class TrezorLite(object):
         """
         return self.creds
 
-    async def tsx_init(self, tsx_data: TsxData):
+    def get_iface(self):
         """
-        Initialize transaction state.
-        :param tsx_data:
-        :return:
-        """
-        self.tsx_ctr += 1
-        self.tsx_obj = TTransactionBuilder(self, creds=self.creds)
-        try:
-            return await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
-        except Exception as e:
-            await self.tsx_exc_handler(e)
-            return TError(exc=e)
-
-    async def tsx_set_input(self, src_entr):
-        """
-        Sets UTXO one by one.
-        Computes spending secret key, key image. tx.vin[i] + HMAC, Pedersen commitment on amount.
-
-        If number of inputs is small, in-memory mode is used = alpha, pseudo_outs are kept in the Trezor.
-        Otherwise pseudo_outs are offloaded with HMAC, alpha is offloaded encrypted under AES-GCM() with
-        key derived for exactly this purpose.
-
-        :param src_entr
-        :type src_entr: xmrtypes.TxSourceEntry
-        :return:
-        """
-        try:
-            return await self.tsx_obj.set_input(src_entr)
-        except Exception as e:
-            await self.tsx_exc_handler(e)
-            return TError(exc=e)
-
-    async def tsx_inputs_permutation(self, permutation):
-        """
-        Set permutation on the inputs - sorted by key image on host.
 
         :return:
         """
-        try:
-            return await self.tsx_obj.tsx_inputs_permutation(permutation)
-        except Exception as e:
-            await self.tsx_exc_handler(e)
-            return TError(exc=e)
+        return self.iface
 
-    async def tsx_input_vini(self, *args, **kwargs):
+    async def test_pb_msg(self, msg):
         """
-        Set tx.vin[i] for incremental tx prefix hash computation.
-        After sorting by key images on host.
-
+        Test message serialization
         :return:
         """
+        if not __debug__:
+            return
+
+        pb = await trezor_misc.dump_pb_msg(msg)
+        await trezor_misc.parse_pb_msg(pb, msg.__class__)
+
+    async def tsx_sign(self, msg: MoneroTsxSign):
+        if self.tsx_obj is None or msg.init:
+            self.tsx_obj = TsxSigner(ctx=self, iface=self.iface, creds=self.creds)
+
         try:
-            return await self.tsx_obj.input_vini(*args, **kwargs)
-        except Exception as e:
-            await self.tsx_exc_handler(e)
-            return TError(exc=e)
+            await self.test_pb_msg(msg)
 
-    async def tsx_set_output1(self, dst_entr, dst_entr_hmac):
-        """
-        Set destination entry one by one.
-        Computes destination stealth address, amount key, range proof + HMAC, out_pk, ecdh_info.
+            res = await self.tsx_obj.sign(self, msg)
+            if await self.tsx_obj.should_purge():
+                self.tsx_obj = None
 
-        :param dst_entr
-        :type dst_entr: xmrtypes.TxDestinationEntry
-        :param dst_entr_hmac
-        :return:
-        """
-        try:
-            return await self.tsx_obj.set_out1(dst_entr, dst_entr_hmac)
-        except Exception as e:
-            await self.tsx_exc_handler(e)
-            return TError(exc=e)
-
-    async def tsx_all_out1_set(self):
-        """
-        All outputs were set in this phase. Computes additional public keys (if needed), tx.extra and
-        transaction prefix hash.
-        Adds additional public keys to the tx.extra
-
-        :return: tx.extra, tx_prefix_hash
-        """
-        try:
-            return await self.tsx_obj.all_out1_set()
-
-        except trezor_misc.TrezorTxPrefixHashNotMatchingError as e:
-            await self.tsx_exc_handler(e)
-            return TTxHashNotMatchingError(exc=e)
+            await self.test_pb_msg(res)
+            return res
 
         except Exception as e:
             await self.tsx_exc_handler(e)
-            return TError(exc=e)
-
-    async def tsx_mlsag_done(self):
-        """
-        MLSAG message computed.
-
-        :return:
-        """
-        try:
-            return await self.tsx_obj.mlsag_done()
-        except Exception as e:
-            await self.tsx_exc_handler(e)
-            return TError(exc=e)
-
-    async def tsx_sign_input(self, src_entr, vini, hmac_vini, pseudo_out, pseudo_out_hmac, alpha):
-        """
-        Generates a signature for one input.
-        
-        :return:
-        """
-        try:
-            return await self.tsx_obj.sign_input(src_entr, vini, hmac_vini, pseudo_out, pseudo_out_hmac, alpha)
-        except Exception as e:
-            await self.tsx_exc_handler(e)
-            return TError(exc=e)
-
-    async def tsx_sign_final(self, *args, **kwargs):
-        """
-        Final message.
-        Offloading tx related data, encrypted.
-
-        :return:
-        """
-        try:
-            return await self.tsx_obj.final_msg(*args, **kwargs)
-        except Exception as e:
-            await self.tsx_exc_handler(e)
-            return TError(exc=e)
+            self.tsx_obj = None
+            return MoneroRespError(exc=e)
 
     async def key_image_sync(self, msg: MoneroKeyImageSync):
         try:
@@ -218,4 +123,4 @@ class TrezorLite(object):
         except Exception as e:
             await self.ki_exc_handler(e)
             self.ki_sync = None
-            return TError(exc=e)
+            return MoneroRespError(exc=e)

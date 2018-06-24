@@ -29,10 +29,10 @@ from flask import Flask, jsonify, request, abort
 from . import cli
 from monero_poc import misc
 from monero_glue import trezor_lite, trezor_iface, protobuf
-from monero_glue.xmr import monero, crypto, common, wallet
+from monero_glue.xmr import monero, crypto, wallet
 from monero_glue.xmr.core import mnemonic
 from monero_glue.misc.bip import bip32
-from monero_glue.trezor import messages
+from monero_glue.protocol import messages
 from monero_serialize import xmrserialize
 
 logger = logging.getLogger(__name__)
@@ -312,52 +312,24 @@ class TrezorServer(cli.BaseCli):
         :return:
         """
         js = request.json
-        cmd = js['cmd']
-        logger.debug('Action: %s' % cmd)
-        args, kwargs = self.unpickle_args(js) if 'payload' in js else ([], {})
 
-        if not self.trez:
-            logger.warning('Transaction signing request on unitialized Trezor')
-            return abort(404)
+        try:
+            js = request.json
+            msg = await self.unproto_req(js)
 
-        if cmd == 'tsx_init':
-            res = await self.trez.tsx_init(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+            if not self.trez:
+                logger.warning('Transaction signing request on unitialized Trezor')
+                return abort(404)
 
-        elif cmd == 'tsx_set_input':
-            res = await self.trez.tsx_set_input(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+            try:
+                res = await self.trez.tsx_sign(msg)
+                return jsonify({'result': True, 'payload': await self.proto_res(res)})
 
-        elif cmd == 'tsx_inputs_permutation':
-            res = await self.trez.tsx_inputs_permutation(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+            except Exception as e:
+                return jsonify({'result': False, 'exc': e})
 
-        elif cmd == 'tsx_input_vini':
-            res = await self.trez.tsx_input_vini(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
-
-        elif cmd == 'tsx_set_output1':
-            res = await self.trez.tsx_set_output1(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
-
-        elif cmd == 'tsx_all_out1_set':
-            res = await self.trez.tsx_all_out1_set(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
-
-        elif cmd == 'tsx_mlsag_done':
-            res = await self.trez.tsx_mlsag_done(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
-
-        elif cmd == 'tsx_sign_input':
-            res = await self.trez.tsx_sign_input(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
-
-        elif cmd == 'final':
-            res = await self.trez.tsx_sign_final(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
-
-        else:
-            return abort(405)
+        except Exception as e:
+            traceback.print_exc()
 
     async def on_ki_sync(self, request=None):
         """
@@ -379,6 +351,7 @@ class TrezorServer(cli.BaseCli):
 
             except Exception as e:
                 return jsonify({'result': False, 'exc': e})
+
         except Exception as e:
             traceback.print_exc()
 

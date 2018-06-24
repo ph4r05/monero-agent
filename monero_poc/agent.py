@@ -10,14 +10,12 @@
 
 import os
 import re
-import getpass
 import asyncio
 import argparse
 import binascii
 import logging
 import requests
 from requests.auth import HTTPDigestAuth
-import functools
 import coloredlogs
 import pickle
 import sys
@@ -33,7 +31,7 @@ from . import misc
 from monero_glue import agent_lite, agent_misc, trezor_lite
 from monero_glue.xmr import wallet, monero, crypto, common
 from monero_glue.xmr.monero import TsxData
-from monero_glue.trezor import messages
+from monero_glue.protocol import messages
 from monero_glue import protobuf
 from monero_serialize import xmrtypes, xmrserialize
 
@@ -97,32 +95,8 @@ class TrezorProxy(trezor_lite.TrezorLite):
         res = await protobuf.load_message(reader, messages.get_message_from_type(resp['payload']['msg_type']))
         return res
 
-    async def tsx_init(self, tsx_data: TsxData):
-        return await self.transfer_pickle('tx_sign', 'tsx_init', tsx_data)
-
-    async def tsx_set_input(self, src_entr):
-        return await self.transfer_pickle('tx_sign', 'tsx_set_input', src_entr)
-
-    async def tsx_inputs_permutation(self, permutation):
-        return await self.transfer_pickle('tx_sign', 'tsx_inputs_permutation', permutation)
-
-    async def tsx_input_vini(self, *args, **kwargs):
-        return await self.transfer_pickle('tx_sign', 'tsx_input_vini', *args, **kwargs)
-
-    async def tsx_set_output1(self, dst_entr, dst_entr_hmac):
-        return await self.transfer_pickle('tx_sign', 'tsx_set_output1', dst_entr, dst_entr_hmac)
-
-    async def tsx_all_out1_set(self):
-        return await self.transfer_pickle('tx_sign', 'tsx_all_out1_set')
-
-    async def tsx_mlsag_done(self):
-        return await self.transfer_pickle('tx_sign', 'tsx_mlsag_done')
-
-    async def tsx_sign_input(self, *args, **kwargs):
-        return await self.transfer_pickle('tx_sign', 'tsx_sign_input', *args, **kwargs)
-
-    async def tsx_sign_final(self, *args, **kwargs):
-        return await self.transfer_pickle('tx_sign', 'final', *args, **kwargs)
+    async def tsx_sign(self, msg):
+        return await self.transfer_protobuf('tx_sign', msg)
 
     async def key_image_sync(self, msg, *args, **kwargs):
         return await self.transfer_protobuf('ki_sync', msg)
