@@ -28,10 +28,12 @@ from flask import Flask, jsonify, request, abort
 
 from . import cli
 from monero_poc import misc
-from monero_glue import trezor_lite, trezor_iface
+from monero_glue import trezor_lite, trezor_iface, protobuf
 from monero_glue.xmr import monero, crypto, common, wallet
 from monero_glue.xmr.core import mnemonic
 from monero_glue.misc.bip import bip32
+from monero_glue.trezor import messages
+from monero_serialize import xmrserialize
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
@@ -58,7 +60,7 @@ class TrezorInterface(trezor_iface.TrezorInterface):
         self.confirmed_result = confirmed
         self.tsx_waiter.confirmation(confirmed)
 
-    async def confirm_transaction(self, tsx_data):
+    async def confirm_transaction(self, tsx_data, ctx=None):
         self.confirmed_result = False
         self.tsx_data = tsx_data
         try:
@@ -69,30 +71,30 @@ class TrezorInterface(trezor_iface.TrezorInterface):
         finally:
             self.tsx_data = None
 
-    async def transaction_signed(self):
+    async def transaction_signed(self, ctx=None):
         logger.debug('Transaction signed')
 
     async def transaction_error(self, *args, **kwargs):
         logger.error('Transaction error: %s %s' % (args, kwargs))
 
-    async def transaction_finished(self):
+    async def transaction_finished(self, ctx=None):
         self.server.on_transaction_signed()
 
     async def transaction_step(self, step, sub_step=None):
         logger.debug('Transaction step: %s, sub step: %s' % (step, sub_step))
 
-    async def confirm_ki_sync(self, init_msg):
+    async def confirm_ki_sync(self, init_msg, ctx=None):
         self.server.on_confirm_ki_sync(init_msg)
         self.ki_sync_waiter.wait_confirmation()
         return self.ki_sync_waiter.confirmed_result
 
-    async def ki_error(self, e):
+    async def ki_error(self, e, ctx=None):
         logger.error('ki sync error: %s' % e)
 
-    async def ki_step(self, i):
+    async def ki_step(self, i, ctx=None):
         logger.debug('ki sync progress: %s' % i)
 
-    async def ki_finished(self):
+    async def ki_finished(self, ctx=None):
         logger.info('ki sync finished')
 
 
@@ -363,29 +365,40 @@ class TrezorServer(cli.BaseCli):
         :param request:
         :return:
         """
-        js = request.json
-        cmd = js['cmd']
-        logger.debug('Action: %s' % cmd)
-        args, kwargs = self.unpickle_args(js) if 'payload' in js else ([], {})
+        try:
+            js = request.json
+            msg = await self.unproto_req(js)
 
-        if not self.trez:
-            logger.warning('KeyImage sync request on unitialized Trezor')
-            return abort(404)
+            if not self.trez:
+                logger.warning('KeyImage sync request on unitialized Trezor')
+                return abort(404)
 
-        if cmd == 'ask':
-            res = await self.trez.key_image_sync_ask(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+            try:
+                res = await self.trez.key_image_sync(msg)
+                return jsonify({'result': True, 'payload': await self.proto_res(res)})
 
-        elif cmd == 'transfer':
-            res = await self.trez.key_image_sync_transfer(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+            except Exception as e:
+                return jsonify({'result': False, 'exc': e})
+        except Exception as e:
+            traceback.print_exc()
 
-        elif cmd == 'final':
-            res = await self.trez.key_image_sync_final(*args, **kwargs)
-            return jsonify({'result': True, 'payload': self.pickle_res(res)})
+    async def unproto_req(self, req):
+        if 'payload' not in req:
+            return None
+        msg, msg_type = req['payload']['msg'], req['payload']['msg_type']
+        return await self.unproto_msg(binascii.unhexlify(msg.encode('utf8')), msg_type)
 
-        else:
-            return abort(405)
+    async def unproto_msg(self, msg, msg_type):
+        reader = xmrserialize.MemoryReaderWriter(bytearray(msg))
+        return await protobuf.load_message(reader, messages.get_message_from_type(msg_type))
+
+    async def proto_res(self, res):
+        writer = xmrserialize.MemoryReaderWriter()
+        await protobuf.dump_message(writer, res)
+        return {
+            'msg': binascii.hexlify(bytes(writer.buffer)).decode('ascii'),
+            'msg_type': messages.get_message_type(res)
+        }
 
     def unpickle_args(self, js):
         return pickle.loads(binascii.unhexlify(js['payload'].encode('utf8')))

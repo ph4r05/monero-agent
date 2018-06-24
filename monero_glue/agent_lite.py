@@ -7,6 +7,7 @@ from monero_glue import trezor_lite, agent_misc
 from monero_glue.xmr import monero, common, key_image, crypto
 from monero_glue.xmr.enc import aesgcm, chacha_poly
 from monero_glue.old import trezor
+from monero_glue.messages import MoneroRespError, MoneroKeyImageSync, MoneroKeyImageSyncStep, MoneroKeyImageSyncFinal
 
 
 class TData(object):
@@ -62,7 +63,7 @@ class Agent(object):
         :param response:
         :return:
         """
-        return isinstance(response, trezor_lite.TError)
+        return isinstance(response, trezor_lite.TError) or isinstance(response, MoneroRespError)
 
     def handle_error(self, response):
         """
@@ -297,26 +298,26 @@ class Agent(object):
         :return:
         """
         ki_export_init = await key_image.generate_commitment(outputs)
-        t_res = await self.trezor.key_image_sync_ask(ki_export_init)
+        t_res = await self.trezor.key_image_sync(MoneroKeyImageSync(init=ki_export_init))
         self.handle_error(t_res)
 
         sub_res = []
         iter = await key_image.yield_key_image_data(outputs)
         batches = common.chunk(iter, 10)
-        for rr in batches:  # type: key_image.TransferDetails
-            t_res = await self.trezor.key_image_sync_transfer(rr)
+        for rr in batches:  # type: list[key_image.MoneroTransferDetails]
+            t_res = await self.trezor.key_image_sync(MoneroKeyImageSync(step=MoneroKeyImageSyncStep(tdis=rr)))
             self.handle_error(t_res)
 
-            sub_res += t_res.args[0]
+            sub_res += t_res.kis
 
-        t_res = await self.trezor.key_image_sync_final()
+        t_res = await self.trezor.key_image_sync(MoneroKeyImageSync(final_msg=MoneroKeyImageSyncFinal()))
         self.handle_error(t_res)
 
         # Decrypting phase
-        enc_key = t_res.args[0]
+        enc_key = bytes(t_res.enc_key)
         final_res = []
-        for sub in sub_res:  # type: key_image.ExportedKeyImage
-            plain = chacha_poly.decrypt(enc_key, sub.iv, sub.blob, sub.tag)
+        for sub in sub_res:  # type: key_image.MoneroExportedKeyImage
+            plain = chacha_poly.decrypt(enc_key, bytes(sub.iv), bytes(sub.blob), bytes(sub.tag))
             ki_bin = plain[:32]
 
             # ki = crypto.decodepoint(ki_bin)

@@ -2,57 +2,12 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+import collections
 
 from monero_serialize import xmrtypes, xmrserialize
 from monero_glue.xmr import mlsag2, ring_ct, crypto, common, monero
-from monero_glue.misc import b58_mnr
-import collections
-import binascii
-
-
-class SubAddrIndicesList(xmrserialize.MessageType):
-    __slots__ = ['account', 'minor_indices']
-    MFIELDS = [
-        ('account', xmrserialize.UVarintType),
-        ('minor_indices', xmrserialize.ContainerType, xmrserialize.UVarintType),
-    ]
-
-
-class KeyImageExportInit(xmrserialize.MessageType):
-    """
-    Initializes key image sync. Commitment
-    """
-    __slots__ = ['num', 'hash', 'subs']
-    MFIELDS = [
-        ('num', xmrserialize.UVarintType),  # number of outputs to gen
-        ('hash', xmrtypes.Hash),  # aggregate hash commitment
-        ('subs', xmrserialize.ContainerType, SubAddrIndicesList),  # aggregated sub addresses indices
-    ]
-
-
-class TransferDetails(xmrserialize.MessageType):
-    """
-    Transfer details for key image sync needs
-    """
-    __slots__ = ['out_key', 'tx_pub_key', 'additional_tx_pub_keys', 'm_internal_output_index']
-    MFIELDS = [
-        ('out_key', xmrtypes.ECPublicKey),
-        ('tx_pub_key', xmrtypes.ECPublicKey),
-        ('additional_tx_pub_keys', xmrserialize.ContainerType, xmrtypes.ECPublicKey),
-        ('m_internal_output_index', xmrserialize.UVarintType),
-    ]
-
-
-class ExportedKeyImage(xmrserialize.MessageType):
-    """
-    Exported key image
-    """
-    __slots__ = ['iv', 'tag', 'blob']
-    MFIELDS = [
-        ('iv', xmrserialize.BlobType),   # enc IV
-        ('tag', xmrserialize.BlobType),  # enc tag
-        ('blob', xmrserialize.BlobType),  # encrypted ki || sig
-    ]
+from monero_glue.messages import MoneroTransferDetails, MoneroSubAddrIndicesList, MoneroExportedKeyImage, \
+    MoneroKeyImageExportInit
 
 
 async def yield_key_image_data(outputs):
@@ -72,9 +27,9 @@ async def yield_key_image_data(outputs):
         extras = await monero.parse_extra_fields(list(td.m_tx.extra))
         additional_pub_keys = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraAdditionalPubKeys)
         out_key = td.m_tx.vout[td.m_internal_output_index].target.key
-        cres = TransferDetails(out_key=out_key, tx_pub_key=tx_pub_key,
-                               additional_tx_pub_keys=additional_pub_keys.data if additional_pub_keys else None,
-                               m_internal_output_index=td.m_internal_output_index)
+        cres = MoneroTransferDetails(out_key=out_key, tx_pub_key=tx_pub_key,
+                                     additional_tx_pub_keys=additional_pub_keys.data if additional_pub_keys else None,
+                                     m_internal_output_index=td.m_internal_output_index)
         res.append(cres)
     return res
 
@@ -110,7 +65,7 @@ async def generate_commitment(outputs):
 
     num = 0
     iter = await yield_key_image_data(outputs)
-    for rr in iter:  # type: TransferDetails
+    for rr in iter:  # type: MoneroTransferDetails
         hash = compute_hash(rr)
         hashes.append(hash)
         num += 1
@@ -119,9 +74,9 @@ async def generate_commitment(outputs):
     indices = []
 
     for major in sub_indices:
-        indices.append(SubAddrIndicesList(account=major, minor_indices=list(sub_indices[major])))
+        indices.append(MoneroSubAddrIndicesList(account=major, minor_indices=list(sub_indices[major])))
 
-    return KeyImageExportInit(num=num, hash=final_hash, subs=indices)
+    return MoneroKeyImageExportInit(num=num, hash=final_hash, subs=indices)
 
 
 async def export_key_image(creds, subaddresses, td):

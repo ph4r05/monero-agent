@@ -23,9 +23,7 @@ import pickle
 import sys
 import time
 import json
-import concurrent
 import threading
-from blessed import Terminal
 from cmd2 import Cmd
 
 from . import trace_logger
@@ -33,10 +31,11 @@ from . import cli
 from . import misc
 
 from monero_glue import agent_lite, agent_misc, trezor_lite
-from monero_glue.misc import b58_mnr
 from monero_glue.xmr import wallet, monero, crypto, common
 from monero_glue.xmr.monero import TsxData
-from monero_serialize import xmrtypes
+from monero_glue.trezor import messages
+from monero_glue import protobuf
+from monero_serialize import xmrtypes, xmrserialize
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
@@ -82,6 +81,22 @@ class TrezorProxy(trezor_lite.TrezorLite):
         res = pickle.loads(pickle_data)
         return res
 
+    async def transfer_protobuf(self, method, msg: protobuf.MessageType):
+        logger.debug('Method: %s' % method)
+        writer = xmrserialize.MemoryReaderWriter()
+
+        await protobuf.dump_message(writer, msg)
+        proto_bin = bytes(writer.buffer)
+        payload = {'msg_type': messages.get_message_type(msg), 'msg': binascii.hexlify(proto_bin).decode('utf8')}
+
+        resp = await self.transfer(method, '', payload)
+        resp_bin = binascii.unhexlify(resp['payload']['msg'].encode('utf8'))
+        logger.debug('Req size: %s, response size: %s' % (len(proto_bin), len(resp_bin)))
+
+        reader = xmrserialize.MemoryReaderWriter(bytearray(resp_bin))
+        res = await protobuf.load_message(reader, messages.get_message_from_type(resp['payload']['msg_type']))
+        return res
+
     async def tsx_init(self, tsx_data: TsxData):
         return await self.transfer_pickle('tx_sign', 'tsx_init', tsx_data)
 
@@ -109,14 +124,8 @@ class TrezorProxy(trezor_lite.TrezorLite):
     async def tsx_sign_final(self, *args, **kwargs):
         return await self.transfer_pickle('tx_sign', 'final', *args, **kwargs)
 
-    async def key_image_sync_ask(self, *args, **kwargs):
-        return await self.transfer_pickle('ki_sync', 'ask', *args, **kwargs)
-
-    async def key_image_sync_transfer(self, *args, **kwargs):
-        return await self.transfer_pickle('ki_sync', 'transfer', *args, **kwargs)
-
-    async def key_image_sync_final(self, *args, **kwargs):
-        return await self.transfer_pickle('ki_sync', 'final', *args, **kwargs)
+    async def key_image_sync(self, msg, *args, **kwargs):
+        return await self.transfer_protobuf('ki_sync', msg)
 
 
 class WalletRpc(object):
