@@ -12,9 +12,9 @@ from monero_glue.xmr.core.ec_base import *
 from trezor_crypto import trezor_cfunc as tcryr
 
 
-from monero_glue.misc.devel.call_tracker import CallTracker
-tcry = CallTracker(tcryr, print_on_end=True)
-# tcry = tcryr
+#from monero_glue.misc.devel.call_tracker import CallTracker
+#tcry = CallTracker(tcryr, print_on_end=True)
+tcry = tcryr
 
 
 # Load & init the library
