@@ -46,7 +46,7 @@ class KeyImageSync(object):
 
         # Sub address precomputation
         if msg.subs and len(msg.subs) > 0:
-            for sub in msg.subs:  # type: key_image.MoneroSubAddrIndicesList
+            for sub in msg.subs:  # type: MoneroSubAddrIndicesList
                 monero.compute_subaddresses(self.creds, sub.account, sub.minor_indices, self.subaddresses)
         return MoneroKeyImageExportInitResp()
 
