@@ -3,11 +3,11 @@ import sys
 from setuptools import setup
 from setuptools import find_packages
 
-version = '1.3.4'
+version = '1.4.0'
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
-    'monero-serialize>=1.3.0',
+    'monero-serialize>=1.3.2',
     'pycryptodome',
     'cryptography',
     'py-cryptonight>=0.1.2',
