@@ -7,7 +7,6 @@ from monero_glue.xmr.monero import TsxData, classify_subaddresses
 from monero_glue import trezor_misc
 from monero_glue.xmr import monero, mlsag2, ring_ct, crypto, common
 from monero_glue.xmr.enc import chacha_poly
-from monero_glue.protocol.base import TError, TResponse
 from monero_glue.trezor import wrapper as twrap
 from monero_glue.messages import MoneroRespError, MoneroTsxSign, \
     MoneroTsxInit, MoneroTsxInitResp, \
@@ -604,7 +603,7 @@ class TTransactionBuilder(object):
         # Ask for confirmation
         confirmation = await self.trezor.iface.confirm_transaction(tsx_data)
         if not confirmation:
-            return TError(reason='rejected')
+            return MoneroRespError(reason='rejected')
 
         # Basic transaction parameters
         self.input_count = tsx_data.num_inputs
@@ -792,7 +791,7 @@ class TTransactionBuilder(object):
             raise ValueError('Input count mismatch')
 
         if self.in_memory():
-            return TResponse(await self.tsx_inputs_done_inm())
+            return await self.tsx_inputs_done_inm()
 
     async def tsx_inputs_done_inm(self):
         """
@@ -1056,7 +1055,7 @@ class TTransactionBuilder(object):
         # RctSigBase later.
         self.output_pk.append(out_pk)
         return MoneroTsxSetOutputResp(tx_out=await trezor_misc.dump_msg(tx_out),
-                                      vouti_hmac=hmac_vouti, rsig=rsig,
+                                      vouti_hmac=hmac_vouti, rsig=rsig,  # rsig is already byte-encoded
                                       out_pk=await trezor_misc.dump_msg(out_pk),
                                       ecdh_info=await trezor_misc.dump_msg(ecdh_info))
 
