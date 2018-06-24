@@ -86,7 +86,7 @@ class Agent(object):
         """
         if not self.is_error(response):
             return
-        raise agent_misc.TrezorReturnedError(response)
+        raise agent_misc.TrezorReturnedError(resp=response)
 
     async def sign_unsigned_tx(self, unsig):
         """
