@@ -75,11 +75,12 @@ def prove_range(amount, last_mask=None, use_asnl=False, mem_opt=True, backend_im
 
     # Encoding
     C, a, R = ret[:3]
-    if not decode:
-        R = monero.recode_rangesig(R, encode=True)
     if byte_enc:
         R = monero.recode_rangesig(R, encode=True)
         R = monero.flatten_rsig(R)
+    elif not decode:
+        R = monero.recode_rangesig(R, encode=True)
+
     return C, a, R
 
 
