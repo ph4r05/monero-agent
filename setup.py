@@ -9,8 +9,8 @@ version = '1.4.0'
 install_requires = [
     'monero-serialize>=1.3.2',
     'pycryptodome',
-    'cryptography',
     'py-cryptonight>=0.1.2',
+    'chacha20poly1305',
 ]
 
 dev_extras = [
@@ -24,6 +24,7 @@ dev_extras = [
     'pandoc',
     'pycparser',
     'ctypeslib2',
+    'cryptography',  # chacha20poly1305
 ]
 
 poc_extras = [

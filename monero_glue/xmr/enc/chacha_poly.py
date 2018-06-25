@@ -3,7 +3,13 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import os
-from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+
+try:
+    from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+    ChaCha20Poly1305(b'\x00'*32)  # test if openssl provides ChaCha20Poly1305
+
+except:
+    from chacha20poly1305 import ChaCha20Poly1305
 
 
 def encrypt(key, plaintext, associated_data=None):
