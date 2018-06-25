@@ -229,7 +229,7 @@ class TrezorServer(cli.BaseCli):
 
         @self.flask.route('/api/v1.0/tx_sign', methods=['GET', 'POST'])
         def tx_sign():
-            return self.wait_coro(self.on_tx_sign(request=request)) \
+            return self.wait_coro(self.on_tx_sign(request=request))
 
         @self.flask.route('/api/v1.0/ki_sync', methods=['GET', 'POST'])
         def ki_sync():
