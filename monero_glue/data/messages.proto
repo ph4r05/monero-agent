@@ -11,9 +11,33 @@ message MoneroRespError {
 	optional string exc = 3;
 }
 
+message MoneroGetAddress {
+    repeated uint32 address_n = 1;			// BIP-32 path to derive the key from master node
+	optional bool show_display = 2;			// Optionally show on display before sending the result
+	optional uint32 network_type = 3;		// Main-net / testnet / stagenet
+	optional uint32 account = 4;            // Major subaddr index
+	optional uint32 minor = 5;              // Minor subaddr index
+}
+
+message MoneroAddress {
+    optional bytes address = 1;
+}
+
+message MoneroGetWatchKey {
+    repeated uint32 address_n = 1;          // BIP-32 path to derive the key from master node
+    optional uint32 network_type = 2;		// Main-net / testnet / stagenet
+}
+
+message MoneroWatchKey {
+    optional bytes watch_key = 1;
+    optional bytes address = 2;
+}
+
 message MoneroTsxInit {
     optional uint32 version = 1;
-    optional MoneroTsxData tsx_data = 2;
+    repeated uint32 address_n = 2;
+    optional uint32 network_type = 3;		// Main-net / testnet / stagenet
+    optional MoneroTsxData tsx_data = 4;
 }
 
 message MoneroTsxInitResp {
@@ -73,10 +97,16 @@ message MoneroTsxAllOutSet {
 
 }
 
+message MoneroRctSig {
+    optional uint64 txn_fee = 1;
+    optional bytes message = 2;
+    optional uint32 rv_type = 3;
+}
+
 message MoneroTsxAllOutSetResp {
     optional bytes extra = 1;
     optional bytes tx_prefix_hash = 2;
-    optional bytes rv = 3;  // xmrtypes.RctSig
+    optional MoneroRctSig rv = 3;  // xmrtypes.RctSig
 }
 
 message MoneroTsxMlsagDone {
@@ -127,7 +157,9 @@ message MoneroTsxSign {
 message MoneroKeyImageExportInit {
     optional uint64 num = 1;
     optional bytes hash = 2;
-    repeated MoneroSubAddrIndicesList subs = 3;
+    repeated uint32 address_n = 3;               // BIP-32 path to derive the key from master node
+    optional uint32 network_type = 4;		     // Main-net / testnet / stagenet
+    repeated MoneroSubAddrIndicesList subs = 5;
 }
 
 message MoneroKeyImageExportInitResp {

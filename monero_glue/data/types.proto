@@ -28,7 +28,7 @@ message MoneroTsxData {
 	optional uint32 account = 9;
 	repeated uint32 minor_indices = 10;
 	optional bool is_multisig = 11;
-	optional string exp_tx_prefix_hash = 12;
+	optional bytes exp_tx_prefix_hash = 12;
 	repeated bytes use_tx_keys = 13;
 }
 
