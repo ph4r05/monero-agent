@@ -834,8 +834,7 @@ class TTransactionBuilder(object):
             self.input_secrets[x], self.input_secrets[y] = self.input_secrets[y], self.input_secrets[x]
             if self.in_memory() and self.use_simple_rct:
                 self.input_alphas[x], self.input_alphas[y] = self.input_alphas[y], self.input_alphas[x]
-                self.input_pseudo_outs[x], self.input_pseudo_outs[y] = self.input_pseudo_outs[y], \
-                                                                       self.input_pseudo_outs[x]
+                self.input_pseudo_outs[x], self.input_pseudo_outs[y] = self.input_pseudo_outs[y], self.input_pseudo_outs[x]
             if self.in_memory():
                 self.tx.vin[x], self.tx.vin[y] = self.tx.vin[y], self.tx.vin[x]
 
