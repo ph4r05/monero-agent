@@ -217,7 +217,7 @@ class HostAgent(cli.BaseCli):
         """
         if not await self.is_connected():
             logger.error('Trezor is not connected')
-            raise misc.TrezorNotRunning('Could not load watch-only credentials')
+            raise agent_misc.TrezorNotRunning('Could not load watch-only credentials')
 
         try:
             print('Loading watch-only credentials from Trezor. Please, confirm the request on Trezor.')
@@ -690,12 +690,12 @@ class HostAgent(cli.BaseCli):
         try:
             return await self.sign(file, fdata)
 
-        except misc.TrezorReturnedError as e:
+        except agent_misc.TrezorReturnedError as e:
             self.trace_logger.log(e)
             print('Trezor returned an error: %s' % e)
             return 1
 
-        except misc.TrezorNotRunning as e:
+        except agent_misc.TrezorNotRunning as e:
             logger.error('Trezor server is not running')
             return 2
 
@@ -709,7 +709,7 @@ class HostAgent(cli.BaseCli):
         try:
             await self.trezor_proxy.ping()
         except Exception as e:
-            raise misc.TrezorNotRunning(e)
+            raise agent_misc.TrezorNotRunning(e)
 
         if file and not os.path.exists(file):
             raise ValueError('Could not find unsigned transaction file')
