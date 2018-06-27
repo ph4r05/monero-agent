@@ -14,10 +14,7 @@ import asyncio
 import argparse
 import binascii
 import logging
-import requests
-from requests.auth import HTTPDigestAuth
 import coloredlogs
-import pickle
 import sys
 import time
 import json
@@ -74,8 +71,9 @@ class HostAgent(cli.BaseCli):
         self.wallet_thread = None
         self.terminating = False
 
-        self.trezor_proxy = TokenProxy()
-        self.agent = agent_lite.Agent(self.trezor_proxy)
+        self.trezor_proxy = None  # type: TokenProxy
+        self.agent = None  # type: agent_lite.Agent
+
         self.wallet_proxy = wallet_rpc.WalletRpc(self, self.rpc_bind_port, self.rpc_passwd)
 
     def looper(self, loop):
@@ -154,8 +152,8 @@ class HostAgent(cli.BaseCli):
             print('OK %s' % pres)
 
         except Exception as e:
-            print('Trezor not connected')
-            logger.debug(e)
+            print('Trezor not connected (e: %s)' % e)
+            self.trace_logger.log(e)
 
     def do_balance(self, line):
         res = self.wallet_proxy.balance()
@@ -242,6 +240,20 @@ class HostAgent(cli.BaseCli):
             self.wallet_file = self.args.watch_wallet
         if self.args.monero_bin:
             self.monero_bin = self.args.monero_bin
+
+    async def connect(self):
+        """
+        Connects to the trezor
+        :return:
+        """
+        if self.args.trezor or self.args.trezor_path:
+            from monero_glue.trezor import manager as tmanager
+            self.trezor_proxy = tmanager.Trezor(path=self.args.trezor_path)
+
+        else:
+            self.trezor_proxy = TokenProxy()
+
+        self.agent = agent_lite.Agent(self.trezor_proxy)
 
     async def open_account(self):
         """
@@ -559,6 +571,7 @@ class HostAgent(cli.BaseCli):
             coloredlogs.install(level=logging.DEBUG, use_chroot=False)
         misc.install_sarge_filter()
 
+        await self.connect()
         await self.open_account()
 
         if self.args.sign:
@@ -890,6 +903,12 @@ class HostAgent(cli.BaseCli):
 
         parser.add_argument('--testnet', dest='testnet', default=False, action='store_const', const=True,
                             help='Testnet')
+
+        parser.add_argument('--trezor', dest='trezor', default=False, action='store_const', const=True,
+                            help='Use Trezor connector')
+
+        parser.add_argument('--trezor-path', dest='trezor_path', default=None,
+                            help='Trezor path')
 
         args_src = sys.argv
         self.args, unknown = parser.parse_known_args(args=args_src[1:])
