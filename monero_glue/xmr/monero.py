@@ -85,12 +85,13 @@ class AccountCreds(object):
     """
     Stores account private keys
     """
-    def __init__(self, view_key_private=None, spend_key_private=None, view_key_public=None, spend_key_public=None, address=None):
+    def __init__(self, view_key_private=None, spend_key_private=None, view_key_public=None, spend_key_public=None, address=None, network_type=NetworkTypes.MAINNET):
         self.view_key_private = view_key_private
         self.view_key_public = view_key_public
         self.spend_key_private = spend_key_private
         self.spend_key_public = spend_key_public
         self.address = address
+        self.network_type = network_type
         self.multisig_keys = []
 
     @classmethod
@@ -102,7 +103,7 @@ class AccountCreds(object):
                            crypto.encodepoint(pub_view_key))
         return cls(view_key_private=priv_view_key, spend_key_private=priv_spend_key,
                    view_key_public=pub_view_key, spend_key_public=pub_spend_key,
-                   address=addr)
+                   address=addr, network_type=network_type)
 
 
 class TxScanInfo(object):
