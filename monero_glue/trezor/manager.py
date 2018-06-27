@@ -59,6 +59,9 @@ class Trezor(token.TokenLite):
     def _to_tlib(self, msg):
         return self.msg_conv.to_trezorlib(msg)
 
+    def _from_tlib(self, msg):
+        return self.msg_conv.to_phlib(msg)
+
     def close(self):
         self.client.close()
 
@@ -73,14 +76,22 @@ class Trezor(token.TokenLite):
         with self.session():
             msg = MoneroGetWatchKey(address_n=self.address_n, network_type=self.network_type)
             res = self.client.call(self._to_tlib(msg))
-            return res
+            return self._from_tlib(res)
 
     async def tsx_sign(self, msg):
         with self.session():
-            return self.client.call(self._to_tlib(msg))
+            res = self.client.call(self._to_tlib(msg))
+            return self._from_tlib(res)
 
     async def key_image_sync(self, msg, *args, **kwargs):
         with self.session():
-            return self.client.call(self._to_tlib(msg))
+            if msg.init:
+                if not msg.init.address_n:
+                    msg.init.address_n = self.address_n
+                if msg.init.network_type is None:
+                    msg.init.network_type = self.network_type
+
+            res = self.client.call(self._to_tlib(msg))
+            return self._from_tlib(res)
 
 
