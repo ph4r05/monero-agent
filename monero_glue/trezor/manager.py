@@ -13,6 +13,7 @@ from trezorlib import monero, protobuf
 from trezorlib import messages as proto
 
 from monero_serialize import xmrserialize
+from monero_glue.protocol.messages import MessageConverter
 from monero_glue.hwtoken import token, misc
 from monero_glue.messages import MoneroExportedKeyImage, \
     MoneroKeyImageExportInit, MoneroKeyImageExportInitResp, \
@@ -20,8 +21,6 @@ from monero_glue.messages import MoneroExportedKeyImage, \
     MoneroKeyImageSyncFinalResp, \
     MoneroGetWatchKey, MoneroGetAddress, \
     MoneroRespError
-
-
 
 
 class TrezorSession(object):
@@ -55,6 +54,10 @@ class Trezor(token.TokenLite):
 
         self.address_n = address_n if address_n else parse_path(monero.DEFAULT_BIP32_PATH)
         self.network_type = network_type
+        self.msg_conv = MessageConverter()
+
+    def _to_tlib(self, msg):
+        return self.msg_conv.to_trezorlib(msg)
 
     def close(self):
         self.client.close()
@@ -69,15 +72,15 @@ class Trezor(token.TokenLite):
     async def watch_only(self):
         with self.session():
             msg = MoneroGetWatchKey(address_n=self.address_n, network_type=self.network_type)
-            res = self.client.call(msg)
+            res = self.client.call(self._to_tlib(msg))
             return res
 
     async def tsx_sign(self, msg):
         with self.session():
-            return self.client.call(msg)
+            return self.client.call(self._to_tlib(msg))
 
     async def key_image_sync(self, msg, *args, **kwargs):
         with self.session():
-            return self.client.call(msg)
+            return self.client.call(self._to_tlib(msg))
 
 
