@@ -9,7 +9,9 @@ from .MoneroTsxData import MoneroTsxData
 from .MoneroTxDestinationEntry import MoneroTxDestinationEntry
 from .MoneroAddress import MoneroAddress
 from .MoneroGetAddress import MoneroGetAddress
+from .MoneroGetKey import MoneroGetKey
 from .MoneroGetWatchKey import MoneroGetWatchKey
+from .MoneroKey import MoneroKey
 from .MoneroKeyImageExportInit import MoneroKeyImageExportInit
 from .MoneroKeyImageExportInitResp import MoneroKeyImageExportInitResp
 from .MoneroKeyImageSync import MoneroKeyImageSync
