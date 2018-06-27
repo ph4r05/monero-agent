@@ -52,6 +52,9 @@ docs_extras = [
     'sphinxcontrib-programoutput',
 ]
 
+trezor_extras = [
+    'trezor'
+]
 
 try:
     import pypandoc
@@ -91,5 +94,6 @@ setup(
         'poc': poc_extras,
         'docs': docs_extras,
         'tcry': tcry_extras,
+        'trezor': trezor_extras,
     },
 )
