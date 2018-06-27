@@ -31,7 +31,7 @@ from monero_poc.trezor_server_proxy import TokenProxy
 
 from monero_glue.hwtoken import token
 from monero_glue.agent import agent_misc, agent_lite
-from monero_glue.xmr import wallet, monero, crypto, common
+from monero_glue.xmr import wallet, monero, crypto, common, wallet_rpc
 from monero_glue.protocol import messages
 from monero_glue import protobuf
 from monero_serialize import xmrtypes, xmrserialize
@@ -39,79 +39,6 @@ from monero_serialize import xmrtypes, xmrserialize
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
 coloredlogs.install(level=logging.WARNING, use_chroot=False)
-
-
-class WalletRpc(object):
-    """
-    RPC helper
-    """
-    def __init__(self, agent, port=None, creds=None):
-        self.agent = agent
-        self.port = port
-        self.creds = creds
-        self.url = None
-        self.set_addr('127.0.0.1:%s' % port)
-
-    def set_addr(self, addr):
-        self.url = 'http://%s/json_rpc' % addr
-
-    def set_creds(self, creds):
-        if creds is None or (isinstance(creds, (list, tuple)) and len(creds) == 2):
-            self.creds = creds
-        elif isinstance(creds, str):
-            self.creds = creds.split(':', 1)
-        else:
-            raise ValueError('Unknown creds type')
-
-    def request(self, method, params=None):
-        """
-        Request wrapper
-        {"jsonrpc":"2.0","id":"0","method":"get_address", "params":{"account_index": 0, "address_index": [0,1,2,3,4,5]}
-        :param method:
-        :param params:
-        :return:
-        """
-        auth = HTTPDigestAuth(self.creds[0], self.creds[1]) if self.creds else None
-        js = {'jsonrpc': '2.0', 'id': '0', 'method': method}
-        if params:
-            js['params'] = params
-
-        resp = requests.post(self.url, json=js, auth=auth)
-        resp.raise_for_status()
-        return resp.json()
-
-    def balance(self):
-        return self.request('getbalance')
-
-    def height(self):
-        return self.request('getheight')
-
-    def get_transfers(self, params=None):
-        return self.request('get_transfers', params)
-
-    def rescan_bc(self):
-        return self.request('rescan_blockchain')
-
-    def transfer(self, params):
-        return self.request('transfer', params)
-
-    def submit_transfer(self, params):
-        return self.request('submit_transfer', params)
-
-    def stop_wallet(self):
-        return self.request('stop_wallet')
-
-    def export_outputs(self):
-        return self.request('export_outputs')
-
-    def import_outputs(self, params=None):
-        return self.request('import_outputs', params)
-
-    def import_key_images(self, params=None):
-        return self.request('import_key_images', params)
-
-    def refresh(self, params=None):
-        return self.request('refresh', params)
 
 
 class HostAgent(cli.BaseCli):
@@ -149,7 +76,7 @@ class HostAgent(cli.BaseCli):
 
         self.trezor_proxy = TokenProxy()
         self.agent = agent_lite.Agent(self.trezor_proxy)
-        self.wallet_proxy = WalletRpc(self, self.rpc_bind_port, self.rpc_passwd)
+        self.wallet_proxy = wallet_rpc.WalletRpc(self, self.rpc_bind_port, self.rpc_passwd)
 
     def looper(self, loop):
         """
