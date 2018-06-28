@@ -20,6 +20,7 @@ from monero_glue.messages import MoneroExportedKeyImage, \
     MoneroKeyImageSyncStep, MoneroKeyImageSyncStepResp, \
     MoneroKeyImageSyncFinalResp, \
     MoneroGetWatchKey, MoneroGetAddress, \
+    MoneroGetKey, \
     MoneroRespError
 
 
@@ -78,6 +79,22 @@ class Trezor(token.TokenLite):
             res = self.client.call(self._to_tlib(msg))
             return self._from_tlib(res)
 
+    async def get_keys(self):
+        with self.session():
+            msg = MoneroGetKey(address_n=self.address_n, network_type=self.network_type)
+            res = self.client.call(self._to_tlib(msg))
+            return self._from_tlib(res)
+
+    async def watch_only_msg(self, msg):
+        with self.session():
+            res = self.client.call(self._to_tlib(msg))
+            return self._from_tlib(res)
+
+    async def get_keys_msg(self, msg):
+        with self.session():
+            res = self.client.call(self._to_tlib(msg))
+            return self._from_tlib(res)
+
     async def tsx_sign(self, msg):
         with self.session():
             res = self.client.call(self._to_tlib(msg))
@@ -85,12 +102,6 @@ class Trezor(token.TokenLite):
 
     async def key_image_sync(self, msg, *args, **kwargs):
         with self.session():
-            if msg.init:
-                if not msg.init.address_n:
-                    msg.init.address_n = self.address_n
-                if msg.init.network_type is None:
-                    msg.init.network_type = self.network_type
-
             res = self.client.call(self._to_tlib(msg))
             return self._from_tlib(res)
 
