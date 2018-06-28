@@ -53,7 +53,7 @@ class Trezor(token.TokenLite):
             self.debuglink = self.wirelink.find_debug()
             self.client.set_debuglink(self.debuglink)
 
-        self.msg_conv = MessageConverter()
+        self.msg_conv = MessageConverter(fix_bytes=True)
 
     def _to_tlib(self, msg):
         return self.msg_conv.to_trezorlib(msg)
