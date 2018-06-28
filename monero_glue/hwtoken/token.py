@@ -5,11 +5,13 @@
 import traceback
 
 from monero_glue.hwtoken import iface, misc
-from monero_glue.xmr import monero
+from monero_glue.xmr import monero, crypto
 from monero_glue.protocol.key_image_sync import KeyImageSync
 from monero_glue.protocol.tsx_sign import TsxSigner
 from monero_glue.protocol.error import exc2str
-from monero_glue.messages import MoneroKeyImageSync, MoneroTsxSign, MoneroRespError
+from monero_glue.messages import MoneroKeyImageSync, MoneroTsxSign, MoneroRespError, \
+    MoneroGetWatchKey, MoneroWatchKey, \
+    MoneroGetKey, MoneroKey
 
 
 class TokenLite(object):
@@ -81,6 +83,18 @@ class TokenLite(object):
 
         pb = await misc.dump_pb_msg(msg)
         await misc.parse_pb_msg(pb, msg.__class__)
+
+    async def get_view_key(self, msg: MoneroGetWatchKey):
+        if msg.network_type != self.creds.network_type:
+            return MoneroRespError(reason='InvalidNetworkType')
+        return MoneroWatchKey(watch_key=crypto.encodepoint(self.creds.view_key_private), address=self.creds.address)
+
+    async def get_keys(self, msg: MoneroGetKey):
+        if msg.network_type != self.creds.network_type:
+            return MoneroRespError(reason='InvalidNetworkType')
+        return MoneroKey(watch_key=crypto.encodepoint(self.creds.view_key_private),
+                         spend_key=crypto.encodepoint(self.creds.spend_key_private),
+                         address=self.creds.address)
 
     async def tsx_sign(self, msg: MoneroTsxSign):
         if self.tsx_obj is None or msg.init:
