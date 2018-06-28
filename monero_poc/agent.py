@@ -240,11 +240,12 @@ class HostAgent(cli.BaseCli):
 
         try:
             print('Loading watch-only credentials from Trezor. Please, confirm the request on Trezor.')
-            res = await self.trezor_proxy.watch_only()
+            self.set_network_type(monero.NetworkTypes.TESTNET if self.args.testnet else monero.NetworkTypes.MAINNET)
 
-            self.priv_view = crypto.b16_to_scalar(res['data']['view_key'].encode('utf8'))
-            self.address = res['data']['address'].encode('utf8')
-            self.set_network_type(res['data']['network_type'])
+            res = await self.agent.get_watch_only()  # type: messages.MoneroWatchKey
+
+            self.priv_view = crypto.decodeint(res.watch_key)
+            self.address = res.address
             await self.open_with_keys(self.priv_view, self.address)
 
         except Exception as e:
