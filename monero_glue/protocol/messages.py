@@ -26,6 +26,32 @@ def get_message_from_type(type_id):
     raise ValueError('Could not find message with type: %s' % type_id)
 
 
+def bytes_fix(msg, pkg=protobuf):
+    """
+    Converts all elements to bytes if specified by protobuf scheme
+    :param msg:
+    :param pkg:
+    :return:
+    """
+    if isinstance(msg, pkg.MessageType):
+        for tag in msg.FIELDS:
+            field = msg.FIELDS[tag]
+            field_name = field[0]
+            if hasattr(msg, field_name):
+                cval = getattr(msg, field_name, None)
+                if field[1] == pkg.BytesType:
+                    cval = bytes(cval)
+                setattr(msg, field_name, bytes_fix(cval, pkg))
+        return msg
+
+    elif isinstance(msg, bytearray):
+        return bytes(msg)
+    elif isinstance(msg, list):
+        return [bytes_fix(x, pkg) for x in msg]
+    else:
+        return msg
+
+
 class MessageConverter(object):
     """
     Converts protobuf messages between base packages.
@@ -33,10 +59,11 @@ class MessageConverter(object):
     Required for protobuf encoders
     """
     
-    def __init__(self):
+    def __init__(self, fix_bytes=False):
         self.imported = False
         self.tlib_msgs = None
         self.tlib_p = None
+        self.fix_bytes = fix_bytes
 
     def _init(self):
         if self.imported:
@@ -71,9 +98,14 @@ class MessageConverter(object):
 
     def to_phlib(self, msg):
         self._init()
+        if self.fix_bytes:
+            msg = bytes_fix(msg, self.tlib_p)
         return self._transform(msg, self.tlib_p, messages)
 
     def to_trezorlib(self, msg):
         self._init()
-        return self._transform(msg, protobuf, self.tlib_msgs)
+        if self.fix_bytes:
+            msg = bytes_fix(msg, protobuf)
+        res = self._transform(msg, protobuf, self.tlib_msgs)
+        return res
 
