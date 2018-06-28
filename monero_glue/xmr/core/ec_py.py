@@ -115,6 +115,7 @@ def encodeint_into(x, b):
     r = ed25519.encodeint(x)
     for i in range(32):
         b[i] = r[i]
+    return b
 
 
 def check_ed25519point(P):
@@ -146,6 +147,13 @@ def encodepoint(P):
         int2byte(sum([bits[i * 8 + j] << j for j in range(8)]))
         for i in range(b // 8)
     ])
+
+
+def encodepoint_into(P, b):
+    r = encodepoint(P)
+    for i in range(32):
+        b[i] = r[i]
+    return b
 
 
 def isoncurve_ext(P):
