@@ -53,8 +53,6 @@ class Trezor(token.TokenLite):
             self.debuglink = self.wirelink.find_debug()
             self.client.set_debuglink(self.debuglink)
 
-        self.address_n = address_n if address_n else parse_path(monero.DEFAULT_BIP32_PATH)
-        self.network_type = network_type
         self.msg_conv = MessageConverter()
 
     def _to_tlib(self, msg):
@@ -73,24 +71,12 @@ class Trezor(token.TokenLite):
         with self.session():
             return self.client.ping(message if message else 'monero', **kwargs)
 
-    async def watch_only(self):
-        with self.session():
-            msg = MoneroGetWatchKey(address_n=self.address_n, network_type=self.network_type)
-            res = self.client.call(self._to_tlib(msg))
-            return self._from_tlib(res)
-
-    async def get_keys(self):
-        with self.session():
-            msg = MoneroGetKey(address_n=self.address_n, network_type=self.network_type)
-            res = self.client.call(self._to_tlib(msg))
-            return self._from_tlib(res)
-
-    async def watch_only_msg(self, msg):
+    async def get_view_key(self, msg):
         with self.session():
             res = self.client.call(self._to_tlib(msg))
             return self._from_tlib(res)
 
-    async def get_keys_msg(self, msg):
+    async def get_keys(self, msg):
         with self.session():
             res = self.client.call(self._to_tlib(msg))
             return self._from_tlib(res)
