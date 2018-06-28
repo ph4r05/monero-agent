@@ -26,7 +26,8 @@ import eventlet
 from eventlet import wsgi
 from flask import Flask, jsonify, request, abort
 
-from . import cli
+from monero_serialize import xmrserialize
+from monero_poc import cli
 from monero_poc import misc
 from monero_glue import protobuf
 from monero_glue.hwtoken import token, iface
@@ -34,7 +35,8 @@ from monero_glue.xmr import monero, crypto, wallet
 from monero_glue.xmr.core import mnemonic
 from monero_glue.misc.bip import bip32
 from monero_glue.protocol import messages
-from monero_serialize import xmrserialize
+from monero_glue.messages import MoneroKey, MoneroWatchKey
+
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
@@ -122,6 +124,7 @@ class TrezorServer(cli.BaseCli):
         self.stop_event = threading.Event()
         self.local_data = threading.local()
         self.watch_only_waiter = misc.CliPrompt(pre_wait_hook=self.update_prompt)
+        self.key_waiter = misc.CliPrompt(pre_wait_hook=self.update_prompt)
         self.ui_lock = threading.Lock()
         self.use_werkzeug = False
         self.thread_rest = None
@@ -162,6 +165,8 @@ class TrezorServer(cli.BaseCli):
         flags = []
         if self.watch_only_waiter.in_confirmation:
             flags.append('W?')
+        if self.key_waiter.in_confirmation:
+            flags.append('Key?')
         if self.trez_iface.in_confirmation:
             flags.append('T?')
         if self.trez_iface.ki_sync_waiter.in_confirmation:
@@ -223,9 +228,13 @@ class TrezorServer(cli.BaseCli):
         def keep_alive():
             return self.wait_coro(self.on_ping(request=request))
 
-        @self.flask.route('/api/v1.0/watch_only', methods=['GET'])
+        @self.flask.route('/api/v1.0/watch_only', methods=['GET', 'POST'])
         def watch_only():
             return self.wait_coro(self.on_watch_only(request=request))
+
+        @self.flask.route('/api/v1.0/get_keys', methods=['GET', 'POST'])
+        def get_keys():
+            return self.wait_coro(self.on_keys(request=request))
 
         @self.flask.route('/api/v1.0/tx_sign', methods=['GET', 'POST'])
         def tx_sign():
@@ -299,12 +308,39 @@ class TrezorServer(cli.BaseCli):
             return abort(403)
 
         logger.info('Returning watch only credentials...')
-        res = {
-            'view_key': binascii.hexlify(crypto.encodeint(self.creds.view_key_private)).decode('ascii'),
-            'address': self.creds.address.decode('ascii'),
-            'network_type': self.network_type,
-        }
-        return jsonify({'result': True, 'data': res})
+        res = MoneroKey(watch_key=crypto.encodeint(self.creds.view_key_private),
+                        address=self.creds.address)
+
+        return jsonify({'result': True, 'payload': await self.proto_res(res)})
+
+    async def on_keys(self, request=None):
+        """
+        Exports credentials
+        :param request:
+        :return:
+        """
+        if not self.creds:
+            logger.warning('Agent asks for credentials export, Trezor not initialized')
+            return abort(406)
+
+        if self.key_waiter.in_confirmation:
+            logger.warning('Agent asks for credentials export concurrently')
+            return abort(406)
+
+        # Prompt user to confirm.
+        self.on_watchonly()
+        confirmed = self.key_waiter.wait_confirmation()
+
+        if not confirmed:
+            logger.warning('Keys rejected')
+            return abort(403)
+
+        logger.info('Returning credentials...')
+        res = MoneroKey(watch_key=crypto.encodeint(self.creds.view_key_private),
+                        spend_key=crypto.encodeint(self.creds.spend_key_private),
+                        address=self.creds.address)
+
+        return jsonify({'result': True, 'payload': await self.proto_res(res)})
 
     async def on_tx_sign(self, request=None):
         """
@@ -466,6 +502,18 @@ class TrezorServer(cli.BaseCli):
 
         self.poutput('\n')
         self.watch_only_waiter.confirmation(result == 0)
+        self.update_prompt()
+
+    def do_KK(self, line):
+        if not self.key_waiter.in_confirmation:
+            self.poutput('No prompt')
+            return
+
+        result = self.select([(0, 'Confirm'), (1, 'Reject')],
+                             'Do you confirm exporting sec credentials to the client? ')
+
+        self.poutput('\n')
+        self.key_waiter.confirmation(result == 0)
         self.update_prompt()
 
     def do_K(self, line):

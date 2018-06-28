@@ -36,11 +36,6 @@ class TokenProxy(token.TokenLite):
         resp.raise_for_status()
         return resp.json()
 
-    async def watch_only(self):
-        resp = requests.get('%s/watch_only' % self.endpoint)
-        resp.raise_for_status()
-        return resp.json()
-
     async def transfer(self, method, cmd, payload):
         endp = '%s/%s' % (self.endpoint, method)
         req = {'cmd': cmd, 'payload': payload}
@@ -76,6 +71,12 @@ class TokenProxy(token.TokenLite):
         reader = xmrserialize.MemoryReaderWriter(bytearray(resp_bin))
         res = await protobuf.load_message(reader, messages.get_message_from_type(resp['payload']['msg_type']))
         return res
+
+    async def get_view_key(self, msg):
+        return await self.transfer_protobuf('watch_only', msg)
+
+    async def get_keys(self, msg):
+        return await self.transfer_protobuf('get_keys', msg)
 
     async def tsx_sign(self, msg):
         return await self.transfer_protobuf('tx_sign', msg)

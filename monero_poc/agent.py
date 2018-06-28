@@ -132,6 +132,16 @@ class HostAgent(cli.BaseCli):
 
         self.prompt = '[wallet %s%s]: ' % (self.address[:6].decode('ascii'), flags_suffix)
 
+    def token_cmd(self, coro):
+        try:
+            res = self.wait_coro(coro)
+            return res
+
+        except Exception as e:
+            print('Trezor not connected (e: %s)' % e)
+            self.trace_logger.log(e)
+
+
     #
     # Handlers
     #
@@ -147,13 +157,20 @@ class HostAgent(cli.BaseCli):
         print(self.address.decode('ascii'))
 
     def do_ping(self, line):
-        try:
-            pres = self.wait_coro(self.trezor_proxy.ping())
+        pres = self.token_cmd(self.trezor_proxy.ping())
+        if pres:
             print('OK %s' % pres)
 
-        except Exception as e:
-            print('Trezor not connected (e: %s)' % e)
-            self.trace_logger.log(e)
+    def do_get_watch_only(self, line):
+        pres = self.token_cmd(self.agent.get_watch_only())
+        print('View key:  %s' % binascii.hexlify(pres.watch_key).decode('utf8'))
+        print('Address:   %s' % pres.address.decode('utf8'))
+
+    def do_get_keys(self, line):
+        pres = self.token_cmd(self.agent.get_keys())
+        print('View key:  %s' % binascii.hexlify(pres.watch_key).decode('utf8'))
+        print('Spend key: %s' % binascii.hexlify(pres.spend_key).decode('utf8'))
+        print('Address:   %s' % pres.address.decode('utf8'))
 
     def do_balance(self, line):
         res = self.wallet_proxy.balance()
@@ -196,6 +213,10 @@ class HostAgent(cli.BaseCli):
     # Logic
     #
 
+    def set_network_type(self, ntype):
+        self.network_type = ntype
+        self.agent.network_type = ntype
+
     async def is_connected(self):
         """
         Returns True if Trezor is connected
@@ -223,7 +244,7 @@ class HostAgent(cli.BaseCli):
 
             self.priv_view = crypto.b16_to_scalar(res['data']['view_key'].encode('utf8'))
             self.address = res['data']['address'].encode('utf8')
-            self.network_type = res['data']['network_type']
+            self.set_network_type(res['data']['network_type'])
             await self.open_with_keys(self.priv_view, self.address)
 
         except Exception as e:
@@ -406,7 +427,7 @@ class HostAgent(cli.BaseCli):
         priv_view = self.args.view_key.encode('ascii')
         self.priv_view = crypto.b16_to_scalar(priv_view)
         self.address = self.args.address.encode('ascii')
-        self.network_type = monero.NetworkTypes.TESTNET if self.args.testnet else monero.NetworkTypes.MAINNET
+        self.set_network_type(monero.NetworkTypes.TESTNET if self.args.testnet else monero.NetworkTypes.MAINNET)
         self.wallet_file = self.args.watch_wallet
         self.monero_bin = self.args.monero_bin
         await self.open_with_keys(self.priv_view, self.address)
@@ -427,7 +448,7 @@ class HostAgent(cli.BaseCli):
         self.address = js['address'].encode('utf8')
         self.wallet_file = js['wallet_file']
         self.monero_bin = js['monero_bin']
-        self.network_type = js['network_type']
+        self.set_network_type(js['network_type'])
         self.rpc_addr = js['rpc_addr']
 
         if self.wallet_password != js['wallet_password'].encode('utf8'):
