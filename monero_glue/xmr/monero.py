@@ -125,7 +125,7 @@ def get_keccak_writer(sub_writer=None):
     :param sub_writer:
     :return:
     """
-    return xproto.AHashWriter(common.HashWrapper(crypto.get_keccak()), sub_writer=sub_writer)
+    return common.AHashWriter(common.HashWrapper(crypto.get_keccak()), sub_writer=sub_writer)
 
 
 def net_version(network_type=NetworkTypes.MAINNET, is_subaddr=False):
