@@ -14,11 +14,6 @@ from monero_glue.xmr.core.backend.ed25519 import expmod
 from monero_serialize import xmrserialize
 
 
-REPR_XY = 0
-REPR_EXT = 1
-POINT_REPR = REPR_EXT
-
-
 def random_bytes(by):
     """
     Generates X random bytes, returns byte-string
@@ -116,6 +111,12 @@ def encodeint(x):
     return ed25519.encodeint(x)
 
 
+def encodeint_into(x, b):
+    r = ed25519.encodeint(x)
+    for i in range(32):
+        b[i] = r[i]
+
+
 def check_ed25519point(P):
     """
     Simple check if the point has exactly 2 coordinates
@@ -127,25 +128,7 @@ def check_ed25519point(P):
         raise ValueError('P is not on ed25519 curve')
 
 
-def decodepoint_xy(P):
-    """
-    Decodes point bit representation to the point representation
-    :param P:
-    :return:
-    """
-    return ed25519.decodepointcheck(P)
-
-
-def encodepoint_xy(P):
-    """
-    Encodes point to the bit representation
-    :param P:
-    :return:
-    """
-    return ed25519.encodepoint(P)
-
-
-def encodepoint_ext(P):
+def encodepoint(P):
     """
     Encodes point in extended coordinates form (x,y,z,t) to the bit representation
     :param P:
@@ -273,7 +256,7 @@ def check_xy(P):
         raise ValueError('P is not a ed25519 ext point')
 
 
-def point_sub_ext(A, B):
+def point_sub(A, B):
     """
     Subtracts,  A - B points in ext coords
     :param A:
@@ -284,7 +267,7 @@ def point_sub_ext(A, B):
     return ed25519_2.edwards_add(A, invert_ext(B))
 
 
-def point_eq_ext(P, Q):
+def point_eq(P, Q):
     """
     Point equivalence, extended coordinates
     x1 / z1 == x2 / z2  <==>  x1 * z2 == x2 * z1
@@ -317,55 +300,13 @@ def point_eq_xy(P, Q):
 # Point representation
 #
 
-idd = lambda x: x
-decodepoint = idd
-encodepoint = idd
+decodepoint = decodepoint_ext
+isoncurve = isoncurve_ext
+check_point_fmt = check_ext
+scalarmult_base = ed25519_2.scalarmult_B
+scalarmult = ed25519_2.scalarmult
+point_add = ed25519_2.edwards_add
 
-conv_to_xy = idd
-conv_to_ext = idd
-conv_from_xy = idd
-conv_from_ext = idd
-
-isoncurve = idd
-check_point_fmt = idd
-
-scalarmult_base = idd
-scalarmult = lambda x, y: y
-point_add = lambda x, y: y
-point_sub = lambda x, y: y
-point_eq = lambda x, y: y
-
-
-def setup_repr(repr):
-    """
-    Configures point representation
-    :param repr:
-    :return:
-    """
-    global decodepoint, encodepoint, conv_to_xy, conv_to_ext, conv_from_xy, conv_from_ext, \
-        isoncurve, check_point_fmt, scalarmult_base, scalarmult, \
-        point_add, point_sub, point_eq
-
-    decodepoint = decodepoint_xy if repr == REPR_XY else decodepoint_ext
-    encodepoint = encodepoint_xy if repr == REPR_XY else encodepoint_ext
-
-    conv_to_xy = idd if repr == REPR_XY else conv_ext_to_xy
-    conv_to_ext = conv_xy_to_ext if repr == REPR_XY else idd
-
-    conv_from_xy = idd if repr == REPR_XY else conv_xy_to_ext
-    conv_from_ext = conv_ext_to_xy if repr == REPR_XY else idd
-
-    isoncurve = ed25519.isoncurve if repr == REPR_XY else isoncurve_ext
-    check_point_fmt = check_xy if repr == REPR_XY else check_ext
-
-    scalarmult_base = ed25519.scalarmultbase if repr == REPR_XY else ed25519_2.scalarmult_B
-    scalarmult = ed25519.scalarmult if repr == REPR_XY else ed25519_2.scalarmult
-    point_add = ed25519.edwards if repr == REPR_XY else ed25519_2.edwards_add
-    point_sub = ed25519.edwards_Minus if repr == REPR_XY else point_sub_ext
-    point_eq = point_eq_xy if repr == REPR_XY else point_eq_ext
-
-
-setup_repr(POINT_REPR)
 
 #
 # Zmod(2^255 - 19) operations, fe (field element)
@@ -835,10 +776,10 @@ def hash_to_ec(buf):
     rx = rx * rz % q
     rt = 1
 
-    if POINT_REPR == REPR_EXT:
-        rt = ((rx * ry % q) * inv(rz)) % q
+    # extended representation
+    rt = ((rx * ry % q) * inv(rz)) % q
 
-    P = conv_from_ext((rx, ry, rz, rt))
+    P = (rx, ry, rz, rt)
     P8 = scalarmult(P, 8)
     return P8
 
