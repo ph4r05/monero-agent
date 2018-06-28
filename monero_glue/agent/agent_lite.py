@@ -18,7 +18,12 @@ from monero_glue.messages import MoneroRespError, MoneroTsxSign, \
     MoneroTsxSignInput, MoneroTsxSignInputResp, \
     MoneroTsxFinal, MoneroTsxFinalResp, \
     MoneroKeyImageSync, \
-    MoneroKeyImageSyncStep, MoneroKeyImageSyncFinal
+    MoneroKeyImageSyncStep, MoneroKeyImageSyncFinal, \
+    MoneroGetKey, MoneroKey, \
+    MoneroGetWatchKey, MoneroWatchKey
+
+
+DEFAULT_MONERO_BIP44 = [2147483692, 2147483776, 2147483648]  # parse_path(monero.DEFAULT_BIP32_PATH)
 
 
 class TData(object):
@@ -51,7 +56,7 @@ class Agent(object):
     def __init__(self, trezor, address_n=None, network_type=None, **kwargs):
         self.trezor = trezor
         self.ct = None  # type: TData
-        self.address_n = address_n
+        self.address_n = address_n if address_n else DEFAULT_MONERO_BIP44
         self.network_type = network_type
 
     def is_simple(self, rv):
@@ -317,6 +322,24 @@ class Agent(object):
         """
         return self.ct
 
+    async def get_watch_only(self):
+        """
+        Watch only key load
+        :return:
+        """
+        msg = MoneroGetWatchKey(address_n=self.address_n, network_type=self.network_type)
+        res = await self.trezor.get_view_key(msg)
+        return res
+
+    async def get_keys(self):
+        """
+        Keys load
+        :return:
+        """
+        msg = MoneroGetKey(address_n=self.address_n, network_type=self.network_type)
+        res = await self.trezor.get_keys(msg)
+        return res
+
     async def import_outputs(self, outputs):
         """
         Key images sync. Required for hot wallet be able to construct transactions.
@@ -329,6 +352,8 @@ class Agent(object):
         :return:
         """
         ki_export_init = await key_image.generate_commitment(outputs)
+        ki_export_init.address_n = self.address_n
+        ki_export_init.network_type = self.network_type
         t_res = await self.trezor.key_image_sync(MoneroKeyImageSync(init=ki_export_init))
         self.handle_error(t_res)
 
