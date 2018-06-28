@@ -39,7 +39,7 @@ def bytes_fix(msg, pkg=protobuf):
             field_name = field[0]
             if hasattr(msg, field_name):
                 cval = getattr(msg, field_name, None)
-                if field[1] == pkg.BytesType:
+                if cval is not None and field[1] == pkg.BytesType:
                     if field[2] & pkg.FLAG_REPEATED:
                         cval = [bytes(x) for x in cval]
                     else:
