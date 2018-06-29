@@ -1176,12 +1176,12 @@ class TTransactionBuilder(object):
         self.inp_idx += 1
         if self.inp_idx >= self.num_inputs():
             raise ValueError('Invalid ins')
-        if not self.in_memory() and alpha is None:
-            raise ValueError('Inconsistent')
-        if not self.in_memory() and pseudo_out is None:
-            raise ValueError('Inconsistent')
+        if self.use_simple_rct and (not self.in_memory() and alpha is None):
+            raise ValueError('Inconsistent1')
+        if self.use_simple_rct and (not self.in_memory() and pseudo_out is None):
+            raise ValueError('Inconsistent2')
         if self.inp_idx >= 1 and not self.use_simple_rct:
-            raise ValueError('Inconsistent')
+            raise ValueError('Inconsistent3')
 
         inv_idx = self.source_permutation[self.inp_idx]
 
@@ -1190,7 +1190,7 @@ class TTransactionBuilder(object):
         if not common.ct_equal(hmac_vini_comp, hmac_vini):
             raise ValueError('HMAC is not correct')
 
-        if not self.in_memory():
+        if self.use_simple_rct and not self.in_memory():
             pseudo_out_hmac_comp = crypto.compute_hmac(self.hmac_key_txin_comm(inv_idx), pseudo_out)
             if not common.ct_equal(pseudo_out_hmac_comp, pseudo_out_hmac):
                 raise ValueError('HMAC is not correct')
@@ -1203,6 +1203,10 @@ class TTransactionBuilder(object):
             alpha_c = self.input_alphas[self.inp_idx]
             pseudo_out_c = crypto.decodepoint(self.input_pseudo_outs[self.inp_idx])
 
+        else:
+            alpha_c = None
+            pseudo_out_c = None
+            
         # Basic setup, sanity check
         index = src_entr.real_output
         in_sk = xmrtypes.CtKey(dest=self.input_secrets[self.inp_idx], mask=crypto.decodeint(src_entr.mask))
