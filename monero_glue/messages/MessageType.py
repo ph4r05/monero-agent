@@ -132,3 +132,5 @@ MoneroGetWatchKey = 332
 MoneroWatchKey = 333
 MoneroGetKey = 334
 MoneroKey = 335
+MoneroDiag = 336
+MoneroDiagResp = 337

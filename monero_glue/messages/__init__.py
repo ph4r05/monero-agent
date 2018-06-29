@@ -7,6 +7,8 @@ from .MoneroSubAddrIndicesList import MoneroSubAddrIndicesList
 from .MoneroTransferDetails import MoneroTransferDetails
 from .MoneroTsxData import MoneroTsxData
 from .MoneroTxDestinationEntry import MoneroTxDestinationEntry
+from .MoneroDiag import MoneroDiag
+from .MoneroDiagResp import MoneroDiagResp
 from .MoneroAddress import MoneroAddress
 from .MoneroGetAddress import MoneroGetAddress
 from .MoneroGetKey import MoneroGetKey
