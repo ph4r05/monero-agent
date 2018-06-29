@@ -539,7 +539,7 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
-        return crypto.keccak_2hash(self.key_enc + b'cout' + (xmrserialize.dump_uvarint_b(idx) if idx else ''))
+        return crypto.keccak_2hash(self.key_enc + b'cout' + (xmrserialize.dump_uvarint_b(idx) if idx else b''))
 
     async def gen_hmac_vini(self, src_entr, vini, idx):
         """
@@ -728,7 +728,7 @@ class TTransactionBuilder(object):
             raise ValueError('Too many inputs')
         if src_entr.real_output >= len(src_entr.outputs):
             raise ValueError(
-                'real_output index %s bigger than output_keys.size()' % (src_entr.real_output, len(src_entr.outputs)))
+                'real_output index %s bigger than output_keys.size() %s' % (src_entr.real_output, len(src_entr.outputs)))
         self.summary_inputs_money += src_entr.amount
 
         # Secrets derivation
@@ -1248,7 +1248,7 @@ class TTransactionBuilder(object):
 
         # Multisig values returned encrypted, keys returned after finished successfully.
         if self.multi_sig:
-            cout = chacha_poly.encrypt(self.enc_key_cout(), crypto.encodeint(msc))
+            cout = chacha_poly.encrypt_pack(self.enc_key_cout(), crypto.encodeint(msc))
 
         # Final state transition
         if self.inp_idx + 1 == self.num_inputs():
@@ -1274,9 +1274,9 @@ class TTransactionBuilder(object):
         tx_key, salt, rand_mult = misc.compute_tx_key(self.creds.spend_key_private, self.tx_prefix_hash)
 
         key_buff = crypto.encodeint(self.r) + b''.join([crypto.encodeint(x) for x in self.additional_tx_private_keys])
-        tx_enc_keys = chacha_poly.encrypt(tx_key, key_buff)
+        tx_enc_keys = chacha_poly.encrypt_pack(tx_key, key_buff)
 
         return MoneroTsxFinalResp(cout_key=cout_key, salt=salt, rand_mult=rand_mult,
-                                  tx_enc_keys=b''.join(list(tx_enc_keys)))
+                                  tx_enc_keys=tx_enc_keys)
 
 
