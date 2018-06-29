@@ -73,6 +73,8 @@ class HostAgent(cli.BaseCli):
 
         self.trezor_proxy = None  # type: TokenProxy
         self.agent = None  # type: agent_lite.Agent
+        self.token_debug = False
+        self.token_path = None
 
         self.wallet_proxy = wallet_rpc.WalletRpc(self, self.rpc_bind_port, self.rpc_passwd)
 
@@ -207,6 +209,9 @@ class HostAgent(cli.BaseCli):
     def do_sign(self, line):
         self.wait_coro(self.sign_wrap(line))
 
+    def do_reconnect(self, line):
+        self.wait_coro(self.connect())
+
     complete_sign = Cmd.path_complete
 
     #
@@ -263,19 +268,20 @@ class HostAgent(cli.BaseCli):
         if self.args.monero_bin:
             self.monero_bin = self.args.monero_bin
 
-    async def connect(self):
+    async def connect(self, path=None):
         """
         Connects to the trezor
         :return:
         """
-        if self.args.trezor or self.args.trezor_path:
+        if self.args.trezor or self.args.trezor_path or path:
             from monero_glue.trezor import manager as tmanager
-            self.trezor_proxy = tmanager.Trezor(path=self.args.trezor_path)
+            self.trezor_proxy = tmanager.Trezor(path=path if path else self.args.trezor_path, debug=self.token_debug)
 
         else:
             self.trezor_proxy = TokenProxy()
 
-        self.agent = agent_lite.Agent(self.trezor_proxy)
+        ntype = self.agent.network_type if self.agent else self.network_type
+        self.agent = agent_lite.Agent(self.trezor_proxy, network_type=ntype)
 
     async def open_account(self):
         """
