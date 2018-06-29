@@ -46,20 +46,29 @@ class Trezor(token.TokenLite):
             path = os.environ.get('TREZOR_PATH', 'udp:127.0.0.1:21324')
 
         self.debug = debug
-        self.wirelink = get_transport(path)
-        self.client = TrezorClientDebugLink(self.wirelink) if debug else TrezorClient(self.wirelink)
-
-        if debug:
-            self.debuglink = self.wirelink.find_debug()
-            self.client.set_debuglink(self.debuglink)
-
+        self.path = path
         self.msg_conv = MessageConverter(fix_bytes=True)
+        self._connect()
+
+    def _connect(self):
+        self.wirelink = get_transport(self.path)
+        self.client = TrezorClientDebugLink(self.wirelink) if self.debug else TrezorClient(self.wirelink)
+
+        if self.debug:
+            try:
+                self.debuglink = self.wirelink.find_debug()
+                self.client.set_debuglink(self.debuglink)
+            except Exception as e:
+                pass
 
     def _to_tlib(self, msg):
         return self.msg_conv.to_trezorlib(msg)
 
     def _from_tlib(self, msg):
         return self.msg_conv.to_phlib(msg)
+
+    def reconnect(self):
+        self._connect()
 
     def close(self):
         self.client.close()
