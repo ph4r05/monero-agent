@@ -67,6 +67,17 @@ class Trezor(token.TokenLite):
     def session(self):
         return TrezorSession(self.client)
 
+    async def call(self, msg, recode=True):
+        with self.session():
+            if recode:
+                msg = self._to_tlib(msg)
+
+            res = self.client.call(msg)
+
+            if recode:
+                res = self._from_tlib(res)
+            return res
+
     async def ping(self, message=None, **kwargs):
         with self.session():
             return self.client.ping(message if message else 'monero', **kwargs)

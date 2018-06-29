@@ -31,11 +31,6 @@ class TokenProxy(token.TokenLite):
         self.url = 'http://127.0.0.1:46123' if url is None else url
         self.endpoint = '%s/api/v1.0' % self.url
 
-    async def ping(self):
-        resp = requests.get('%s/ping' % self.endpoint)
-        resp.raise_for_status()
-        return resp.json()
-
     async def transfer(self, method, cmd, payload):
         endp = '%s/%s' % (self.endpoint, method)
         req = {'cmd': cmd, 'payload': payload}
@@ -71,6 +66,14 @@ class TokenProxy(token.TokenLite):
         reader = xmrserialize.MemoryReaderWriter(bytearray(resp_bin))
         res = await protobuf.load_message(reader, messages.get_message_from_type(resp['payload']['msg_type']))
         return res
+
+    async def call(self, msg, recode=True):
+        return await self.transfer_protobuf('call', msg)
+
+    async def ping(self, message=None, **kwargs):
+        resp = requests.get('%s/ping' % self.endpoint)
+        resp.raise_for_status()
+        return resp.json()
 
     async def get_view_key(self, msg):
         return await self.transfer_protobuf('watch_only', msg)

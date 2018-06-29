@@ -11,7 +11,7 @@ from monero_glue.protocol.tsx_sign import TsxSigner
 from monero_glue.protocol.error import exc2str
 from monero_glue.messages import MoneroKeyImageSync, MoneroTsxSign, MoneroRespError, \
     MoneroGetWatchKey, MoneroWatchKey, \
-    MoneroGetKey, MoneroKey
+    MoneroGetKey, MoneroKey, MoneroDiagResp
 
 
 class TokenLite(object):
@@ -83,6 +83,12 @@ class TokenLite(object):
 
         pb = await misc.dump_pb_msg(msg)
         await misc.parse_pb_msg(pb, msg.__class__)
+
+    async def call(self, msg, recode=True):
+        return MoneroRespError(reason='unsupported')
+
+    async def ping(self, message=None, **kwargs):
+        return MoneroDiagResp()
 
     async def get_view_key(self, msg: MoneroGetWatchKey):
         if msg.network_type != self.creds.network_type:
