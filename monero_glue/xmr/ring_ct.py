@@ -365,11 +365,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
     image_unp = crypto.ge_frombytes_vartime(image)
     image_pre = crypto.ge_dsm_precomp(image_unp)
 
-    buff_off = len(prefix_hash)
-    buff = bytearray(buff_off + 2*32*len(pubs))
-    common.memcpy(buff, 0, prefix_hash, 0, buff_off)
-    mvbuff = memoryview(buff)
-
+    buff = b'' + prefix_hash
     sum = crypto.sc_0()
     k = crypto.sc_0()
     sig = []
@@ -380,26 +376,18 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
         if i == sec_idx:
             k = crypto.random_scalar()
             tmp3 = crypto.scalarmult_base(k)
-            crypto.encodepoint_into(tmp3, mvbuff[buff_off:buff_off+32])
-            buff_off += 32
-
+            buff += crypto.encodepoint(tmp3)
             tmp3 = crypto.hash_to_ec(crypto.encodepoint(pubs[i]))
             tmp2 = crypto.scalarmult(tmp3, k)
-            crypto.encodepoint_into(tmp2, mvbuff[buff_off:buff_off+32])
-            buff_off += 32
-
+            buff += crypto.encodepoint(tmp2)
         else:
             sig[i] = [crypto.random_scalar(), crypto.random_scalar()]
             tmp3 = crypto.ge_frombytes_vartime(pubs[i])
             tmp2 = crypto.ge_double_scalarmult_base_vartime(sig[i][0], tmp3, sig[i][1])
-            crypto.encodepoint_into(tmp2, mvbuff[buff_off:buff_off+32])
-            buff_off += 32
-
+            buff += crypto.encodepoint(tmp2)
             tmp3 = crypto.hash_to_ec(crypto.encodepoint(tmp3))
             tmp2 = crypto.ge_double_scalarmult_precomp_vartime(sig[i][1], tmp3, sig[i][0], image_pre)
-            crypto.encodepoint_into(tmp2, mvbuff[buff_off:buff_off+32])
-            buff_off += 32
-
+            buff += crypto.encodepoint(tmp2)
             sum = crypto.sc_add(sum, sig[i][0])
 
     h = crypto.hash_to_scalar(buff)
@@ -420,11 +408,7 @@ def check_ring_singature(prefix_hash, image, pubs, sig):
     image_unp = crypto.ge_frombytes_vartime(image)
     image_pre = crypto.ge_dsm_precomp(image_unp)
 
-    buff_off = len(prefix_hash)
-    buff = bytearray(buff_off + 2 * 32 * len(pubs))
-    common.memcpy(buff, 0, prefix_hash, 0, buff_off)
-    mvbuff = memoryview(buff)
-
+    buff = b'' + prefix_hash
     sum = crypto.sc_0()
     for i in range(len(pubs)):
         if crypto.sc_check(sig[i][0]) != 0 or crypto.sc_check(sig[i][1]) != 0:
@@ -432,14 +416,10 @@ def check_ring_singature(prefix_hash, image, pubs, sig):
 
         tmp3 = crypto.ge_frombytes_vartime(pubs[i])
         tmp2 = crypto.ge_double_scalarmult_base_vartime(sig[i][0], tmp3, sig[i][1])
-        crypto.encodepoint_into(tmp2, mvbuff[buff_off:buff_off + 32])
-        buff_off += 32
-
+        buff += crypto.encodepoint(tmp2)
         tmp3 = crypto.hash_to_ec(crypto.encodepoint(pubs[i]))
         tmp2 = crypto.ge_double_scalarmult_precomp_vartime(sig[i][1], tmp3, sig[i][0], image_pre)
-        crypto.encodepoint_into(tmp2, mvbuff[buff_off:buff_off + 32])
-        buff_off += 32
-
+        buff += crypto.encodepoint(tmp2)
         sum = crypto.sc_add(sum, sig[i][0])
 
     h = crypto.hash_to_scalar(buff)
