@@ -6,7 +6,7 @@ from monero_serialize import xmrserialize, xmrtypes
 from monero_glue.hwtoken import misc as tmisc
 from monero_glue.agent import agent_misc
 from monero_glue.protocol.base import TError
-from monero_glue.xmr import monero, common, key_image
+from monero_glue.xmr import monero, common, key_image, ring_ct
 from monero_glue.xmr.enc import chacha_poly
 from monero_glue.old import trezor
 from monero_glue.messages import MoneroRespError, MoneroTsxSign, \
@@ -21,6 +21,11 @@ from monero_glue.messages import MoneroRespError, MoneroTsxSign, \
     MoneroKeyImageSyncStep, MoneroKeyImageSyncFinal, \
     MoneroGetKey, MoneroKey, \
     MoneroGetWatchKey, MoneroWatchKey
+
+
+import logging
+import traceback
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_MONERO_BIP44 = [2147483692, 2147483776, 2147483648]  # parse_path(monero.DEFAULT_BIP32_PATH)
@@ -242,6 +247,16 @@ class Agent(object):
             self.ct.tx_out_rsigs.append(await tmisc.parse_msg(t_res.rsig, xmrtypes.RangeSig()))
             self.ct.tx_out_pk.append(await tmisc.parse_msg(t_res.out_pk, xmrtypes.CtKey()))
             self.ct.tx_out_ecdh.append(await tmisc.parse_msg(t_res.ecdh_info, xmrtypes.EcdhTuple()))
+
+            # Rsig verification
+            try:
+                rsig = self.ct.tx_out_rsigs[-1]
+                if not ring_ct.ver_range(C=None, rsig=rsig):
+                    logger.warning('Rsing not valid')
+
+            except Exception as e:
+                logger.error('Exception rsig: %s' % e)
+                traceback.print_exc()
 
         t_res = await self.trezor.tsx_sign(MoneroTsxSign(all_out_set=MoneroTsxAllOutSet()))  # type: MoneroTsxAllOutSetResp
         self.handle_error(t_res)
