@@ -76,6 +76,12 @@ def ct_equal(a, b):
     return hmac.compare_digest(a, b)
 
 
+def memcpy(dst, dst_from, src, src_from, length):
+    for i in range(length):
+        dst[dst_from + i] = src[src_from + i]
+    return dst
+
+
 def check_permutation(permutation):
     """
     Check permutation sanity
