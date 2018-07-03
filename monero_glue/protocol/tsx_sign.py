@@ -117,8 +117,8 @@ class TsxSigner(object):
         Computes spending secret key, key image. tx.vin[i] + HMAC, Pedersen commitment on amount.
 
         If number of inputs is small, in-memory mode is used = alpha, pseudo_outs are kept in the Trezor.
-        Otherwise pseudo_outs are offloaded with HMAC, alpha is offloaded encrypted under AES-GCM() with
-        key derived for exactly this purpose.
+        Otherwise pseudo_outs are offloaded with HMAC, alpha is offloaded encrypted under Chacha20Poly1305
+        with key derived for exactly this purpose.
 
         :param msg
         :return:
@@ -213,7 +213,8 @@ class TsxSigner(object):
             src_entr = await misc.parse_src_entry(msg.src_entr)
             vini = await misc.parse_vini(msg.vini)
             return await self.tsx_obj.sign_input(src_entr, vini, msg.vini_hmac,
-                                                 msg.pseudo_out, msg.pseudo_out_hmac, msg.alpha)
+                                                 msg.pseudo_out, msg.pseudo_out_hmac,
+                                                 msg.alpha_enc, msg.spend_enc)
         except Exception as e:
             await self.tsx_exc_handler(e)
             return MoneroRespError(exc=exc2str(e))
@@ -435,6 +436,20 @@ class TTransactionBuilder(object):
         """
         return self.input_count <= 1
 
+    def many_inputs(self):
+        """
+        Returns true if number of inputs > 10 (secret spending key offloaded)
+        :return:
+        """
+        return self.input_count >= 10
+
+    def many_outputs(self):
+        """
+        Returns true if number of outputs > 10 (increases number of roundtrips of the protocol)
+        :return:
+        """
+        return self.output_count >= 10
+
     def num_inputs(self):
         """
         Number of inputs
@@ -527,15 +542,23 @@ class TTransactionBuilder(object):
 
     def enc_key_txin_alpha(self, idx):
         """
-        AES-GCM encryption key for alpha[i] used in Pedersen commitment in pseudo_outs[i]
+        Chacha20Poly1305 encryption key for alpha[i] used in Pedersen commitment in pseudo_outs[i]
         :param idx:
         :return:
         """
         return crypto.keccak_2hash(self.key_enc + b'txin-alpha' + xmrserialize.dump_uvarint_b(idx))
 
+    def enc_key_spend(self, idx):
+        """
+        Chacha20Poly1305 encryption key for alpha[i] used in Pedersen commitment in pseudo_outs[i]
+        :param idx:
+        :return:
+        """
+        return crypto.keccak_2hash(self.key_enc + b'txin-spend' + xmrserialize.dump_uvarint_b(idx))
+
     def enc_key_cout(self, idx=None):
         """
-        AES-GCM encryption key for multisig C values from MLASG.
+        Chacha20Poly1305 encryption key for multisig C values from MLASG.
         :param idx:
         :return:
         """
@@ -712,8 +735,8 @@ class TTransactionBuilder(object):
         Computes spending secret key, key image. tx.vin[i] + HMAC, Pedersen commitment on amount.
 
         If number of inputs is small, in-memory mode is used = alpha, pseudo_outs are kept in the Trezor.
-        Otherwise pseudo_outs are offloaded with HMAC, alpha is offloaded encrypted under AES-GCM() with
-        key derived for exactly this purpose.
+        Otherwise pseudo_outs are offloaded with HMAC, alpha is offloaded encrypted under Chacha20Poly1305()
+        with key derived for exactly this purpose.
 
         :param src_entr:
         :type src_entr: xmrtypes.TxSourceEntry
@@ -741,7 +764,6 @@ class TTransactionBuilder(object):
                                                 additional_keys,
                                                 src_entr.real_output_in_tx_index)
         xi, ki, di = secs
-        self.input_secrets.append(xi)
 
         # Construct tx.vin
         ki_real = src_entr.multisig_kLRki.ki if self.multi_sig else ki
@@ -762,6 +784,8 @@ class TTransactionBuilder(object):
         pseudo_out = None
         pseudo_out_hmac = None
         alpha_enc = None
+        spend_enc = None
+
         if self.use_simple_rct:
             alpha, pseudo_out = await self.commitment(src_entr.amount)
             pseudo_out = crypto.encodepoint(pseudo_out)
@@ -774,13 +798,21 @@ class TTransactionBuilder(object):
                 pseudo_out_hmac = crypto.compute_hmac(self.hmac_key_txin_comm(self.inp_idx), pseudo_out)
                 alpha_enc = chacha_poly.encrypt_pack(self.enc_key_txin_alpha(self.inp_idx), crypto.encodeint(alpha))
 
+        if self.many_inputs():
+            spend_enc = chacha_poly.encrypt_pack(self.enc_key_spend(self.inp_idx), crypto.encodeint(xi))
+        else:
+            self.input_secrets.append(xi)
+
         # All inputs done?
         if self.inp_idx + 1 == self.num_inputs():
             await self.tsx_inputs_done()
 
-        return MoneroTsxSetInputResp(vini=await misc.dump_msg(vini), vini_hmac=hmac_vini,
-                                     pseudo_out=pseudo_out, pseudo_out_hmac=pseudo_out_hmac,
-                                     alpha_enc=alpha_enc)
+        return MoneroTsxSetInputResp(vini=await misc.dump_msg(vini),
+                                     vini_hmac=hmac_vini,
+                                     pseudo_out=pseudo_out,
+                                     pseudo_out_hmac=pseudo_out_hmac,
+                                     alpha_enc=alpha_enc,
+                                     spend_enc=spend_enc)
 
     async def tsx_inputs_done(self):
         """
@@ -831,7 +863,8 @@ class TTransactionBuilder(object):
         self.source_permutation = permutation
 
         def swapper(x, y):
-            self.input_secrets[x], self.input_secrets[y] = self.input_secrets[y], self.input_secrets[x]
+            if not self.many_inputs():
+                self.input_secrets[x], self.input_secrets[y] = self.input_secrets[y], self.input_secrets[x]
             if self.in_memory() and self.use_simple_rct:
                 self.input_alphas[x], self.input_alphas[y] = self.input_alphas[y], self.input_alphas[x]
                 self.input_pseudo_outs[x], self.input_pseudo_outs[y] = self.input_pseudo_outs[y], self.input_pseudo_outs[x]
@@ -1155,7 +1188,7 @@ class TTransactionBuilder(object):
 
         return MoneroTsxMlsagDoneResp(full_message_hash=self.full_message)
 
-    async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, pseudo_out_hmac, alpha):
+    async def sign_input(self, src_entr, vini, hmac_vini, pseudo_out, pseudo_out_hmac, alpha_enc, spend_enc):
         """
         Generates a signature for one input.
 
@@ -1166,8 +1199,9 @@ class TTransactionBuilder(object):
         :param pseudo_out: pedersen commitment for the current input, uses alpha as the mask.
         Only in memory offloaded scenario. Tuple containing HMAC, as returned from the Trezor.
         :param pseudo_out_hmac:
-        :param alpha: alpha mask for the current input. Only in memory offloaded scenario,
+        :param alpha_enc: alpha mask for the current input. Only in memory offloaded scenario,
         tuple as returned from the Trezor
+        :param spend_enc
         :return: Generated signature MGs[i]
         """
         self.state.set_signature()
@@ -1176,7 +1210,7 @@ class TTransactionBuilder(object):
         self.inp_idx += 1
         if self.inp_idx >= self.num_inputs():
             raise ValueError('Invalid ins')
-        if self.use_simple_rct and (not self.in_memory() and alpha is None):
+        if self.use_simple_rct and (not self.in_memory() and alpha_enc is None):
             raise ValueError('Inconsistent1')
         if self.use_simple_rct and (not self.in_memory() and pseudo_out is None):
             raise ValueError('Inconsistent2')
@@ -1195,8 +1229,7 @@ class TTransactionBuilder(object):
             if not common.ct_equal(pseudo_out_hmac_comp, pseudo_out_hmac):
                 raise ValueError('HMAC is not correct')
 
-            alpha_c = chacha_poly.decrypt_pack(self.enc_key_txin_alpha(inv_idx), bytes(alpha))
-            alpha_c = crypto.decodeint(alpha_c)
+            alpha_c = crypto.decodeint(chacha_poly.decrypt_pack(self.enc_key_txin_alpha(inv_idx), bytes(alpha_enc)))
             pseudo_out_c = crypto.decodepoint(pseudo_out)
 
         elif self.use_simple_rct:
@@ -1206,17 +1239,23 @@ class TTransactionBuilder(object):
         else:
             alpha_c = None
             pseudo_out_c = None
-            
+
+        # Spending secret
+        if self.many_inputs():
+            input_secret = crypto.decodeint(chacha_poly.decrypt_pack(self.enc_key_spend(inv_idx), bytes(spend_enc)))
+        else:
+            input_secret = self.input_secrets[self.inp_idx]
+
         # Basic setup, sanity check
         index = src_entr.real_output
-        in_sk = xmrtypes.CtKey(dest=self.input_secrets[self.inp_idx], mask=crypto.decodeint(src_entr.mask))
+        in_sk = xmrtypes.CtKey(dest=input_secret, mask=crypto.decodeint(src_entr.mask))
         kLRki = src_entr.multisig_kLRki if self.multi_sig else None
 
         # Private key correctness test
         self.assrt(crypto.point_eq(crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].dest),
-                                   crypto.scalarmult_base(in_sk.dest)))
+                                   crypto.scalarmult_base(in_sk.dest)), 'a1')
         self.assrt(crypto.point_eq(crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].mask),
-                                   crypto.gen_c(in_sk.mask, src_entr.amount)))
+                                   crypto.gen_c(in_sk.mask, src_entr.amount)), 'a2')
 
         # RCT signature
         mg = None
