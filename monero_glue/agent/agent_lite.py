@@ -46,6 +46,7 @@ class TData(object):
         self.tx_out_ecdh = []
         self.source_permutation = []
         self.alphas = []
+        self.spend_encs = []
         self.pseudo_outs = []
         self.couts = []
         self.tx_prefix_hash = None
@@ -177,6 +178,7 @@ class Agent(object):
         tsx_data.account = tx.subaddr_account
         tsx_data.minor_indices = tx.subaddr_indices
         tsx_data.is_multisig = multisig
+        tsx_data.is_bulletproof = False
         tsx_data.exp_tx_prefix_hash = common.defval(exp_tx_prefix_hash, b'')
         tsx_data.use_tx_keys = common.defval(use_tx_keys, [])
         self.ct.tx.unlock_time = tx.unlock_time
@@ -204,6 +206,7 @@ class Agent(object):
             self.ct.tx_in_hmacs.append(t_res.vini_hmac)
             self.ct.pseudo_outs.append((t_res.pseudo_out, t_res.pseudo_out_hmac))
             self.ct.alphas.append(t_res.alpha_enc)
+            self.ct.spend_encs.append(t_res.spend_enc)
 
         # Sort key image
         self.ct.source_permutation = list(range(len(tx.sources)))
@@ -214,6 +217,7 @@ class Agent(object):
             self.ct.tx_in_hmacs[x], self.ct.tx_in_hmacs[y] = self.ct.tx_in_hmacs[y], self.ct.tx_in_hmacs[x]
             self.ct.pseudo_outs[x], self.ct.pseudo_outs[y] = self.ct.pseudo_outs[y], self.ct.pseudo_outs[x]
             self.ct.alphas[x], self.ct.alphas[y] = self.ct.alphas[y], self.ct.alphas[x]
+            self.ct.spend_encs[x], self.ct.spend_encs[y] = self.ct.spend_encs[y], self.ct.spend_encs[x]
             tx.sources[x], tx.sources[y] = tx.sources[y], tx.sources[x]
 
         common.apply_permutation(self.ct.source_permutation, swapper)
@@ -307,7 +311,8 @@ class Agent(object):
                                      self.ct.tx_in_hmacs[idx],
                                      self.ct.pseudo_outs[idx][0] if not in_memory else None,
                                      self.ct.pseudo_outs[idx][1] if not in_memory else None,
-                                     self.ct.alphas[idx])
+                                     self.ct.alphas[idx],
+                                     self.ct.spend_encs[idx])
             t_res = await self.trezor.tsx_sign(MoneroTsxSign(sign_input=msg))  # type: MoneroTsxSignInputResp
             self.handle_error(t_res)
 
