@@ -21,6 +21,7 @@ import json
 import threading
 from cmd2 import Cmd
 
+from monero_glue.messages import MoneroDiag, MoneroDiagResp
 from monero_poc import trace_logger
 from monero_poc import cli
 from monero_poc import misc
@@ -209,8 +210,42 @@ class HostAgent(cli.BaseCli):
     def do_sign(self, line):
         self.wait_coro(self.sign_wrap(line))
 
+    def do_init(self, line):
+        mnemonic12 = 'alcohol woman abuse must during monitor noble actual mixed trade anger aisle'
+        self.trezor_proxy.client.wipe_device()
+        self.trezor_proxy.client.load_device_by_mnemonic(mnemonic=mnemonic12, pin='', passphrase_protection=False,
+                                                         label='ph4test', language='english')
+
+    def do_tdeb(self, line):
+        is_deb = bool(int(line))
+        print('Token debug set to: %s' % is_deb)
+        self.token_debug = is_deb
+
+    def do_switch(self, line):
+        path = 'bridge:web01'
+        if line == 'udp':
+            path = 'udp:127.0.0.1:21324'
+        else:
+            self.token_debug = False
+
+        print('Switching to device: %s' % path)
+        self.token_path = path
+        self.wait_coro(self.connect(path))
+
     def do_reconnect(self, line):
         self.wait_coro(self.connect())
+
+    def do_diag(self, line):
+        diag_code = int(line)
+        print('Diagnosis: %d' % diag_code)
+        msg = MoneroDiag(ins=diag_code)
+        try:
+            resp = self.wait_coro(self.trezor_proxy.call(msg))
+            print(resp)
+
+        except Exception as e:
+            self.trace_logger.log(e)
+            logger.warning(e)
 
     complete_sign = Cmd.path_complete
 
