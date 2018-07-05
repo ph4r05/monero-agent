@@ -472,7 +472,7 @@ def ge_frombytes_vartime_check(point):
     #
     # return 0
 
-    return 0 if tcry.ge25519_fromfe_check(point) == 1 else -1
+    return 0 if tcry.ge25519_check(point) == 1 else -1
 
 
 def ge_frombytes_vartime(point):
