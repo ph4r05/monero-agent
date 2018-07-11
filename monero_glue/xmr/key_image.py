@@ -29,7 +29,7 @@ async def yield_key_image_data(outputs):
         out_key = td.m_tx.vout[td.m_internal_output_index].target.key
         cres = MoneroTransferDetails(out_key=out_key, tx_pub_key=tx_pub_key,
                                      additional_tx_pub_keys=additional_pub_keys.data if additional_pub_keys else None,
-                                     m_internal_output_index=td.m_internal_output_index)
+                                     internal_output_index=td.m_internal_output_index)
         res.append(cres)
     return res
 
@@ -46,7 +46,7 @@ def compute_hash(rr):
     buff += rr.tx_pub_key
     if rr.additional_tx_pub_keys:
         buff += b''.join(rr.additional_tx_pub_keys)
-    buff += xmrserialize.dump_uvarint_b(rr.m_internal_output_index)
+    buff += xmrserialize.dump_uvarint_b(rr.internal_output_index)
 
     return crypto.cn_fast_hash(buff)
 
