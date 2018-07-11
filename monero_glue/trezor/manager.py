@@ -96,11 +96,6 @@ class Trezor(token.TokenLite):
             res = self.client.call(self._to_tlib(msg))
             return self._from_tlib(res)
 
-    async def get_keys(self, msg):
-        with self.session():
-            res = self.client.call(self._to_tlib(msg))
-            return self._from_tlib(res)
-
     async def tsx_sign(self, msg):
         with self.session():
             res = self.client.call(self._to_tlib(msg))

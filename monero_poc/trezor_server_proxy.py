@@ -78,9 +78,6 @@ class TokenProxy(token.TokenLite):
     async def get_view_key(self, msg):
         return await self.transfer_protobuf('watch_only', msg)
 
-    async def get_keys(self, msg):
-        return await self.transfer_protobuf('get_keys', msg)
-
     async def tsx_sign(self, msg):
         return await self.transfer_protobuf('tx_sign', msg)
 

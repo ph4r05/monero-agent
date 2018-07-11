@@ -95,13 +95,6 @@ class TokenLite(object):
             return MoneroRespError(reason='InvalidNetworkType')
         return MoneroWatchKey(watch_key=crypto.encodepoint(self.creds.view_key_private), address=self.creds.address)
 
-    async def get_keys(self, msg: MoneroGetKey):
-        if msg.network_type != self.creds.network_type:
-            return MoneroRespError(reason='InvalidNetworkType')
-        return MoneroKey(watch_key=crypto.encodepoint(self.creds.view_key_private),
-                         spend_key=crypto.encodepoint(self.creds.spend_key_private),
-                         address=self.creds.address)
-
     async def tsx_sign(self, msg: MoneroTsxSign):
         if self.tsx_obj is None or msg.init:
             self.tsx_obj = TsxSigner(ctx=self, iface=self.iface, creds=self.creds)
