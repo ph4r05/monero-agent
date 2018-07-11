@@ -27,7 +27,9 @@
 #either expressed or implied, of the FreeBSD Project.
 
 import hashlib
+
 from . import ed25519
+
 
 def sha512(s):
     return hashlib.sha512(s).digest()
@@ -140,4 +142,3 @@ def point_decompress(s):
         return None
     else:
         return x, y, 1, x*y % p
-

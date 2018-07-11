@@ -4,7 +4,6 @@
 
 import os
 
-
 EC_BACKEND_PY = 0
 EC_BACKEND_TREZOR = 1
 EC_BACKEND = EC_BACKEND_TREZOR
@@ -46,6 +45,3 @@ def set_ec_backend_force(x):
         raise ValueError('Could not override Environment variable EC_BACKEND_FORCE')
 
     EC_BACKEND_FORCE = x
-
-
-

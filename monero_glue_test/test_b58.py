@@ -6,7 +6,6 @@ import binascii
 import unittest
 
 import aiounittest
-
 from monero_glue.misc import b58
 
 
@@ -33,4 +32,3 @@ class Base58Test(aiounittest.AsyncTestCase):
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
-

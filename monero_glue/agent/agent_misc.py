@@ -39,5 +39,3 @@ class TrezorReturnedError(AgentError):
 class TrezorNotRunning(AgentError):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-

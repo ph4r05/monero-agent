@@ -76,5 +76,3 @@ class TokenInterface(object):
 
 def get_iface(ctx=None):
     return TokenInterface(ctx)
-
-

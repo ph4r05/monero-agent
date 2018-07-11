@@ -3,17 +3,14 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import hmac
+
 from Crypto.Protocol.KDF import PBKDF2
-
-from monero_serialize import xmrtypes
 from monero_glue.xmr.core.ec_base import *
-
-#from monero_glue.xmr.core.backend import trezor_crypto as tcryr
+from monero_serialize import xmrtypes
 from trezor_crypto import trezor_cfunc as tcryr
 
-
-#from monero_glue.misc.devel.call_tracker import CallTracker
-#tcry = CallTracker(tcryr, print_on_end=True)
+# from monero_glue.misc.devel.call_tracker import CallTracker
+# tcry = CallTracker(tcryr, print_on_end=True)
 tcry = tcryr
 
 
@@ -713,6 +710,3 @@ def get_backend():
     if BACKEND_OBJ is None:
         BACKEND_OBJ = TcryECBackend()
     return BACKEND_OBJ
-
-
-

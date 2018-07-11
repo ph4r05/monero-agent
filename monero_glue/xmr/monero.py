@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from monero_serialize import protobuf as xproto
-from monero_serialize import xmrtypes, xmrserialize
-from monero_glue.xmr import mlsag2, ring_ct, crypto, common
-from monero_glue.xmr.core.tsx_helper import *
-from monero_glue.misc import b58_mnr
 import binascii
 import struct
 
+from monero_glue.misc import b58_mnr
+from monero_glue.xmr import common, crypto, mlsag2, ring_ct
+from monero_glue.xmr.core.tsx_helper import *
+from monero_serialize import protobuf as xproto
+from monero_serialize import xmrserialize, xmrtypes
 
 DISPLAY_DECIMAL_POINT = 12
 
@@ -926,4 +926,3 @@ def generate_monero_keys(seed):
     hash = crypto.cn_fast_hash(crypto.encodeint(spend_sec))
     view_sec, view_pub = generate_keys(crypto.decodeint(hash))
     return spend_sec, spend_pub, view_sec, view_pub
-

@@ -1,8 +1,8 @@
 import ctypes as ct
 import os
+
 from . import trezor_types as tt
 from .trezor_types import *
-
 
 # Loaded library instance
 CLIB = None
@@ -1060,4 +1060,3 @@ def gen_range_proof(amount, last_mask):
     CLIB.xmr_gen_range_sig(ct.byref(rsig), ct.byref(C), mask, amount, last_mask_ptr)
 
     return C, mask, rsig
-

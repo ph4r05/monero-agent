@@ -3,15 +3,15 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 
-from monero_glue.xmr import monero, crypto, common, key_image
-from monero_glue.xmr.enc import chacha_poly
+from monero_glue.messages import (MoneroExportedKeyImage,
+                                  MoneroKeyImageExportInit,
+                                  MoneroKeyImageExportInitResp,
+                                  MoneroKeyImageSyncFinalResp,
+                                  MoneroKeyImageSyncStep,
+                                  MoneroKeyImageSyncStepResp, MoneroRespError)
 from monero_glue.trezor import wrapper as twrap
-
-from monero_glue.messages import MoneroExportedKeyImage, \
-    MoneroKeyImageExportInit, MoneroKeyImageExportInitResp, \
-    MoneroKeyImageSyncStep, MoneroKeyImageSyncStepResp, \
-    MoneroKeyImageSyncFinalResp, \
-    MoneroRespError
+from monero_glue.xmr import common, crypto, key_image, monero
+from monero_glue.xmr.enc import chacha_poly
 
 
 class KeyImageSync(object):
@@ -90,6 +90,3 @@ class KeyImageSync(object):
             raise ValueError('Invalid hash')
 
         return MoneroKeyImageSyncFinalResp(enc_key=self.enc_key)
-
-
-

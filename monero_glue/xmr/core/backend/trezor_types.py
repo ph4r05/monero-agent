@@ -1,6 +1,5 @@
 import ctypes as ct
 
-
 FE = ct.c_uint32 * 10
 MODM = ct.c_uint32 * 9
 KEY_BUFF = ct.c_byte * 32
@@ -161,5 +160,3 @@ class struct_anon_7(ct.Structure):
 
 
 Hasher = struct_anon_7
-
-

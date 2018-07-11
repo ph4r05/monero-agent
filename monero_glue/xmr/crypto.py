@@ -9,22 +9,18 @@
 # https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-00#section-4
 # https://github.com/monero-project/research-lab
 
-import sys
+import binascii
 import operator
+import sys
 
 from Crypto.Random import random as rand
-import binascii
-
-from monero_glue.xmr.core.backend import ed25519_2
-from monero_glue.xmr.core.backend.ed25519 import b, q, l, d
-from monero_glue.xmr.core.backend import keccak2, ed25519
-from monero_glue.xmr.core.pycompat import *
-
-from monero_serialize import xmrserialize
 from monero_glue.xmr import common
-
+from monero_glue.xmr.core.backend import ed25519, ed25519_2, keccak2
+from monero_glue.xmr.core.backend.ed25519 import b, d, l, q
 from monero_glue.xmr.core.ec import *
 from monero_glue.xmr.core.ec_conv import *
+from monero_glue.xmr.core.pycompat import *
+from monero_serialize import xmrserialize
 
 
 def b16_to_scalar(bts):
@@ -115,5 +111,3 @@ def check_signature(data, c, r, pub):
     tmp_c = hash_to_scalar(buff)
     res = sc_sub(tmp_c, c)
     return not sc_isnonzero(res)
-
-

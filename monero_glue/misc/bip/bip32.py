@@ -1,34 +1,22 @@
-from binascii import hexlify
-from binascii import unhexlify
-from hashlib import sha256
-from hashlib import sha512
 import hmac
-
-from monero_glue.xmr import crypto
-from monero_glue.misc import b58 as base58
-from monero_glue.misc.bip import bip39
+import time
+from binascii import hexlify, unhexlify
+from hashlib import sha256, sha512
 from os import urandom
+
+import six
 from ecdsa import SECP256k1
 from ecdsa.ecdsa import Public_key as _ECDSA_Public_key
 from ecdsa.ellipticcurve import INFINITY
-import six
-import time
+from monero_glue.misc import b58 as base58
+from monero_glue.misc.bip import bip39
+from monero_glue.xmr import crypto
 
-# import all the networks
+from .keys import (PrivateKey, PublicKey, PublicPair,
+                   incompatible_network_exception_factory)
 from .network import *
-
-from .keys import incompatible_network_exception_factory
-from .keys import PrivateKey
-from .keys import PublicKey
-from .keys import PublicPair
-from .utils import chr_py2
-from .utils import ensure_bytes
-from .utils import ensure_str
-from .utils import hash160
-from .utils import is_hex_string
-from .utils import long_or_int
-from .utils import long_to_hex
-from .utils import memoize
+from .utils import (chr_py2, ensure_bytes, ensure_str, hash160, is_hex_string,
+                    long_or_int, long_to_hex, memoize)
 
 
 class Wallet(object):
@@ -763,4 +751,3 @@ class KeyMismatchError(ValueError):
 
 class InfinityPointException(Exception):
     pass
-

@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import os
-import getpass
 import asyncio
-import sys
-import time
+import getpass
 import json
 import logging
+import os
+import sys
+import time
+
 from blessed import Terminal
 from cmd2 import Cmd
 
-from . import trace_logger
-from . import misc
+from . import misc, trace_logger
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,3 @@ class BaseCli(Cmd):
 
     do_q = quit
     do_Q = quit
-
-
-
-

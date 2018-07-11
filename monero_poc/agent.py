@@ -8,31 +8,29 @@
 # Instead, protobuf messages will be defined and parsed to avoid malicious pickling.
 #
 
+import argparse
+import asyncio
+import binascii
+import json
+import logging
 import os
 import re
-import asyncio
-import argparse
-import binascii
-import logging
-import coloredlogs
 import sys
-import time
-import json
 import threading
-from cmd2 import Cmd
+import time
 
-from monero_glue.messages import DebugMoneroDiag, DebugMoneroDiagResp
-from monero_poc import trace_logger
-from monero_poc import cli
-from monero_poc import misc
-from monero_poc.trezor_server_proxy import TokenProxy
-
-from monero_glue.hwtoken import token
-from monero_glue.agent import agent_misc, agent_lite
-from monero_glue.xmr import wallet, monero, crypto, common, wallet_rpc
-from monero_glue.protocol import messages
 from monero_glue import protobuf
-from monero_serialize import xmrtypes, xmrserialize
+from monero_glue.agent import agent_lite, agent_misc
+from monero_glue.hwtoken import token
+from monero_glue.messages import DebugMoneroDiag, DebugMoneroDiagResp
+from monero_glue.protocol import messages
+from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc
+from monero_poc import cli, misc, trace_logger
+from monero_poc.trezor_server_proxy import TokenProxy
+from monero_serialize import xmrserialize, xmrtypes
+
+import coloredlogs
+from cmd2 import Cmd
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
@@ -998,5 +996,3 @@ if __name__ == '__main__':
     loop.run_until_complete(main())
     # loop.run_forever()
     loop.close()
-
-

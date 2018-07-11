@@ -30,5 +30,3 @@ class CallTracker(object):
 
     def call_tracker_get_call_stats(self):
         return self.t
-
-

@@ -200,5 +200,3 @@ def b58decode(data_hex=None, data_bin=None):
         data = decode_block(enc[(full_block_count*__fullEncodedBlockSize):(full_block_count*__fullEncodedBlockSize+last_block_size)], data, full_block_count * __fullBlockSize)
 
     return bytes(data)
-
-

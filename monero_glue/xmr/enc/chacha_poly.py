@@ -47,6 +47,3 @@ def encrypt_pack(key, plaintext, associated_data=None):
 
 def decrypt_pack(key, ciphertext):
     return decrypt(key, ciphertext[:12], ciphertext[12:], None)
-
-
-

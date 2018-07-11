@@ -4,9 +4,9 @@
 
 
 import os
-from trezorlib import coins
-from trezorlib import tx_api
-from trezorlib.client import TrezorClientDebugLink, TrezorClient
+
+from trezorlib import coins, tx_api
+from trezorlib.client import TrezorClient, TrezorClientDebugLink
 from trezorlib.transport import get_transport
 
 mnemonic12 = 'alcohol woman abuse must during monitor noble actual mixed trade anger aisle'
@@ -26,5 +26,3 @@ client.load_device_by_mnemonic(mnemonic=mnemonic12, pin='', passphrase_protectio
 
 client.transport.session_end()
 client.close()
-
-

@@ -8,11 +8,11 @@
 # Instead, protobuf messages will be defined and parsed to avoid malicious pickling.
 #
 
-import os
 import logging
+import os
+
 import requests
 from requests.auth import HTTPDigestAuth
-
 
 logger = logging.getLogger(__name__)
 
@@ -88,4 +88,3 @@ class WalletRpc(object):
 
     def refresh(self, params=None):
         return self.request('refresh', params)
-

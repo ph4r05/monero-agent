@@ -4,7 +4,8 @@
 
 import argparse
 import binascii
-from monero_glue.xmr import monero, crypto
+
+from monero_glue.xmr import crypto, monero
 
 
 def main():
@@ -39,5 +40,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-

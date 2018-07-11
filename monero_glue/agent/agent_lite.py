@@ -2,29 +2,30 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from monero_serialize import xmrserialize, xmrtypes
-from monero_glue.hwtoken import misc as tmisc
-from monero_glue.agent import agent_misc
-from monero_glue.protocol.base import TError
-from monero_glue.xmr import monero, common, key_image, ring_ct
-from monero_glue.xmr.enc import chacha_poly
-from monero_glue.old import trezor
-from monero_glue.messages import MoneroRespError, MoneroTsxSign, \
-    MoneroTsxInit, MoneroTsxInitResp, \
-    MoneroTsxSetInput, MoneroTsxSetInputResp, \
-    MoneroTsxInputsPermutation, MoneroTsxInputVini, MoneroTsxSetOutput, MoneroTsxSetOutputResp, \
-    MoneroTsxAllOutSet, MoneroTsxAllOutSetResp, \
-    MoneroTsxMlsagDone, MoneroTsxMlsagDoneResp, \
-    MoneroTsxSignInput, MoneroTsxSignInputResp, \
-    MoneroTsxFinal, MoneroTsxFinalResp, \
-    MoneroKeyImageSync, \
-    MoneroKeyImageSyncStep, MoneroKeyImageSyncFinal, \
-    MoneroGetKey, MoneroKey, \
-    MoneroGetWatchKey, MoneroWatchKey
-
-
 import logging
 import traceback
+
+from monero_glue.agent import agent_misc
+from monero_glue.hwtoken import misc as tmisc
+from monero_glue.messages import (MoneroGetKey, MoneroGetWatchKey, MoneroKey,
+                                  MoneroKeyImageSync, MoneroKeyImageSyncFinal,
+                                  MoneroKeyImageSyncStep, MoneroRespError,
+                                  MoneroTsxAllOutSet, MoneroTsxAllOutSetResp,
+                                  MoneroTsxFinal, MoneroTsxFinalResp,
+                                  MoneroTsxInit, MoneroTsxInitResp,
+                                  MoneroTsxInputsPermutation,
+                                  MoneroTsxInputVini, MoneroTsxMlsagDone,
+                                  MoneroTsxMlsagDoneResp, MoneroTsxSetInput,
+                                  MoneroTsxSetInputResp, MoneroTsxSetOutput,
+                                  MoneroTsxSetOutputResp, MoneroTsxSign,
+                                  MoneroTsxSignInput, MoneroTsxSignInputResp,
+                                  MoneroWatchKey)
+from monero_glue.old import trezor
+from monero_glue.protocol.base import TError
+from monero_glue.xmr import common, key_image, monero, ring_ct
+from monero_glue.xmr.enc import chacha_poly
+from monero_serialize import xmrserialize, xmrtypes
+
 logger = logging.getLogger(__name__)
 
 
@@ -402,4 +403,3 @@ class Agent(object):
             final_res.append((ki_bin, (plain[32:64], plain[64:])))
 
         return final_res
-

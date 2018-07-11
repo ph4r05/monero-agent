@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+import functools
+import hmac
+
 from Crypto.Random import get_random_bytes
 from Crypto.Random import random as rand
-
-import hmac
-import functools
 
 
 class XmrException(Exception):
@@ -189,5 +189,3 @@ def chunk(arr, size=1):
         if len(c) != size:
             break
     return res
-
-

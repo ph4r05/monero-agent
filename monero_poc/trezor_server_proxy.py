@@ -8,16 +8,16 @@
 # Instead, protobuf messages will be defined and parsed to avoid malicious pickling.
 #
 
-import os
 import binascii
 import logging
-import requests
+import os
 import pickle
 
+import requests
+from monero_glue import protobuf
 from monero_glue.hwtoken import token
 from monero_glue.protocol import messages
-from monero_glue import protobuf
-from monero_serialize import xmrtypes, xmrserialize
+from monero_serialize import xmrserialize, xmrtypes
 
 logger = logging.getLogger(__name__)
 
@@ -83,4 +83,3 @@ class TokenProxy(token.TokenLite):
 
     async def key_image_sync(self, msg, *args, **kwargs):
         return await self.transfer_protobuf('ki_sync', msg)
-

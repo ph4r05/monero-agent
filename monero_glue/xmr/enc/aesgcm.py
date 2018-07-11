@@ -45,5 +45,3 @@ def decrypt(key, iv, ciphertext, tag, associated_data=None):
 
     decrypted_data = cipher.decrypt_and_verify(ciphertext, tag)
     return decrypted_data
-
-

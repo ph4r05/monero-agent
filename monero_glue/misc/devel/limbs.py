@@ -7,8 +7,8 @@
 #
 
 import math
-from monero_glue.xmr import crypto
 
+from monero_glue.xmr import crypto
 
 LIMBS = 9
 LIMB_SIZE = 30
@@ -142,5 +142,3 @@ print_limbs(limbs)
 limbs_consts(0, limbs=limbs)
 
 print_limbs(to_limbs(crypto.l-1))
-
-

@@ -4,10 +4,12 @@
 
 import collections
 
-from monero_serialize import xmrtypes, xmrserialize
-from monero_glue.xmr import mlsag2, ring_ct, crypto, common, monero
-from monero_glue.messages import MoneroTransferDetails, MoneroSubAddrIndicesList, MoneroExportedKeyImage, \
-    MoneroKeyImageExportInit
+from monero_glue.messages import (MoneroExportedKeyImage,
+                                  MoneroKeyImageExportInit,
+                                  MoneroSubAddrIndicesList,
+                                  MoneroTransferDetails)
+from monero_glue.xmr import common, crypto, mlsag2, monero, ring_ct
+from monero_serialize import xmrserialize, xmrtypes
 
 
 async def yield_key_image_data(outputs):
@@ -97,8 +99,3 @@ async def export_key_image(creds, subaddresses, td):
                                        additional_tx_pub_keys, td.m_internal_output_index)
 
     return ki, sig
-
-
-
-
-

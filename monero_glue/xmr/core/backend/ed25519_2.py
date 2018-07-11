@@ -34,7 +34,6 @@ import hashlib
 import operator
 import sys
 
-
 __version__ = "1.0.dev0"
 
 
@@ -317,4 +316,3 @@ if __name__ == "__main__":
 
 
     pass
-

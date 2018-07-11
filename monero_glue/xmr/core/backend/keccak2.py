@@ -1,7 +1,7 @@
+import functools
+from copy import deepcopy
 from math import log
 from operator import xor
-from copy import deepcopy
-import functools
 
 # The Keccak-f round constants.
 RoundConstants = [

@@ -3,8 +3,8 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import unittest
-import aiounittest
 
+import aiounittest
 from monero_glue.xmr import crypto
 from monero_glue.xmr.enc import aesgcm
 
@@ -36,5 +36,3 @@ class AesTest(aiounittest.AsyncTestCase):
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
-
-

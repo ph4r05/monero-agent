@@ -125,4 +125,3 @@ def b58decode_check(v):
         raise ValueError("Invalid checksum")
 
     return result
-

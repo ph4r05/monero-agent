@@ -8,35 +8,33 @@
 # Instead, protobuf messages will be defined and parsed to avoid malicious pickling.
 #
 
-import sys
-import os
-import time
-import json
-import asyncio
 import argparse
+import asyncio
 import binascii
-import logging
-import traceback
-import threading
-import coloredlogs
-import pickle
 import collections
+import json
+import logging
+import os
+import pickle
+import sys
+import threading
+import time
+import traceback
 
-import eventlet
-from eventlet import wsgi
-from flask import Flask, jsonify, request, abort
-
-from monero_serialize import xmrserialize
-from monero_poc import cli
-from monero_poc import misc
 from monero_glue import protobuf
-from monero_glue.hwtoken import token, iface
-from monero_glue.xmr import monero, crypto, wallet
-from monero_glue.xmr.core import mnemonic
+from monero_glue.hwtoken import iface, token
+from monero_glue.messages import MoneroKey, MoneroWatchKey
 from monero_glue.misc.bip import bip32
 from monero_glue.protocol import messages
-from monero_glue.messages import MoneroKey, MoneroWatchKey
+from monero_glue.xmr import crypto, monero, wallet
+from monero_glue.xmr.core import mnemonic
+from monero_poc import cli, misc
+from monero_serialize import xmrserialize
 
+import coloredlogs
+import eventlet
+from eventlet import wsgi
+from flask import Flask, abort, jsonify, request
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
@@ -773,5 +771,3 @@ if __name__ == '__main__':
     loop.run_until_complete(main())
     # loop.run_forever()
     loop.close()
-
-

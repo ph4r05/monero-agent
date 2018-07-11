@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import hmac
 import hashlib
+import hmac
+
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 from Crypto.Random import random as rand
-
-from monero_glue.xmr.core.ec_base import *
-from monero_glue.xmr.core.backend.ed25519_2 import inv
 from monero_glue.xmr.core.backend.ed25519 import expmod
+from monero_glue.xmr.core.backend.ed25519_2 import inv
+from monero_glue.xmr.core.ec_base import *
 from monero_serialize import xmrserialize
 
 
@@ -931,5 +931,3 @@ def get_backend():
     if BACKEND_OBJ is None:
         BACKEND_OBJ = PyECBackend()
     return BACKEND_OBJ
-
-

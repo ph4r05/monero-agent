@@ -2,24 +2,25 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import sys
-import os
-import re
-import time
-import json
 import asyncio
 import binascii
-import signal
-import logging
-import random
-import string
-import traceback
-import threading
-import subprocess
 import collections
-import shellescape
+import json
+import logging
+import os
+import random
+import re
+import signal
+import string
+import subprocess
+import sys
+import threading
+import time
+import traceback
 from shlex import quote
-from sarge import run, Capture, Feeder
+
+import shellescape
+from sarge import Capture, Feeder, run
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +224,3 @@ def add_readlines(lns, buff):
         return buff
     buff += [x.decode('utf8') for x in lns]
     return buff
-
-
-

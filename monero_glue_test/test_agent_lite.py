@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import os
-import unittest
-import pkg_resources
-import aiounittest
 import binascii
 import collections
-
-from monero_serialize import xmrserialize, xmrtypes, xmrboost
-from monero_glue.hwtoken import token
-from monero_glue.agent import agent_lite
-from monero_glue.xmr import wallet, monero, crypto
+import os
+import unittest
 import zlib
+
+import aiounittest
+import pkg_resources
+from monero_glue.agent import agent_lite
+from monero_glue.hwtoken import token
+from monero_glue.xmr import crypto, monero, wallet
+from monero_serialize import xmrboost, xmrserialize, xmrtypes
 
 
 class AgentLiteTest(aiounittest.AsyncTestCase):
@@ -254,5 +254,3 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
-
-

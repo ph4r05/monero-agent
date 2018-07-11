@@ -4,24 +4,24 @@
 
 
 import os
-from trezorlib import coins
-from trezorlib import tx_api
-from trezorlib.client import TrezorClientDebugLink, TrezorClient
-from trezorlib.transport import get_transport
-from trezorlib.tools import parse_path
-from trezorlib import monero, protobuf
-from trezorlib import messages as proto
 
-from monero_serialize import xmrserialize
+from monero_glue.hwtoken import misc, token
+from monero_glue.messages import (MoneroExportedKeyImage, MoneroGetAddress,
+                                  MoneroGetKey, MoneroGetWatchKey,
+                                  MoneroKeyImageExportInit,
+                                  MoneroKeyImageExportInitResp,
+                                  MoneroKeyImageSyncFinalResp,
+                                  MoneroKeyImageSyncStep,
+                                  MoneroKeyImageSyncStepResp, MoneroRespError)
 from monero_glue.protocol.messages import MessageConverter
-from monero_glue.hwtoken import token, misc
-from monero_glue.messages import MoneroExportedKeyImage, \
-    MoneroKeyImageExportInit, MoneroKeyImageExportInitResp, \
-    MoneroKeyImageSyncStep, MoneroKeyImageSyncStepResp, \
-    MoneroKeyImageSyncFinalResp, \
-    MoneroGetWatchKey, MoneroGetAddress, \
-    MoneroGetKey, \
-    MoneroRespError
+from monero_serialize import xmrserialize
+
+from trezorlib import coins
+from trezorlib import messages as proto
+from trezorlib import monero, protobuf, tx_api
+from trezorlib.client import TrezorClient, TrezorClientDebugLink
+from trezorlib.tools import parse_path
+from trezorlib.transport import get_transport
 
 
 class TrezorSession(object):
@@ -105,5 +105,3 @@ class Trezor(token.TokenLite):
         with self.session():
             res = self.client.call(self._to_tlib(msg))
             return self._from_tlib(res)
-
-

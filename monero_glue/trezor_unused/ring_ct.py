@@ -3,8 +3,9 @@
 # Author: https://github.com/monero-project/mininero
 # Author: Dusan Klinec, ph4r05, 2018
 
-from apps.monero.xmr import crypto
 import gc
+
+from apps.monero.xmr import crypto
 
 
 def key_zero_vector(rows):
@@ -360,4 +361,3 @@ def export_key_image(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_ke
             raise ValueError('Signature error')
 
     return ki, sig
-

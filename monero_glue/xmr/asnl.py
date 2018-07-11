@@ -5,6 +5,7 @@
 
 
 import logging
+
 from monero_glue.xmr import crypto
 
 logger = logging.getLogger(__name__)
@@ -106,4 +107,3 @@ def ver_asnl(P1, P2, L1, s2, s):
     else:
         logger.warning('Didn\'t verify L1: %s, L1p: %s' % (crypto.encodepoint(LHS), crypto.encodepoint(RHS)))
         return 0
-

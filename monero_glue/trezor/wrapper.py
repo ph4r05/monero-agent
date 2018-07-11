@@ -22,4 +22,3 @@ async def monero_get_creds(ctx, address_n=None, network_type=None):
 
 def get_interface(ctx):
     return ctx.get_iface()
-

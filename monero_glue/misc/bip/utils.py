@@ -1,7 +1,7 @@
-from functools import wraps
 import hashlib
-from hashlib import sha256
 import re
+from functools import wraps
+from hashlib import sha256
 
 import six
 

@@ -9,9 +9,8 @@ import unittest
 
 import aiounittest
 import pkg_resources
+from monero_glue.xmr import crypto, mlsag2, monero, ring_ct
 from monero_serialize import xmrserialize, xmrtypes
-
-from monero_glue.xmr import monero, mlsag2, ring_ct, crypto
 
 
 class MoneroTest(aiounittest.AsyncTestCase):
@@ -143,5 +142,3 @@ class MoneroTest(aiounittest.AsyncTestCase):
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
-
-

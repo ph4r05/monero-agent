@@ -5,7 +5,6 @@
 import unittest
 
 import aiounittest
-
 from monero_glue.xmr import crypto
 from monero_glue.xmr.enc import chacha
 
@@ -57,5 +56,3 @@ class ChachaTest(aiounittest.AsyncTestCase):
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
-
-

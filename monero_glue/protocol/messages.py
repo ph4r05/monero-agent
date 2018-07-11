@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from monero_glue import protobuf
-from monero_glue import messages
+from monero_glue import messages, protobuf
 from monero_glue.messages import *
 
 
@@ -111,4 +110,3 @@ class MessageConverter(object):
             msg = bytes_fix(msg, protobuf)
         res = self._transform(msg, protobuf, self.tlib_msgs)
         return res
-

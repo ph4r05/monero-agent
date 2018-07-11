@@ -1,26 +1,16 @@
-from binascii import hexlify
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 from collections import namedtuple
 from hashlib import sha256
 
-from monero_glue.misc import b58 as base58
-from ecdsa import SigningKey
-from ecdsa import VerifyingKey
-from ecdsa import SECP256k1
+import six
+from ecdsa import SECP256k1, SigningKey, VerifyingKey
 from ecdsa.ellipticcurve import Point as _ECDSA_Point
 from ecdsa.numbertheory import square_root_mod_prime
-import six
+from monero_glue.misc import b58 as base58
 
 from .network import BitcoinMainNet
-from .utils import chr_py2
-from .utils import ensure_bytes
-from .utils import ensure_str
-from .utils import hash160
-from .utils import is_hex_string
-from .utils import long_or_int
-from .utils import long_to_hex
-from .utils import memoize
-
+from .utils import (chr_py2, ensure_bytes, ensure_str, hash160, is_hex_string,
+                    long_or_int, long_to_hex, memoize)
 
 PublicPair = namedtuple("PublicPair", ["x", "y"])
 

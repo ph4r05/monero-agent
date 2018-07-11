@@ -2,16 +2,16 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+import binascii
 import os
 import unittest
-import pkg_resources
-import aiounittest
-import binascii
-
-from monero_serialize import xmrserialize, xmrtypes
-from monero_glue.xmr import monero, crypto
-from monero_glue.old import agent, trezor
 import zlib
+
+import aiounittest
+import pkg_resources
+from monero_glue.old import agent, trezor
+from monero_glue.xmr import crypto, monero
+from monero_serialize import xmrserialize, xmrtypes
 
 
 class AgentTest(aiounittest.AsyncTestCase):
@@ -100,5 +100,3 @@ class AgentTest(aiounittest.AsyncTestCase):
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
-
-

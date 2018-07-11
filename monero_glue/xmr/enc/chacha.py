@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from Crypto.Cipher import ChaCha20
 import pycryptonight
+from Crypto.Cipher import ChaCha20
 from monero_glue.xmr import crypto
 
 
@@ -84,5 +84,3 @@ def decrypt(key, ciphertext):
     nonce, ciptext = ciphertext[:8], ciphertext[8:]
     cipher = ChaCha20.new(key=key, nonce=nonce)
     return cipher.decrypt(ciptext)
-
-

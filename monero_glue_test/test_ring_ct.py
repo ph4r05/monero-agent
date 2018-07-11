@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import unittest
 import binascii
+import unittest
 
 import aiounittest
-
-from monero_glue.xmr import monero, ring_ct, crypto
+from monero_glue.xmr import crypto, monero, ring_ct
 
 
 class RingCtTest(aiounittest.AsyncTestCase):
@@ -94,5 +93,3 @@ class RingCtTest(aiounittest.AsyncTestCase):
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
-
-

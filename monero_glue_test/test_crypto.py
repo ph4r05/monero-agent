@@ -5,8 +5,7 @@
 import unittest
 
 import aiounittest
-
-from monero_glue.xmr import crypto, common
+from monero_glue.xmr import common, crypto
 from monero_glue.xmr.core import ec_py
 
 
@@ -203,5 +202,3 @@ class CryptoTest(aiounittest.AsyncTestCase):
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
-
-

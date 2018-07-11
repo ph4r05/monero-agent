@@ -1,7 +1,6 @@
 import sys
 
-from setuptools import setup
-from setuptools import find_packages
+from setuptools import find_packages, setup
 
 version = '1.4.0'
 

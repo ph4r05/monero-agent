@@ -2,15 +2,13 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import unittest
 import binascii
 import logging
+import unittest
 
 import aiounittest
-
-from monero_glue.xmr import crypto, common
+from monero_glue.xmr import common, crypto
 from monero_glue.xmr.core import ec_py
-
 
 logger = logging.getLogger(__name__)
 
@@ -54,5 +52,3 @@ class EcTrezorTest(aiounittest.AsyncTestCase):
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
-
-

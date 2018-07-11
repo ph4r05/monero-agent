@@ -3,16 +3,16 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import base64
-import unittest
-import requests
-import aiounittest
 import binascii
+import unittest
 
-from monero_serialize import xmrserialize, xmrtypes
-from monero_glue.hwtoken import token
+import aiounittest
+import requests
 from monero_glue.agent import agent_lite
-from monero_glue.xmr import monero, crypto
+from monero_glue.hwtoken import token
 from monero_glue.old import agent, trezor
+from monero_glue.xmr import crypto, monero
+from monero_serialize import xmrserialize, xmrtypes
 
 
 class AgentTest(aiounittest.AsyncTestCase):
@@ -118,5 +118,3 @@ class AgentTest(aiounittest.AsyncTestCase):
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
-
-

@@ -9,14 +9,13 @@
 # https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-00#section-4
 # https://github.com/monero-project/research-lab
 
-import sys
-import operator
 import binascii
+import operator
+import sys
 
 from Crypto.Random import random as rand
-from monero_glue.xmr.core.backend import ed25519_2
-from monero_glue.xmr.core.backend.ed25519 import b, q, l, d
-from monero_glue.xmr.core.backend import keccak2, ed25519
+from monero_glue.xmr.core.backend import ed25519, ed25519_2, keccak2
+from monero_glue.xmr.core.backend.ed25519 import b, d, l, q
 from monero_glue.xmr.core.pycompat import *
 
 # py constants
@@ -185,4 +184,3 @@ class ECBackendBase(object):
 
     def has_rangeproof_bulletproof(self):
         return False
-

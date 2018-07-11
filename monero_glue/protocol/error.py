@@ -8,5 +8,3 @@ import traceback
 
 def exc2str(exc):
     return traceback.format_exc()
-
-

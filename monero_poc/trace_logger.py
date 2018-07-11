@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
+import hashlib
 import logging
 import traceback
-import hashlib
-
 
 logger = logging.getLogger(__name__)
 
@@ -47,4 +46,3 @@ class Tracelogger(object):
         :return: 
         """
         self._logger = logger_obj if logger_obj is not None else logger
-

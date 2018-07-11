@@ -5,8 +5,8 @@
 
 import logging
 
+from monero_glue.xmr import asnl, common, crypto, mlsag2, monero
 from monero_serialize import xmrtypes
-from monero_glue.xmr import mlsag2, crypto, common, asnl, monero
 
 logger = logging.getLogger(__name__)
 ATOMS = 64
@@ -451,4 +451,3 @@ def export_key_image(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_ke
             raise ValueError('Signature error')
 
     return ki, sig
-

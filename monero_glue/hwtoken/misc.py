@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from monero_serialize import xmrtypes, xmrserialize
+from monero_glue import protobuf
+from monero_glue.messages import (MoneroAccountPublicAddress, MoneroTsxData,
+                                  MoneroTxDestinationEntry)
 from monero_glue.xmr import common, crypto
 from monero_glue.xmr.monero import TsxData
-from monero_glue.messages import MoneroTxDestinationEntry, MoneroTsxData, MoneroAccountPublicAddress
-from monero_glue import protobuf
+from monero_serialize import xmrserialize, xmrtypes
 
 
 class TrezorError(Exception):
@@ -134,6 +135,3 @@ async def dump_pb_msg(msg):
     writer = xmrserialize.MemoryReaderWriter()
     await protobuf.dump_message(writer, msg)
     return bytes(writer.buffer)
-
-
-

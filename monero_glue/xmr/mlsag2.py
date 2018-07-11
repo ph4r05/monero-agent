@@ -5,7 +5,8 @@
 # see https://eprint.iacr.org/2015/1098.pdf
 
 import logging
-from monero_glue.xmr import crypto, common
+
+from monero_glue.xmr import common, crypto
 from monero_serialize import xmrtypes
 
 logger = logging.getLogger(__name__)
@@ -709,4 +710,3 @@ def ver_rct_mg_simple(message, mg, pubs, C):
         M[i][1] = crypto.point_sub(crypto.decodepoint(pubs[i].mask), C)
 
     return ver_mlsag_ext(message, M, mg, rows)
-

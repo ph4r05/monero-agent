@@ -1715,6 +1715,3 @@ def checksum_test(wlist, unique_prefix_len=UNIQUE_PREFIX_LEN):
     trimmed_checksum = checksum[:unique_prefix_len] if len(checksum) > unique_prefix_len else checksum
     trimmed_last_word = last_word[:unique_prefix_len] if len(last_word) > unique_prefix_len else last_word
     return trimmed_checksum == trimmed_last_word
-
-
-

@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from monero_serialize import xmrtypes, xmrserialize
-from monero_glue.xmr import mlsag2, ring_ct, crypto, common
-from monero_glue.misc import b58_mnr
 import binascii
 import struct
+
+from monero_glue.misc import b58_mnr
+from monero_glue.xmr import common, crypto, mlsag2, ring_ct
+from monero_serialize import xmrserialize, xmrtypes
 
 
 async def parse_extra_fields(extra_buff):
@@ -198,4 +199,3 @@ async def add_additional_tx_pub_keys_to_extra(tx_extra, additional_pub_keys=None
     await ar.variant(pubs_msg, xmrtypes.TxExtraField)
     tx_extra += bytes(rw.buffer)
     return tx_extra
-

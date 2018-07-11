@@ -3,8 +3,8 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import logging
-from . import ec_picker
 
+from . import ec_picker
 
 logger = logging.getLogger(__name__)
 backend = ec_picker.get_ec_backend()
@@ -26,4 +26,3 @@ elif backend == ec_picker.EC_BACKEND_TREZOR:
 
 else:
     raise ValueError('Unknown EC backend: %s' % backend)
-

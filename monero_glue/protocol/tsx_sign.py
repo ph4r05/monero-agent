@@ -2,23 +2,26 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from monero_serialize import xmrtypes, xmrserialize
-from monero_glue.xmr.monero import TsxData, classify_subaddresses
 from monero_glue.hwtoken import misc
-from monero_glue.xmr import monero, mlsag2, ring_ct, crypto, common
-from monero_glue.xmr.enc import chacha_poly
-from monero_glue.trezor import wrapper as twrap
+from monero_glue.messages import (MoneroRctSig, MoneroRespError,
+                                  MoneroTsxAllOutSet, MoneroTsxAllOutSetResp,
+                                  MoneroTsxData, MoneroTsxFinal,
+                                  MoneroTsxFinalResp, MoneroTsxInit,
+                                  MoneroTsxInitResp,
+                                  MoneroTsxInputsPermutation,
+                                  MoneroTsxInputsPermutationResp,
+                                  MoneroTsxInputVini, MoneroTsxInputViniResp,
+                                  MoneroTsxMlsagDone, MoneroTsxMlsagDoneResp,
+                                  MoneroTsxSetInput, MoneroTsxSetInputResp,
+                                  MoneroTsxSetOutput, MoneroTsxSetOutputResp,
+                                  MoneroTsxSign, MoneroTsxSignInput,
+                                  MoneroTsxSignInputResp)
 from monero_glue.protocol.error import exc2str
-from monero_glue.messages import MoneroRespError, MoneroTsxSign, \
-    MoneroTsxInit, MoneroTsxInitResp, \
-    MoneroTsxData, MoneroTsxSetInput, MoneroTsxSetInputResp, \
-    MoneroTsxInputsPermutation, MoneroTsxInputsPermutationResp, \
-    MoneroTsxInputVini, MoneroTsxInputViniResp, \
-    MoneroTsxSetOutput, MoneroTsxSetOutputResp, \
-    MoneroTsxAllOutSet, MoneroTsxAllOutSetResp, \
-    MoneroTsxMlsagDone, MoneroTsxMlsagDoneResp, \
-    MoneroTsxSignInput, MoneroTsxSignInputResp, \
-    MoneroTsxFinal, MoneroTsxFinalResp, MoneroRctSig
+from monero_glue.trezor import wrapper as twrap
+from monero_glue.xmr import common, crypto, mlsag2, monero, ring_ct
+from monero_glue.xmr.enc import chacha_poly
+from monero_glue.xmr.monero import TsxData, classify_subaddresses
+from monero_serialize import xmrserialize, xmrtypes
 
 
 class TsxSigner(object):
@@ -1321,5 +1324,3 @@ class TTransactionBuilder(object):
 
         return MoneroTsxFinalResp(cout_key=cout_key, salt=salt, rand_mult=rand_mult,
                                   tx_enc_keys=tx_enc_keys)
-
-

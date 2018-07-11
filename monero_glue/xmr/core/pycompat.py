@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import sys
 import operator
-
+import sys
 
 # Useful for very coarse version differentiation.
 PY3 = sys.version_info[0] == 3
@@ -23,5 +22,3 @@ else:
 
     def intlist2bytes(l):
         return b"".join(chr(c) for c in l)
-
-
