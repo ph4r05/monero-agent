@@ -13,7 +13,7 @@ class MoneroTransferDetails(p.MessageType):
         1: ('out_key', p.BytesType, 0),
         2: ('tx_pub_key', p.BytesType, 0),
         3: ('additional_tx_pub_keys', p.BytesType, p.FLAG_REPEATED),
-        4: ('m_internal_output_index', p.UVarintType, 0),
+        4: ('internal_output_index', p.UVarintType, 0),
     }
 
     def __init__(
@@ -21,9 +21,9 @@ class MoneroTransferDetails(p.MessageType):
         out_key: bytes = None,
         tx_pub_key: bytes = None,
         additional_tx_pub_keys: List[bytes] = None,
-        m_internal_output_index: int = None,
+        internal_output_index: int = None,
     ) -> None:
         self.out_key = out_key
         self.tx_pub_key = tx_pub_key
         self.additional_tx_pub_keys = additional_tx_pub_keys if additional_tx_pub_keys is not None else []
-        self.m_internal_output_index = m_internal_output_index
+        self.internal_output_index = internal_output_index
