@@ -145,5 +145,5 @@ MoneroGetAddress = 530
 MoneroAddress = 531
 MoneroGetWatchKey = 532
 MoneroWatchKey = 533
-MoneroDiag = 536
-MoneroDiagResp = 537
+DebugMoneroDiag = 536
+DebugMoneroDiagResp = 537
