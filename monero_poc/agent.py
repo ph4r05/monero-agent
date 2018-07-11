@@ -210,8 +210,12 @@ class HostAgent(cli.BaseCli):
 
     def do_init(self, line):
         mnemonic12 = 'alcohol woman abuse must during monitor noble actual mixed trade anger aisle'
+        mnemonic24 = 'permit universe parent weapon amused modify essay borrow tobacco budget walnut ' \
+                     'lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple'
+        
+        mnemonic = mnemonic12 if len(line) == 0 or int(line) == 0 else mnemonic24
         self.trezor_proxy.client.wipe_device()
-        self.trezor_proxy.client.load_device_by_mnemonic(mnemonic=mnemonic12, pin='', passphrase_protection=False,
+        self.trezor_proxy.client.load_device_by_mnemonic(mnemonic=mnemonic, pin='', passphrase_protection=False,
                                                          label='ph4test', language='english')
 
     def do_tdeb(self, line):
