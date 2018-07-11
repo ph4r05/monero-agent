@@ -5,20 +5,38 @@ from operator import xor
 
 # The Keccak-f round constants.
 RoundConstants = [
-    0x0000000000000001, 0x0000000000008082, 0x800000000000808A, 0x8000000080008000,
-    0x000000000000808B, 0x0000000080000001, 0x8000000080008081, 0x8000000000008009,
-    0x000000000000008A, 0x0000000000000088, 0x0000000080008009, 0x000000008000000A,
-    0x000000008000808B, 0x800000000000008B, 0x8000000000008089, 0x8000000000008003,
-    0x8000000000008002, 0x8000000000000080, 0x000000000000800A, 0x800000008000000A,
-    0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008
+    0x0000000000000001,
+    0x0000000000008082,
+    0x800000000000808A,
+    0x8000000080008000,
+    0x000000000000808B,
+    0x0000000080000001,
+    0x8000000080008081,
+    0x8000000000008009,
+    0x000000000000008A,
+    0x0000000000000088,
+    0x0000000080008009,
+    0x000000008000000A,
+    0x000000008000808B,
+    0x800000000000008B,
+    0x8000000000008089,
+    0x8000000000008003,
+    0x8000000000008002,
+    0x8000000000000080,
+    0x000000000000800A,
+    0x800000008000000A,
+    0x8000000080008081,
+    0x8000000000008080,
+    0x0000000080000001,
+    0x8000000080008008,
 ]
 
 RotationConstants = [
-    [0, 1, 62, 28, 27, ],
-    [36, 44, 6, 55, 20, ],
-    [3, 10, 43, 25, 39, ],
-    [41, 45, 15, 21, 8, ],
-    [18, 2, 61, 56, 14, ]
+    [0, 1, 62, 28, 27],
+    [36, 44, 6, 55, 20],
+    [3, 10, 43, 25, 39],
+    [41, 45, 15, 21, 8],
+    [18, 2, 61, 56, 14],
 ]
 
 Masks = [(1 << i) - 1 for i in range(65)]
@@ -86,12 +104,14 @@ def keccak_f(state):
         B = zero()
         for x in rangeW:
             for y in rangeH:
-                B[y % W][(2 * x + 3 * y) % H] = rol(A[x][y], RotationConstants[y][x], lanew)
+                B[y % W][(2 * x + 3 * y) % H] = rol(
+                    A[x][y], RotationConstants[y][x], lanew
+                )
 
         # chi
         for x in rangeW:
             for y in rangeH:
-                A[x][y] = B[x][y] ^ ((~ B[(x + 1) % W][y]) & B[(x + 2) % W][y])
+                A[x][y] = B[x][y] ^ ((~B[(x + 1) % W][y]) & B[(x + 2) % W][y])
 
         # iota
         A[0][0] ^= RC
@@ -109,6 +129,7 @@ class KeccakState(object):
 
     The state is stored as a 5x5 table of integers.
     """
+
     W = 5
     H = 5
 
@@ -130,14 +151,14 @@ class KeccakState(object):
         rows = []
 
         def fmt(x):
-            return '%016x' % x
+            return "%016x" % x
 
         for y in KeccakState.rangeH:
             row = []
             for x in KeccakState.rangeW:
                 row.append(fmt(st[x][y]))
-            rows.append(' '.join(row))
-        return '\n'.join(rows)
+            rows.append(" ".join(row))
+        return "\n".join(rows)
 
     @staticmethod
     def lane2bytes(s, w):
@@ -165,14 +186,14 @@ class KeccakState(object):
         """
         Converts a sequence of byte values to a string.
         """
-        return bytes(bb)  #''.join(map(chr, bb))
+        return bytes(bb)  # ''.join(map(chr, bb))
 
     @staticmethod
     def str2bytes(ss):
         """
         Converts a string to a sequence of byte values.
         """
-        return bytes(ss)   #map(ord, ss)
+        return bytes(ss)  # map(ord, ss)
 
     def __init__(self, bitrate, b):
         self.bitrate = bitrate
@@ -201,14 +222,14 @@ class KeccakState(object):
 
         for y in self.rangeH:
             for x in self.rangeW:
-                self.s[x][y] ^= KeccakState.bytes2lane(bb[i:i + 8])
+                self.s[x][y] ^= KeccakState.bytes2lane(bb[i : i + 8])
                 i += 8
 
     def squeeze(self):
         """
         Returns the bitrate-length prefix of the state to be output.
         """
-        return self.get_bytes()[:self.bitrate_bytes]
+        return self.get_bytes()[: self.bitrate_bytes]
 
     def get_bytes(self):
         """
@@ -219,7 +240,7 @@ class KeccakState(object):
         for y in self.rangeH:
             for x in self.rangeW:
                 v = KeccakState.lane2bytes(self.s[x][y], self.lanew)
-                out[i:i + 8] = v
+                out[i : i + 8] = v
                 i += 8
         return out
 
@@ -231,7 +252,7 @@ class KeccakState(object):
         i = 0
         for y in self.rangeH:
             for x in self.rangeW:
-                self.s[x][y] = KeccakState.bytes2lane(bb[i:i + 8])
+                self.s[x][y] = KeccakState.bytes2lane(bb[i : i + 8])
                 i += 8
 
 
@@ -254,8 +275,8 @@ class KeccakSponge(object):
         self.buffer += KeccakState.str2bytes(s)
 
         while len(self.buffer) >= self.state.bitrate_bytes:
-            self.absorb_block(self.buffer[:self.state.bitrate_bytes])
-            self.buffer = self.buffer[self.state.bitrate_bytes:]
+            self.absorb_block(self.buffer[: self.state.bitrate_bytes])
+            self.buffer = self.buffer[self.state.bitrate_bytes :]
 
     def absorb_final(self):
         padded = self.buffer + self.padfn(len(self.buffer), self.state.bitrate_bytes)
@@ -282,9 +303,9 @@ class KeccakHash(object):
     def __init__(self, bitrate_bits, capacity_bits, output_bits):
         # our in-absorption sponge. this is never given padding
         assert bitrate_bits + capacity_bits in (25, 50, 100, 200, 400, 800, 1600)
-        self.sponge = KeccakSponge(bitrate_bits, bitrate_bits + capacity_bits,
-                                   multirate_padding,
-                                   keccak_f)
+        self.sponge = KeccakSponge(
+            bitrate_bits, bitrate_bits + capacity_bits, multirate_padding, keccak_f
+        )
 
         # hashlib interface members
         assert output_bits % 8 == 0
@@ -292,10 +313,12 @@ class KeccakHash(object):
         self.block_size = bits2bytes(bitrate_bits)
 
     def __repr__(self):
-        inf = (self.sponge.state.bitrate,
-               self.sponge.state.b - self.sponge.state.bitrate,
-               self.digest_size * 8)
-        return '<KeccakHash with r=%d, c=%d, image=%d>' % inf
+        inf = (
+            self.sponge.state.bitrate,
+            self.sponge.state.b - self.sponge.state.bitrate,
+            self.digest_size * 8,
+        )
+        return "<KeccakHash with r=%d, c=%d, image=%d>" % inf
 
     def copy(self):
         return deepcopy(self)
@@ -310,7 +333,7 @@ class KeccakHash(object):
         return KeccakState.bytes2str(digest)
 
     def hexdigest(self):
-        return self.digest().encode('hex')
+        return self.digest().encode("hex")
 
     @staticmethod
     def preset(bitrate_bits, capacity_bits, output_bits):

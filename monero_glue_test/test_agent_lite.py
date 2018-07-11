@@ -27,7 +27,9 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         Testing tx signature, simple, multiple inputs
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns01.txt'))
+        unsigned_tx_c = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_uns01.txt")
+        )
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
 
         await self.tx_sign_unsigned(unsigned_tx)
@@ -37,7 +39,9 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         Testing tx signature, one input. non-simple RCT
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns02.txt'))
+        unsigned_tx_c = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_uns02.txt")
+        )
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
         await self.tx_sign_unsigned(unsigned_tx)
 
@@ -46,7 +50,9 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         Testing tx signature, one input. non-simple RCT
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns03.txt'))
+        unsigned_tx_c = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_uns03.txt")
+        )
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
         await self.tx_sign_unsigned(unsigned_tx)
 
@@ -55,7 +61,9 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         Testing tx signature, one input. non-simple RCT
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns04.txt'))
+        unsigned_tx_c = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_uns04.txt")
+        )
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
         await self.tx_sign_unsigned(unsigned_tx)
 
@@ -64,7 +72,9 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
-        pending_hex = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_pending01.txt'))
+        pending_hex = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_pending01.txt")
+        )
         pending_bin = binascii.unhexlify(pending_hex)
         await self.tx_sign_pending_boost(pending_bin)
 
@@ -73,7 +83,9 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
-        pending_hex = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_pending02.txt'))
+        pending_hex = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_pending02.txt")
+        )
         pending_bin = binascii.unhexlify(pending_hex)
         await self.tx_sign_pending_boost(pending_bin)
 
@@ -82,10 +94,14 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns_enc01.txt'))
+        unsigned_tx_c = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_uns_enc01.txt")
+        )
 
         creds = self.get_creds()
-        unsigned_tx = await wallet.load_unsigned_tx(creds.view_key_private, unsigned_tx_c)
+        unsigned_tx = await wallet.load_unsigned_tx(
+            creds.view_key_private, unsigned_tx_c
+        )
         await self.tx_sign_unsigned_msg(unsigned_tx)
 
     async def test_tx_sign_uns01_boost_full_2dest_sub(self):
@@ -93,10 +109,14 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns_enc02.txt'))
+        unsigned_tx_c = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_uns_enc02.txt")
+        )
 
         creds = self.get_creds()
-        unsigned_tx = await wallet.load_unsigned_tx(creds.view_key_private, unsigned_tx_c)
+        unsigned_tx = await wallet.load_unsigned_tx(
+            creds.view_key_private, unsigned_tx_c
+        )
         await self.tx_sign_unsigned_msg(unsigned_tx)
 
     async def tx_sign_unsigned_msg(self, unsigned_tx):
@@ -166,8 +186,12 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
 
         await ar1.message(tx_obj, msg_type=xmrtypes.Transaction)
         extras = await monero.parse_extra_fields(tx_obj.extra)
-        tx_pub = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraPubKey).pub_key
-        additional_pub_keys = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraAdditionalPubKeys)
+        tx_pub = monero.find_tx_extra_field_by_type(
+            extras, xmrtypes.TxExtraPubKey
+        ).pub_key
+        additional_pub_keys = monero.find_tx_extra_field_by_type(
+            extras, xmrtypes.TxExtraAdditionalPubKeys
+        )
         num_outs = len(tx_obj.vout)
         num_received = 0
 
@@ -180,27 +204,44 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
             for account in range(0, 5):
                 monero.compute_subaddresses(creds, account, range(5), wallet_subs)
 
-            derivation = monero.generate_key_derivation(crypto.decodepoint(tx_pub), creds.view_key_private)
+            derivation = monero.generate_key_derivation(
+                crypto.decodepoint(tx_pub), creds.view_key_private
+            )
             additional_derivations = []
             if additional_pub_keys and additional_pub_keys.data:
                 for x in additional_pub_keys.data:
                     additional_derivations.append(
-                        monero.generate_key_derivation(crypto.decodepoint(x), creds.view_key_private))
+                        monero.generate_key_derivation(
+                            crypto.decodepoint(x), creds.view_key_private
+                        )
+                    )
 
             for ti, to in enumerate(tx_obj.vout):
-                tx_scan_info = monero.check_acc_out_precomp(to, wallet_subs, derivation, additional_derivations, ti)
+                tx_scan_info = monero.check_acc_out_precomp(
+                    to, wallet_subs, derivation, additional_derivations, ti
+                )
                 if not tx_scan_info.received:
                     continue
 
                 num_received += 1
-                tx_scan_info = monero.scan_output(creds, tx_obj, ti, tx_scan_info, tx_money_got_in_outs, outs, False)
+                tx_scan_info = monero.scan_output(
+                    creds, tx_obj, ti, tx_scan_info, tx_money_got_in_outs, outs, False
+                )
 
                 # Check spending private key correctness
-                self.assertTrue(crypto.point_eq(crypto.decodepoint(tx_obj.rct_signatures.outPk[ti].mask),
-                                                crypto.gen_c(tx_scan_info.mask, tx_scan_info.amount)))
+                self.assertTrue(
+                    crypto.point_eq(
+                        crypto.decodepoint(tx_obj.rct_signatures.outPk[ti].mask),
+                        crypto.gen_c(tx_scan_info.mask, tx_scan_info.amount),
+                    )
+                )
 
-                self.assertTrue(crypto.point_eq(crypto.decodepoint(tx_obj.vout[ti].target.key),
-                                                crypto.scalarmult_base(tx_scan_info.in_ephemeral)))
+                self.assertTrue(
+                    crypto.point_eq(
+                        crypto.decodepoint(tx_obj.vout[ti].target.key),
+                        crypto.scalarmult_base(tx_scan_info.in_ephemeral),
+                    )
+                )
 
         # All outputs have to be successfully received
         self.assertEqual(num_outs, num_received)
@@ -211,9 +252,14 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         :return:
         """
         return monero.AccountCreds.new_wallet(
-            priv_view_key=crypto.b16_to_scalar(b'4ce88c168e0f5f8d6524f712d5f8d7d83233b1e7a2a60b5aba5206cc0ea2bc08'),
-            priv_spend_key=crypto.b16_to_scalar(b'f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a'),
-            network_type=monero.NetworkTypes.TESTNET)
+            priv_view_key=crypto.b16_to_scalar(
+                b"4ce88c168e0f5f8d6524f712d5f8d7d83233b1e7a2a60b5aba5206cc0ea2bc08"
+            ),
+            priv_spend_key=crypto.b16_to_scalar(
+                b"f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a"
+            ),
+            network_type=monero.NetworkTypes.TESTNET,
+        )
 
     def get_creds_01(self):
         """
@@ -221,9 +267,14 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         :return:
         """
         return monero.AccountCreds.new_wallet(
-            priv_view_key=crypto.b16_to_scalar(b'42ba20adb337e5eca797565be11c9adb0a8bef8c830bccc2df712535d3b8f608'),
-            priv_spend_key=crypto.b16_to_scalar(b'b0ef6bd527b9b23b9ceef70dc8b4cd1ee83ca14541964e764ad23f5151204f0f'),
-            network_type=monero.NetworkTypes.TESTNET)
+            priv_view_key=crypto.b16_to_scalar(
+                b"42ba20adb337e5eca797565be11c9adb0a8bef8c830bccc2df712535d3b8f608"
+            ),
+            priv_spend_key=crypto.b16_to_scalar(
+                b"b0ef6bd527b9b23b9ceef70dc8b4cd1ee83ca14541964e764ad23f5151204f0f"
+            ),
+            network_type=monero.NetworkTypes.TESTNET,
+        )
 
     def get_creds_02(self):
         """
@@ -231,9 +282,14 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         :return:
         """
         return monero.AccountCreds.new_wallet(
-            priv_view_key=crypto.b16_to_scalar(b'9e7aba8ae9ee134e5d5464d9145a4db26793d7411af7d06f20e755cb2a5ad50f'),
-            priv_spend_key=crypto.b16_to_scalar(b'283d8bab1aeaee8f8b5aed982fc894c67d3e03db9006e488321c053f5183310d'),
-            network_type=monero.NetworkTypes.TESTNET)
+            priv_view_key=crypto.b16_to_scalar(
+                b"9e7aba8ae9ee134e5d5464d9145a4db26793d7411af7d06f20e755cb2a5ad50f"
+            ),
+            priv_spend_key=crypto.b16_to_scalar(
+                b"283d8bab1aeaee8f8b5aed982fc894c67d3e03db9006e488321c053f5183310d"
+            ),
+            network_type=monero.NetworkTypes.TESTNET,
+        )
 
     def init_trezor(self):
         """

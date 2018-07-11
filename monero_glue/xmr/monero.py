@@ -49,23 +49,45 @@ class TsxData(xmrserialize.MessageType):
     TsxData, initial input to the transaction processing.
     Serialization structure for easy hashing.
     """
-    __slots__ = ('version', 'payment_id', 'unlock_time', 'outputs', 'change_dts', 'num_inputs', 'mixin', 'fee',
-                 'account', 'minor_indices', 'is_multisig', 'exp_tx_prefix_hash', 'use_tx_keys', 'is_bulletproof')
+
+    __slots__ = (
+        "version",
+        "payment_id",
+        "unlock_time",
+        "outputs",
+        "change_dts",
+        "num_inputs",
+        "mixin",
+        "fee",
+        "account",
+        "minor_indices",
+        "is_multisig",
+        "exp_tx_prefix_hash",
+        "use_tx_keys",
+        "is_bulletproof",
+    )
     MFIELDS = [
-        ('version', xmrserialize.UVarintType),
-        ('payment_id', xmrserialize.BlobType),
-        ('unlock_time', xmrserialize.UVarintType),
-        ('outputs', xmrserialize.ContainerType, xmrtypes.TxDestinationEntry),
-        ('change_dts', xmrtypes.TxDestinationEntry),
-        ('num_inputs', xmrserialize.UVarintType),
-        ('mixin', xmrserialize.UVarintType),
-        ('fee', xmrserialize.UVarintType),
-        ('account', xmrserialize.UVarintType),
-        ('minor_indices', xmrserialize.ContainerType, xmrserialize.UVarintType),
-        ('is_multisig', xmrserialize.BoolType),
-        ('exp_tx_prefix_hash', xmrserialize.BlobType),                    # expected prefix hash, bail on error
-        ('use_tx_keys', xmrserialize.ContainerType, xmrtypes.SecretKey),  # use this secret key, multisig
-        ('is_bulletproof', xmrserialize.BoolType),
+        ("version", xmrserialize.UVarintType),
+        ("payment_id", xmrserialize.BlobType),
+        ("unlock_time", xmrserialize.UVarintType),
+        ("outputs", xmrserialize.ContainerType, xmrtypes.TxDestinationEntry),
+        ("change_dts", xmrtypes.TxDestinationEntry),
+        ("num_inputs", xmrserialize.UVarintType),
+        ("mixin", xmrserialize.UVarintType),
+        ("fee", xmrserialize.UVarintType),
+        ("account", xmrserialize.UVarintType),
+        ("minor_indices", xmrserialize.ContainerType, xmrserialize.UVarintType),
+        ("is_multisig", xmrserialize.BoolType),
+        (
+            "exp_tx_prefix_hash",
+            xmrserialize.BlobType,
+        ),  # expected prefix hash, bail on error
+        (
+            "use_tx_keys",
+            xmrserialize.ContainerType,
+            xmrtypes.SecretKey,
+        ),  # use this secret key, multisig
+        ("is_bulletproof", xmrserialize.BoolType),
     ]
 
     def __init__(self, payment_id=None, outputs=None, change_dts=None, **kwargs):
@@ -76,10 +98,12 @@ class TsxData(xmrserialize.MessageType):
         self.fee = 0
         self.account = 0
         self.minor_indices = [0]
-        self.outputs = outputs if outputs else []  # type: list[xmrtypes.TxDestinationEntry]
+        self.outputs = (
+            outputs if outputs else []
+        )  # type: list[xmrtypes.TxDestinationEntry]
         self.is_multisig = False
         self.is_bulletproof = False
-        self.exp_tx_prefix_hash = b''
+        self.exp_tx_prefix_hash = b""
         self.use_tx_keys = []
 
 
@@ -87,7 +111,16 @@ class AccountCreds(object):
     """
     Stores account private keys
     """
-    def __init__(self, view_key_private=None, spend_key_private=None, view_key_public=None, spend_key_public=None, address=None, network_type=NetworkTypes.MAINNET):
+
+    def __init__(
+        self,
+        view_key_private=None,
+        spend_key_private=None,
+        view_key_public=None,
+        spend_key_public=None,
+        address=None,
+        network_type=NetworkTypes.MAINNET,
+    ):
         self.view_key_private = view_key_private
         self.view_key_public = view_key_public
         self.spend_key_private = spend_key_private
@@ -97,22 +130,40 @@ class AccountCreds(object):
         self.multisig_keys = []
 
     @classmethod
-    def new_wallet(cls, priv_view_key, priv_spend_key, network_type=NetworkTypes.MAINNET):
+    def new_wallet(
+        cls, priv_view_key, priv_spend_key, network_type=NetworkTypes.MAINNET
+    ):
         pub_view_key = crypto.scalarmult_base(priv_view_key)
         pub_spend_key = crypto.scalarmult_base(priv_spend_key)
-        addr = encode_addr(net_version(network_type),
-                           crypto.encodepoint(pub_spend_key),
-                           crypto.encodepoint(pub_view_key))
-        return cls(view_key_private=priv_view_key, spend_key_private=priv_spend_key,
-                   view_key_public=pub_view_key, spend_key_public=pub_spend_key,
-                   address=addr, network_type=network_type)
+        addr = encode_addr(
+            net_version(network_type),
+            crypto.encodepoint(pub_spend_key),
+            crypto.encodepoint(pub_view_key),
+        )
+        return cls(
+            view_key_private=priv_view_key,
+            spend_key_private=priv_spend_key,
+            view_key_public=pub_view_key,
+            spend_key_public=pub_spend_key,
+            address=addr,
+            network_type=network_type,
+        )
 
 
 class TxScanInfo(object):
     """
     struct tx_scan_info_t
     """
-    __slots__ = ['in_ephemeral', 'ki', 'mask', 'amount', 'money_transfered', 'error', 'received']
+
+    __slots__ = [
+        "in_ephemeral",
+        "ki",
+        "mask",
+        "amount",
+        "money_transfered",
+        "error",
+        "received",
+    ]
 
 
 class KeccakArchive(object):
@@ -127,7 +178,9 @@ def get_keccak_writer(sub_writer=None):
     :param sub_writer:
     :return:
     """
-    return common.AHashWriter(common.HashWrapper(crypto.get_keccak()), sub_writer=sub_writer)
+    return common.AHashWriter(
+        common.HashWrapper(crypto.get_keccak()), sub_writer=sub_writer
+    )
 
 
 def net_version(network_type=NetworkTypes.MAINNET, is_subaddr=False):
@@ -143,9 +196,13 @@ def net_version(network_type=NetworkTypes.MAINNET, is_subaddr=False):
     elif network_type == NetworkTypes.STAGENET:
         c_net = StageNet
     else:
-        raise ValueError('Unknown network type: %s' % network_type)
+        raise ValueError("Unknown network type: %s" % network_type)
 
-    prefix = c_net.PUBLIC_ADDRESS_BASE58_PREFIX if not is_subaddr else c_net.PUBLIC_SUBADDRESS_BASE58_PREFIX
+    prefix = (
+        c_net.PUBLIC_ADDRESS_BASE58_PREFIX
+        if not is_subaddr
+        else c_net.PUBLIC_SUBADDRESS_BASE58_PREFIX
+    )
     return bytes([prefix])
 
 
@@ -190,7 +247,7 @@ def decode_addr(addr):
         return version, pub_spend_key, pub_view_key
 
     else:
-        raise ValueError('Invalid address checksum')
+        raise ValueError("Invalid address checksum")
 
 
 def public_addr_encode(pub_addr, is_sub=False, net=NetworkTypes.MAINNET):
@@ -206,7 +263,7 @@ def public_addr_encode(pub_addr, is_sub=False, net=NetworkTypes.MAINNET):
     return encode_addr(net_ver, pub_addr.m_spend_public_key, pub_addr.m_view_public_key)
 
 
-def classify_subaddresses(tx_dests, change_addr : xmrtypes.AccountPublicAddress):
+def classify_subaddresses(tx_dests, change_addr: xmrtypes.AccountPublicAddress):
     """
     Classify destination subaddresses
     void classify_addresses()
@@ -234,7 +291,9 @@ def classify_subaddresses(tx_dests, change_addr : xmrtypes.AccountPublicAddress)
     return num_stdaddresses, num_subaddresses, single_dest_subaddress
 
 
-def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None, little_endian=True):
+def get_subaddress_secret_key(
+    secret_key, index=None, major=None, minor=None, little_endian=True
+):
     """
     Builds subaddress secret key from the subaddress index
     Hs(SubAddr || a || index_major || index_minor)
@@ -260,10 +319,19 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None, li
     if index:
         major = index.major
         minor = index.minor
-    endianity = '<' if little_endian else '>'
-    prefix = b'SubAddr'
+    endianity = "<" if little_endian else ">"
+    prefix = b"SubAddr"
     buffer = bytearray(len(prefix) + 1 + 32 + 4 + 4)
-    struct.pack_into('%s7sb32sLL' % endianity, buffer, 0, prefix, 0, crypto.encodeint(secret_key), major, minor)
+    struct.pack_into(
+        "%s7sb32sLL" % endianity,
+        buffer,
+        0,
+        prefix,
+        0,
+        crypto.encodeint(secret_key),
+        major,
+        minor,
+    )
     return crypto.hash_to_scalar(buffer)
 
 
@@ -320,7 +388,9 @@ def generate_key_image(public_key, secret_key):
     return point2
 
 
-def is_out_to_acc_precomp(subaddresses, out_key, derivation, additional_derivations, output_index):
+def is_out_to_acc_precomp(
+    subaddresses, out_key, derivation, additional_derivations, output_index
+):
     """
     Searches subaddresses for the computed subaddress_spendkey.
     If found, returns (major, minor), derivation.
@@ -332,23 +402,32 @@ def is_out_to_acc_precomp(subaddresses, out_key, derivation, additional_derivati
     :param output_index:
     :return:
     """
-    subaddress_spendkey = crypto.encodepoint(derive_subaddress_public_key(out_key, derivation, output_index))
+    subaddress_spendkey = crypto.encodepoint(
+        derive_subaddress_public_key(out_key, derivation, output_index)
+    )
     if subaddress_spendkey in subaddresses:
         return subaddresses[subaddress_spendkey], derivation
 
     if additional_derivations and len(additional_derivations) > 0:
         if output_index >= len(additional_derivations):
-            raise ValueError('Wrong number of additional derivations')
+            raise ValueError("Wrong number of additional derivations")
 
-        subaddress_spendkey = derive_subaddress_public_key(out_key, additional_derivations[output_index], output_index)
+        subaddress_spendkey = derive_subaddress_public_key(
+            out_key, additional_derivations[output_index], output_index
+        )
         subaddress_spendkey = crypto.encodepoint(subaddress_spendkey)
         if subaddress_spendkey in subaddresses:
-            return subaddresses[subaddress_spendkey], additional_derivations[output_index]
+            return (
+                subaddresses[subaddress_spendkey],
+                additional_derivations[output_index],
+            )
 
     return None
 
 
-def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output_index, received_index):
+def generate_key_image_helper_precomp(
+    ack, out_key, recv_derivation, real_output_index, received_index
+):
     """
     Generates UTXO spending key and key image.
 
@@ -361,10 +440,12 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     :return:
     """
     if ack.spend_key_private == 0:
-        raise ValueError('Watch-only wallet not supported')
+        raise ValueError("Watch-only wallet not supported")
 
     # derive secret key with subaddress - step 1: original CN derivation
-    scalar_step1 = crypto.derive_secret_key(recv_derivation, real_output_index, ack.spend_key_private)
+    scalar_step1 = crypto.derive_secret_key(
+        recv_derivation, real_output_index, ack.spend_key_private
+    )
 
     # step 2: add Hs(SubAddr || a || index_major || index_minor)
     subaddr_sk = None
@@ -372,7 +453,9 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     if received_index == (0, 0):
         scalar_step2 = scalar_step1
     else:
-        subaddr_sk = get_subaddress_secret_key(ack.view_key_private, major=received_index[0], minor=received_index[1])
+        subaddr_sk = get_subaddress_secret_key(
+            ack.view_key_private, major=received_index[0], minor=received_index[1]
+        )
         scalar_step2 = crypto.sc_add(scalar_step1, subaddr_sk)
 
     # when not in multisig, we know the full spend secret key, so the output pubkey can be obtained by scalarmultBase
@@ -382,7 +465,9 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
     else:
         # When in multisig, we only know the partial spend secret key. But we do know the full spend public key,
         # so the output pubkey can be obtained by using the standard CN key derivation.
-        pub_ver = crypto.derive_public_key(recv_derivation, real_output_index, ack.spend_key_public)
+        pub_ver = crypto.derive_public_key(
+            recv_derivation, real_output_index, ack.spend_key_public
+        )
 
         # Add the contribution from the subaddress part
         if received_index != (0, 0):
@@ -390,13 +475,22 @@ def generate_key_image_helper_precomp(ack, out_key, recv_derivation, real_output
             pub_ver = crypto.point_add(pub_ver, subaddr_pk)
 
     if not crypto.point_eq(pub_ver, out_key):
-        raise ValueError('key image helper precomp: given output pubkey doesn\'t match the derived one')
+        raise ValueError(
+            "key image helper precomp: given output pubkey doesn't match the derived one"
+        )
 
     ki = generate_key_image(crypto.encodepoint(pub_ver), scalar_step2)
     return scalar_step2, ki
 
 
-def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, additional_tx_public_keys, real_output_index):
+def generate_key_image_helper(
+    creds,
+    subaddresses,
+    out_key,
+    tx_public_key,
+    additional_tx_public_keys,
+    real_output_index,
+):
     """
     Generates UTXO spending key and key image.
     Supports subaddresses.
@@ -413,13 +507,23 @@ def generate_key_image_helper(creds, subaddresses, out_key, tx_public_key, addit
 
     additional_recv_derivations = []
     for add_pub_key in additional_tx_public_keys:
-        additional_recv_derivations.append(generate_key_derivation(add_pub_key, creds.view_key_private))
+        additional_recv_derivations.append(
+            generate_key_derivation(add_pub_key, creds.view_key_private)
+        )
 
-    subaddr_recv_info = is_out_to_acc_precomp(subaddresses, out_key, recv_derivation, additional_recv_derivations, real_output_index)
+    subaddr_recv_info = is_out_to_acc_precomp(
+        subaddresses,
+        out_key,
+        recv_derivation,
+        additional_recv_derivations,
+        real_output_index,
+    )
     if subaddr_recv_info is None:
         raise XmrNoSuchAddressException()
 
-    xi, ki = generate_key_image_helper_precomp(creds, out_key, subaddr_recv_info[1], real_output_index, subaddr_recv_info[0])
+    xi, ki = generate_key_image_helper_precomp(
+        creds, out_key, subaddr_recv_info[1], real_output_index, subaddr_recv_info[0]
+    )
     return xi, ki, recv_derivation
 
 
@@ -441,7 +545,13 @@ def check_acc_out_precomp(tx_out, subaddresses, derivation, additional_derivatio
     if not isinstance(tx_out.target, xmrtypes.TxoutToKey):
         return tx_scan_info
 
-    tx_scan_info.received = is_out_to_acc_precomp(subaddresses, crypto.decodepoint(tx_out.target.key), derivation, additional_derivations, i)
+    tx_scan_info.received = is_out_to_acc_precomp(
+        subaddresses,
+        crypto.decodepoint(tx_out.target.key),
+        derivation,
+        additional_derivations,
+        i,
+    )
     if tx_scan_info.received:
         tx_scan_info.money_transfered = tx_out.amount
     else:
@@ -470,11 +580,12 @@ def scan_output(creds, tx, i, tx_scan_info, tx_money_got_in_outs, outs, multisig
 
     else:
         out_dec = crypto.decodepoint(tx.vout[i].target.key)
-        res = generate_key_image_helper_precomp(creds, out_dec,
-                                                tx_scan_info.received[1], i, tx_scan_info.received[0])
+        res = generate_key_image_helper_precomp(
+            creds, out_dec, tx_scan_info.received[1], i, tx_scan_info.received[0]
+        )
         tx_scan_info.in_ephemeral, tx_scan_info.ki = res
         if not tx_scan_info.ki:
-            raise ValueError('Key error generation failed')
+            raise ValueError("Key error generation failed")
 
     outs.append(i)
     if tx_scan_info.money_transfered == 0:
@@ -504,7 +615,7 @@ def ecdh_decode_rv(rv, derivation, i):
         return ecdh_decode_simple(rv, scalar, i)
 
     else:
-        raise ValueError('Unknown rv type')
+        raise ValueError("Unknown rv type")
 
 
 def ecdh_decode_simple(rv, sk, i):
@@ -517,16 +628,16 @@ def ecdh_decode_simple(rv, sk, i):
     :return:
     """
     if i >= len(rv.ecdhInfo):
-        raise ValueError('Bad index')
+        raise ValueError("Bad index")
     if len(rv.outPk) != len(rv.ecdhInfo):
-        raise ValueError('outPk vs ecdhInfo mismatch')
+        raise ValueError("outPk vs ecdhInfo mismatch")
 
     ecdh_info = rv.ecdhInfo[i]
     ecdh_info = recode_ecdh(ecdh_info, False)
     ecdh_info = ring_ct.ecdh_decode(ecdh_info, derivation=crypto.encodeint(sk))
     c_tmp = crypto.add_keys2(ecdh_info.mask, ecdh_info.amount, crypto.gen_H())
     if not crypto.point_eq(c_tmp, crypto.decodepoint(rv.outPk[i].mask)):
-        raise ValueError('Amount decoded incorrectly')
+        raise ValueError("Amount decoded incorrectly")
 
     return ecdh_info.amount, ecdh_info.mask
 
@@ -547,6 +658,7 @@ class PreMlsagHasher(object):
     """
     Iterative construction of the pre_mlsag_hash
     """
+
     def __init__(self):
         self.is_simple = None
         self.state = 0
@@ -556,7 +668,7 @@ class PreMlsagHasher(object):
 
     def init(self, is_simple):
         if self.state != 0:
-            raise ValueError('State error')
+            raise ValueError("State error")
 
         self.state = 1
         self.is_simple = is_simple
@@ -566,36 +678,40 @@ class PreMlsagHasher(object):
 
     async def set_type_fee(self, rv_type, fee):
         if self.state != 1:
-            raise ValueError('State error')
+            raise ValueError("State error")
         self.state = 2
 
-        await self.rtcsig_hasher.ar.message_field(None, field=xmrtypes.RctSigBase.MFIELDS[0], fvalue=rv_type)
-        await self.rtcsig_hasher.ar.message_field(None, field=xmrtypes.RctSigBase.MFIELDS[1], fvalue=fee)
+        await self.rtcsig_hasher.ar.message_field(
+            None, field=xmrtypes.RctSigBase.MFIELDS[0], fvalue=rv_type
+        )
+        await self.rtcsig_hasher.ar.message_field(
+            None, field=xmrtypes.RctSigBase.MFIELDS[1], fvalue=fee
+        )
 
     async def set_pseudo_out(self, out):
         if self.state != 2 and self.state != 3:
-            raise ValueError('State error')
+            raise ValueError("State error")
         self.state = 3
 
         await self.rtcsig_hasher.ar.field(out, xmrtypes.KeyV.ELEM_TYPE)
 
     async def set_ecdh(self, ecdh):
         if self.state != 2 and self.state != 3 and self.state != 4:
-            raise ValueError('State error')
+            raise ValueError("State error")
         self.state = 4
 
         await self.rtcsig_hasher.ar.field(ecdh, xmrtypes.EcdhInfo.ELEM_TYPE)
 
     async def set_out_pk(self, out_pk, mask=None):
         if self.state != 4 and self.state != 5:
-            raise ValueError('State error')
+            raise ValueError("State error")
         self.state = 5
 
         await self.rtcsig_hasher.ar.field(mask if mask else out_pk.mask, xmrtypes.ECKey)
 
     async def rctsig_base_done(self):
         if self.state != 5:
-            raise ValueError('State error')
+            raise ValueError("State error")
         self.state = 6
 
         c_hash = self.rtcsig_hasher.kwriter.get_digest()
@@ -604,7 +720,7 @@ class PreMlsagHasher(object):
 
     async def rsig_val(self, p, bulletproof, raw=False):
         if self.state == 8:
-            raise ValueError('State error')
+            raise ValueError("State error")
 
         if raw:
             self.rsig_hasher.update(p)
@@ -636,7 +752,7 @@ class PreMlsagHasher(object):
 
     async def get_digest(self):
         if self.state != 6:
-            raise ValueError('State error')
+            raise ValueError("State error")
         self.state = 8
 
         c_hash = self.rsig_hasher.digest()
@@ -668,7 +784,10 @@ async def get_pre_mlsag_hash(rv):
     kc_master.update(c_hash)
 
     kc = crypto.get_keccak()
-    if rv.type in [xmrtypes.RctType.FullBulletproof, xmrtypes.RctType.SimpleBulletproof]:
+    if rv.type in [
+        xmrtypes.RctType.FullBulletproof,
+        xmrtypes.RctType.SimpleBulletproof,
+    ]:
         for p in rv.p.bulletproofs:
             kc.update(p.A)
             kc.update(p.S)
@@ -755,7 +874,7 @@ def flatten_rsig(rsig):
     :param rsig:
     :return:
     """
-    res = b''
+    res = b""
 
     for i in range(len(rsig.asig.s0)):
         res += bytes(rsig.asig.s0[i])
@@ -775,10 +894,10 @@ def inflate_rsig(buff, rsig=None):
     """
     if rsig is None:
         rsig = xmrtypes.RangeSig()
-        rsig.Ci = [None]*64
+        rsig.Ci = [None] * 64
         rsig.asig = xmrtypes.BoroSig()
-        rsig.asig.s0 = [None]*64
-        rsig.asig.s1 = [None]*64
+        rsig.asig.s0 = [None] * 64
+        rsig.asig.s1 = [None] * 64
 
     for i in range(64):
         rsig.asig.s0[i], buff = buff[:32], buff[32:]
@@ -802,7 +921,7 @@ def recode_msg(mgs, encode=True):
 
     for idx in range(len(mgs)):
         mgs[idx].cc = recode_int(mgs[idx].cc)
-        if hasattr(mgs[idx], 'II') and mgs[idx].II:
+        if hasattr(mgs[idx], "II") and mgs[idx].II:
             for i in range(len(mgs[idx].II)):
                 mgs[idx].II[i] = recode_point(mgs[idx].II[i])
 
@@ -840,12 +959,12 @@ def expand_transaction(tx):
 
     elif rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.SimpleBulletproof]:
         if len(rv.p.MGs) != len(tx.vin):
-            raise ValueError('Bad MGs size')
+            raise ValueError("Bad MGs size")
         for n in range(len(tx.vin)):
             rv.p.MGs[n].II = [tx.vin[n].k_image]
 
     else:
-        raise ValueError('Unsupported rct tx type %s' % rv.type)
+        raise ValueError("Unsupported rct tx type %s" % rv.type)
 
     return tx
 
@@ -868,9 +987,9 @@ def compute_subaddresses(creds, account, indices, subaddresses=None):
             subaddresses[crypto.encodepoint(creds.spend_key_public)] = (0, 0)
             continue
 
-        pub = get_subaddress_spend_public_key(creds.view_key_private,
-                                              creds.spend_key_public,
-                                              major=account, minor=idx)
+        pub = get_subaddress_spend_public_key(
+            creds.view_key_private, creds.spend_key_public, major=account, minor=idx
+        )
         pub = crypto.encodepoint(pub)
         subaddresses[pub] = (account, idx)
     return subaddresses
@@ -899,7 +1018,7 @@ async def get_tx_pub_key_from_received_outs(td):
 
     # Workaround: resend all your funds to the wallet in a different transaction.
     # Proper handling would require derivation -> need trezor roundtrips.
-    raise ValueError('Input transaction is buggy, contains two tx keys')
+    raise ValueError("Input transaction is buggy, contains two tx keys")
 
 
 def generate_keys(recovery_key):

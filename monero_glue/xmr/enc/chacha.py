@@ -53,7 +53,7 @@ def decrypt_xmr(priv_key, ciphertext, authenticated=True):
         r = crypto.decodeint(signature[32:])
         res = crypto.check_signature(hash, c, r, pub)
         if not res:
-            raise ValueError('Signature invalid')
+            raise ValueError("Signature invalid")
 
     key = generate_key(crypto.encodeint(priv_key))
     return decrypt(key, ciphertext)

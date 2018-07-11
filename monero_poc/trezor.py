@@ -73,16 +73,16 @@ class TokenInterface(iface.TokenInterface):
             self.tsx_data = None
 
     async def transaction_signed(self, ctx=None):
-        logger.debug('Transaction signed')
+        logger.debug("Transaction signed")
 
     async def transaction_error(self, *args, **kwargs):
-        logger.error('Transaction error: %s %s' % (args, kwargs))
+        logger.error("Transaction error: %s %s" % (args, kwargs))
 
     async def transaction_finished(self, ctx=None):
         self.server.on_transaction_signed()
 
     async def transaction_step(self, step, sub_step=None):
-        logger.debug('Transaction step: %s, sub step: %s' % (step, sub_step))
+        logger.debug("Transaction step: %s, sub step: %s" % (step, sub_step))
 
     async def confirm_ki_sync(self, init_msg, ctx=None):
         self.server.on_confirm_ki_sync(init_msg)
@@ -90,20 +90,21 @@ class TokenInterface(iface.TokenInterface):
         return self.ki_sync_waiter.confirmed_result
 
     async def ki_error(self, e, ctx=None):
-        logger.error('ki sync error: %s' % e)
+        logger.error("ki sync error: %s" % e)
 
     async def ki_step(self, i, ctx=None):
-        logger.debug('ki sync progress: %s' % i)
+        logger.debug("ki sync progress: %s" % i)
 
     async def ki_finished(self, ctx=None):
-        logger.info('ki sync finished')
+        logger.info("ki sync finished")
 
 
 class TrezorServer(cli.BaseCli):
     """
     Trezor emulator server
     """
-    prompt = '$> '
+
+    prompt = "$> "
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -143,17 +144,20 @@ class TrezorServer(cli.BaseCli):
         Updates intro text for CLI header - adds version to it.
         :return:
         """
-        self.intro = '-'*self.get_term_width() + \
-                     '\n    Trezor server\n'
+        self.intro = "-" * self.get_term_width() + "\n    Trezor server\n"
 
         if self.creds:
-            self.intro += ('\n    Account address: %s ' % self.creds.address.decode('utf8'))
+            self.intro += "\n    Account address: %s " % self.creds.address.decode(
+                "utf8"
+            )
         else:
-            self.intro += ('\n    Account not initialized, call new_wallet')
+            self.intro += "\n    Account not initialized, call new_wallet"
 
-        self.intro += ('\n    Running on: 127.0.0.1:%s ' % self.port) + \
-                      '\n' + \
-                      '-' * self.get_term_width()
+        self.intro += (
+            ("\n    Running on: 127.0.0.1:%s " % self.port)
+            + "\n"
+            + "-" * self.get_term_width()
+        )
 
     def update_prompt(self):
         """
@@ -162,19 +166,19 @@ class TrezorServer(cli.BaseCli):
         """
         flags = []
         if self.watch_only_waiter.in_confirmation:
-            flags.append('W?')
+            flags.append("W?")
         if self.key_waiter.in_confirmation:
-            flags.append('Key?')
+            flags.append("Key?")
         if self.trez_iface.in_confirmation:
-            flags.append('T?')
+            flags.append("T?")
         if self.trez_iface.ki_sync_waiter.in_confirmation:
-            flags.append('K?')
+            flags.append("K?")
 
-        flags_str = '|'.join(flags)
-        flags_suffix = '|' + flags_str if len(flags_str) > 0 else ''
+        flags_str = "|".join(flags)
+        flags_suffix = "|" + flags_str if len(flags_str) > 0 else ""
 
-        addr_str = self.creds.address.decode('ascii')[:6] if self.creds else 'UNINIT'
-        self.prompt = '[trezor %s%s]: ' % (addr_str, flags_suffix)
+        addr_str = self.creds.address.decode("ascii")[:6] if self.creds else "UNINIT"
+        self.prompt = "[trezor %s%s]: " % (addr_str, flags_suffix)
 
     #
     # Server related
@@ -185,9 +189,9 @@ class TrezorServer(cli.BaseCli):
         Shutdown flask server
         :return:
         """
-        func = request.environ.get('werkzeug.server.shutdown')
+        func = request.environ.get("werkzeug.server.shutdown")
         if func is None:
-            raise RuntimeError('Not running with the Werkzeug Server')
+            raise RuntimeError("Not running with the Werkzeug Server")
         func()
 
     def terminating(self):
@@ -222,23 +226,24 @@ class TrezorServer(cli.BaseCli):
         Initializes rest server
         :return:
         """
-        @self.flask.route('/api/v1.0/ping', methods=['GET'])
+
+        @self.flask.route("/api/v1.0/ping", methods=["GET"])
         def keep_alive():
             return self.wait_coro(self.on_ping(request=request))
 
-        @self.flask.route('/api/v1.0/watch_only', methods=['GET', 'POST'])
+        @self.flask.route("/api/v1.0/watch_only", methods=["GET", "POST"])
         def watch_only():
             return self.wait_coro(self.on_watch_only(request=request))
 
-        @self.flask.route('/api/v1.0/get_keys', methods=['GET', 'POST'])
+        @self.flask.route("/api/v1.0/get_keys", methods=["GET", "POST"])
         def get_keys():
             return self.wait_coro(self.on_keys(request=request))
 
-        @self.flask.route('/api/v1.0/tx_sign', methods=['GET', 'POST'])
+        @self.flask.route("/api/v1.0/tx_sign", methods=["GET", "POST"])
         def tx_sign():
             return self.wait_coro(self.on_tx_sign(request=request))
 
-        @self.flask.route('/api/v1.0/ki_sync', methods=['GET', 'POST'])
+        @self.flask.route("/api/v1.0/ki_sync", methods=["GET", "POST"])
         def ki_sync():
             return self.wait_coro(self.on_ki_sync(request=request))
 
@@ -249,7 +254,7 @@ class TrezorServer(cli.BaseCli):
         """
         kwargs = dict()
         if False:
-            kwargs['minimum_chunk_size'] = 1
+            kwargs["minimum_chunk_size"] = 1
         return kwargs
 
     def serve_werkzeug(self):
@@ -258,7 +263,7 @@ class TrezorServer(cli.BaseCli):
         :return:
         """
         r = self.flask.run(debug=self.debug, port=self.port, threaded=True)
-        logger.info('Started werkzeug server: %s' % r)
+        logger.info("Started werkzeug server: %s" % r)
 
     def serve_eventlet(self):
         """
@@ -267,8 +272,10 @@ class TrezorServer(cli.BaseCli):
 
         :return:
         """
-        listener = eventlet.listen(('0.0.0.0', self.port))
-        logger.info('Starting Eventlet listener %s for Flask %s' % (listener, self.flask))
+        listener = eventlet.listen(("0.0.0.0", self.port))
+        logger.info(
+            "Starting Eventlet listener %s for Flask %s" % (listener, self.flask)
+        )
         wsgi.server(listener, self.flask, **self.wsgi_options())
 
     #
@@ -281,7 +288,7 @@ class TrezorServer(cli.BaseCli):
         :param request:
         :return:
         """
-        return jsonify({'result': True})
+        return jsonify({"result": True})
 
     async def on_watch_only(self, request=None):
         """
@@ -290,26 +297,30 @@ class TrezorServer(cli.BaseCli):
         :return:
         """
         if not self.creds:
-            logger.warning('Agent asks for watch-only credentials, Trezor not initialized')
+            logger.warning(
+                "Agent asks for watch-only credentials, Trezor not initialized"
+            )
             return abort(406)
 
         if self.watch_only_waiter.in_confirmation:
-            logger.warning('Agent asks for watch-only credentials concurrently')
+            logger.warning("Agent asks for watch-only credentials concurrently")
             return abort(406)
-        
+
         # Prompt user to confirm.
         self.on_watchonly()
         confirmed = self.watch_only_waiter.wait_confirmation()
 
         if not confirmed:
-            logger.warning('Watch only rejected')
+            logger.warning("Watch only rejected")
             return abort(403)
 
-        logger.info('Returning watch only credentials...')
-        res = MoneroKey(watch_key=crypto.encodeint(self.creds.view_key_private),
-                        address=self.creds.address)
+        logger.info("Returning watch only credentials...")
+        res = MoneroKey(
+            watch_key=crypto.encodeint(self.creds.view_key_private),
+            address=self.creds.address,
+        )
 
-        return jsonify({'result': True, 'payload': await self.proto_res(res)})
+        return jsonify({"result": True, "payload": await self.proto_res(res)})
 
     async def on_keys(self, request=None):
         """
@@ -318,11 +329,11 @@ class TrezorServer(cli.BaseCli):
         :return:
         """
         if not self.creds:
-            logger.warning('Agent asks for credentials export, Trezor not initialized')
+            logger.warning("Agent asks for credentials export, Trezor not initialized")
             return abort(406)
 
         if self.key_waiter.in_confirmation:
-            logger.warning('Agent asks for credentials export concurrently')
+            logger.warning("Agent asks for credentials export concurrently")
             return abort(406)
 
         # Prompt user to confirm.
@@ -330,15 +341,17 @@ class TrezorServer(cli.BaseCli):
         confirmed = self.key_waiter.wait_confirmation()
 
         if not confirmed:
-            logger.warning('Keys rejected')
+            logger.warning("Keys rejected")
             return abort(403)
 
-        logger.info('Returning credentials...')
-        res = MoneroKey(watch_key=crypto.encodeint(self.creds.view_key_private),
-                        spend_key=crypto.encodeint(self.creds.spend_key_private),
-                        address=self.creds.address)
+        logger.info("Returning credentials...")
+        res = MoneroKey(
+            watch_key=crypto.encodeint(self.creds.view_key_private),
+            spend_key=crypto.encodeint(self.creds.spend_key_private),
+            address=self.creds.address,
+        )
 
-        return jsonify({'result': True, 'payload': await self.proto_res(res)})
+        return jsonify({"result": True, "payload": await self.proto_res(res)})
 
     async def on_tx_sign(self, request=None):
         """
@@ -353,15 +366,15 @@ class TrezorServer(cli.BaseCli):
             msg = await self.unproto_req(js)
 
             if not self.trez:
-                logger.warning('Transaction signing request on unitialized Trezor')
+                logger.warning("Transaction signing request on unitialized Trezor")
                 return abort(404)
 
             try:
                 res = await self.trez.tsx_sign(msg)
-                return jsonify({'result': True, 'payload': await self.proto_res(res)})
+                return jsonify({"result": True, "payload": await self.proto_res(res)})
 
             except Exception as e:
-                return jsonify({'result': False, 'exc': e})
+                return jsonify({"result": False, "exc": e})
 
         except Exception as e:
             traceback.print_exc()
@@ -377,42 +390,44 @@ class TrezorServer(cli.BaseCli):
             msg = await self.unproto_req(js)
 
             if not self.trez:
-                logger.warning('KeyImage sync request on unitialized Trezor')
+                logger.warning("KeyImage sync request on unitialized Trezor")
                 return abort(404)
 
             try:
                 res = await self.trez.key_image_sync(msg)
-                return jsonify({'result': True, 'payload': await self.proto_res(res)})
+                return jsonify({"result": True, "payload": await self.proto_res(res)})
 
             except Exception as e:
-                return jsonify({'result': False, 'exc': e})
+                return jsonify({"result": False, "exc": e})
 
         except Exception as e:
             traceback.print_exc()
 
     async def unproto_req(self, req):
-        if 'payload' not in req:
+        if "payload" not in req:
             return None
-        msg, msg_type = req['payload']['msg'], req['payload']['msg_type']
-        return await self.unproto_msg(binascii.unhexlify(msg.encode('utf8')), msg_type)
+        msg, msg_type = req["payload"]["msg"], req["payload"]["msg_type"]
+        return await self.unproto_msg(binascii.unhexlify(msg.encode("utf8")), msg_type)
 
     async def unproto_msg(self, msg, msg_type):
         reader = xmrserialize.MemoryReaderWriter(bytearray(msg))
-        return await protobuf.load_message(reader, messages.get_message_from_type(msg_type))
+        return await protobuf.load_message(
+            reader, messages.get_message_from_type(msg_type)
+        )
 
     async def proto_res(self, res):
         writer = xmrserialize.MemoryReaderWriter()
         await protobuf.dump_message(writer, res)
         return {
-            'msg': binascii.hexlify(bytes(writer.buffer)).decode('ascii'),
-            'msg_type': messages.get_message_type(res)
+            "msg": binascii.hexlify(bytes(writer.buffer)).decode("ascii"),
+            "msg_type": messages.get_message_type(res),
         }
 
     def unpickle_args(self, js):
-        return pickle.loads(binascii.unhexlify(js['payload'].encode('utf8')))
+        return pickle.loads(binascii.unhexlify(js["payload"].encode("utf8")))
 
     def pickle_res(self, res):
-        return binascii.hexlify(pickle.dumps(res)).decode('utf8')
+        return binascii.hexlify(pickle.dumps(res)).decode("utf8")
 
     #
     # Terminal
@@ -425,107 +440,157 @@ class TrezorServer(cli.BaseCli):
         self.create_wallet(line)
 
     def do_address(self, line):
-        self.poutput(self.creds.address.decode('ascii'))
+        self.poutput(self.creds.address.decode("ascii"))
 
     def do_keys(self, line):
-        print('Spend key priv:   0x%s' % binascii.hexlify(crypto.encodeint(self.creds.spend_key_private)).decode('ascii'))
-        print('View key priv:    0x%s' % binascii.hexlify(crypto.encodeint(self.creds.view_key_private)).decode('ascii'))
-        print('')
-        print('Spend key pub:    0x%s' % binascii.hexlify(crypto.encodepoint(self.creds.spend_key_public)).decode('ascii'))
-        print('View key pub:     0x%s' % binascii.hexlify(crypto.encodepoint(self.creds.view_key_public)).decode('ascii'))
+        print(
+            "Spend key priv:   0x%s"
+            % binascii.hexlify(crypto.encodeint(self.creds.spend_key_private)).decode(
+                "ascii"
+            )
+        )
+        print(
+            "View key priv:    0x%s"
+            % binascii.hexlify(crypto.encodeint(self.creds.view_key_private)).decode(
+                "ascii"
+            )
+        )
+        print("")
+        print(
+            "Spend key pub:    0x%s"
+            % binascii.hexlify(crypto.encodepoint(self.creds.spend_key_public)).decode(
+                "ascii"
+            )
+        )
+        print(
+            "View key pub:     0x%s"
+            % binascii.hexlify(crypto.encodepoint(self.creds.view_key_public)).decode(
+                "ascii"
+            )
+        )
 
     def on_watchonly(self):
-        self.poutput('-' * 80)
-        self.poutput('Watch-only request received\nEnter W to confirm/reject\n')
+        self.poutput("-" * 80)
+        self.poutput("Watch-only request received\nEnter W to confirm/reject\n")
 
     def on_confirm_start(self):
-        self.poutput('-' * 80)
-        self.poutput('Transaction confirmation procedure\nEnter T to start\n')
+        self.poutput("-" * 80)
+        self.poutput("Transaction confirmation procedure\nEnter T to start\n")
 
     def on_transaction_signed(self):
-        self.poutput('-' * 80)
-        self.poutput('Transaction was successfully signed\n')
+        self.poutput("-" * 80)
+        self.poutput("Transaction was successfully signed\n")
 
     def on_confirm_ki_sync(self, msg):
         self.ki_sync_data = msg
-        self.poutput('-' * 80)
-        self.poutput('Key image sync procedure\nEnter K to start\n')
+        self.poutput("-" * 80)
+        self.poutput("Key image sync procedure\nEnter K to start\n")
 
     def conv_disp_amount(self, amount):
         return wallet.conv_disp_amount(amount)
 
     def do_T(self, line):
         if not self.trez_iface.in_confirmation:
-            self.poutput('No transaction in progress')
+            self.poutput("No transaction in progress")
             return
 
         tsx_data = self.trez_iface.get_tx_data()
-        self.poutput('Confirming transaction:')
-        self.poutput('- ' * 40)
+        self.poutput("Confirming transaction:")
+        self.poutput("- " * 40)
         if tsx_data.payment_id:
-            self.poutput('  Payment ID: %s' % binascii.hexlify(tsx_data.payment_id).decode('utf8'))
+            self.poutput(
+                "  Payment ID: %s"
+                % binascii.hexlify(tsx_data.payment_id).decode("utf8")
+            )
 
-        self.poutput('  Unlock time: %s' % tsx_data.unlock_time)
-        self.poutput('  UTXOs: %s' % tsx_data.num_inputs)
-        self.poutput('  Mixin: %s' % tsx_data.mixin)
+        self.poutput("  Unlock time: %s" % tsx_data.unlock_time)
+        self.poutput("  UTXOs: %s" % tsx_data.num_inputs)
+        self.poutput("  Mixin: %s" % tsx_data.mixin)
 
         chg = tsx_data.change_dts
-        addr_chg = monero.public_addr_encode(chg.addr, chg.is_subaddress, self.network_type) if chg else None
+        addr_chg = (
+            monero.public_addr_encode(chg.addr, chg.is_subaddress, self.network_type)
+            if chg
+            else None
+        )
 
         for idx, out in enumerate(tsx_data.outputs):
-            addr = monero.public_addr_encode(out.addr, out.is_subaddress, self.network_type)
+            addr = monero.public_addr_encode(
+                out.addr, out.is_subaddress, self.network_type
+            )
             if addr != addr_chg:
-                self.poutput('  Output %2d: %12.8f to %s, sub: %s'
-                             % (idx, self.conv_disp_amount(out.amount), addr.decode('utf8'), out.is_subaddress))
+                self.poutput(
+                    "  Output %2d: %12.8f to %s, sub: %s"
+                    % (
+                        idx,
+                        self.conv_disp_amount(out.amount),
+                        addr.decode("utf8"),
+                        out.is_subaddress,
+                    )
+                )
             else:
-                self.poutput('  Change:    %12.8f to %s, sub: %s'
-                             % (self.conv_disp_amount(out.amount), addr.decode('utf8'), out.is_subaddress))
+                self.poutput(
+                    "  Change:    %12.8f to %s, sub: %s"
+                    % (
+                        self.conv_disp_amount(out.amount),
+                        addr.decode("utf8"),
+                        out.is_subaddress,
+                    )
+                )
 
-        self.poutput('  Fee: %.8f' % self.conv_disp_amount(tsx_data.fee))
-        self.poutput('  Account: %s' % tsx_data.account)
+        self.poutput("  Fee: %.8f" % self.conv_disp_amount(tsx_data.fee))
+        self.poutput("  Account: %s" % tsx_data.account)
 
-        self.poutput('- ' * 40)
-        result = self.select([(0, 'Confirm the transaction'), (1, 'Reject')], 'Do you confirm the transaction? ')
-        self.poutput('\n')
+        self.poutput("- " * 40)
+        result = self.select(
+            [(0, "Confirm the transaction"), (1, "Reject")],
+            "Do you confirm the transaction? ",
+        )
+        self.poutput("\n")
         self.trez_iface.confirmation(result == 0)
         self.update_prompt()
 
     def do_W(self, line):
         if not self.watch_only_waiter.in_confirmation:
-            self.poutput('No prompt')
+            self.poutput("No prompt")
             return
 
-        result = self.select([(0, 'Confirm'), (1, 'Reject')],
-                             'Do you confirm sending watch-only credentials to the client? ')
+        result = self.select(
+            [(0, "Confirm"), (1, "Reject")],
+            "Do you confirm sending watch-only credentials to the client? ",
+        )
 
-        self.poutput('\n')
+        self.poutput("\n")
         self.watch_only_waiter.confirmation(result == 0)
         self.update_prompt()
 
     def do_KK(self, line):
         if not self.key_waiter.in_confirmation:
-            self.poutput('No prompt')
+            self.poutput("No prompt")
             return
 
-        result = self.select([(0, 'Confirm'), (1, 'Reject')],
-                             'Do you confirm exporting sec credentials to the client? ')
+        result = self.select(
+            [(0, "Confirm"), (1, "Reject")],
+            "Do you confirm exporting sec credentials to the client? ",
+        )
 
-        self.poutput('\n')
+        self.poutput("\n")
         self.key_waiter.confirmation(result == 0)
         self.update_prompt()
 
     def do_K(self, line):
         if not self.trez_iface.ki_sync_waiter.in_confirmation:
-            self.poutput('No prompt')
+            self.poutput("No prompt")
             return
 
-        self.poutput('Agent asks to perform key image sync.')
-        self.poutput('Syncing %s outputs' % self.ki_sync_data.num)
+        self.poutput("Agent asks to perform key image sync.")
+        self.poutput("Syncing %s outputs" % self.ki_sync_data.num)
 
-        result = self.select([(0, 'Confirm'), (1, 'Reject')],
-                             'Do you want to proceed? ')
+        result = self.select(
+            [(0, "Confirm"), (1, "Reject")], "Do you want to proceed? "
+        )
 
-        self.poutput('\n')
+        self.poutput("\n")
         self.trez_iface.ki_sync_waiter.confirmation(result == 0)
         self.update_prompt()
 
@@ -550,8 +615,10 @@ class TrezorServer(cli.BaseCli):
         Main work method for the server - accepting incoming connections.
         :return:
         """
-        logger.info('REST thread started %s %s %s dbg: %s'
-                    % (os.getpid(), os.getppid(), threading.current_thread(), self.debug))
+        logger.info(
+            "REST thread started %s %s %s dbg: %s"
+            % (os.getpid(), os.getppid(), threading.current_thread(), self.debug)
+        )
         try:
             self.worker_loop = asyncio.new_event_loop()
             self.rest_loop = asyncio.new_event_loop()
@@ -567,14 +634,14 @@ class TrezorServer(cli.BaseCli):
             else:
                 self.serve_eventlet()
 
-            logger.info('Terminating flask: %s' % self.flask)
+            logger.info("Terminating flask: %s" % self.flask)
 
         except Exception as e:
-            logger.error('Exception: %s' % e)
+            logger.error("Exception: %s" % e)
             logger.error(traceback.format_exc())
 
         self.terminating()
-        logger.info('Work loop terminated')
+        logger.info("Work loop terminated")
 
     def rest_server_boot(self):
         """
@@ -592,10 +659,10 @@ class TrezorServer(cli.BaseCli):
         """
         if self.args.account_file:
             if os.path.exists(self.args.account_file):
-                logger.error('Wallet file exists, could not overwrite')
+                logger.error("Wallet file exists, could not overwrite")
                 return
 
-        print('Generating new wallet...')
+        print("Generating new wallet...")
         seed = crypto.random_bytes(32)
 
         wl = bip32.Wallet.from_master_secret(seed)
@@ -608,46 +675,64 @@ class TrezorServer(cli.BaseCli):
 
         # to_hash is initial seed in the Monero sense, recoverable from this seed
         hashed = crypto.cn_fast_hash(to_hash)
-        electrum_words = ' '.join(mnemonic.mn_encode(hashed))
+        electrum_words = " ".join(mnemonic.mn_encode(hashed))
 
         keys = monero.generate_monero_keys(hashed)
         spend_sec, spend_pub, view_sec, view_pub = keys
 
-        print('Seed:             0x%s' % binascii.hexlify(seed).decode('ascii'))
-        print('Seed bip39 words: %s' % ' '.join(seed_bip32_words))
-        print('Seed bip32 b58:   %s' % seed_bip32_b58)
+        print("Seed:             0x%s" % binascii.hexlify(seed).decode("ascii"))
+        print("Seed bip39 words: %s" % " ".join(seed_bip32_words))
+        print("Seed bip32 b58:   %s" % seed_bip32_b58)
 
-        print('Seed Monero:      0x%s' % binascii.hexlify(hashed).decode('ascii'))
-        print('Seed Monero wrds: %s' % electrum_words)
+        print("Seed Monero:      0x%s" % binascii.hexlify(hashed).decode("ascii"))
+        print("Seed Monero wrds: %s" % electrum_words)
 
-        print('')
-        print('Spend key priv:   0x%s' % binascii.hexlify(crypto.encodeint(spend_sec)).decode('ascii'))
-        print('View key priv:    0x%s' % binascii.hexlify(crypto.encodeint(view_sec)).decode('ascii'))
-        print('')
-        print('Spend key pub:    0x%s' % binascii.hexlify(crypto.encodepoint(spend_pub)).decode('ascii'))
-        print('View key pub:     0x%s' % binascii.hexlify(crypto.encodepoint(view_pub)).decode('ascii'))
+        print("")
+        print(
+            "Spend key priv:   0x%s"
+            % binascii.hexlify(crypto.encodeint(spend_sec)).decode("ascii")
+        )
+        print(
+            "View key priv:    0x%s"
+            % binascii.hexlify(crypto.encodeint(view_sec)).decode("ascii")
+        )
+        print("")
+        print(
+            "Spend key pub:    0x%s"
+            % binascii.hexlify(crypto.encodepoint(spend_pub)).decode("ascii")
+        )
+        print(
+            "View key pub:     0x%s"
+            % binascii.hexlify(crypto.encodepoint(view_pub)).decode("ascii")
+        )
 
         self.init_with_keys(spend_sec, view_sec)
-        print('')
-        print('Address:          %s' % self.creds.address.decode('ascii'))
+        print("")
+        print("Address:          %s" % self.creds.address.decode("ascii"))
 
         self.account_data = collections.OrderedDict()
-        self.account_data['seed'] = binascii.hexlify(seed).decode('ascii')
-        self.account_data['spend_key'] = binascii.hexlify(crypto.encodeint(spend_sec)).decode('ascii')
-        self.account_data['view_key'] = binascii.hexlify(crypto.encodeint(view_sec)).decode('ascii')
-        self.account_data['meta'] = collections.OrderedDict([
-            ('addr', self.creds.address.decode('ascii')),
-            ('bip44_seed', binascii.hexlify(seed).decode('ascii')),
-            ('bip32_39_words', ' '.join(seed_bip32_words)),
-            ('bip32_b58', seed_bip32_b58),
-            ('monero_seed', binascii.hexlify(hashed).decode('ascii')),
-            ('monero_words', electrum_words),
-        ])
+        self.account_data["seed"] = binascii.hexlify(seed).decode("ascii")
+        self.account_data["spend_key"] = binascii.hexlify(
+            crypto.encodeint(spend_sec)
+        ).decode("ascii")
+        self.account_data["view_key"] = binascii.hexlify(
+            crypto.encodeint(view_sec)
+        ).decode("ascii")
+        self.account_data["meta"] = collections.OrderedDict(
+            [
+                ("addr", self.creds.address.decode("ascii")),
+                ("bip44_seed", binascii.hexlify(seed).decode("ascii")),
+                ("bip32_39_words", " ".join(seed_bip32_words)),
+                ("bip32_b58", seed_bip32_b58),
+                ("monero_seed", binascii.hexlify(hashed).decode("ascii")),
+                ("monero_words", electrum_words),
+            ]
+        )
 
         if self.args.account_file:
-            with open(self.args.account_file, 'w+') as fh:
+            with open(self.args.account_file, "w+") as fh:
                 json.dump(self.account_data, fh, indent=2)
-        print('Wallet generated')
+        print("Wallet generated")
         self.update_prompt()
 
     async def open_account(self):
@@ -662,7 +747,7 @@ class TrezorServer(cli.BaseCli):
         priv_view_key = None
 
         if not self.args.account_file and not self.args.spend_key:
-            logger.debug('No account file nor spend key. Please generate new account')
+            logger.debug("No account file nor spend key. Please generate new account")
             return
 
         acc_file_exists = False
@@ -670,23 +755,27 @@ class TrezorServer(cli.BaseCli):
             acc_file_exists = os.path.exists(self.args.account_file)
 
             if acc_file_exists and self.args.spend_key:
-                logger.error('Account file exists, spend key is ignored')
+                logger.error("Account file exists, spend key is ignored")
             if acc_file_exists and self.args.view_key:
-                logger.error('Account file exists, view key is ignored')
+                logger.error("Account file exists, view key is ignored")
             if acc_file_exists:
                 with open(self.args.account_file) as fh:
                     self.account_data = json.load(fh)
-                priv_spend_key = crypto.decodeint(binascii.unhexlify(self.account_data['spend_key'].encode('ascii')))
-                priv_view_key = crypto.decodeint(binascii.unhexlify(self.account_data['view_key'].encode('ascii')))
+                priv_spend_key = crypto.decodeint(
+                    binascii.unhexlify(self.account_data["spend_key"].encode("ascii"))
+                )
+                priv_view_key = crypto.decodeint(
+                    binascii.unhexlify(self.account_data["view_key"].encode("ascii"))
+                )
 
         if not acc_file_exists and self.args.spend_key:
-            priv_view = self.args.view_key.encode('utf8')
-            priv_spend = self.args.spend_key.encode('utf8')
+            priv_view = self.args.view_key.encode("utf8")
+            priv_spend = self.args.spend_key.encode("utf8")
             priv_view_key = crypto.b16_to_scalar(priv_view)
             priv_spend_key = crypto.b16_to_scalar(priv_spend)
 
-            self.account_data = {'spend_key': priv_spend_key, 'view_key': priv_view_key}
-            with open(self.args.account_file, 'w') as fh:
+            self.account_data = {"spend_key": priv_spend_key, "view_key": priv_view_key}
+            with open(self.args.account_file, "w") as fh:
                 json.dump(self.account_data, fh, indent=2)
 
         if priv_spend_key and priv_view_key:
@@ -697,7 +786,9 @@ class TrezorServer(cli.BaseCli):
         Initializes Trezor classes with the private keys
         :return:
         """
-        self.creds = monero.AccountCreds.new_wallet(priv_view_key, priv_spend_key, self.network_type)
+        self.creds = monero.AccountCreds.new_wallet(
+            priv_view_key, priv_spend_key, self.network_type
+        )
         self.update_intro()
 
         self.trez = token.TokenLite()
@@ -721,7 +812,7 @@ class TrezorServer(cli.BaseCli):
 
         await self.open_account()
 
-        logging.info('Starting rest server...')
+        logging.info("Starting rest server...")
         self.rest_server_boot()
         time.sleep(1)
 
@@ -733,25 +824,48 @@ class TrezorServer(cli.BaseCli):
         Entry point
         :return:
         """
-        parser = argparse.ArgumentParser(description='Trezor server')
+        parser = argparse.ArgumentParser(description="Trezor server")
 
-        parser.add_argument('--testnet', dest='testnet', default=False, action='store_const', const=True,
-                            help='Testnet')
+        parser.add_argument(
+            "--testnet",
+            dest="testnet",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Testnet",
+        )
 
-        parser.add_argument('--stagenet', dest='stagenet', default=False, action='store_const', const=True,
-                            help='Stagenet')
+        parser.add_argument(
+            "--stagenet",
+            dest="stagenet",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Stagenet",
+        )
 
-        parser.add_argument('--debug', dest='debug', default=False, action='store_const', const=True,
-                            help='Debug')
+        parser.add_argument(
+            "--debug",
+            dest="debug",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Debug",
+        )
 
-        parser.add_argument('--account-file', dest='account_file',
-                            help='Trezor account file to use / open')
+        parser.add_argument(
+            "--account-file",
+            dest="account_file",
+            help="Trezor account file to use / open",
+        )
 
-        parser.add_argument('--view-key', dest='view_key',
-                            help='Hex coded private view key')
+        parser.add_argument(
+            "--view-key", dest="view_key", help="Hex coded private view key"
+        )
 
-        parser.add_argument('--spend-key', dest='spend_key',
-                            help='Hex coded private spend key')
+        parser.add_argument(
+            "--spend-key", dest="spend_key", help="Hex coded private spend key"
+        )
 
         args_src = sys.argv
         self.args, unknown = parser.parse_known_args(args=args_src[1:])
@@ -766,7 +880,7 @@ async def main():
     await agent.main()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
     # loop.run_forever()

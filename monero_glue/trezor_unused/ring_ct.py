@@ -52,11 +52,13 @@ def prove_range_mem(amount, last_mask=None):
     gc.collect()
 
     def as0(mv, x, i):
-        crypto.encodeint_into(x, mv[32 * i:])
+        crypto.encodeint_into(x, mv[32 * i :])
+
     def as1(mv, x, i):
-        crypto.encodeint_into(x, mv[32*64 + 32*i:])
+        crypto.encodeint_into(x, mv[32 * 64 + 32 * i :])
+
     def aci(mv, x, i):
-        crypto.encodepoint_into(x, mv[32*64*2+32+32*i:])
+        crypto.encodepoint_into(x, mv[32 * 64 * 2 + 32 + 32 * i :])
 
     n = 64
     bb = d2b(amount, n)  # gives binary form of bb in "digits" binary digits
@@ -74,7 +76,9 @@ def prove_range_mem(amount, last_mask=None):
         if last_mask is not None and ii == 64 - 1:
             ai[ii] = crypto.sc_sub(last_mask, a)
 
-        a = crypto.sc_add(a, ai[ii])  # creating the total mask since you have to pass this to receiver...
+        a = crypto.sc_add(
+            a, ai[ii]
+        )  # creating the total mask since you have to pass this to receiver...
 
         alpha[ii] = crypto.random_scalar()
         L = crypto.scalarmult_base(alpha[ii])
@@ -100,7 +104,7 @@ def prove_range_mem(amount, last_mask=None):
 
     # Compute ee, memory cleanup
     ee = crypto.sc_reduce32(crypto.decodeint(kck.digest()))
-    crypto.encodeint_into(ee, mv[64*32*2:])
+    crypto.encodeint_into(ee, mv[64 * 32 * 2 :])
     del kck
     gc.collect()
 
@@ -113,7 +117,9 @@ def prove_range_mem(amount, last_mask=None):
 
         else:
             s0 = crypto.random_scalar()
-            Ctmp = crypto.decodepoint(mv[32*64*2+32+32*jj:32*64*2+32+32*jj+32])
+            Ctmp = crypto.decodepoint(
+                mv[32 * 64 * 2 + 32 + 32 * jj : 32 * 64 * 2 + 32 + 32 * jj + 32]
+            )
             LL = crypto.add_keys2(s0, ee, Ctmp)
             cc = crypto.hash_to_scalar(crypto.encodepoint(LL))
             si = crypto.sc_mulsub(ai[jj], cc, alpha[jj])
@@ -126,7 +132,9 @@ def prove_range_mem(amount, last_mask=None):
     return C, a, res
 
 
-def prove_range(amount, last_mask=None, decode=False, backend_impl=True, byte_enc=True, rsig=None):
+def prove_range(
+    amount, last_mask=None, decode=False, backend_impl=True, byte_enc=True, rsig=None
+):
     """
     Range proof generator.
     In order to minimize the memory consumption and CPU usage during transaction generation the returned values
@@ -141,19 +149,22 @@ def prove_range(amount, last_mask=None, decode=False, backend_impl=True, byte_en
     :return:
     """
     if not backend_impl or not byte_enc or decode:
-        raise ValueError('Unsupported params')
+        raise ValueError("Unsupported params")
 
     C, a, R = None, None, None
     try:
         if rsig is None:
             rsig = bytearray(32 * (64 + 64 + 64 + 1))
 
-        buf_ai = bytearray(4*9*64)
-        buf_alpha = bytearray(4*9*64)
-        C, a, R = crypto.prove_range(rsig, amount, last_mask, buf_ai, buf_alpha)  # backend returns encoded
+        buf_ai = bytearray(4 * 9 * 64)
+        buf_alpha = bytearray(4 * 9 * 64)
+        C, a, R = crypto.prove_range(
+            rsig, amount, last_mask, buf_ai, buf_alpha
+        )  # backend returns encoded
 
     finally:
         import gc
+
         buf_ai = None
         buf_alpha = None
         gc.collect()
@@ -163,8 +174,8 @@ def prove_range(amount, last_mask=None, decode=False, backend_impl=True, byte_en
 
 # Ring-ct MG sigs
 # Prove:
-#   c.f. http:#eprint.iacr.org/2015/1098 section 4. definition 10. 
-#   This does the MG sig on the "dest" part of the given key matrix, and 
+#   c.f. http:#eprint.iacr.org/2015/1098 section 4. definition 10.
+#   This does the MG sig on the "dest" part of the given key matrix, and
 #   the last row is the sum of input commitments from that column - sum output commitments
 #   this shows that sum inputs = sum outputs
 # Ver:
@@ -181,6 +192,7 @@ def ecdh_encode(unmasked, receiver_pk=None, derivation=None):
     :return:
     """
     from apps.monero.xmr.serialize_messages.tx_ecdh import EcdhTuple
+
     rv = EcdhTuple()
     if derivation is None:
         esk = crypto.random_scalar()
@@ -194,7 +206,7 @@ def ecdh_encode(unmasked, receiver_pk=None, derivation=None):
     rv.amount = crypto.sc_add(unmasked.amount, sharedSec2)
     return rv
 
-    
+
 def ecdh_decode(masked, receiver_sk=None, derivation=None):
     """
     Elliptic Curve Diffie-Helman: encodes and decodes the amount b and mask a
@@ -205,6 +217,7 @@ def ecdh_decode(masked, receiver_sk=None, derivation=None):
     :return:
     """
     from apps.monero.xmr.serialize_messages.tx_ecdh import EcdhTuple
+
     rv = EcdhTuple()
 
     if derivation is None:
@@ -240,13 +253,14 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
 
     if test:
         from apps.monero.xmr import monero
+
         t = crypto.scalarmult_base(sec)
         if not crypto.point_eq(t, pubs[sec_idx]):
-            raise ValueError('Invalid sec key')
+            raise ValueError("Invalid sec key")
 
         k_i = monero.generate_key_image(crypto.encodepoint(pubs[sec_idx]), sec)
         if not crypto.point_eq(k_i, image):
-            raise ValueError('Key image invalid')
+            raise ValueError("Key image invalid")
         for k in pubs:
             crypto.ge_frombytes_vartime_check(k)
 
@@ -254,7 +268,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
     image_pre = crypto.ge_dsm_precomp(image_unp)
 
     buff_off = len(prefix_hash)
-    buff = bytearray(buff_off + 2*32*len(pubs))
+    buff = bytearray(buff_off + 2 * 32 * len(pubs))
     memcpy(buff, 0, prefix_hash, 0, buff_off)
     mvbuff = memoryview(buff)
 
@@ -268,24 +282,26 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
         if i == sec_idx:
             k = crypto.random_scalar()
             tmp3 = crypto.scalarmult_base(k)
-            crypto.encodepoint_into(tmp3, mvbuff[buff_off:buff_off+32])
+            crypto.encodepoint_into(tmp3, mvbuff[buff_off : buff_off + 32])
             buff_off += 32
 
             tmp3 = crypto.hash_to_ec(crypto.encodepoint(pubs[i]))
             tmp2 = crypto.scalarmult(tmp3, k)
-            crypto.encodepoint_into(tmp2, mvbuff[buff_off:buff_off+32])
+            crypto.encodepoint_into(tmp2, mvbuff[buff_off : buff_off + 32])
             buff_off += 32
 
         else:
             sig[i] = [crypto.random_scalar(), crypto.random_scalar()]
             tmp3 = crypto.ge_frombytes_vartime(pubs[i])
             tmp2 = crypto.ge_double_scalarmult_base_vartime(sig[i][0], tmp3, sig[i][1])
-            crypto.encodepoint_into(tmp2, mvbuff[buff_off:buff_off+32])
+            crypto.encodepoint_into(tmp2, mvbuff[buff_off : buff_off + 32])
             buff_off += 32
 
             tmp3 = crypto.hash_to_ec(crypto.encodepoint(tmp3))
-            tmp2 = crypto.ge_double_scalarmult_precomp_vartime(sig[i][1], tmp3, sig[i][0], image_pre)
-            crypto.encodepoint_into(tmp2, mvbuff[buff_off:buff_off+32])
+            tmp2 = crypto.ge_double_scalarmult_precomp_vartime(
+                sig[i][1], tmp3, sig[i][0], image_pre
+            )
+            crypto.encodepoint_into(tmp2, mvbuff[buff_off : buff_off + 32])
             buff_off += 32
 
             sum = crypto.sc_add(sum, sig[i][0])
@@ -306,6 +322,7 @@ def check_ring_singature(prefix_hash, image, pubs, sig):
     :return:
     """
     from apps.monero.xmr.common import memcpy
+
     image_unp = crypto.ge_frombytes_vartime(image)
     image_pre = crypto.ge_dsm_precomp(image_unp)
 
@@ -321,12 +338,14 @@ def check_ring_singature(prefix_hash, image, pubs, sig):
 
         tmp3 = crypto.ge_frombytes_vartime(pubs[i])
         tmp2 = crypto.ge_double_scalarmult_base_vartime(sig[i][0], tmp3, sig[i][1])
-        crypto.encodepoint_into(tmp2, mvbuff[buff_off:buff_off + 32])
+        crypto.encodepoint_into(tmp2, mvbuff[buff_off : buff_off + 32])
         buff_off += 32
 
         tmp3 = crypto.hash_to_ec(crypto.encodepoint(pubs[i]))
-        tmp2 = crypto.ge_double_scalarmult_precomp_vartime(sig[i][1], tmp3, sig[i][0], image_pre)
-        crypto.encodepoint_into(tmp2, mvbuff[buff_off:buff_off + 32])
+        tmp2 = crypto.ge_double_scalarmult_precomp_vartime(
+            sig[i][1], tmp3, sig[i][0], image_pre
+        )
+        crypto.encodepoint_into(tmp2, mvbuff[buff_off : buff_off + 32])
         buff_off += 32
 
         sum = crypto.sc_add(sum, sig[i][0])
@@ -336,7 +355,16 @@ def check_ring_singature(prefix_hash, image, pubs, sig):
     return crypto.sc_isnonzero(h) == 0
 
 
-def export_key_image(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_keys, out_idx, test=True, verify=True):
+def export_key_image(
+    creds,
+    subaddresses,
+    pkey,
+    tx_pub_key,
+    additional_tx_pub_keys,
+    out_idx,
+    test=True,
+    verify=True,
+):
     """
     Generates key image for the TXO + signature for the key image
     :param creds:
@@ -350,7 +378,10 @@ def export_key_image(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_ke
     :return:
     """
     from apps.monero.xmr import monero
-    r = monero.generate_key_image_helper(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_keys, out_idx)
+
+    r = monero.generate_key_image_helper(
+        creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_keys, out_idx
+    )
     xi, ki, recv_derivation = r[:3]
 
     phash = crypto.encodepoint(ki)
@@ -358,6 +389,6 @@ def export_key_image(creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_ke
 
     if verify:
         if check_ring_singature(phash, ki, [pkey], sig) != 1:
-            raise ValueError('Signature error')
+            raise ValueError("Signature error")
 
     return ki, sig

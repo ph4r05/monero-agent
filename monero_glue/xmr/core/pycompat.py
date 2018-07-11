@@ -11,7 +11,7 @@ PY3 = sys.version_info[0] == 3
 if PY3:
     indexbytes = operator.getitem
     intlist2bytes = bytes
-    int2byte = operator.methodcaller('to_bytes', 1, 'big')
+    int2byte = operator.methodcaller("to_bytes", 1, "big")
 
 else:
     int2byte = chr

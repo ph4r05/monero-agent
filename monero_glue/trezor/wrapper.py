@@ -3,7 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 
-MONERO_CURVE = 'ed25519-keccak'
+MONERO_CURVE = "ed25519-keccak"
 
 
 async def monero_get_creds(ctx, address_n=None, network_type=None):

@@ -75,18 +75,18 @@ def pow2(x, p):
 def inv(z):
     """$= z^{-1} \mod q$, for z != 0"""
     # Adapted from curve25519_athlon.c in djb's Curve25519.
-    z2 = z * z % q                                # 2
-    z9 = pow2(z2, 2) * z % q                      # 9
-    z11 = z9 * z2 % q                             # 11
-    z2_5_0 = (z11 * z11) % q * z9 % q             # 31 == 2^5 - 2^0
-    z2_10_0 = pow2(z2_5_0, 5) * z2_5_0 % q        # 2^10 - 2^0
-    z2_20_0 = pow2(z2_10_0, 10) * z2_10_0 % q     # ...
+    z2 = z * z % q  # 2
+    z9 = pow2(z2, 2) * z % q  # 9
+    z11 = z9 * z2 % q  # 11
+    z2_5_0 = (z11 * z11) % q * z9 % q  # 31 == 2^5 - 2^0
+    z2_10_0 = pow2(z2_5_0, 5) * z2_5_0 % q  # 2^10 - 2^0
+    z2_20_0 = pow2(z2_10_0, 10) * z2_10_0 % q  # ...
     z2_40_0 = pow2(z2_20_0, 20) * z2_20_0 % q
     z2_50_0 = pow2(z2_40_0, 10) * z2_10_0 % q
     z2_100_0 = pow2(z2_50_0, 50) * z2_50_0 % q
     z2_200_0 = pow2(z2_100_0, 100) * z2_100_0 % q
-    z2_250_0 = pow2(z2_200_0, 50) * z2_50_0 % q   # 2^250 - 2^0
-    return pow2(z2_250_0, 5) * z11 % q            # 2^255 - 2^5 + 11 = q - 2
+    z2_250_0 = pow2(z2_200_0, 50) * z2_50_0 % q  # 2^250 - 2^0
+    return pow2(z2_250_0, 5) * z11 % q  # 2^255 - 2^5 + 11 = q - 2
 
 
 d = -121665 * inv(121666) % q
@@ -101,7 +101,7 @@ def xrecover(y):
         x = (x * I) % q
 
     if x % 2 != 0:
-        x = q-x
+        x = q - x
 
     return x
 
@@ -118,18 +118,18 @@ def edwards_add(P, Q):
     (x1, y1, z1, t1) = P
     (x2, y2, z2, t2) = Q
 
-    a = (y1-x1)*(y2-x2) % q
-    b = (y1+x1)*(y2+x2) % q
-    c = t1*2*d*t2 % q
-    dd = z1*2*z2 % q
+    a = (y1 - x1) * (y2 - x2) % q
+    b = (y1 + x1) * (y2 + x2) % q
+    c = t1 * 2 * d * t2 % q
+    dd = z1 * 2 * z2 % q
     e = b - a
     f = dd - c
     g = dd + c
     h = b + a
-    x3 = e*f
-    y3 = g*h
-    t3 = e*h
-    z3 = f*g
+    x3 = e * f
+    y3 = g * h
+    t3 = e * h
+    z3 = f * g
 
     return (x3 % q, y3 % q, z3 % q, t3 % q)
 
@@ -139,18 +139,18 @@ def edwards_double(P):
     # http://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html
     (x1, y1, z1, t1) = P
 
-    a = x1*x1 % q
-    b = y1*y1 % q
-    c = 2*z1*z1 % q
+    a = x1 * x1 % q
+    b = y1 * y1 % q
+    c = 2 * z1 * z1 % q
     # dd = -a
-    e = ((x1+y1)*(x1+y1) - a - b) % q
+    e = ((x1 + y1) * (x1 + y1) - a - b) % q
     g = -a + b  # dd + b
     f = g - c
     h = -a - b  # dd - b
-    x3 = e*f
-    y3 = g*h
-    t3 = e*h
-    z3 = f*g
+    x3 = e * f
+    y3 = g * h
+    t3 = e * h
+    z3 = f * g
 
     return (x3 % q, y3 % q, z3 % q, t3 % q)
 
@@ -174,6 +174,8 @@ def make_Bpow():
     for i in range(253):
         Bpow.append(P)
         P = edwards_double(P)
+
+
 make_Bpow()
 
 
@@ -194,10 +196,9 @@ def scalarmult_B(e):
 
 def encodeint(y):
     bits = [(y >> i) & 1 for i in range(b)]
-    return b''.join([
-        int2byte(sum([bits[i * 8 + j] << j for j in range(8)]))
-        for i in range(b//8)
-    ])
+    return b"".join(
+        [int2byte(sum([bits[i * 8 + j] << j for j in range(8)])) for i in range(b // 8)]
+    )
 
 
 def encodepoint(P):
@@ -206,10 +207,9 @@ def encodepoint(P):
     x = (x * zi) % q
     y = (y * zi) % q
     bits = [(y >> i) & 1 for i in range(b - 1)] + [x & 1]
-    return b''.join([
-        int2byte(sum([bits[i * 8 + j] << j for j in range(8)]))
-        for i in range(b // 8)
-    ])
+    return b"".join(
+        [int2byte(sum([bits[i * 8 + j] << j for j in range(8)])) for i in range(b // 8)]
+    )
 
 
 def bit(h, i):
@@ -239,9 +239,7 @@ def signature_unsafe(m, sk, pk):
     """
     h = H(sk)
     a = 2 ** (b - 2) + sum(2 ** i * bit(h, i) for i in range(3, b - 2))
-    r = Hint(
-        intlist2bytes([indexbytes(h, j) for j in range(b // 8, b // 4)]) + m
-    )
+    r = Hint(intlist2bytes([indexbytes(h, j) for j in range(b // 8, b // 4)]) + m)
     R = scalarmult_B(r)
     S = (r + Hint(encodepoint(R) + pk + m) * a) % l
     return encodepoint(R) + encodeint(S)
@@ -249,9 +247,11 @@ def signature_unsafe(m, sk, pk):
 
 def isoncurve(P):
     (x, y, z, t) = P
-    return (z % q != 0 and
-            x*y % q == z*t % q and
-            (y*y - x*x - z*z - d*t*t) % q == 0)
+    return (
+        z % q != 0
+        and x * y % q == z * t % q
+        and (y * y - x * x - z * z - d * t * t) % q == 0
+    )
 
 
 def decodeint(s):
@@ -261,9 +261,9 @@ def decodeint(s):
 def decodepoint(s):
     y = sum(2 ** i * bit(s, i) for i in range(0, b - 1))
     x = xrecover(y)
-    if x & 1 != bit(s, b-1):
+    if x & 1 != bit(s, b - 1):
         x = q - x
-    P = (x, y, 1, (x*y) % q)
+    P = (x, y, 1, (x * y) % q)
     if not isoncurve(P):
         raise ValueError("decoding point that is not on curve")
     return P
@@ -285,25 +285,98 @@ def checkvalid(s, m, pk):
     if len(pk) != b // 8:
         raise ValueError("public-key length is wrong")
 
-    R = decodepoint(s[:b // 8])
+    R = decodepoint(s[: b // 8])
     A = decodepoint(pk)
-    S = decodeint(s[b // 8:b // 4])
+    S = decodeint(s[b // 8 : b // 4])
     h = Hint(encodepoint(R) + pk + m)
 
     (x1, y1, z1, t1) = P = scalarmult_B(S)
     (x2, y2, z2, t2) = Q = edwards_add(R, scalarmult(A, h))
 
-    if (not isoncurve(P) or not isoncurve(Q) or
-       (x1*z2 - x2*z1) % q != 0 or (y1*z2 - y2*z1) % q != 0):
+    if (
+        not isoncurve(P)
+        or not isoncurve(Q)
+        or (x1 * z2 - x2 * z1) % q != 0
+        or (y1 * z2 - y2 * z1) % q != 0
+    ):
         raise SignatureMismatch("signature does not pass verification")
 
 
 if __name__ == "__main__":
     import base64
+
     pub = bytes(
-        [0x22, 0x4f, 0xad, 0x08, 0x5c, 0x7c, 0x8b, 0xe0, 0xc0, 0x58, 0x48, 0x46, 0xf7, 0x88, 0xd9, 0x48, 0x1e, 0x53,
-         0x53, 0xfb, 0xa7, 0xbb, 0xff, 0x4d, 0x24, 0xb0, 0xb8, 0xbc, 0x43, 0xbb, 0x66, 0x6f])
-    scal_b = bytes([0x4c,0xe8,0x8c,0x16,0x8e,0x0f,0x5f,0x8d,0x65,0x24,0xf7,0x12,0xd5,0xf8,0xd7,0xd8,0x32,0x33,0xb1,0xe7,0xa2,0xa6,0x0b,0x5a,0xba,0x52,0x06,0xcc,0x0e,0xa2,0xbc,0x08])
+        [
+            0x22,
+            0x4f,
+            0xad,
+            0x08,
+            0x5c,
+            0x7c,
+            0x8b,
+            0xe0,
+            0xc0,
+            0x58,
+            0x48,
+            0x46,
+            0xf7,
+            0x88,
+            0xd9,
+            0x48,
+            0x1e,
+            0x53,
+            0x53,
+            0xfb,
+            0xa7,
+            0xbb,
+            0xff,
+            0x4d,
+            0x24,
+            0xb0,
+            0xb8,
+            0xbc,
+            0x43,
+            0xbb,
+            0x66,
+            0x6f,
+        ]
+    )
+    scal_b = bytes(
+        [
+            0x4c,
+            0xe8,
+            0x8c,
+            0x16,
+            0x8e,
+            0x0f,
+            0x5f,
+            0x8d,
+            0x65,
+            0x24,
+            0xf7,
+            0x12,
+            0xd5,
+            0xf8,
+            0xd7,
+            0xd8,
+            0x32,
+            0x33,
+            0xb1,
+            0xe7,
+            0xa2,
+            0xa6,
+            0x0b,
+            0x5a,
+            0xba,
+            0x52,
+            0x06,
+            0xcc,
+            0x0e,
+            0xa2,
+            0xbc,
+            0x08,
+        ]
+    )
     scal = decodeint(scal_b)
 
     res = scalarmult(decodepoint(pub), scal)
@@ -313,6 +386,5 @@ if __name__ == "__main__":
     res = scalarmult(res, 8)
     res_h = encodepoint(res)
     print(base64.b16encode(res_h))
-
 
     pass

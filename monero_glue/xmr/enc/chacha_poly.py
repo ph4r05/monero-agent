@@ -6,7 +6,8 @@ import os
 
 try:
     from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
-    ChaCha20Poly1305(b'\x00'*32)  # test if openssl provides ChaCha20Poly1305
+
+    ChaCha20Poly1305(b"\x00" * 32)  # test if openssl provides ChaCha20Poly1305
 
 except:
     from chacha20poly1305 import ChaCha20Poly1305
@@ -23,7 +24,7 @@ def encrypt(key, plaintext, associated_data=None):
     cipher = ChaCha20Poly1305(key)
     nonce = os.urandom(12)
     ciphertext = cipher.encrypt(nonce, plaintext, associated_data)
-    return nonce, ciphertext, b''
+    return nonce, ciphertext, b""
 
 
 def decrypt(key, iv, ciphertext, tag=None, associated_data=None):
@@ -42,7 +43,7 @@ def decrypt(key, iv, ciphertext, tag=None, associated_data=None):
 
 
 def encrypt_pack(key, plaintext, associated_data=None):
-    return b''.join(encrypt(key, plaintext, associated_data))
+    return b"".join(encrypt(key, plaintext, associated_data))
 
 
 def decrypt_pack(key, ciphertext):

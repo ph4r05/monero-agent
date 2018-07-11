@@ -126,7 +126,7 @@ def check_ed25519point(P):
     """
     check_point_fmt(P)
     if not isoncurve(P):
-        raise ValueError('P is not on ed25519 curve')
+        raise ValueError("P is not on ed25519 curve")
 
 
 def encodepoint(P):
@@ -143,10 +143,9 @@ def encodepoint(P):
     bits = [(y >> i) & 1 for i in range(b - 1)] + [x & 1]
 
     # noinspection PyTypeChecker
-    return b''.join([
-        int2byte(sum([bits[i * 8 + j] << j for j in range(8)]))
-        for i in range(b // 8)
-    ])
+    return b"".join(
+        [int2byte(sum([bits[i * 8 + j] << j for j in range(8)])) for i in range(b // 8)]
+    )
 
 
 def encodepoint_into(P, b):
@@ -163,9 +162,11 @@ def isoncurve_ext(P):
     :return:
     """
     (x, y, z, t) = P
-    return (z % q != 0 and
-            x * y % q == z * t % q and
-            (y * y - x * x - z * z - ed25519.d * t * t) % q == 0)
+    return (
+        z % q != 0
+        and x * y % q == z * t % q
+        and (y * y - x * x - z * z - ed25519.d * t * t) % q == 0
+    )
 
 
 def decodepoint_ext(s):
@@ -174,8 +175,8 @@ def decodepoint_ext(s):
     :param s:
     :return:
     """
-    x,y = ed25519.decodepointcheck(s)
-    P = (x, y, 1, (x*y) % q)
+    x, y = ed25519.decodepointcheck(s)
+    P = (x, y, 1, (x * y) % q)
     if not isoncurve_ext(P):
         raise ValueError("decoding point that is not on curve")
     return P
@@ -231,7 +232,7 @@ def conv_p1p1_to_ext(P):
     :return:
     """
     x0, y0, z0, t0 = P
-    return x0*t0 % q, y0*z0 % q, z0*t0 % q, x0*y0 % q
+    return x0 * t0 % q, y0 * z0 % q, z0 * t0 % q, x0 * y0 % q
 
 
 def invert_ext(P):
@@ -241,7 +242,7 @@ def invert_ext(P):
     :return:
     """
     check_ed25519point(P)
-    return -1*P[0] % q, P[1], P[2], -1*P[3] % q
+    return -1 * P[0] % q, P[1], P[2], -1 * P[3] % q
 
 
 def check_ext(P):
@@ -251,7 +252,7 @@ def check_ext(P):
     :return:
     """
     if not isinstance(P, (list, tuple)) or len(P) != 4:
-        raise ValueError('P is not a ed25519 ext point')
+        raise ValueError("P is not a ed25519 ext point")
 
 
 def check_xy(P):
@@ -261,7 +262,7 @@ def check_xy(P):
     :return:
     """
     if not isinstance(P, (list, tuple)) or len(P) != 2:
-        raise ValueError('P is not a ed25519 ext point')
+        raise ValueError("P is not a ed25519 ext point")
 
 
 def point_sub(A, B):
@@ -357,8 +358,8 @@ def fe_divpowm1(u, v):
     :param v:
     :return:
     """
-    uv3 = ((u*v)^3) % q
-    uv7 = ((u*v)^7) % q
+    uv3 = ((u * v) ^ 3) % q
+    uv7 = ((u * v) ^ 7) % q
 
     return uv3 * fe_expmod(uv7, ((q - 5) / 8))
 
@@ -374,6 +375,7 @@ def fe_isnonzero(x):
 #
 # Zmod(order), scalar values field
 #
+
 
 def sc_0():
     """
@@ -419,7 +421,7 @@ def check_sc(key):
     :return:
     """
     if sc_check(key) != 0:
-        raise ValueError('Invalid scalar value')
+        raise ValueError("Invalid scalar value")
 
 
 def sc_reduce32(data):
@@ -661,7 +663,7 @@ def ge_frombytes_vartime_check(point):
         check = fe_add(vxx, u)
         if fe_isnegative(check):
             # return -1
-            raise ValueError('Point check failed')
+            raise ValueError("Point check failed")
     return 0
 
 
@@ -777,7 +779,7 @@ def hash_to_ec(buf):
 
     # setsign
     if (rx % 2) != sign:
-        rx = - (rx) % q
+        rx = -(rx) % q
 
     rz = (z + w) % q
     ry = (z - w) % q
@@ -863,7 +865,9 @@ def generate_key_derivation(key1, key2):
 
     check_ed25519point(key1)
     point2 = ge_scalarmult(key2, key1)
-    point3 = ge_mul8(point2)  # This has to do with n==0 mod 8 by dedfinition, c.f. the top paragraph of page 5 of http://cr.yp.to/ecdh/curve25519-20060209.pdf
+    point3 = ge_mul8(
+        point2
+    )  # This has to do with n==0 mod 8 by dedfinition, c.f. the top paragraph of page 5 of http://cr.yp.to/ecdh/curve25519-20060209.pdf
     # and also c.f. middle of page 8 in same document (Bernstein)
     return point3
 

@@ -3,10 +3,10 @@
 # https://github.com/keis/base58/blob/master/base58.py
 
 
-'''Base58 encoding
+"""Base58 encoding
 Implementations of Base58 and Base58Check endcodings that are compatible
 with the bitcoin network.
-'''
+"""
 
 # This module is based upon base58 snippets found scattered over many bitcoin
 # tools written in python. From what I gather the original source is from a
@@ -15,56 +15,52 @@ with the bitcoin network.
 
 from hashlib import sha256
 
-__version__ = '0.2.5'
+__version__ = "0.2.5"
 
 # 58 character alphabet used
-alphabet = b'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+alphabet = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
 
 if bytes == str:  # python2
     iseq, bseq, buffer = (
         lambda s: map(ord, s),
-        lambda s: ''.join(map(chr, s)),
+        lambda s: "".join(map(chr, s)),
         lambda s: s,
     )
 else:  # python3
-    iseq, bseq, buffer = (
-        lambda s: s,
-        bytes,
-        lambda s: s.buffer,
-    )
+    iseq, bseq, buffer = (lambda s: s, bytes, lambda s: s.buffer)
 
 
 def scrub_input(v):
     if isinstance(v, str) and not isinstance(v, bytes):
-        v = v.encode('ascii')
+        v = v.encode("ascii")
 
     if not isinstance(v, bytes):
         raise TypeError(
-            "a bytes-like object is required (also str), not '%s'" %
-            type(v).__name__)
+            "a bytes-like object is required (also str), not '%s'" % type(v).__name__
+        )
 
     return v
 
 
 def b58encode_int(i, default_one=True):
-    '''Encode an integer using Base58'''
+    """Encode an integer using Base58"""
     if not i and default_one:
         return alphabet[0:1]
     string = b""
     while i:
         i, idx = divmod(i, 58)
-        string = alphabet[idx:idx+1] + string
+        string = alphabet[idx : idx + 1] + string
     return string
 
 
 def b58encode(v):
-    '''Encode a string using Base58'''
+    """Encode a string using Base58"""
 
     v = scrub_input(v)
 
     nPad = len(v)
-    v = v.lstrip(b'\0')
+    v = v.lstrip(b"\0")
     nPad -= len(v)
 
     p, acc = 1, 0
@@ -74,11 +70,11 @@ def b58encode(v):
 
     result = b58encode_int(acc, default_one=False)
 
-    return (alphabet[0:1] * nPad + result)
+    return alphabet[0:1] * nPad + result
 
 
 def b58decode_int(v):
-    '''Decode a Base58 encoded string as an integer'''
+    """Decode a Base58 encoded string as an integer"""
 
     v = scrub_input(v)
 
@@ -89,7 +85,7 @@ def b58decode_int(v):
 
 
 def b58decode(v):
-    '''Decode a Base58 encoded string'''
+    """Decode a Base58 encoded string"""
 
     v = scrub_input(v)
 
@@ -104,18 +100,18 @@ def b58decode(v):
         acc, mod = divmod(acc, 256)
         result.append(mod)
 
-    return (b'\0' * (origlen - newlen) + bseq(reversed(result)))
+    return b"\0" * (origlen - newlen) + bseq(reversed(result))
 
 
 def b58encode_check(v):
-    '''Encode a string using Base58 with a 4 character checksum'''
+    """Encode a string using Base58 with a 4 character checksum"""
 
     digest = sha256(sha256(v).digest()).digest()
     return b58encode(v + digest[:4])
 
 
 def b58decode_check(v):
-    '''Decode and verify the checksum of a Base58 encoded string'''
+    """Decode and verify the checksum of a Base58 encoded string"""
 
     result = b58decode(v)
     result, check = result[:-4], result[-4:]

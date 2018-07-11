@@ -25,7 +25,9 @@ class AgentTest(aiounittest.AsyncTestCase):
         Testing tx signature, simple, multiple inputs
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns01.txt'))
+        unsigned_tx_c = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_uns01.txt")
+        )
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
 
         await self.tx_sign(unsigned_tx)
@@ -35,7 +37,9 @@ class AgentTest(aiounittest.AsyncTestCase):
         Testing tx signature, one input. non-simple RCT
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns02.txt'))
+        unsigned_tx_c = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_uns02.txt")
+        )
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
         await self.tx_sign(unsigned_tx)
 
@@ -44,7 +48,9 @@ class AgentTest(aiounittest.AsyncTestCase):
         Testing tx signature, one input. non-simple RCT
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns03.txt'))
+        unsigned_tx_c = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_uns03.txt")
+        )
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
         await self.tx_sign(unsigned_tx)
 
@@ -53,7 +59,9 @@ class AgentTest(aiounittest.AsyncTestCase):
         Testing tx signature, one input. non-simple RCT
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(__name__, os.path.join('data', 'tsx_uns04.txt'))
+        unsigned_tx_c = pkg_resources.resource_string(
+            __name__, os.path.join("data", "tsx_uns04.txt")
+        )
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
         await self.tx_sign(unsigned_tx)
 
@@ -77,9 +85,14 @@ class AgentTest(aiounittest.AsyncTestCase):
         :return:
         """
         return monero.AccountCreds.new_wallet(
-            priv_view_key=crypto.b16_to_scalar(b'4ce88c168e0f5f8d6524f712d5f8d7d83233b1e7a2a60b5aba5206cc0ea2bc08'),
-            priv_spend_key=crypto.b16_to_scalar(b'f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a'),
-            network_type=monero.NetworkTypes.TESTNET)
+            priv_view_key=crypto.b16_to_scalar(
+                b"4ce88c168e0f5f8d6524f712d5f8d7d83233b1e7a2a60b5aba5206cc0ea2bc08"
+            ),
+            priv_spend_key=crypto.b16_to_scalar(
+                b"f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a"
+            ),
+            network_type=monero.NetworkTypes.TESTNET,
+        )
 
     def init_trezor(self):
         """

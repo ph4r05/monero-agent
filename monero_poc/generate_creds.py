@@ -13,13 +13,27 @@ def main():
     Entry point
     :return:
     """
-    parser = argparse.ArgumentParser(description='Generate non-deterministic wallet credentials')
+    parser = argparse.ArgumentParser(
+        description="Generate non-deterministic wallet credentials"
+    )
 
-    parser.add_argument('--testnet', dest='testnet', default=False, action='store_const', const=True,
-                        help='Testnet')
+    parser.add_argument(
+        "--testnet",
+        dest="testnet",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Testnet",
+    )
 
-    parser.add_argument('--stagenet', dest='stagenet', default=False, action='store_const', const=True,
-                        help='Testnet')
+    parser.add_argument(
+        "--stagenet",
+        dest="stagenet",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Testnet",
+    )
 
     args = parser.parse_args()
 
@@ -33,10 +47,16 @@ def main():
     priv_spend = crypto.random_scalar()
     w = monero.AccountCreds.new_wallet(priv_view, priv_spend, network_type=network_type)
 
-    print('Address: %s' % w.address.decode('utf8'))
-    print('Private view key:  %s' % binascii.hexlify(crypto.encodeint(priv_view)).decode('utf8'))
-    print('Private spend key: %s' % binascii.hexlify(crypto.encodeint(priv_spend)).decode('utf8'))
+    print("Address: %s" % w.address.decode("utf8"))
+    print(
+        "Private view key:  %s"
+        % binascii.hexlify(crypto.encodeint(priv_view)).decode("utf8")
+    )
+    print(
+        "Private spend key: %s"
+        % binascii.hexlify(crypto.encodeint(priv_spend)).decode("utf8")
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -9,8 +9,16 @@ from ecdsa.numbertheory import square_root_mod_prime
 from monero_glue.misc import b58 as base58
 
 from .network import BitcoinMainNet
-from .utils import (chr_py2, ensure_bytes, ensure_str, hash160, is_hex_string,
-                    long_or_int, long_to_hex, memoize)
+from .utils import (
+    chr_py2,
+    ensure_bytes,
+    ensure_str,
+    hash160,
+    is_hex_string,
+    long_or_int,
+    long_to_hex,
+    memoize,
+)
 
 PublicPair = namedtuple("PublicPair", ["x", "y"])
 
@@ -23,9 +31,7 @@ class Key(object):
         self.compressed = compressed
 
     def __eq__(self, other):
-        return (other and
-                self.network == other.network and
-                type(self) == type(other))
+        return other and self.network == other.network and type(self) == type(other)
 
     def __ne__(self, other):
         return not self == other
@@ -37,13 +43,13 @@ class Key(object):
 
 
 class PrivateKey(Key):
-    def __init__(self, secret_exponent, network=BitcoinMainNet,
-                 *args, **kwargs):
+    def __init__(self, secret_exponent, network=BitcoinMainNet, *args, **kwargs):
         if not isinstance(secret_exponent, six.integer_types):
             raise ValueError("secret_exponent must be a long")
         super(PrivateKey, self).__init__(network=network, *args, **kwargs)
         self._private_key = SigningKey.from_secret_exponent(
-            secret_exponent, curve=SECP256k1)
+            secret_exponent, curve=SECP256k1
+        )
 
     def get_key(self):
         """Get the key - a hex formatted private exponent for the curve."""
@@ -54,15 +60,16 @@ class PrivateKey(Key):
         """Get the PublicKey for this PrivateKey."""
         return PublicKey.from_verifying_key(
             self._private_key.get_verifying_key(),
-            network=self.network, compressed=self.compressed)
+            network=self.network,
+            compressed=self.compressed,
+        )
 
     def get_extended_key(self):
         """Get the extended key.
         Extended keys contain the network bytes and the public or private
         key.
         """
-        network_hex_chars = hexlify(
-            chr_py2(self.network.SECRET_KEY))
+        network_hex_chars = hexlify(chr_py2(self.network.SECRET_KEY))
         return ensure_bytes(network_hex_chars + self.get_key())
 
     def export_to_wif(self, compressed=None):
@@ -81,7 +88,7 @@ class PrivateKey(Key):
         if compressed is None:
             compressed = self.compressed
         if compressed:
-            extended_key_bytes += '\01'
+            extended_key_bytes += "\01"
         # And return the base58-encoded result with a checksum
         return ensure_str(base58.b58encode_check(extended_key_bytes))
 
@@ -111,11 +118,12 @@ class PrivateKey(Key):
         # py3k interprets network_byte as an int already
         if not isinstance(network_bytes, six.integer_types):
             network_bytes = ord(network_bytes)
-        if (network_bytes != network.SECRET_KEY):
+        if network_bytes != network.SECRET_KEY:
             raise incompatible_network_exception_factory(
                 network_name=network.NAME,
                 expected_prefix=network.SECRET_KEY,
-                given_prefix=network_bytes)
+                given_prefix=network_bytes,
+            )
 
         # Drop the network bytes
         extended_key_bytes = extended_key_bytes[1:]
@@ -129,8 +137,9 @@ class PrivateKey(Key):
             compressed = True
 
         # And we should finally have a valid key
-        return cls(long_or_int(hexlify(extended_key_bytes), 16), network,
-                   compressed=compressed)
+        return cls(
+            long_or_int(hexlify(extended_key_bytes), 16), network, compressed=compressed
+        )
 
     @classmethod
     def from_hex_key(cls, key, network=BitcoinMainNet):
@@ -158,13 +167,16 @@ class PrivateKey(Key):
     __hash__ = Key.__hash__
 
     def __eq__(self, other):
-        return (super(PrivateKey, self).__eq__(other) and
-                self._private_key.curve == other._private_key.curve and
-                (self._private_key.to_string() ==
-                 other._private_key.to_string()) and
-                (self._private_key.privkey.secret_multiplier ==
-                 other._private_key.privkey.secret_multiplier) and
-                self.get_public_key() == other.get_public_key())
+        return (
+            super(PrivateKey, self).__eq__(other)
+            and self._private_key.curve == other._private_key.curve
+            and (self._private_key.to_string() == other._private_key.to_string())
+            and (
+                self._private_key.privkey.secret_multiplier
+                == other._private_key.privkey.secret_multiplier
+            )
+            and self.get_public_key() == other.get_public_key()
+        )
 
     def __sub__(self, other):
         assert isinstance(other, self.__class__)
@@ -213,14 +225,11 @@ class PublicKey(Key):
             compressed = self.compressed
         if compressed:
             parity = 2 + (self.y & 1)  # 0x02 even, 0x03 odd
-            return ensure_bytes(
-                long_to_hex(parity, 2) +
-                long_to_hex(self.x, 64))
+            return ensure_bytes(long_to_hex(parity, 2) + long_to_hex(self.x, 64))
         else:
             return ensure_bytes(
-                b'04' +
-                long_to_hex(self.x, 64) +
-                long_to_hex(self.y, 64))
+                b"04" + long_to_hex(self.x, 64) + long_to_hex(self.y, 64)
+            )
 
     @classmethod
     def from_hex_key(cls, key, network=BitcoinMainNet):
@@ -245,8 +254,8 @@ class PublicKey(Key):
             if len(key) != 65:
                 raise KeyParseError("Invalid key length")
             public_pair = PublicPair(
-                long_or_int(hexlify(key[1:33]), 16),
-                long_or_int(hexlify(key[33:]), 16))
+                long_or_int(hexlify(key[1:33]), 16), long_or_int(hexlify(key[33:]), 16)
+            )
         elif id_byte in [2, 3]:
             # Compressed public point!
             compressed = True
@@ -271,8 +280,7 @@ class PublicKey(Key):
                 public_pair = PublicPair(x, beta)
         else:
             raise KeyParseError("The given key is not in a known format.")
-        return cls.from_public_pair(public_pair, network=network,
-                                    compressed=compressed)
+        return cls.from_public_pair(public_pair, network=network, compressed=compressed)
 
     @memoize
     def create_point(self, x, y):
@@ -282,8 +290,7 @@ class PublicKey(Key):
         :param y: The y coodinate on the curve
         :type y: long
         """
-        if (not isinstance(x, six.integer_types) or
-                not isinstance(y, six.integer_types)):
+        if not isinstance(x, six.integer_types) or not isinstance(y, six.integer_types):
             raise ValueError("The coordinates must be longs.")
         return _ECDSA_Point(SECP256k1.curve, x, y)
 
@@ -300,8 +307,7 @@ class PublicKey(Key):
         return cls.from_verifying_key(verifying_key, network=network, **kwargs)
 
     @classmethod
-    def from_verifying_key(
-            cls, verifying_key, network=BitcoinMainNet, **kwargs):
+    def from_verifying_key(cls, verifying_key, network=BitcoinMainNet, **kwargs):
         return cls(verifying_key, network=network, **kwargs)
 
     def to_address(self, compressed=None):
@@ -317,8 +323,7 @@ class PublicKey(Key):
         # First get the hash160 of the key
         hash160_bytes = hash160(key)
         # Prepend the network address byte
-        network_hash160_bytes = \
-            chr_py2(self.network.PUBKEY_ADDRESS) + hash160_bytes
+        network_hash160_bytes = chr_py2(self.network.PUBKEY_ADDRESS) + hash160_bytes
         # Return a base58 encoded address with a checksum
         return ensure_str(base58.b58encode_check(network_hash160_bytes))
 
@@ -331,9 +336,11 @@ class PublicKey(Key):
         return cls.from_point(point, network=network, **kwargs)
 
     def __eq__(self, other):
-        return (super(PublicKey, self).__eq__(other) and
-                self.x == other.x and
-                self.y == other.y)
+        return (
+            super(PublicKey, self).__eq__(other)
+            and self.x == other.x
+            and self.y == other.y
+        )
 
     __hash__ = Key.__hash__
 
@@ -342,14 +349,15 @@ class KeyParseError(Exception):
     pass
 
 
-def incompatible_network_exception_factory(
-        network_name, expected_prefix, given_prefix):
+def incompatible_network_exception_factory(network_name, expected_prefix, given_prefix):
     return IncompatibleNetworkException(
         "Incorrect network. {net_name} expects a byte prefix of "
         "{expected_prefix}, but you supplied {given_prefix}".format(
             net_name=network_name,
             expected_prefix=expected_prefix,
-            given_prefix=given_prefix))
+            given_prefix=given_prefix,
+        )
+    )
 
 
 class ChecksumException(Exception):

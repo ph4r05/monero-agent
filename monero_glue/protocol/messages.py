@@ -12,17 +12,17 @@ def get_message_type(msg=None, cls=None):
 
     type_id = getattr(MessageType, cls.__name__)
     if type_id is None:
-        raise ValueError('Could not find message ID for: %s' % msg)
+        raise ValueError("Could not find message ID for: %s" % msg)
     return type_id
 
 
 def get_message_from_type(type_id):
-    all_msg = [x for x in dir(MessageType) if not x.startswith('_')]
+    all_msg = [x for x in dir(MessageType) if not x.startswith("_")]
     for m in all_msg:
         cur_id = getattr(MessageType, m)
         if cur_id == type_id:
             return getattr(messages, m)
-    raise ValueError('Could not find message with type: %s' % type_id)
+    raise ValueError("Could not find message with type: %s" % type_id)
 
 
 def bytes_fix(msg, pkg=protobuf):
@@ -60,7 +60,7 @@ class MessageConverter(object):
     Converts our protobufs <-> trezorlib
     Required for protobuf encoders
     """
-    
+
     def __init__(self, fix_bytes=False):
         self.imported = False
         self.tlib_msgs = None
@@ -73,6 +73,7 @@ class MessageConverter(object):
 
         from trezorlib import messages as tlib_msgs
         from trezorlib import protobuf as tlib_protobuf
+
         self.tlib_msgs = tlib_msgs
         self.tlib_p = tlib_protobuf
         self.imported = True
@@ -94,7 +95,7 @@ class MessageConverter(object):
         elif isinstance(msg, list):
             return [self.to_trezorlib(x) for x in msg]
         elif isinstance(msg, dict):
-            return {v:self.to_trezorlib(x) for v,x in msg.items()}
+            return {v: self.to_trezorlib(x) for v, x in msg.items()}
         else:
             return msg
 

@@ -17,7 +17,7 @@ class StubException(Exception):
         self.text = text
 
     def __repr__(self):
-        return 'StubException(%r)' % self.text
+        return "StubException(%r)" % self.text
 
     def __str__(self):
         return self.__repr__()
@@ -30,8 +30,10 @@ class TrezorReturnedError(AgentError):
 
     def __str__(self):
         if self.resp and isinstance(self.resp, MoneroRespError):
-            return 'TrezorReturnedError(MoneroRespError(status=%r, reason=%r))\n\nCaused by: %s' \
-                   % (self.resp.status, self.resp.reason, self.resp.exc)
+            return (
+                "TrezorReturnedError(MoneroRespError(status=%r, reason=%r))\n\nCaused by: %s"
+                % (self.resp.status, self.resp.reason, self.resp.exc)
+            )
         else:
             return super().__str__()
 

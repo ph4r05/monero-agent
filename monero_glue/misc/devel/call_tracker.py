@@ -10,6 +10,7 @@ class CallTracker(object):
     """
     Tracks method invocations in the given object / module
     """
+
     def __init__(self, base, print_on_end=False):
         self.base = base
         self.t = collections.defaultdict(lambda: 0)
@@ -26,7 +27,7 @@ class CallTracker(object):
         if self.print_on_end:
             k = sorted(self.t.keys())
             for kk in k:
-                print('  %s: %s' % (kk, self.t[kk]))
+                print("  %s: %s" % (kk, self.t[kk]))
 
     def call_tracker_get_call_stats(self):
         return self.t

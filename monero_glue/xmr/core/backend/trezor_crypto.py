@@ -19,11 +19,11 @@ def open_lib(lib_path=None, try_env=True):
 
     # Open Trezor-crypto
     if lib_path is None and try_env:
-        lib_path = os.getenv('LIBTREZOR_CRYPTO_PATH', None)
+        lib_path = os.getenv("LIBTREZOR_CRYPTO_PATH", None)
     if lib_path is None:
-        lib_path = os.path.join(os.path.dirname(__file__), './libtrezor-crypto.so')
+        lib_path = os.path.join(os.path.dirname(__file__), "./libtrezor-crypto.so")
     if lib_path is None or not os.path.exists(lib_path):
-        raise FileNotFoundError('Trezor-Crypto lib not found')
+        raise FileNotFoundError("Trezor-Crypto lib not found")
 
     CLIB = ct.cdll.LoadLibrary(lib_path)
 
@@ -101,23 +101,73 @@ def open_lib(lib_path=None, try_env=True):
     #
 
     CLIB.ed25519_verify.argtypes = [ct.c_char_p, ct.c_char_p, ct.c_size_t]
-    CLIB.ge25519_p1p1_to_partial.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519_p1p1)]
-    CLIB.ge25519_p1p1_to_full.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519_p1p1)]
-    CLIB.ge25519_full_to_pniels.argtypes = [ct.POINTER(tt.Ge25519_pniels), ct.POINTER(tt.Ge25519)]
+    CLIB.ge25519_p1p1_to_partial.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519_p1p1),
+    ]
+    CLIB.ge25519_p1p1_to_full.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519_p1p1),
+    ]
+    CLIB.ge25519_full_to_pniels.argtypes = [
+        ct.POINTER(tt.Ge25519_pniels),
+        ct.POINTER(tt.Ge25519),
+    ]
 
-    CLIB.ge25519_double_p1p1.argtypes = [ct.POINTER(tt.Ge25519_p1p1), ct.POINTER(tt.Ge25519)]
-    CLIB.ge25519_nielsadd2_p1p1.argtypes = [ct.POINTER(tt.Ge25519_p1p1), ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519_niels), ct.c_char]
-    CLIB.ge25519_pnielsadd_p1p1.argtypes = [ct.POINTER(tt.Ge25519_p1p1), ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519_pniels), ct.c_char]
-    CLIB.ge25519_double_partial.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519)]
+    CLIB.ge25519_double_p1p1.argtypes = [
+        ct.POINTER(tt.Ge25519_p1p1),
+        ct.POINTER(tt.Ge25519),
+    ]
+    CLIB.ge25519_nielsadd2_p1p1.argtypes = [
+        ct.POINTER(tt.Ge25519_p1p1),
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519_niels),
+        ct.c_char,
+    ]
+    CLIB.ge25519_pnielsadd_p1p1.argtypes = [
+        ct.POINTER(tt.Ge25519_p1p1),
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519_pniels),
+        ct.c_char,
+    ]
+    CLIB.ge25519_double_partial.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519),
+    ]
     CLIB.ge25519_double.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519)]
-    CLIB.ge25519_nielsadd2.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519_niels)]
-    CLIB.ge25519_pnielsadd.argtypes = [ct.POINTER(tt.Ge25519_pniels), ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519_pniels)]
+    CLIB.ge25519_nielsadd2.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519_niels),
+    ]
+    CLIB.ge25519_pnielsadd.argtypes = [
+        ct.POINTER(tt.Ge25519_pniels),
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519_pniels),
+    ]
     CLIB.ge25519_pack.argtypes = [tt.KEY_BUFF, ct.POINTER(tt.Ge25519)]
-    CLIB.ge25519_unpack_negative_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.KEY_BUFF]
+    CLIB.ge25519_unpack_negative_vartime.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        tt.KEY_BUFF,
+    ]
     CLIB.ge25519_set_neutral.argtypes = [ct.POINTER(tt.Ge25519)]
-    CLIB.ge25519_double_scalarmult_vartime.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM]
-    CLIB.ge25519_double_scalarmult_vartime2.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM]
-    CLIB.ge25519_scalarmult.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM]
+    CLIB.ge25519_double_scalarmult_vartime.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+        tt.MODM,
+    ]
+    CLIB.ge25519_double_scalarmult_vartime2.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+    ]
+    CLIB.ge25519_scalarmult.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+    ]
     CLIB.ge25519_check.argtypes = [ct.POINTER(tt.Ge25519)]
     CLIB.ge25519_fromfe_check.argtypes = [ct.POINTER(tt.Ge25519)]
     CLIB.ge25519_eq.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519)]
@@ -128,11 +178,23 @@ def open_lib(lib_path=None, try_env=True):
     CLIB.ge25519_neg_full.argtypes = [ct.POINTER(tt.Ge25519)]
     CLIB.ge25519_reduce.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519)]
     CLIB.ge25519_norm.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519)]
-    CLIB.ge25519_add.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), ct.c_char]
-    CLIB.ge25519_fromfe_frombytes_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.KEY_BUFF]
+    CLIB.ge25519_add.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519),
+        ct.c_char,
+    ]
+    CLIB.ge25519_fromfe_frombytes_vartime.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        tt.KEY_BUFF,
+    ]
     CLIB.ge25519_unpack_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.KEY_BUFF]
     CLIB.ge25519_scalarmult_base_wrapper.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM]
-    CLIB.ge25519_scalarmult_wrapper.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM]
+    CLIB.ge25519_scalarmult_wrapper.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+    ]
     CLIB.ge25519_set_xmr_h.argtypes = [ct.POINTER(tt.Ge25519)]
 
     CLIB.ed25519_verify.restype = ct.c_int
@@ -156,23 +218,76 @@ def open_lib(lib_path=None, try_env=True):
 
     CLIB.xmr_hash_to_scalar.argtypes = [tt.MODM, ct.c_void_p, ct.c_size_t]
     CLIB.xmr_hash_to_ec.argtypes = [ct.POINTER(tt.Ge25519), ct.c_void_p, ct.c_size_t]
-    CLIB.xmr_derivation_to_scalar.argtypes = [tt.MODM, ct.POINTER(tt.Ge25519), ct.c_uint32]
-    CLIB.xmr_generate_key_derivation.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), tt.MODM]
-    CLIB.xmr_derive_private_key.argtypes = [tt.MODM, ct.POINTER(tt.Ge25519), ct.c_uint32, tt.MODM]
-    CLIB.xmr_derive_public_key.argtypes = [ct.POINTER(tt.Ge25519), ct.POINTER(tt.Ge25519), ct.c_uint32, ct.POINTER(tt.Ge25519)]
+    CLIB.xmr_derivation_to_scalar.argtypes = [
+        tt.MODM,
+        ct.POINTER(tt.Ge25519),
+        ct.c_uint32,
+    ]
+    CLIB.xmr_generate_key_derivation.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+    ]
+    CLIB.xmr_derive_private_key.argtypes = [
+        tt.MODM,
+        ct.POINTER(tt.Ge25519),
+        ct.c_uint32,
+        tt.MODM,
+    ]
+    CLIB.xmr_derive_public_key.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        ct.POINTER(tt.Ge25519),
+        ct.c_uint32,
+        ct.POINTER(tt.Ge25519),
+    ]
     CLIB.xmr_gen_c.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.c_uint64]
-    CLIB.xmr_add_keys2.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM, ct.POINTER(tt.Ge25519)]
-    CLIB.xmr_add_keys2_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, tt.MODM, ct.POINTER(tt.Ge25519)]
-    CLIB.xmr_add_keys3.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519)]
-    CLIB.xmr_add_keys3_vartime.argtypes = [ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519), tt.MODM, ct.POINTER(tt.Ge25519)]
-    CLIB.xmr_get_subaddress_secret_key.argtypes = [tt.MODM, ct.c_uint32, ct.c_uint32, tt.MODM]
-    CLIB.xmr_gen_range_sig.argtypes = [ct.POINTER(tt.XmrRangeSig), ct.POINTER(tt.Ge25519), tt.MODM, tt.XmrAmount, ct.POINTER(tt.MODM)]
+    CLIB.xmr_add_keys2.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+        tt.MODM,
+        ct.POINTER(tt.Ge25519),
+    ]
+    CLIB.xmr_add_keys2_vartime.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+        tt.MODM,
+        ct.POINTER(tt.Ge25519),
+    ]
+    CLIB.xmr_add_keys3.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+        ct.POINTER(tt.Ge25519),
+    ]
+    CLIB.xmr_add_keys3_vartime.argtypes = [
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+        ct.POINTER(tt.Ge25519),
+    ]
+    CLIB.xmr_get_subaddress_secret_key.argtypes = [
+        tt.MODM,
+        ct.c_uint32,
+        ct.c_uint32,
+        tt.MODM,
+    ]
+    CLIB.xmr_gen_range_sig.argtypes = [
+        ct.POINTER(tt.XmrRangeSig),
+        ct.POINTER(tt.Ge25519),
+        tt.MODM,
+        tt.XmrAmount,
+        ct.POINTER(tt.MODM),
+    ]
 
     init_lib()
+
 
 #
 # Wrappers
 #
+
 
 def init_lib():
     """
@@ -181,7 +296,7 @@ def init_lib():
     """
     res = CLIB.random_init()
     if res < 0:
-        raise ValueError('Library initialization error: %s' % res)
+        raise ValueError("Library initialization error: %s" % res)
     return res
 
 
@@ -189,6 +304,7 @@ def random_buffer(sz):
     buff = (ct.c_uint8 * sz)()
     CLIB.random_buffer(ct.byref(buff), sz)
     return bytes(buff)
+
 
 random_buffer_r = random_buffer
 
@@ -250,7 +366,7 @@ def get256_modm_r(a):
     r = ct.c_uint64()
     res = CLIB.get256_modm(ct.byref(r), a)
     if not res:
-        raise ValueError('Get256_modm failed')
+        raise ValueError("Get256_modm failed")
     return r.value
 
 
@@ -711,7 +827,9 @@ def ge25519_double_scalarmult_vartime_r(a, b, c):
 
 
 def ge25519_double_scalarmult_vartime2(r, a, b, c, d):
-    return CLIB.ge25519_double_scalarmult_vartime2(ct.byref(r), ct.byref(a), b, ct.byref(c), d)
+    return CLIB.ge25519_double_scalarmult_vartime2(
+        ct.byref(r), ct.byref(a), b, ct.byref(c), d
+    )
 
 
 def ge25519_double_scalarmult_vartime2_r(a, b, c, d):
@@ -841,10 +959,10 @@ def ge25519_unpack_vartime(a, b):
 
 def ge25519_unpack_vartime_r(buff):
     pt = tt.Ge25519()
-    #buff = tt.KEY_BUFF(*buff)
+    # buff = tt.KEY_BUFF(*buff)
     r = CLIB.ge25519_unpack_vartime(ct.byref(pt), buff)
     if r != 1:
-        raise ValueError('Point decoding error')
+        raise ValueError("Point decoding error")
     return pt
 
 

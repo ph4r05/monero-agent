@@ -104,7 +104,7 @@ def check_signature(data, c, r, pub):
     c = sc_reduce32(c)
     r = sc_reduce32(r)
     if sc_check(c) != 0 or sc_check(r) != 0:
-        raise ValueError('Signature error')
+        raise ValueError("Signature error")
 
     tmp2 = point_add(scalarmult(pub, c), scalarmult_base(r))
     buff = data + encodepoint(pub) + encodepoint(tmp2)

@@ -5,10 +5,16 @@
 import traceback
 
 from monero_glue.hwtoken import iface, misc
-from monero_glue.messages import (DebugMoneroDiagResp, MoneroGetKey,
-                                  MoneroGetWatchKey, MoneroKey,
-                                  MoneroKeyImageSync, MoneroRespError,
-                                  MoneroTsxSign, MoneroWatchKey)
+from monero_glue.messages import (
+    DebugMoneroDiagResp,
+    MoneroGetKey,
+    MoneroGetWatchKey,
+    MoneroKey,
+    MoneroKeyImageSync,
+    MoneroRespError,
+    MoneroTsxSign,
+    MoneroWatchKey,
+)
 from monero_glue.protocol.error import exc2str
 from monero_glue.protocol.key_image_sync import KeyImageSync
 from monero_glue.protocol.tsx_sign import TsxSigner
@@ -20,6 +26,7 @@ class TokenLite(object):
     Main Trezor object.
     Provides interface to the host, packages messages.
     """
+
     def __init__(self):
         self.tsx_ctr = 0
         self.err_ctr = 0
@@ -86,15 +93,18 @@ class TokenLite(object):
         await misc.parse_pb_msg(pb, msg.__class__)
 
     async def call(self, msg, recode=True):
-        return MoneroRespError(reason='unsupported')
+        return MoneroRespError(reason="unsupported")
 
     async def ping(self, message=None, **kwargs):
         return DebugMoneroDiagResp()
 
     async def get_view_key(self, msg: MoneroGetWatchKey):
         if msg.network_type != self.creds.network_type:
-            return MoneroRespError(reason='InvalidNetworkType')
-        return MoneroWatchKey(watch_key=crypto.encodepoint(self.creds.view_key_private), address=self.creds.address)
+            return MoneroRespError(reason="InvalidNetworkType")
+        return MoneroWatchKey(
+            watch_key=crypto.encodepoint(self.creds.view_key_private),
+            address=self.creds.address,
+        )
 
     async def tsx_sign(self, msg: MoneroTsxSign):
         if self.tsx_obj is None or msg.init:
@@ -118,7 +128,9 @@ class TokenLite(object):
     async def key_image_sync(self, msg: MoneroKeyImageSync):
         try:
             if msg.init:
-                self.ki_sync = KeyImageSync(ctx=self, iface=self.iface, creds=self.creds)
+                self.ki_sync = KeyImageSync(
+                    ctx=self, iface=self.iface, creds=self.creds
+                )
                 return await self.ki_sync.init(self, msg.init)
 
             elif msg.step:
@@ -130,7 +142,7 @@ class TokenLite(object):
                 return res
 
             else:
-                raise ValueError('Unknown error')
+                raise ValueError("Unknown error")
 
         except Exception as e:
             await self.ki_exc_handler(e)

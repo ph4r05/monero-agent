@@ -16,13 +16,13 @@ if backend == ec_picker.EC_BACKEND_PY:
 elif backend == ec_picker.EC_BACKEND_TREZOR:
     try:
         from monero_glue.xmr.core.ec_trezor import *
-        
+
     except Exception as e:
-        logger.warning('Trezor-crypto backend not usable: %s' % e)
+        logger.warning("Trezor-crypto backend not usable: %s" % e)
         if ec_picker.get_ec_backend_force():
             raise
 
         from monero_glue.xmr.core.ec_py import *
 
 else:
-    raise ValueError('Unknown EC backend: %s' % backend)
+    raise ValueError("Unknown EC backend: %s" % backend)

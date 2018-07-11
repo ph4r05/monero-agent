@@ -6,13 +6,18 @@
 import os
 
 from monero_glue.hwtoken import misc, token
-from monero_glue.messages import (MoneroExportedKeyImage, MoneroGetAddress,
-                                  MoneroGetKey, MoneroGetWatchKey,
-                                  MoneroKeyImageExportInit,
-                                  MoneroKeyImageExportInitResp,
-                                  MoneroKeyImageSyncFinalResp,
-                                  MoneroKeyImageSyncStep,
-                                  MoneroKeyImageSyncStepResp, MoneroRespError)
+from monero_glue.messages import (
+    MoneroExportedKeyImage,
+    MoneroGetAddress,
+    MoneroGetKey,
+    MoneroGetWatchKey,
+    MoneroKeyImageExportInit,
+    MoneroKeyImageExportInitResp,
+    MoneroKeyImageSyncFinalResp,
+    MoneroKeyImageSyncStep,
+    MoneroKeyImageSyncStepResp,
+    MoneroRespError,
+)
 from monero_glue.protocol.messages import MessageConverter
 from monero_serialize import xmrserialize
 
@@ -40,10 +45,13 @@ class Trezor(token.TokenLite):
     """
     Trezor proxy calls to the trezor
     """
-    def __init__(self, path=None, debug=False, address_n=None, network_type=0, *args, **kwargs):
+
+    def __init__(
+        self, path=None, debug=False, address_n=None, network_type=0, *args, **kwargs
+    ):
         super().__init__()
         if path is None:
-            path = os.environ.get('TREZOR_PATH', 'udp:127.0.0.1:21324')
+            path = os.environ.get("TREZOR_PATH", "udp:127.0.0.1:21324")
 
         self.debug = debug
         self.path = path
@@ -52,7 +60,11 @@ class Trezor(token.TokenLite):
 
     def _connect(self):
         self.wirelink = get_transport(self.path)
-        self.client = TrezorClientDebugLink(self.wirelink) if self.debug else TrezorClient(self.wirelink)
+        self.client = (
+            TrezorClientDebugLink(self.wirelink)
+            if self.debug
+            else TrezorClient(self.wirelink)
+        )
 
         if self.debug:
             try:
@@ -89,7 +101,7 @@ class Trezor(token.TokenLite):
 
     async def ping(self, message=None, **kwargs):
         with self.session():
-            return self.client.ping(message if message else 'monero', **kwargs)
+            return self.client.ping(message if message else "monero", **kwargs)
 
     async def get_view_key(self, msg):
         with self.session():

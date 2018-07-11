@@ -71,7 +71,9 @@ def key_image_vector(x):
     :param x:
     :return:
     """
-    return [crypto.scalarmult(crypto.hash_to_ec(crypto.scalarmult_base(xx)), xx) for xx in x]
+    return [
+        crypto.scalarmult(crypto.hash_to_ec(crypto.scalarmult_base(xx)), xx) for xx in x
+    ]
 
 
 def scalar_gen_vector(n):
@@ -181,17 +183,17 @@ def gen_mlsag(pk, xx, index):
     R = key_matrix(rows, cols)
     s = key_matrix(rows, cols)
 
-    m = ''.join(pk[0])
+    m = "".join(pk[0])
     for i in range(1, cols):
-        m = m + ''.join(pk[i])
+        m = m + "".join(pk[i])
 
     L[index] = [crypto.scalarmult_base(aa) for aa in alpha]  # L = aG
     Hi = hash_key_vector(pk[index])
     R[index] = [crypto.scalarmult(Hi[ii], alpha[ii]) for ii in range(0, rows)]  # R = aI
-    
+
     oldi = index
     i = (index + 1) % cols
-    c[i] = crypto.cn_fast_hash(m + ''.join(L[oldi]) + ''.join(R[oldi]))
+    c[i] = crypto.cn_fast_hash(m + "".join(L[oldi]) + "".join(R[oldi]))
 
     while i != index:
         s[i] = scalar_gen_vector(rows)
@@ -201,9 +203,11 @@ def gen_mlsag(pk, xx, index):
         R[i] = [crypto.add_keys3(s[i][j], Hi[j], c[i], I[j]) for j in range(0, rows)]
         oldi = i
         i = (i + 1) % cols
-        c[i] = crypto.cn_fast_hash(m + ''.join(L[oldi]) + ''.join(R[oldi]))
+        c[i] = crypto.cn_fast_hash(m + "".join(L[oldi]) + "".join(R[oldi]))
 
-    s[index] = [crypto.sc_mulsub(c[index], xx[j], alpha[j]) for j in range(0, rows)]  # alpha - c * x
+    s[index] = [
+        crypto.sc_mulsub(c[index], xx[j], alpha[j]) for j in range(0, rows)
+    ]  # alpha - c * x
     return I, c[0], s
 
 
@@ -223,10 +227,10 @@ def ver_mlsag(pk, I, c0, s):
     c[0] = c0
     L = key_matrix(rows, cols)
     R = key_matrix(rows, cols)
-    
-    m = ''.join(pk[0])
+
+    m = "".join(pk[0])
     for i in range(1, cols):
-        m = m + ''.join(pk[i])
+        m = m + "".join(pk[i])
 
     i = 0
     while i < cols:
@@ -237,7 +241,7 @@ def ver_mlsag(pk, I, c0, s):
 
         oldi = i
         i = i + 1
-        c[i] = crypto.cn_fast_hash(m + ''.join(L[oldi]) + ''.join(R[oldi]))
+        c[i] = crypto.cn_fast_hash(m + "".join(L[oldi]) + "".join(R[oldi]))
 
     return c0 == c[cols]
 
@@ -345,25 +349,25 @@ def gen_mlsag_assert(pk, xx, kLRki, mscout, index, dsRows):
     """
     cols = len(pk)
     if cols <= 1:
-        raise ValueError('Cols == 1')
+        raise ValueError("Cols == 1")
     if index >= cols:
-        raise ValueError('Index out of range')
+        raise ValueError("Index out of range")
 
     rows = len(pk[0])
     if rows == 0:
-        raise ValueError('Empty pk')
+        raise ValueError("Empty pk")
 
     for i in range(cols):
         if len(pk[i]) != rows:
-            raise ValueError('pk is not rectangular')
+            raise ValueError("pk is not rectangular")
     if len(xx) != rows:
-        raise ValueError('Bad xx size')
+        raise ValueError("Bad xx size")
     if dsRows > rows:
-        raise ValueError('Bad dsRows size')
+        raise ValueError("Bad dsRows size")
     if (not kLRki or not mscout) and (kLRki or mscout):
-        raise ValueError('Only one of kLRki/mscout is present')
+        raise ValueError("Only one of kLRki/mscout is present")
     if kLRki and dsRows != 1:
-        raise ValueError('Multisig requires exactly 1 dsRows')
+        raise ValueError("Multisig requires exactly 1 dsRows")
     return rows, cols
 
 
@@ -397,7 +401,9 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
             hasher.update(crypto.encodepoint(kLRki.R))
 
         else:
-            Hi = crypto.hash_to_ec(crypto.encodepoint(pk[index][i]))  # originally hashToPoint()
+            Hi = crypto.hash_to_ec(
+                crypto.encodepoint(pk[index][i])
+            )  # originally hashToPoint()
             alpha[i] = crypto.random_scalar()
             aGi = crypto.scalarmult_base(alpha[i])
             aHPi = crypto.scalarmult(Hi, alpha[i])
@@ -436,7 +442,9 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
     rv = xmrtypes.MgSig()
     c, L, R, Hi = 0, None, None, None
 
-    c_old, Ip, alpha = gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols)
+    c_old, Ip, alpha = gen_mlsag_rows(
+        message, rv, pk, xx, kLRki, index, dsRows, rows, cols
+    )
 
     i = (index + 1) % cols
     if i == 0:
@@ -448,7 +456,9 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
 
         for j in range(dsRows):
             L = crypto.add_keys2(rv.ss[i][j], c_old, pk[i][j])
-            Hi = crypto.hash_to_ec(crypto.encodepoint(pk[i][j]))  # originally hashToPoint()
+            Hi = crypto.hash_to_ec(
+                crypto.encodepoint(pk[i][j])
+            )  # originally hashToPoint()
             R = crypto.add_keys3(rv.ss[i][j], Hi, c_old, Ip[j])
             hasher.update(crypto.encodepoint(pk[i][j]))
             hasher.update(crypto.encodepoint(L))
@@ -467,7 +477,9 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
             rv.cc = c_old
 
     for j in range(rows):
-        rv.ss[index][j] = crypto.sc_mulsub(c, xx[j], alpha[j])  # alpha[j] - c * xx[j]; sc_mulsub in original does c-ab
+        rv.ss[index][j] = crypto.sc_mulsub(
+            c, xx[j], alpha[j]
+        )  # alpha[j] - c * xx[j]; sc_mulsub in original does c-ab
 
     if mscout:
         mscout(c)
@@ -485,25 +497,25 @@ def ver_mlsag_assert(pk, rv, dsRows):
     """
     cols = len(pk)
     if cols < 2:
-        raise ValueError('Error! What is c if cols = 1!')
+        raise ValueError("Error! What is c if cols = 1!")
 
     rows = len(pk[0])
     if rows == 0:
-        raise ValueError('Empty pk')
+        raise ValueError("Empty pk")
 
     for i in range(cols):
         if len(pk[i]) != rows:
-            raise ValueError('pk is not rectangular')
+            raise ValueError("pk is not rectangular")
 
     if len(rv.II) != dsRows:
-        raise ValueError('Bad II size')
+        raise ValueError("Bad II size")
     if len(rv.ss) != cols:
-        raise ValueError('Bad rv.ss size')
+        raise ValueError("Bad rv.ss size")
     for i in range(cols):
         if len(rv.ss[i]) != rows:
-            raise ValueError('rv.ss is not rectangular')
+            raise ValueError("rv.ss is not rectangular")
     if dsRows > rows:
-        raise ValueError('Bad dsRows value')
+        raise ValueError("Bad dsRows value")
 
     return rows, cols
 
@@ -533,7 +545,9 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
         hasher = hasher_message(message)
         for j in range(dsRows):
             L = crypto.add_keys2(rv.ss[i][j], c_old, pk[i][j])
-            Hi = crypto.hash_to_ec(crypto.encodepoint(pk[i][j]))  # originally hashToPoint()
+            Hi = crypto.hash_to_ec(
+                crypto.encodepoint(pk[i][j])
+            )  # originally hashToPoint()
             R = crypto.add_keys3(rv.ss[i][j], Hi, c_old, Ip[j])
             hasher.update(crypto.encodepoint(pk[i][j]))
             hasher.update(crypto.encodepoint(L))
@@ -552,7 +566,9 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
     return not crypto.sc_isnonzero(c)
 
 
-def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn_fee_key):
+def prove_rct_mg(
+    message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn_fee_key
+):
     """
     c.f. http://eprint.iacr.org/2015/1098 section 4. definition 10.
     This does the MG sig on the "dest" part of the given key matrix, and
@@ -571,20 +587,20 @@ def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn
     """
     cols = len(pubs)
     if cols == 0:
-        raise ValueError('Empty pubs')
+        raise ValueError("Empty pubs")
     rows = len(pubs[0])
     if rows == 0:
-        raise ValueError('Empty pub row')
+        raise ValueError("Empty pub row")
     for i in range(cols):
         if len(pubs[i]) != rows:
-            raise ValueError('pub is not rectangular')
+            raise ValueError("pub is not rectangular")
 
     if len(in_sk) != rows:
-        raise ValueError('Bad inSk size')
+        raise ValueError("Bad inSk size")
     if len(out_sk) != len(out_pk):
-        raise ValueError('Bad outsk/putpk size')
+        raise ValueError("Bad outsk/putpk size")
     if (not kLRki or not mscout) and (kLRki and mscout):
-        raise ValueError('Only one of kLRki/mscout is present')
+        raise ValueError("Only one of kLRki/mscout is present")
 
     sk = key_vector(rows + 1)
     M = key_matrix(rows + 1, cols)
@@ -595,7 +611,9 @@ def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn
         M[i][rows] = crypto.identity()
         for j in range(rows):
             M[i][j] = crypto.decodepoint(pubs[i][j].dest)
-            M[i][rows] = crypto.point_add(M[i][rows], crypto.decodepoint(pubs[i][j].mask))
+            M[i][rows] = crypto.point_add(
+                M[i][rows], crypto.decodepoint(pubs[i][j].mask)
+            )
 
     sk[rows] = crypto.sc_0()
     for j in range(rows):
@@ -604,13 +622,17 @@ def prove_rct_mg(message, pubs, in_sk, out_sk, out_pk, kLRki, mscout, index, txn
 
     for i in range(cols):
         for j in range(len(out_pk)):
-            M[i][rows] = crypto.point_sub(M[i][rows], crypto.decodepoint(out_pk[j].mask))  # subtract output Ci's in last row
+            M[i][rows] = crypto.point_sub(
+                M[i][rows], crypto.decodepoint(out_pk[j].mask)
+            )  # subtract output Ci's in last row
 
         # Subtract txn fee output in last row
         M[i][rows] = crypto.point_sub(M[i][rows], txn_fee_key)
 
     for j in range(len(out_pk)):
-        sk[rows] = crypto.sc_sub(sk[rows], out_sk[j].mask)  # subtract output masks in last row
+        sk[rows] = crypto.sc_sub(
+            sk[rows], out_sk[j].mask
+        )  # subtract output masks in last row
 
     return gen_mlsag_ext(message, M, sk, kLRki, mscout, index, rows)
 
@@ -634,9 +656,9 @@ def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
     rows = 1
     cols = len(pubs)
     if cols == 0:
-        raise ValueError('Empty pubs')
+        raise ValueError("Empty pubs")
     if (not kLRki or not mscout) and (kLRki and mscout):
-        raise ValueError('Only one of kLRki/mscout is present')
+        raise ValueError("Only one of kLRki/mscout is present")
 
     sk = key_vector(rows + 1)
     M = key_matrix(rows + 1, cols)
@@ -663,13 +685,13 @@ def ver_rct_mg(mg, pubs, out_pk, txn_fee_key, message):
     """
     cols = len(pubs)
     if cols == 0:
-        raise ValueError('Empty pubs')
+        raise ValueError("Empty pubs")
     rows = len(pubs[0])
     if rows == 0:
-        raise ValueError('Empty pubs[0]')
+        raise ValueError("Empty pubs[0]")
     for i in range(cols):
         if len(pubs[i]) != rows:
-            raise ValueError('pubs is not rectangular')
+            raise ValueError("pubs is not rectangular")
 
     M = key_matrix(rows + 1, cols)
     for i in range(cols):
@@ -678,11 +700,15 @@ def ver_rct_mg(mg, pubs, out_pk, txn_fee_key, message):
     for j in range(rows):
         for i in range(cols):
             M[i][j] = crypto.decodepoint(pubs[i][j].dest)
-            M[i][rows] = crypto.point_add(M[i][rows], crypto.decodepoint(pubs[i][j].mask))  # add Ci in last row
+            M[i][rows] = crypto.point_add(
+                M[i][rows], crypto.decodepoint(pubs[i][j].mask)
+            )  # add Ci in last row
 
     for i in range(cols):
         for j in range(len(out_pk)):
-            M[i][rows] = crypto.point_sub(M[i][rows], crypto.decodepoint(out_pk[j].mask))  # subtract output Ci's in last row
+            M[i][rows] = crypto.point_sub(
+                M[i][rows], crypto.decodepoint(out_pk[j].mask)
+            )  # subtract output Ci's in last row
 
         # subtract txn fee output in last row
         M[i][rows] = crypto.point_sub(M[i][rows], txn_fee_key)
@@ -702,7 +728,7 @@ def ver_rct_mg_simple(message, mg, pubs, C):
     rows = 1
     cols = len(pubs)
     if cols == 0:
-        raise ValueError('Empty pubs')
+        raise ValueError("Empty pubs")
 
     M = key_matrix(rows + 1, cols)
     for i in range(cols):

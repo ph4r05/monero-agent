@@ -16,16 +16,16 @@ class AesTest(aiounittest.AsyncTestCase):
         super(AesTest, self).__init__(*args, **kwargs)
 
     def test_enc(self):
-        key = crypto.keccak_hash(b'0')
-        plain = b'1234'
-        assoc = b'4567'
+        key = crypto.keccak_hash(b"0")
+        plain = b"1234"
+        assoc = b"4567"
         iv, cip, tag = aesgcm.encrypt(key, plain, assoc)
 
         plain2 = aesgcm.decrypt(key, iv, cip, tag, assoc)
         self.assertEqual(plain, plain2)
 
         with self.assertRaises(ValueError):
-            plain2 = aesgcm.decrypt(key, iv, cip, tag, assoc + b'1')
+            plain2 = aesgcm.decrypt(key, iv, cip, tag, assoc + b"1")
 
         with self.assertRaises(ValueError):
             plain2 = aesgcm.decrypt(key, bytes(iv[0] ^ 0xff) + iv[1:], cip, tag, assoc)

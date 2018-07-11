@@ -24,17 +24,17 @@ class Tracelogger(object):
         :return:
         """
         traceback_formatted = traceback.format_exc()
-        md5 = hashlib.md5(traceback_formatted.encode('utf-8')).hexdigest()
+        md5 = hashlib.md5(traceback_formatted.encode("utf-8")).hexdigest()
 
         if md5 in self._db:
             return
 
         if custom_msg is not None and cause is not None:
-            self._logger.debug('%s : %s' % (custom_msg, cause))
+            self._logger.debug("%s : %s" % (custom_msg, cause))
         elif custom_msg is not None:
             self._logger.debug(custom_msg)
         elif cause is not None:
-            self._logger.debug('%s' % cause)
+            self._logger.debug("%s" % cause)
 
         self._logger.debug(traceback_formatted)
         self._db.add(md5)

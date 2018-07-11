@@ -15,6 +15,7 @@ class TData(object):
     """
     Agent transaction-scoped data
     """
+
     def __init__(self):
         self.tsx_data = None  # type: monero.TsxData
         self.tx = xmrtypes.Transaction(vin=[], vout=[], extra=[])
@@ -26,6 +27,7 @@ class Agent(object):
     """
     Glue agent, running on host
     """
+
     def __init__(self, trezor):
         self.trezor = trezor
         self.ct = None  # type: TData
@@ -37,9 +39,13 @@ class Agent(object):
 
             payment_id = []
             extras = await monero.parse_extra_fields(tx.extra)
-            extra_nonce = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraNonce)
+            extra_nonce = monero.find_tx_extra_field_by_type(
+                extras, xmrtypes.TxExtraNonce
+            )
             if extra_nonce and monero.has_encrypted_payment_id(extra_nonce.nonce):
-                payment_id = monero.get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce.nonce)
+                payment_id = monero.get_encrypted_payment_id_from_tx_extra_nonce(
+                    extra_nonce.nonce
+                )
 
             # Init transaction
             tsx_data = trezor.TsxData()
@@ -50,7 +56,9 @@ class Agent(object):
             tsx_data.change_dts = tx.change_dts
             tsx_data.num_inputs = len(tx.sources)
             tsx_data.mixin = len(tx.sources[0].outputs)
-            tsx_data.fee = sum([x.amount for x in tx.sources]) - sum([x.amount for x in tx.splitted_dsts])
+            tsx_data.fee = sum([x.amount for x in tx.sources]) - sum(
+                [x.amount for x in tx.splitted_dsts]
+            )
 
             self.ct.tsx_data = tsx_data
             await self.trezor.tsx_init(tsx_data)
@@ -73,5 +81,3 @@ class Agent(object):
             buf = await self.trezor.tsx_obj.signature(tx)
             txes.append(buf)
         return txes
-
-

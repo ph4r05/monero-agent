@@ -22,10 +22,11 @@ class BaseCli(Cmd):
     """
     Base CLI class
     """
-    prompt = '$> '
-    PROCEED_YES = 'yes'
-    PROCEED_NO = 'no'
-    PROCEED_QUIT = 'quit'
+
+    prompt = "$> "
+    PROCEED_YES = "yes"
+    PROCEED_NO = "no"
+    PROCEED_QUIT = "quit"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -55,21 +56,28 @@ class BaseCli(Cmd):
         :param double_verify:
         :return:
         """
-        question = question if question is not None else 'Please enter the password'
+        question = question if question is not None else "Please enter the password"
 
         while True:
-            passwd = getpass.getpass(question + '\n')
+            passwd = getpass.getpass(question + "\n")
             if not double_verify:
                 return passwd
 
-            passwd2 = getpass.getpass('Please enter the password again for verification: \n')
+            passwd2 = getpass.getpass(
+                "Please enter the password again for verification: \n"
+            )
             if passwd != passwd2:
-                print('Error: password did\'t match. Please, try again\n')
+                print("Error: password did't match. Please, try again\n")
             else:
                 return passwd
 
-    def ask_proceed_quit(self, question=None, support_non_interactive=False,
-                         non_interactive_return=PROCEED_YES, quit_enabled=True):
+    def ask_proceed_quit(
+        self,
+        question=None,
+        support_non_interactive=False,
+        non_interactive_return=PROCEED_YES,
+        quit_enabled=True,
+    ):
         """
         Ask if user wants to proceed
         :param question:
@@ -78,20 +86,24 @@ class BaseCli(Cmd):
         :param quit_enabled:
         :return:
         """
-        opts = 'Y/n/q' if quit_enabled else 'Y/n'
-        question = question if question is not None else ('Do you really want to proceed? (%s): ' % opts)
+        opts = "Y/n/q" if quit_enabled else "Y/n"
+        question = (
+            question
+            if question is not None
+            else ("Do you really want to proceed? (%s): " % opts)
+        )
 
         if self.noninteractive and not support_non_interactive:
-            raise ValueError('Non-interactive mode not supported for this prompt')
+            raise ValueError("Non-interactive mode not supported for this prompt")
 
         # Classic interactive prompt
         confirmation = None
-        while confirmation != 'y' and confirmation != 'n' and confirmation != 'q':
+        while confirmation != "y" and confirmation != "n" and confirmation != "q":
             confirmation = misc.py_raw_input(question).strip().lower()
 
-        if confirmation == 'y':
+        if confirmation == "y":
             return self.PROCEED_YES
-        elif confirmation == 'n':
+        elif confirmation == "n":
             return self.PROCEED_NO
         else:
             return self.PROCEED_QUIT

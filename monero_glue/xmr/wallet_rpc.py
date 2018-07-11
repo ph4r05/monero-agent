@@ -21,23 +21,24 @@ class WalletRpc(object):
     """
     RPC helper
     """
+
     def __init__(self, agent, port=None, creds=None):
         self.agent = agent
         self.port = port
         self.creds = creds
         self.url = None
-        self.set_addr('127.0.0.1:%s' % port)
+        self.set_addr("127.0.0.1:%s" % port)
 
     def set_addr(self, addr):
-        self.url = 'http://%s/json_rpc' % addr
+        self.url = "http://%s/json_rpc" % addr
 
     def set_creds(self, creds):
         if creds is None or (isinstance(creds, (list, tuple)) and len(creds) == 2):
             self.creds = creds
         elif isinstance(creds, str):
-            self.creds = creds.split(':', 1)
+            self.creds = creds.split(":", 1)
         else:
-            raise ValueError('Unknown creds type')
+            raise ValueError("Unknown creds type")
 
     def request(self, method, params=None):
         """
@@ -48,43 +49,43 @@ class WalletRpc(object):
         :return:
         """
         auth = HTTPDigestAuth(self.creds[0], self.creds[1]) if self.creds else None
-        js = {'jsonrpc': '2.0', 'id': '0', 'method': method}
+        js = {"jsonrpc": "2.0", "id": "0", "method": method}
         if params:
-            js['params'] = params
+            js["params"] = params
 
         resp = requests.post(self.url, json=js, auth=auth)
         resp.raise_for_status()
         return resp.json()
 
     def balance(self):
-        return self.request('getbalance')
+        return self.request("getbalance")
 
     def height(self):
-        return self.request('getheight')
+        return self.request("getheight")
 
     def get_transfers(self, params=None):
-        return self.request('get_transfers', params)
+        return self.request("get_transfers", params)
 
     def rescan_bc(self):
-        return self.request('rescan_blockchain')
+        return self.request("rescan_blockchain")
 
     def transfer(self, params):
-        return self.request('transfer', params)
+        return self.request("transfer", params)
 
     def submit_transfer(self, params):
-        return self.request('submit_transfer', params)
+        return self.request("submit_transfer", params)
 
     def stop_wallet(self):
-        return self.request('stop_wallet')
+        return self.request("stop_wallet")
 
     def export_outputs(self):
-        return self.request('export_outputs')
+        return self.request("export_outputs")
 
     def import_outputs(self, params=None):
-        return self.request('import_outputs', params)
+        return self.request("import_outputs", params)
 
     def import_key_images(self, params=None):
-        return self.request('import_key_images', params)
+        return self.request("import_key_images", params)
 
     def refresh(self, params=None):
-        return self.request('refresh', params)
+        return self.request("refresh", params)

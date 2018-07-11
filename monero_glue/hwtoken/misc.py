@@ -3,8 +3,11 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 from monero_glue import protobuf
-from monero_glue.messages import (MoneroAccountPublicAddress, MoneroTsxData,
-                                  MoneroTxDestinationEntry)
+from monero_glue.messages import (
+    MoneroAccountPublicAddress,
+    MoneroTsxData,
+    MoneroTxDestinationEntry,
+)
 from monero_glue.xmr import common, crypto
 from monero_glue.xmr.monero import TsxData
 from monero_serialize import xmrserialize, xmrtypes
@@ -60,16 +63,22 @@ def translate_monero_dest_entry(dst_entry: MoneroTxDestinationEntry):
     d = xmrtypes.TxDestinationEntry()
     d.amount = dst_entry.amount
     d.is_subaddress = dst_entry.is_subaddress
-    d.addr = xmrtypes.AccountPublicAddress(m_spend_public_key=dst_entry.addr.spend_public_key,
-                                           m_view_public_key=dst_entry.addr.view_public_key)
+    d.addr = xmrtypes.AccountPublicAddress(
+        m_spend_public_key=dst_entry.addr.spend_public_key,
+        m_view_public_key=dst_entry.addr.view_public_key,
+    )
     return d
 
 
 def translate_monero_dest_entry_pb(dst_entry: xmrtypes.TxDestinationEntry):
-    d = MoneroTxDestinationEntry(amount=dst_entry.amount,
-                                 is_subaddress=dst_entry.is_subaddress,
-                                 addr=MoneroAccountPublicAddress(spend_public_key=dst_entry.addr.m_spend_public_key,
-                                                                 view_public_key=dst_entry.addr.m_view_public_key))
+    d = MoneroTxDestinationEntry(
+        amount=dst_entry.amount,
+        is_subaddress=dst_entry.is_subaddress,
+        addr=MoneroAccountPublicAddress(
+            spend_public_key=dst_entry.addr.m_spend_public_key,
+            view_public_key=dst_entry.addr.m_view_public_key,
+        ),
+    )
     return d
 
 

@@ -4,10 +4,12 @@
 
 import collections
 
-from monero_glue.messages import (MoneroExportedKeyImage,
-                                  MoneroKeyImageExportInit,
-                                  MoneroSubAddrIndicesList,
-                                  MoneroTransferDetails)
+from monero_glue.messages import (
+    MoneroExportedKeyImage,
+    MoneroKeyImageExportInit,
+    MoneroSubAddrIndicesList,
+    MoneroTransferDetails,
+)
 from monero_glue.xmr import common, crypto, mlsag2, monero, ring_ct
 from monero_serialize import xmrserialize, xmrtypes
 
@@ -23,15 +25,22 @@ async def yield_key_image_data(outputs):
     res = []
     for idx, td in enumerate(outputs):  # type: xmrtypes.TransferDetails
         if common.is_empty(td.m_tx.vout):
-            raise ValueError('Tx with no outputs %s' % idx)
+            raise ValueError("Tx with no outputs %s" % idx)
 
         tx_pub_key = await monero.get_tx_pub_key_from_received_outs(td)
         extras = await monero.parse_extra_fields(list(td.m_tx.extra))
-        additional_pub_keys = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraAdditionalPubKeys)
+        additional_pub_keys = monero.find_tx_extra_field_by_type(
+            extras, xmrtypes.TxExtraAdditionalPubKeys
+        )
         out_key = td.m_tx.vout[td.m_internal_output_index].target.key
-        cres = MoneroTransferDetails(out_key=out_key, tx_pub_key=tx_pub_key,
-                                     additional_tx_pub_keys=additional_pub_keys.data if additional_pub_keys else None,
-                                     internal_output_index=td.m_internal_output_index)
+        cres = MoneroTransferDetails(
+            out_key=out_key,
+            tx_pub_key=tx_pub_key,
+            additional_tx_pub_keys=additional_pub_keys.data
+            if additional_pub_keys
+            else None,
+            internal_output_index=td.m_internal_output_index,
+        )
         res.append(cres)
     return res
 
@@ -43,11 +52,11 @@ def compute_hash(rr):
     :type rr: TransferDetails
     :return:
     """
-    buff = b''
+    buff = b""
     buff += rr.out_key
     buff += rr.tx_pub_key
     if rr.additional_tx_pub_keys:
-        buff += b''.join(rr.additional_tx_pub_keys)
+        buff += b"".join(rr.additional_tx_pub_keys)
     buff += xmrserialize.dump_uvarint_b(rr.internal_output_index)
 
     return crypto.cn_fast_hash(buff)
@@ -72,11 +81,15 @@ async def generate_commitment(outputs):
         hashes.append(hash)
         num += 1
 
-    final_hash = crypto.cn_fast_hash(b''.join(hashes))
+    final_hash = crypto.cn_fast_hash(b"".join(hashes))
     indices = []
 
     for major in sub_indices:
-        indices.append(MoneroSubAddrIndicesList(account=major, minor_indices=list(sub_indices[major])))
+        indices.append(
+            MoneroSubAddrIndicesList(
+                account=major, minor_indices=list(sub_indices[major])
+            )
+        )
 
     return MoneroKeyImageExportInit(num=num, hash=final_hash, subs=indices)
 
@@ -93,9 +106,17 @@ async def export_key_image(creds, subaddresses, td):
     tx_pub_key = crypto.decodepoint(td.tx_pub_key)
     additional_tx_pub_keys = []
     if not common.is_empty(td.additional_tx_pub_keys):
-        additional_tx_pub_keys = [crypto.decodepoint(x) for x in td.additional_tx_pub_keys]
+        additional_tx_pub_keys = [
+            crypto.decodepoint(x) for x in td.additional_tx_pub_keys
+        ]
 
-    ki, sig = ring_ct.export_key_image(creds, subaddresses, out_key, tx_pub_key,
-                                       additional_tx_pub_keys, td.m_internal_output_index)
+    ki, sig = ring_ct.export_key_image(
+        creds,
+        subaddresses,
+        out_key,
+        tx_pub_key,
+        additional_tx_pub_keys,
+        td.m_internal_output_index,
+    )
 
     return ki, sig

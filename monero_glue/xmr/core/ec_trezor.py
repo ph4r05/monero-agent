@@ -31,6 +31,7 @@ class KeccakWrapper(object):
     """
     Simple Keccak hasher wrapper. OOP interface to xmr_hasher_*
     """
+
     digest_size = 32
     block_size = 136  # 1088 bits
 
@@ -38,7 +39,7 @@ class KeccakWrapper(object):
         self.h = tcry.xmr_hasher_init_r() if h is None else h
 
     def __repr__(self):
-        return '<KeccakHash: %s>' % self.h
+        return "<KeccakHash: %s>" % self.h
 
     def copy(self):
         h_copy = tcry.xmr_hasher_copy_r(self.h)
@@ -53,7 +54,7 @@ class KeccakWrapper(object):
         return r
 
     def hexdigest(self):
-        return self.digest().encode('hex')
+        return self.digest().encode("hex")
 
 
 def get_keccak():
@@ -149,7 +150,7 @@ def encodeint_into(x, b):
 
 def check_ed25519point(x):
     if tcry.ge25519_check(x) != 1:
-        raise ValueError('P is not on ed25519 curve')
+        raise ValueError("P is not on ed25519 curve")
 
 
 def scalarmult_base(a):
@@ -217,11 +218,11 @@ def fe_mul(a, b):
 
 
 def fe_expmod(b, e):
-    raise ValueError('Not implemented')
+    raise ValueError("Not implemented")
 
 
 def fe_divpowm1(u, v):
-    raise ValueError('Not implemented')
+    raise ValueError("Not implemented")
 
 
 def fe_isnegative(x):
@@ -235,6 +236,7 @@ def fe_isnonzero(x):
 #
 # Zmod(order), scalar values field
 #
+
 
 def sc_0():
     """
@@ -250,7 +252,7 @@ def sc_init(x):
     :return:
     """
     if x >= (1 << 64):
-        raise ValueError('Initialization works up to 64-bit only')
+        raise ValueError("Initialization works up to 64-bit only")
     return tcry.init256_modm_r(x)
 
 
@@ -280,7 +282,7 @@ def check_sc(key):
     :return:
     """
     if sc_check(key) != 0:
-        raise ValueError('Invalid scalar value')
+        raise ValueError("Invalid scalar value")
 
 
 def sc_reduce32(data):
@@ -617,7 +619,7 @@ def derivation_to_scalar(derivation, output_index):
     :return:
     """
     check_ed25519point(derivation)
-    return tcry.xmr_derivation_to_scalar_r(derivation, output_index);
+    return tcry.xmr_derivation_to_scalar_r(derivation, output_index)
 
 
 def derive_public_key(derivation, output_index, base):
@@ -634,7 +636,7 @@ def derive_public_key(derivation, output_index, base):
     check_ed25519point(base)
 
     return tcry.xmr_derive_public_key_r(derivation, output_index, base)
-    
+
 
 def derive_secret_key(derivation, output_index, base):
     """
@@ -660,7 +662,7 @@ def prove_range(amount, last_mask=None):
     C, a, R = tcry.gen_range_proof(amount, last_mask)
 
     # Trezor micropython extmod returns byte-serialized/flattened rsig
-    nrsig = b''
+    nrsig = b""
     for i in range(len(R.asig.s0)):
         nrsig += bytes(R.asig.s0[i])
     for i in range(len(R.asig.s1)):
@@ -685,6 +687,7 @@ def prove_range(amount, last_mask=None):
     #     nrsig.asig.s1[i] = bytes(nrsig.asig.s1[i])
     #
     # return C, a, nrsig
+
 
 #
 # Backend config
