@@ -21,7 +21,7 @@ import json
 import threading
 from cmd2 import Cmd
 
-from monero_glue.messages import MoneroDiag, MoneroDiagResp
+from monero_glue.messages import DebugMoneroDiag, DebugMoneroDiagResp
 from monero_poc import trace_logger
 from monero_poc import cli
 from monero_poc import misc
@@ -238,7 +238,7 @@ class HostAgent(cli.BaseCli):
     def do_diag(self, line):
         diag_code = int(line)
         print('Diagnosis: %d' % diag_code)
-        msg = MoneroDiag(ins=diag_code)
+        msg = DebugMoneroDiag(ins=diag_code)
         try:
             resp = self.wait_coro(self.trezor_proxy.call(msg))
             print(resp)
