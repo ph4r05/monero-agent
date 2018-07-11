@@ -28,7 +28,7 @@ import traceback
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_MONERO_BIP44 = [2147483692, 2147483776, 2147483648]  # parse_path(monero.DEFAULT_BIP32_PATH)
+DEFAULT_MONERO_BIP44 = [0x8000002c, 0x80000080, 0x80000000, 0, 0]  # parse_path(monero.DEFAULT_BIP32_PATH)
 
 
 class TData(object):
