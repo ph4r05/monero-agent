@@ -9,7 +9,7 @@ if __debug__:
 
 
 class MoneroTsxInitResp(p.MessageType):
-    MESSAGE_WIRE_TYPE = 302
+    MESSAGE_WIRE_TYPE = 502
     FIELDS = {
         1: ('version', p.UVarintType, 0),
         2: ('status', p.UVarintType, 0),
