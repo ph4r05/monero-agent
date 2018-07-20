@@ -17,6 +17,7 @@ addons:
     - valgrind
     - gcc-5
     - libc++-dev
+    - protobuf-compiler
 
 cache:
   directories:
