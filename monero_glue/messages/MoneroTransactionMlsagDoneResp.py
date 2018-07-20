@@ -3,8 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroTsxMlsagDoneResp(p.MessageType):
-    MESSAGE_WIRE_TYPE = 508
+class MoneroTransactionMlsagDoneResp(p.MessageType):
     FIELDS = {
         1: ('full_message_hash', p.BytesType, 0),
     }

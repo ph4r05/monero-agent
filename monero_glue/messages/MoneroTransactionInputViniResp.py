@@ -3,5 +3,5 @@
 from .. import protobuf as p
 
 
-class MoneroTsxAllOutSet(p.MessageType):
+class MoneroTransactionInputViniResp(p.MessageType):
     pass

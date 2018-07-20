@@ -3,8 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroTsxSetInputResp(p.MessageType):
-    MESSAGE_WIRE_TYPE = 503
+class MoneroTransactionSetInputResp(p.MessageType):
     FIELDS = {
         1: ('vini', p.BytesType, 0),
         2: ('vini_hmac', p.BytesType, 0),

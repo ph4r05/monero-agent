@@ -3,8 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroTsxSignInputResp(p.MessageType):
-    MESSAGE_WIRE_TYPE = 509
+class MoneroTransactionSignInputResp(p.MessageType):
     FIELDS = {
         1: ('signature', p.BytesType, 0),
         2: ('cout', p.BytesType, 0),

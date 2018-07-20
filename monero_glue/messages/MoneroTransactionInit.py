@@ -6,15 +6,15 @@ if __debug__:
         from typing import List
     except ImportError:
         List = None  # type: ignore
-from .MoneroTsxData import MoneroTsxData
+from .MoneroTransactionData import MoneroTransactionData
 
 
-class MoneroTsxInit(p.MessageType):
+class MoneroTransactionInit(p.MessageType):
     FIELDS = {
         1: ('version', p.UVarintType, 0),
         2: ('address_n', p.UVarintType, p.FLAG_REPEATED),
         3: ('network_type', p.UVarintType, 0),
-        4: ('tsx_data', MoneroTsxData, 0),
+        4: ('tsx_data', MoneroTransactionData, 0),
     }
 
     def __init__(
@@ -22,7 +22,7 @@ class MoneroTsxInit(p.MessageType):
         version: int = None,
         address_n: List[int] = None,
         network_type: int = None,
-        tsx_data: MoneroTsxData = None,
+        tsx_data: MoneroTransactionData = None,
     ) -> None:
         self.version = version
         self.address_n = address_n if address_n is not None else []

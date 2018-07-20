@@ -3,5 +3,5 @@
 from .. import protobuf as p
 
 
-class MoneroTsxMlsagDone(p.MessageType):
+class MoneroTransactionFinal(p.MessageType):
     pass

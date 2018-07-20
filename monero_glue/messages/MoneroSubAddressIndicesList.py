@@ -8,7 +8,7 @@ if __debug__:
         List = None  # type: ignore
 
 
-class MoneroSubAddrIndicesList(p.MessageType):
+class MoneroSubAddressIndicesList(p.MessageType):
     FIELDS = {
         1: ('account', p.UVarintType, 0),
         2: ('minor_indices', p.UVarintType, p.FLAG_REPEATED),

@@ -8,8 +8,7 @@ if __debug__:
         List = None  # type: ignore
 
 
-class MoneroTsxInitResp(p.MessageType):
-    MESSAGE_WIRE_TYPE = 502
+class MoneroTransactionInitResp(p.MessageType):
     FIELDS = {
         1: ('version', p.UVarintType, 0),
         2: ('status', p.UVarintType, 0),

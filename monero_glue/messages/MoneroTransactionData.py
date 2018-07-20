@@ -6,16 +6,16 @@ if __debug__:
         from typing import List
     except ImportError:
         List = None  # type: ignore
-from .MoneroTxDestinationEntry import MoneroTxDestinationEntry
+from .MoneroTransactionDestinationEntry import MoneroTransactionDestinationEntry
 
 
-class MoneroTsxData(p.MessageType):
+class MoneroTransactionData(p.MessageType):
     FIELDS = {
         1: ('version', p.UVarintType, 0),
         2: ('payment_id', p.BytesType, 0),
         3: ('unlock_time', p.UVarintType, 0),
-        4: ('outputs', MoneroTxDestinationEntry, p.FLAG_REPEATED),
-        5: ('change_dts', MoneroTxDestinationEntry, 0),
+        4: ('outputs', MoneroTransactionDestinationEntry, p.FLAG_REPEATED),
+        5: ('change_dts', MoneroTransactionDestinationEntry, 0),
         6: ('num_inputs', p.UVarintType, 0),
         7: ('mixin', p.UVarintType, 0),
         8: ('fee', p.UVarintType, 0),
@@ -32,8 +32,8 @@ class MoneroTsxData(p.MessageType):
         version: int = None,
         payment_id: bytes = None,
         unlock_time: int = None,
-        outputs: List[MoneroTxDestinationEntry] = None,
-        change_dts: MoneroTxDestinationEntry = None,
+        outputs: List[MoneroTransactionDestinationEntry] = None,
+        change_dts: MoneroTransactionDestinationEntry = None,
         num_inputs: int = None,
         mixin: int = None,
         fee: int = None,

@@ -3,7 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroRctSig(p.MessageType):
+class MoneroRingCtSig(p.MessageType):
     FIELDS = {
         1: ('txn_fee', p.UVarintType, 0),
         2: ('message', p.BytesType, 0),

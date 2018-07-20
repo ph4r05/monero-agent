@@ -6,7 +6,7 @@ if __debug__:
         from typing import List
     except ImportError:
         List = None  # type: ignore
-from .MoneroSubAddrIndicesList import MoneroSubAddrIndicesList
+from .MoneroSubAddressIndicesList import MoneroSubAddressIndicesList
 
 
 class MoneroKeyImageExportInit(p.MessageType):
@@ -15,7 +15,7 @@ class MoneroKeyImageExportInit(p.MessageType):
         2: ('hash', p.BytesType, 0),
         3: ('address_n', p.UVarintType, p.FLAG_REPEATED),
         4: ('network_type', p.UVarintType, 0),
-        5: ('subs', MoneroSubAddrIndicesList, p.FLAG_REPEATED),
+        5: ('subs', MoneroSubAddressIndicesList, p.FLAG_REPEATED),
     }
 
     def __init__(
@@ -24,7 +24,7 @@ class MoneroKeyImageExportInit(p.MessageType):
         hash: bytes = None,
         address_n: List[int] = None,
         network_type: int = None,
-        subs: List[MoneroSubAddrIndicesList] = None,
+        subs: List[MoneroSubAddressIndicesList] = None,
     ) -> None:
         self.num = num
         self.hash = hash
