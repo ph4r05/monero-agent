@@ -89,9 +89,9 @@ from .MoneroGetAddressRequest import MoneroGetAddressRequest
 from .MoneroGetWatchKeyRequest import MoneroGetWatchKeyRequest
 from .MoneroKeyImageExportInitAck import MoneroKeyImageExportInitAck
 from .MoneroKeyImageExportInitRequest import MoneroKeyImageExportInitRequest
-from .MoneroKeyImageSync import MoneroKeyImageSync
 from .MoneroKeyImageSyncFinalAck import MoneroKeyImageSyncFinalAck
 from .MoneroKeyImageSyncFinalRequest import MoneroKeyImageSyncFinalRequest
+from .MoneroKeyImageSyncRequest import MoneroKeyImageSyncRequest
 from .MoneroKeyImageSyncStepAck import MoneroKeyImageSyncStepAck
 from .MoneroKeyImageSyncStepRequest import MoneroKeyImageSyncStepRequest
 from .MoneroRingCtSig import MoneroRingCtSig
