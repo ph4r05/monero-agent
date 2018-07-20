@@ -4,6 +4,7 @@ from .. import protobuf as p
 
 
 class MoneroTransactionMlsagDoneAck(p.MessageType):
+    MESSAGE_WIRE_TYPE = 508
     FIELDS = {
         1: ('full_message_hash', p.BytesType, 0),
     }

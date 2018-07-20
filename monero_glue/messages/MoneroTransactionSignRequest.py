@@ -13,6 +13,7 @@ from .MoneroTransactionSignInputRequest import MoneroTransactionSignInputRequest
 
 
 class MoneroTransactionSignRequest(p.MessageType):
+    MESSAGE_WIRE_TYPE = 501
     FIELDS = {
         1: ('init', MoneroTransactionInitRequest, 0),
         2: ('set_input', MoneroTransactionSetInputRequest, 0),

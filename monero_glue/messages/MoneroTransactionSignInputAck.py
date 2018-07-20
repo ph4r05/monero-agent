@@ -4,6 +4,7 @@ from .. import protobuf as p
 
 
 class MoneroTransactionSignInputAck(p.MessageType):
+    MESSAGE_WIRE_TYPE = 509
     FIELDS = {
         1: ('signature', p.BytesType, 0),
         2: ('cout', p.BytesType, 0),
