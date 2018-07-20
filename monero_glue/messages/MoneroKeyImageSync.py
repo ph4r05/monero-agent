@@ -7,7 +7,6 @@ from .MoneroKeyImageSyncStepRequest import MoneroKeyImageSyncStepRequest
 
 
 class MoneroKeyImageSync(p.MessageType):
-    MESSAGE_WIRE_TYPE = 511
     FIELDS = {
         1: ('init', MoneroKeyImageExportInitRequest, 0),
         2: ('step', MoneroKeyImageSyncStepRequest, 0),

@@ -9,6 +9,7 @@ if __debug__:
 
 
 class DebugMoneroDiagAck(p.MessageType):
+    MESSAGE_WIRE_TYPE = 537
     FIELDS = {
         1: ('ins', p.UVarintType, 0),
         2: ('p1', p.UVarintType, 0),
