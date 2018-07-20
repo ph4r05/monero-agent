@@ -3,5 +3,5 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionAllOutSet(p.MessageType):
+class MoneroKeyImageSyncFinalRequest(p.MessageType):
     pass

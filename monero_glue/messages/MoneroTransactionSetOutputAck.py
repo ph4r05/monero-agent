@@ -3,7 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionSetOutputResp(p.MessageType):
+class MoneroTransactionSetOutputAck(p.MessageType):
     FIELDS = {
         1: ('tx_out', p.BytesType, 0),
         2: ('vouti_hmac', p.BytesType, 0),

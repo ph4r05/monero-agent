@@ -3,7 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionInputVini(p.MessageType):
+class MoneroTransactionInputViniRequest(p.MessageType):
     FIELDS = {
         1: ('src_entr', p.BytesType, 0),
         2: ('vini', p.BytesType, 0),

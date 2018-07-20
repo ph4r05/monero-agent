@@ -3,5 +3,5 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionInputViniResp(p.MessageType):
+class MoneroTransactionInputViniAck(p.MessageType):
     pass

@@ -4,7 +4,7 @@ from .. import protobuf as p
 from .MoneroRingCtSig import MoneroRingCtSig
 
 
-class MoneroTransactionAllOutSetResp(p.MessageType):
+class MoneroTransactionAllOutSetAck(p.MessageType):
     FIELDS = {
         1: ('extra', p.BytesType, 0),
         2: ('tx_prefix_hash', p.BytesType, 0),

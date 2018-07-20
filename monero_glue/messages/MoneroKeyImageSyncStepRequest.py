@@ -9,7 +9,7 @@ if __debug__:
 from .MoneroTransferDetails import MoneroTransferDetails
 
 
-class MoneroKeyImageSyncStep(p.MessageType):
+class MoneroKeyImageSyncStepRequest(p.MessageType):
     FIELDS = {
         1: ('tdis', MoneroTransferDetails, p.FLAG_REPEATED),
     }

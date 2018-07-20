@@ -3,20 +3,18 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionSignInput(p.MessageType):
+class MoneroTransactionSetInputAck(p.MessageType):
     FIELDS = {
-        1: ('src_entr', p.BytesType, 0),
-        2: ('vini', p.BytesType, 0),
-        3: ('vini_hmac', p.BytesType, 0),
-        4: ('pseudo_out', p.BytesType, 0),
-        5: ('pseudo_out_hmac', p.BytesType, 0),
-        6: ('alpha_enc', p.BytesType, 0),
-        7: ('spend_enc', p.BytesType, 0),
+        1: ('vini', p.BytesType, 0),
+        2: ('vini_hmac', p.BytesType, 0),
+        3: ('pseudo_out', p.BytesType, 0),
+        4: ('pseudo_out_hmac', p.BytesType, 0),
+        5: ('alpha_enc', p.BytesType, 0),
+        6: ('spend_enc', p.BytesType, 0),
     }
 
     def __init__(
         self,
-        src_entr: bytes = None,
         vini: bytes = None,
         vini_hmac: bytes = None,
         pseudo_out: bytes = None,
@@ -24,7 +22,6 @@ class MoneroTransactionSignInput(p.MessageType):
         alpha_enc: bytes = None,
         spend_enc: bytes = None,
     ) -> None:
-        self.src_entr = src_entr
         self.vini = vini
         self.vini_hmac = vini_hmac
         self.pseudo_out = pseudo_out

@@ -3,8 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroAddress(p.MessageType):
-    MESSAGE_WIRE_TYPE = 531
+class MoneroAddressAck(p.MessageType):
     FIELDS = {
         1: ('address', p.BytesType, 0),
     }

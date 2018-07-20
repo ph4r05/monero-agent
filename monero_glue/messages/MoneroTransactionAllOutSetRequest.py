@@ -3,5 +3,5 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionInputsPermutationResp(p.MessageType):
+class MoneroTransactionAllOutSetRequest(p.MessageType):
     pass

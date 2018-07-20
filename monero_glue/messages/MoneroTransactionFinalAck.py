@@ -3,7 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionFinalResp(p.MessageType):
+class MoneroTransactionFinalAck(p.MessageType):
     FIELDS = {
         1: ('cout_key', p.BytesType, 0),
         2: ('salt', p.BytesType, 0),

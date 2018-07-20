@@ -3,7 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionMlsagDoneResp(p.MessageType):
+class MoneroTransactionMlsagDoneAck(p.MessageType):
     FIELDS = {
         1: ('full_message_hash', p.BytesType, 0),
     }

@@ -9,7 +9,7 @@ if __debug__:
 from .MoneroSubAddressIndicesList import MoneroSubAddressIndicesList
 
 
-class MoneroKeyImageExportInit(p.MessageType):
+class MoneroKeyImageExportInitRequest(p.MessageType):
     FIELDS = {
         1: ('num', p.UVarintType, 0),
         2: ('hash', p.BytesType, 0),

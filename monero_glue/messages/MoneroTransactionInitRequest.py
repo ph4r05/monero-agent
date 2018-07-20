@@ -9,7 +9,7 @@ if __debug__:
 from .MoneroTransactionData import MoneroTransactionData
 
 
-class MoneroTransactionInit(p.MessageType):
+class MoneroTransactionInitRequest(p.MessageType):
     FIELDS = {
         1: ('version', p.UVarintType, 0),
         2: ('address_n', p.UVarintType, p.FLAG_REPEATED),

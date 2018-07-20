@@ -3,7 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionSetInput(p.MessageType):
+class MoneroTransactionSetInputRequest(p.MessageType):
     FIELDS = {
         1: ('version', p.UVarintType, 0),
         2: ('src_entr', p.BytesType, 0),

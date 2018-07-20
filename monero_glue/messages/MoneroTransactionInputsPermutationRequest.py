@@ -8,7 +8,7 @@ if __debug__:
         List = None  # type: ignore
 
 
-class MoneroTransactionInputsPermutation(p.MessageType):
+class MoneroTransactionInputsPermutationRequest(p.MessageType):
     FIELDS = {
         1: ('perm', p.UVarintType, p.FLAG_REPEATED),
     }

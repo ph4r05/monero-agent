@@ -3,5 +3,5 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionFinal(p.MessageType):
+class MoneroKeyImageExportInitAck(p.MessageType):
     pass

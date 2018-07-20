@@ -8,8 +8,7 @@ if __debug__:
         List = None  # type: ignore
 
 
-class DebugMoneroDiagResp(p.MessageType):
-    MESSAGE_WIRE_TYPE = 537
+class DebugMoneroDiagAck(p.MessageType):
     FIELDS = {
         1: ('ins', p.UVarintType, 0),
         2: ('p1', p.UVarintType, 0),

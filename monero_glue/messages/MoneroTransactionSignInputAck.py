@@ -3,7 +3,7 @@
 from .. import protobuf as p
 
 
-class MoneroTransactionSignInputResp(p.MessageType):
+class MoneroTransactionSignInputAck(p.MessageType):
     FIELDS = {
         1: ('signature', p.BytesType, 0),
         2: ('cout', p.BytesType, 0),
