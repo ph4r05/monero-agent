@@ -31,6 +31,7 @@ dev_extras = [
     "pycparser",
     "ctypeslib2",
     "cryptography",  # chacha20poly1305
+    "protobuf",
 ]
 
 poc_extras = [
