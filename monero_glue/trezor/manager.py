@@ -5,21 +5,8 @@
 
 import os
 
-from monero_glue.hwtoken import misc, token
-from monero_glue.messages import (
-    MoneroExportedKeyImage,
-    MoneroGetAddress,
-    MoneroGetKey,
-    MoneroGetWatchKey,
-    MoneroKeyImageExportInit,
-    MoneroKeyImageExportInitResp,
-    MoneroKeyImageSyncFinalResp,
-    MoneroKeyImageSyncStep,
-    MoneroKeyImageSyncStepResp,
-    MoneroRespError,
-)
+from monero_glue.hwtoken import token
 from monero_glue.protocol.messages import MessageConverter
-from monero_serialize import xmrserialize
 
 from trezorlib import coins
 from trezorlib import messages as proto

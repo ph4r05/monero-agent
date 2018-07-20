@@ -3,7 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 
-from monero_serialize import xmrserialize, xmrtypes
+from monero_serialize import xmrserialize
 
 
 class TMessage(object):

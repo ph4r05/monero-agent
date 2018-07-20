@@ -6,8 +6,8 @@ import collections
 
 from monero_glue.messages import (
     MoneroExportedKeyImage,
-    MoneroKeyImageExportInit,
-    MoneroSubAddrIndicesList,
+    MoneroKeyImageExportInitRequest,
+    MoneroSubAddressIndicesList,
     MoneroTransferDetails,
 )
 from monero_glue.xmr import common, crypto, mlsag2, monero, ring_ct
@@ -86,12 +86,12 @@ async def generate_commitment(outputs):
 
     for major in sub_indices:
         indices.append(
-            MoneroSubAddrIndicesList(
+            MoneroSubAddressIndicesList(
                 account=major, minor_indices=list(sub_indices[major])
             )
         )
 
-    return MoneroKeyImageExportInit(num=num, hash=final_hash, subs=indices)
+    return MoneroKeyImageExportInitRequest(num=num, hash=final_hash, subs=indices)
 
 
 async def export_key_image(creds, subaddresses, td):

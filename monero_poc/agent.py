@@ -22,7 +22,7 @@ import time
 from monero_glue import protobuf
 from monero_glue.agent import agent_lite, agent_misc
 from monero_glue.hwtoken import token
-from monero_glue.messages import DebugMoneroDiag, DebugMoneroDiagResp
+from monero_glue.messages import DebugMoneroDiagRequest, DebugMoneroDiagAck
 from monero_glue.protocol import messages
 from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc
 from monero_poc import cli, misc, trace_logger
@@ -258,7 +258,7 @@ class HostAgent(cli.BaseCli):
     def do_diag(self, line):
         diag_code = int(line)
         print("Diagnosis: %d" % diag_code)
-        msg = DebugMoneroDiag(ins=diag_code)
+        msg = DebugMoneroDiagRequest(ins=diag_code)
         try:
             resp = self.wait_coro(self.trezor_proxy.call(msg))
             print(resp)

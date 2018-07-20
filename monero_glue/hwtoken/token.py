@@ -6,14 +6,13 @@ import traceback
 
 from monero_glue.hwtoken import iface, misc
 from monero_glue.messages import (
-    DebugMoneroDiagResp,
-    MoneroGetKey,
-    MoneroGetWatchKey,
-    MoneroKey,
+    DebugMoneroDiagAck,
+    MoneroGetWatchKeyRequest,
     MoneroKeyImageSync,
-    MoneroRespError,
-    MoneroTsxSign,
-    MoneroWatchKey,
+    MoneroTransactionSignRequest,
+    MoneroWatchKeyAck,
+    Failure,
+    FailureType,
 )
 from monero_glue.protocol.error import exc2str
 from monero_glue.protocol.key_image_sync import KeyImageSync
@@ -93,20 +92,21 @@ class TokenLite(object):
         await misc.parse_pb_msg(pb, msg.__class__)
 
     async def call(self, msg, recode=True):
-        return MoneroRespError(reason="unsupported")
+        return Failure(code=FailureType.FirmwareError, message="unsupported")
 
     async def ping(self, message=None, **kwargs):
-        return DebugMoneroDiagResp()
+        return DebugMoneroDiagAck()
 
-    async def get_view_key(self, msg: MoneroGetWatchKey):
+    async def get_view_key(self, msg: MoneroGetWatchKeyRequest):
         if msg.network_type != self.creds.network_type:
-            return MoneroRespError(reason="InvalidNetworkType")
-        return MoneroWatchKey(
+            return Failure(message="InvalidNetworkType")
+
+        return MoneroWatchKeyAck(
             watch_key=crypto.encodepoint(self.creds.view_key_private),
             address=self.creds.address,
         )
 
-    async def tsx_sign(self, msg: MoneroTsxSign):
+    async def tsx_sign(self, msg: MoneroTransactionSignRequest):
         if self.tsx_obj is None or msg.init:
             self.tsx_obj = TsxSigner(ctx=self, iface=self.iface, creds=self.creds)
 
@@ -123,7 +123,7 @@ class TokenLite(object):
         except Exception as e:
             await self.tsx_exc_handler(e)
             self.tsx_obj = None
-            return MoneroRespError(exc=exc2str(e))
+            return Failure(message=exc2str(e))
 
     async def key_image_sync(self, msg: MoneroKeyImageSync):
         try:
@@ -147,4 +147,4 @@ class TokenLite(object):
         except Exception as e:
             await self.ki_exc_handler(e)
             self.ki_sync = None
-            return MoneroRespError(exc=exc2str(e))
+            return Failure(message=exc2str(e))

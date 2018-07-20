@@ -5,12 +5,13 @@
 
 from monero_glue.messages import (
     MoneroExportedKeyImage,
-    MoneroKeyImageExportInit,
-    MoneroKeyImageExportInitResp,
-    MoneroKeyImageSyncFinalResp,
-    MoneroKeyImageSyncStep,
-    MoneroKeyImageSyncStepResp,
-    MoneroRespError,
+    MoneroKeyImageExportInitRequest,
+    MoneroKeyImageExportInitAck,
+    MoneroKeyImageSyncFinalAck,
+    MoneroKeyImageSyncStepRequest,
+    MoneroKeyImageSyncStepAck,
+    Failure,
+    FailureType,
 )
 from monero_glue.trezor import wrapper as twrap
 from monero_glue.xmr import common, crypto, key_image, monero
@@ -31,18 +32,18 @@ class KeyImageSync(object):
         self.subaddresses = {}
         self.hasher = common.HashWrapper(crypto.get_keccak())
 
-    async def derive_creds(self, msg: MoneroKeyImageExportInit):
+    async def derive_creds(self, msg: MoneroKeyImageExportInitRequest):
         self.creds = await twrap.monero_get_creds(
             self.ctx, msg.address_n or (), msg.network_type
         )
 
-    async def init(self, ctx, msg: MoneroKeyImageExportInit):
+    async def init(self, ctx, msg: MoneroKeyImageExportInitRequest):
         self.ctx = ctx
         await self.derive_creds(msg)
 
         confirmation = await self.iface.confirm_ki_sync(msg, ctx=ctx)
         if not confirmation:
-            return MoneroRespError(reason="rejected")
+            return Failure(code=FailureType.ActionCancelled, message="rejected")
 
         self.num = msg.num
         self.hash = msg.hash
@@ -50,13 +51,13 @@ class KeyImageSync(object):
 
         # Sub address precomputation
         if msg.subs and len(msg.subs) > 0:
-            for sub in msg.subs:  # type: MoneroSubAddrIndicesList
+            for sub in msg.subs:
                 monero.compute_subaddresses(
                     self.creds, sub.account, sub.minor_indices, self.subaddresses
                 )
-        return MoneroKeyImageExportInitResp()
+        return MoneroKeyImageExportInitAck()
 
-    async def sync(self, ctx, tds: MoneroKeyImageSyncStep):
+    async def sync(self, ctx, tds: MoneroKeyImageSyncStepRequest):
         self.ctx = ctx
         if self.blocked:
             raise ValueError("Blocked")
@@ -82,7 +83,7 @@ class KeyImageSync(object):
             nonce, ciph, tag = chacha_poly.encrypt(self.enc_key, buff)
             eki = MoneroExportedKeyImage(iv=nonce, tag=tag, blob=ciph)
             resp.append(eki)
-        return MoneroKeyImageSyncStepResp(kis=resp)
+        return MoneroKeyImageSyncStepAck(kis=resp)
 
     async def final(self, ctx, msg=None):
         self.ctx = ctx
@@ -98,4 +99,4 @@ class KeyImageSync(object):
             await self.iface.ki_error("Invalid hash", ctx=self.ctx)
             raise ValueError("Invalid hash")
 
-        return MoneroKeyImageSyncFinalResp(enc_key=self.enc_key)
+        return MoneroKeyImageSyncFinalAck(enc_key=self.enc_key)

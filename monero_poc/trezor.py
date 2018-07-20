@@ -23,7 +23,7 @@ import traceback
 
 from monero_glue import protobuf
 from monero_glue.hwtoken import iface, token
-from monero_glue.messages import MoneroKey, MoneroWatchKey
+from monero_glue.messages import MoneroWatchKeyAck
 from monero_glue.misc.bip import bip32
 from monero_glue.protocol import messages
 from monero_glue.xmr import crypto, monero, wallet
@@ -315,39 +315,8 @@ class TrezorServer(cli.BaseCli):
             return abort(403)
 
         logger.info("Returning watch only credentials...")
-        res = MoneroKey(
+        res = MoneroWatchKeyAck(
             watch_key=crypto.encodeint(self.creds.view_key_private),
-            address=self.creds.address,
-        )
-
-        return jsonify({"result": True, "payload": await self.proto_res(res)})
-
-    async def on_keys(self, request=None):
-        """
-        Exports credentials
-        :param request:
-        :return:
-        """
-        if not self.creds:
-            logger.warning("Agent asks for credentials export, Trezor not initialized")
-            return abort(406)
-
-        if self.key_waiter.in_confirmation:
-            logger.warning("Agent asks for credentials export concurrently")
-            return abort(406)
-
-        # Prompt user to confirm.
-        self.on_watchonly()
-        confirmed = self.key_waiter.wait_confirmation()
-
-        if not confirmed:
-            logger.warning("Keys rejected")
-            return abort(403)
-
-        logger.info("Returning credentials...")
-        res = MoneroKey(
-            watch_key=crypto.encodeint(self.creds.view_key_private),
-            spend_key=crypto.encodeint(self.creds.spend_key_private),
             address=self.creds.address,
         )
 

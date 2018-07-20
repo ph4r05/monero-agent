@@ -5,10 +5,10 @@
 from monero_glue import protobuf
 from monero_glue.messages import (
     MoneroAccountPublicAddress,
-    MoneroTsxData,
-    MoneroTxDestinationEntry,
+    MoneroTransactionData,
+    MoneroTransactionDestinationEntry,
 )
-from monero_glue.xmr import common, crypto
+from monero_glue.xmr import crypto
 from monero_glue.xmr.monero import TsxData
 from monero_serialize import xmrserialize, xmrtypes
 
@@ -59,7 +59,7 @@ def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None)
     return tx_key, salt, rand_mult
 
 
-def translate_monero_dest_entry(dst_entry: MoneroTxDestinationEntry):
+def translate_monero_dest_entry(dst_entry: MoneroTransactionDestinationEntry):
     d = xmrtypes.TxDestinationEntry()
     d.amount = dst_entry.amount
     d.is_subaddress = dst_entry.is_subaddress
@@ -71,7 +71,7 @@ def translate_monero_dest_entry(dst_entry: MoneroTxDestinationEntry):
 
 
 def translate_monero_dest_entry_pb(dst_entry: xmrtypes.TxDestinationEntry):
-    d = MoneroTxDestinationEntry(
+    d = MoneroTransactionDestinationEntry(
         amount=dst_entry.amount,
         is_subaddress=dst_entry.is_subaddress,
         addr=MoneroAccountPublicAddress(
@@ -82,7 +82,7 @@ def translate_monero_dest_entry_pb(dst_entry: xmrtypes.TxDestinationEntry):
     return d
 
 
-async def translate_tsx_data(tsx_data: MoneroTsxData):
+async def translate_tsx_data(tsx_data: MoneroTransactionData):
     tsxd = TsxData()
     for fld in TsxData.MFIELDS:
         fname = fld[0]
@@ -97,7 +97,7 @@ async def translate_tsx_data(tsx_data: MoneroTsxData):
 
 
 async def translate_tsx_data_pb(tsx_data: TsxData):
-    tsxd = MoneroTsxData()
+    tsxd = MoneroTransactionData()
     for fld in TsxData.MFIELDS:
         fname = fld[0]
         if hasattr(tsx_data, fname):

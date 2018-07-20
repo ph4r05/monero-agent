@@ -3,7 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 
-from monero_glue.messages import MoneroRespError
+from monero_glue.messages import Failure
 
 
 class AgentError(Exception):
@@ -29,10 +29,10 @@ class TrezorReturnedError(AgentError):
         self.resp = resp
 
     def __str__(self):
-        if self.resp and isinstance(self.resp, MoneroRespError):
+        if self.resp and isinstance(self.resp, Failure):
             return (
-                "TrezorReturnedError(MoneroRespError(status=%r, reason=%r))\n\nCaused by: %s"
-                % (self.resp.status, self.resp.reason, self.resp.exc)
+                "TrezorReturnedError(Failure(code=%r, message=%r))"
+                % (self.resp.code, self.resp.message)
             )
         else:
             return super().__str__()
