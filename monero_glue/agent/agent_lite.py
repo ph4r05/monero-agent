@@ -9,7 +9,7 @@ from monero_glue.agent import agent_misc
 from monero_glue.hwtoken import misc as tmisc
 from monero_glue.messages import (
     MoneroGetWatchKeyRequest,
-    MoneroKeyImageSync,
+    MoneroKeyImageSyncRequest,
     MoneroKeyImageSyncFinalRequest,
     MoneroKeyImageSyncStepRequest,
     MoneroTransactionAllOutSetRequest,
@@ -445,7 +445,7 @@ class Agent(object):
         ki_export_init.address_n = self.address_n
         ki_export_init.network_type = self.network_type
         t_res = await self.trezor.key_image_sync(
-            MoneroKeyImageSync(init=ki_export_init)
+            MoneroKeyImageSyncRequest(init=ki_export_init)
         )
         self.handle_error(t_res)
 
@@ -454,14 +454,14 @@ class Agent(object):
         batches = common.chunk(iter, 10)
         for rr in batches:  # type: list[key_image.MoneroTransferDetails]
             t_res = await self.trezor.key_image_sync(
-                MoneroKeyImageSync(step=MoneroKeyImageSyncStepRequest(tdis=rr))
+                MoneroKeyImageSyncRequest(step=MoneroKeyImageSyncStepRequest(tdis=rr))
             )
             self.handle_error(t_res)
 
             sub_res += t_res.kis
 
         t_res = await self.trezor.key_image_sync(
-            MoneroKeyImageSync(final_msg=MoneroKeyImageSyncFinalRequest())
+            MoneroKeyImageSyncRequest(final_msg=MoneroKeyImageSyncFinalRequest())
         )
         self.handle_error(t_res)
 

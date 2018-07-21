@@ -8,7 +8,7 @@ from monero_glue.hwtoken import iface, misc
 from monero_glue.messages import (
     DebugMoneroDiagAck,
     MoneroGetWatchKeyRequest,
-    MoneroKeyImageSync,
+    MoneroKeyImageSyncRequest,
     MoneroTransactionSignRequest,
     MoneroWatchKeyAck,
     Failure,
@@ -125,7 +125,7 @@ class TokenLite(object):
             self.tsx_obj = None
             return Failure(message=exc2str(e))
 
-    async def key_image_sync(self, msg: MoneroKeyImageSync):
+    async def key_image_sync(self, msg: MoneroKeyImageSyncRequest):
         try:
             if msg.init:
                 self.ki_sync = KeyImageSync(
