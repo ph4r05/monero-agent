@@ -147,7 +147,9 @@ class TsxSigner(object):
             await self.tsx_exc_handler(e)
             return Failure(message=exc2str(e))
 
-    async def tsx_inputs_permutation(self, msg: MoneroTransactionInputsPermutationRequest):
+    async def tsx_inputs_permutation(
+        self, msg: MoneroTransactionInputsPermutationRequest
+    ):
         """
         Set permutation on the inputs - sorted by key image on host.
 
@@ -1504,7 +1506,9 @@ class TTransactionBuilder(object):
             self.state.set_signature_done()
             await self.trezor.iface.transaction_signed()
 
-        return MoneroTransactionSignInputAck(signature=await misc.dump_msg(mgs[0]), cout=cout)
+        return MoneroTransactionSignInputAck(
+            signature=await misc.dump_msg(mgs[0]), cout=cout
+        )
 
     async def final_msg(self, *args, **kwargs):
         """

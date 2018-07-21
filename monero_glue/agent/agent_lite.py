@@ -29,7 +29,7 @@ from monero_glue.messages import (
     MoneroTransactionSignRequest,
     MoneroTransactionSignInputRequest,
     MoneroTransactionSignInputAck,
-    Failure
+    Failure,
 )
 from monero_glue.old import trezor
 from monero_glue.protocol.base import TError
@@ -272,8 +272,12 @@ class Agent(object):
         common.apply_permutation(self.ct.source_permutation, swapper)
 
         if not in_memory:
-            msg = MoneroTransactionInputsPermutationRequest(perm=self.ct.source_permutation)
-            t_res = await self.trezor.tsx_sign(MoneroTransactionSignRequest(input_permutation=msg))
+            msg = MoneroTransactionInputsPermutationRequest(
+                perm=self.ct.source_permutation
+            )
+            t_res = await self.trezor.tsx_sign(
+                MoneroTransactionSignRequest(input_permutation=msg)
+            )
             self.handle_error(t_res)
 
         # Set vin_i back - tx prefix hashing
@@ -289,7 +293,9 @@ class Agent(object):
                     if not in_memory
                     else None,
                 )
-                t_res = await self.trezor.tsx_sign(MoneroTransactionSignRequest(input_vini=msg))
+                t_res = await self.trezor.tsx_sign(
+                    MoneroTransactionSignRequest(input_vini=msg)
+                )
                 self.handle_error(t_res)
 
         # Set transaction outputs
@@ -328,7 +334,9 @@ class Agent(object):
                 traceback.print_exc()
 
         t_res = await self.trezor.tsx_sign(
-            MoneroTransactionSignRequest(all_out_set=MoneroTransactionAllOutSetRequest())
+            MoneroTransactionSignRequest(
+                all_out_set=MoneroTransactionAllOutSetRequest()
+            )
         )  # type: MoneroTransactionAllOutSetAck
         self.handle_error(t_res)
 

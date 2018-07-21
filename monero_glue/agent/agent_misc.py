@@ -30,9 +30,9 @@ class TrezorReturnedError(AgentError):
 
     def __str__(self):
         if self.resp and isinstance(self.resp, Failure):
-            return (
-                "TrezorReturnedError(Failure(code=%r, message=%r))"
-                % (self.resp.code, self.resp.message)
+            return "TrezorReturnedError(Failure(code=%r, message=%r))" % (
+                self.resp.code,
+                self.resp.message,
             )
         else:
             return super().__str__()
