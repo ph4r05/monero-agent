@@ -83,10 +83,10 @@ from .LiskVerifyMessage import LiskVerifyMessage
 from .LoadDevice import LoadDevice
 from .MessageSignature import MessageSignature
 from .MoneroAccountPublicAddress import MoneroAccountPublicAddress
-from .MoneroAddressAck import MoneroAddressAck
+from .MoneroAddress import MoneroAddress
 from .MoneroExportedKeyImage import MoneroExportedKeyImage
-from .MoneroGetAddressRequest import MoneroGetAddressRequest
-from .MoneroGetWatchKeyRequest import MoneroGetWatchKeyRequest
+from .MoneroGetAddress import MoneroGetAddress
+from .MoneroGetWatchKey import MoneroGetWatchKey
 from .MoneroKeyImageExportInitAck import MoneroKeyImageExportInitAck
 from .MoneroKeyImageExportInitRequest import MoneroKeyImageExportInitRequest
 from .MoneroKeyImageSyncFinalAck import MoneroKeyImageSyncFinalAck
@@ -118,7 +118,7 @@ from .MoneroTransactionSignInputAck import MoneroTransactionSignInputAck
 from .MoneroTransactionSignInputRequest import MoneroTransactionSignInputRequest
 from .MoneroTransactionSignRequest import MoneroTransactionSignRequest
 from .MoneroTransferDetails import MoneroTransferDetails
-from .MoneroWatchKeyAck import MoneroWatchKeyAck
+from .MoneroWatchKey import MoneroWatchKey
 from .MultisigRedeemScriptType import MultisigRedeemScriptType
 from .NEMAddress import NEMAddress
 from .NEMAggregateModification import NEMAggregateModification
