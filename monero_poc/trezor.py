@@ -23,7 +23,7 @@ import traceback
 
 from monero_glue import protobuf
 from monero_glue.hwtoken import iface, token
-from monero_glue.messages import MoneroWatchKeyAck
+from monero_glue.messages import MoneroWatchKey
 from monero_glue.misc.bip import bip32
 from monero_glue.protocol import messages
 from monero_glue.xmr import crypto, monero, wallet
@@ -315,7 +315,7 @@ class TrezorServer(cli.BaseCli):
             return abort(403)
 
         logger.info("Returning watch only credentials...")
-        res = MoneroWatchKeyAck(
+        res = MoneroWatchKey(
             watch_key=crypto.encodeint(self.creds.view_key_private),
             address=self.creds.address,
         )

@@ -7,10 +7,10 @@ import traceback
 from monero_glue.hwtoken import iface, misc
 from monero_glue.messages import (
     DebugMoneroDiagAck,
-    MoneroGetWatchKeyRequest,
+    MoneroGetWatchKey,
     MoneroKeyImageSyncRequest,
     MoneroTransactionSignRequest,
-    MoneroWatchKeyAck,
+    MoneroWatchKey,
     Failure,
     FailureType,
 )
@@ -97,11 +97,11 @@ class TokenLite(object):
     async def ping(self, message=None, **kwargs):
         return DebugMoneroDiagAck()
 
-    async def get_view_key(self, msg: MoneroGetWatchKeyRequest):
+    async def get_view_key(self, msg: MoneroGetWatchKey):
         if msg.network_type != self.creds.network_type:
             return Failure(message="InvalidNetworkType")
 
-        return MoneroWatchKeyAck(
+        return MoneroWatchKey(
             watch_key=crypto.encodepoint(self.creds.view_key_private),
             address=self.creds.address,
         )

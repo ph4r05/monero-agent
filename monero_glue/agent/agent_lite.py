@@ -8,7 +8,7 @@ import traceback
 from monero_glue.agent import agent_misc
 from monero_glue.hwtoken import misc as tmisc
 from monero_glue.messages import (
-    MoneroGetWatchKeyRequest,
+    MoneroGetWatchKey,
     MoneroKeyImageSyncRequest,
     MoneroKeyImageSyncFinalRequest,
     MoneroKeyImageSyncStepRequest,
@@ -432,7 +432,7 @@ class Agent(object):
         Watch only key load
         :return:
         """
-        msg = MoneroGetWatchKeyRequest(
+        msg = MoneroGetWatchKey(
             address_n=self.address_n, network_type=self.network_type
         )
         res = await self.trezor.get_view_key(msg)
