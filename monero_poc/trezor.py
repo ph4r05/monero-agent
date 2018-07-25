@@ -746,7 +746,9 @@ class TrezorServer(cli.BaseCli):
 
             self.account_data = {"spend_key": priv_spend_key, "view_key": priv_view_key}
             with open(self.args.account_file, "w") as fh:
-                json.dump(self.account_data, fh, indent=2)
+                json.dump({
+                    "spend_key": priv_spend.decode('ascii'),
+                    "view_key": priv_view.decode('ascii')}, fh, indent=2)
 
         if priv_spend_key and priv_view_key:
             self.init_with_keys(priv_spend_key, priv_view_key)
