@@ -56,6 +56,7 @@ class TData(object):
 
     def __init__(self):
         self.tsx_data = None  # type: TsxData
+        self.tx_data = None  # construction data
         self.tx = xmrtypes.Transaction(version=2, vin=[], vout=[], extra=[])
         self.tx_in_hmacs = []
         self.tx_out_entr_hmacs = []
@@ -183,6 +184,7 @@ class Agent(object):
         :return:
         """
         self.ct = TData()
+        self.ct.tx_data = tx
 
         payment_id = []
         extras = await monero.parse_extra_fields(tx.extra)
