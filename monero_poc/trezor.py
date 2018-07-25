@@ -388,7 +388,7 @@ class TrezorServer(cli.BaseCli):
         writer = xmrserialize.MemoryReaderWriter()
         await protobuf.dump_message(writer, res)
         return {
-            "msg": binascii.hexlify(bytes(writer.buffer)).decode("ascii"),
+            "msg": binascii.hexlify(bytes(writer.get_buffer())).decode("ascii"),
             "msg_type": messages.get_message_type(res),
         }
 

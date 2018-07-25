@@ -59,7 +59,7 @@ class TokenProxy(token.TokenLite):
         writer = xmrserialize.MemoryReaderWriter()
 
         await protobuf.dump_message(writer, msg)
-        proto_bin = bytes(writer.buffer)
+        proto_bin = bytes(writer.get_buffer())
         payload = {
             "msg_type": messages.get_message_type(msg),
             "msg": binascii.hexlify(proto_bin).decode("utf8"),
