@@ -153,4 +153,12 @@ setup(
     cmdclass={
         'prebuild': PrebuildCommand,
     },
+    entry_points={
+        'console_scripts': [
+            'monero-seed = monero_poc.seed:main',
+            'monero-agent = monero_poc.agent:main',
+            'monero-trezor-poc = monero_poc.trezor:main',
+        ],
+    }
+
 )
