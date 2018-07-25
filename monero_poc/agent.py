@@ -1095,14 +1095,18 @@ class HostAgent(cli.BaseCli):
         return res
 
 
-async def main():
+async def amain():
     agent = HostAgent()
     res = await agent.main()
     sys.exit(res)
 
 
-if __name__ == "__main__":
+def main():
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    loop.run_until_complete(amain())
     # loop.run_forever()
     loop.close()
+
+
+if __name__ == "__main__":
+    main()

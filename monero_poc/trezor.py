@@ -844,13 +844,17 @@ class TrezorServer(cli.BaseCli):
         sys.argv = args_src
 
 
-async def main():
+async def amain():
     agent = TrezorServer()
     await agent.main()
 
 
-if __name__ == "__main__":
+def main():
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    loop.run_until_complete(amain())
     # loop.run_forever()
     loop.close()
+
+
+if __name__ == "__main__":
+    main()

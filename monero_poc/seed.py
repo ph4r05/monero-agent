@@ -38,7 +38,7 @@ parser.add_argument("--debug", dest="debug", default=False, action="store_const"
 args = parser.parse_args()
 
 
-async def main(args):
+async def amain(args):
     mnems = []
     for w in args.input:
         mnems += w.split(' ')
@@ -92,7 +92,11 @@ async def main(args):
     print("Stagenet Address:  %s" % stage_addr.address.decode("ascii"))
 
 
-if __name__ == "__main__":
+def main(args):
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(args))
+    loop.run_until_complete(amain(args))
     loop.close()
+
+
+if __name__ == "__main__":
+    main(args)
