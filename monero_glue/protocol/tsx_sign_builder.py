@@ -1359,10 +1359,7 @@ class TTransactionBuilder(object):
         mg = None
         if self.use_simple_rct:
             # Simple RingCT
-            mix_ring = []
-            for idx2, out in enumerate(src_entr.outputs):
-                mix_ring.append(out[1])
-
+            mix_ring = [x[1] for x in src_entr.outputs]
             mg, msc = mlsag2.prove_rct_mg_simple(
                 self.full_message,
                 mix_ring,
@@ -1384,11 +1381,7 @@ class TTransactionBuilder(object):
         else:
             # Full RingCt, only one input
             txn_fee_key = crypto.scalarmult_h(self.get_fee())
-            n_total_outs = len(src_entr.outputs)
-            mix_ring = [None] * n_total_outs
-            for idx in range(n_total_outs):
-                mix_ring[idx] = [src_entr.outputs[idx][1]]
-
+            mix_ring = [[x[1]] for x in src_entr.outputs]
             mg, msc = mlsag2.prove_rct_mg(
                 self.full_message,
                 mix_ring,
