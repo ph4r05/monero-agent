@@ -467,7 +467,7 @@ class TTransaction(object):
         ar1 = xmrserialize.Archive(writer, True)
         await ar1.message(self.tx, msg_type=xmrtypes.Transaction)
 
-        return bytes(writer.buffer)
+        return bytes(writer.get_buffer())
 
     def zero_out_amounts(self):
         """

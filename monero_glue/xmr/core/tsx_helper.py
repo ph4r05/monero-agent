@@ -17,9 +17,9 @@ async def parse_extra_fields(extra_buff):
     :return:
     """
     extras = []
-    rw = xmrserialize.MemoryReaderWriter(list(extra_buff))
+    rw = xmrserialize.MemoryReaderWriter(bytes(extra_buff))
     ar2 = xmrserialize.Archive(rw, False)
-    while len(rw.buffer) > 0:
+    while len(rw.get_buffer()) > 0:
         extras.append(await ar2.variant(elem_type=xmrtypes.TxExtraField))
     return extras
 
@@ -151,12 +151,12 @@ async def remove_field_from_tx_extra(extra, mtype):
     writer = xmrserialize.MemoryReaderWriter()
     ar_read = xmrserialize.Archive(reader, False)
     ar_write = xmrserialize.Archive(writer, True)
-    while len(reader.buffer) > 0:
+    while len(reader.get_buffer()) > 0:
         c_extras = await ar_read.variant(elem_type=xmrtypes.TxExtraField)
         if not isinstance(c_extras, mtype):
             await ar_write.variant(c_extras, elem_type=xmrtypes.TxExtraField)
 
-    return writer.buffer
+    return writer.get_buffer()
 
 
 def add_extra_nonce_to_tx_extra(extra, extra_nonce):
@@ -204,5 +204,5 @@ async def add_additional_tx_pub_keys_to_extra(
 
     # format: variant_tag (0x4) | array len varint | 32B | 32B | ...
     await ar.variant(pubs_msg, xmrtypes.TxExtraField)
-    tx_extra += bytes(rw.buffer)
+    tx_extra += bytes(rw.get_buffer())
     return tx_extra

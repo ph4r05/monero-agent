@@ -168,7 +168,7 @@ class Agent(object):
         writer = xmrserialize.MemoryReaderWriter()
         ar1 = xmrserialize.Archive(writer, True)
         await ar1.message(tx, msg_type=xmrtypes.Transaction)
-        return bytes(writer.buffer)
+        return bytes(writer.get_buffer())
 
     async def sign_transaction_data(
         self, tx, multisig=False, exp_tx_prefix_hash=None, use_tx_keys=None

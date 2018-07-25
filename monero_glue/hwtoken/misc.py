@@ -137,10 +137,10 @@ async def dump_msg(msg):
     writer = xmrserialize.MemoryReaderWriter()
     ar = xmrserialize.Archive(writer, True)
     await ar.message(msg)
-    return bytes(writer.buffer)
+    return bytes(writer.get_buffer())
 
 
 async def dump_pb_msg(msg):
     writer = xmrserialize.MemoryReaderWriter()
     await protobuf.dump_message(writer, msg)
-    return bytes(writer.buffer)
+    return bytes(writer.get_buffer())

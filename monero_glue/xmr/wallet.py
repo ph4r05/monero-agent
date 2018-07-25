@@ -153,7 +153,7 @@ async def gen_keys_file(password, wkeyfile):
 
     await ar.root()
     await ar.section(mdl)
-    ser = bytes(writer.buffer)
+    ser = bytes(writer.get_buffer())
 
     ser2 = xmrjson.escape_string_json(ser)
     enc2 = b'{"key_data":"' + ser2 + b'",' + enc[1:].encode("utf8")
@@ -168,7 +168,7 @@ async def gen_keys_file(password, wkeyfile):
     msg.account_data = enc_enc[8:]
     await ar.message(msg)
 
-    return bytes(writer.buffer)
+    return bytes(writer.get_buffer())
 
 
 async def load_unsigned_tx(priv_key, data):
@@ -211,7 +211,7 @@ async def dump_signed_tx(priv_key, signed_tx):
     await ar.root()
     await ar.message(signed_tx)
 
-    ciphertext = chacha.encrypt_xmr(priv_key, bytes(writer.buffer), authenticated=True)
+    ciphertext = chacha.encrypt_xmr(priv_key, bytes(writer.get_buffer()), authenticated=True)
     return SIGNED_TX_PREFIX + ciphertext
 
 
