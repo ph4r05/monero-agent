@@ -3,6 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 from monero_glue import protobuf
+from monero_glue.compat import gc
 from monero_glue.messages import (
     MoneroAccountPublicAddress,
     MoneroTransactionData,
@@ -33,6 +34,12 @@ class TrezorInvalidStateError(TrezorError):
 class TrezorTxPrefixHashNotMatchingError(TrezorError):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+
+class StdObj(object):
+    def __init__(self, **kwargs):
+        for kw in kwargs:
+            setattr(self, kw, kwargs[kw])
 
 
 def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None):
@@ -133,14 +140,25 @@ async def parse_vini(bts):
     return await parse_msg(bts, xmrtypes.TxinToKey())
 
 
-async def dump_msg(msg):
-    writer = xmrserialize.MemoryReaderWriter()
+async def dump_msg(msg, preallocate=None, msg_type=None):
+    writer = xmrserialize.MemoryReaderWriter(preallocate=preallocate)
     ar = xmrserialize.Archive(writer, True)
-    await ar.message(msg)
-    return bytes(writer.get_buffer())
+    await ar.message(msg, msg_type=msg_type)
+    return writer.get_buffer()
 
 
 async def dump_pb_msg(msg):
     writer = xmrserialize.MemoryReaderWriter()
     await protobuf.dump_message(writer, msg)
     return bytes(writer.get_buffer())
+
+
+async def dump_msg_gc(msg, preallocate=None, msg_type=None, del_msg=False):
+    b = await dump_msg(msg, preallocate=preallocate, msg_type=msg_type)
+    if del_msg:
+        del msg
+
+    import gc
+
+    gc.collect()
+    return b

@@ -25,7 +25,7 @@ from monero_glue import protobuf
 from monero_glue.hwtoken import iface, token
 from monero_glue.messages import MoneroWatchKey
 from monero_glue.misc.bip import bip32
-from monero_glue.protocol import messages
+from monero_glue.protocol_base import messages
 from monero_glue.xmr import crypto, monero, wallet
 from monero_glue.xmr.core import mnemonic
 from monero_poc import cli, misc
@@ -61,7 +61,7 @@ class TokenInterface(iface.TokenInterface):
         self.confirmed_result = confirmed
         self.tsx_waiter.confirmation(confirmed)
 
-    async def confirm_transaction(self, tsx_data, ctx=None):
+    async def confirm_transaction(self, tsx_data, creds=None, ctx=None):
         self.confirmed_result = False
         self.tsx_data = tsx_data
         try:
@@ -81,7 +81,7 @@ class TokenInterface(iface.TokenInterface):
     async def transaction_finished(self, ctx=None):
         self.server.on_transaction_signed()
 
-    async def transaction_step(self, step, sub_step=None):
+    async def transaction_step(self, step, sub_step=None, sub_step_total=None):
         logger.debug("Transaction step: %s, sub step: %s" % (step, sub_step))
 
     async def confirm_ki_sync(self, init_msg, ctx=None):

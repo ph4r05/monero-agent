@@ -42,6 +42,7 @@ def prove_range(
     backend_impl=False,
     decode=False,
     byte_enc=False,
+    rsig=None,
 ):
     """
     Range proof generator.
@@ -55,6 +56,7 @@ def prove_range(
     :param backend_impl: backend implementation, if available
     :param decode: decodes output
     :param byte_enc: decodes output
+    :param rsig: buffer for rsig
     :return:
     """
     if use_asnl and mem_opt:

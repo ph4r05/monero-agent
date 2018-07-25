@@ -10,10 +10,11 @@ class TokenInterface(object):
     def gctx(self, ctx):
         return ctx if not None else self.ctx
 
-    async def confirm_transaction(self, tsx_data, ctx=None):
+    async def confirm_transaction(self, tsx_data, creds=None, ctx=None):
         """
         Ask for confirmation from user
         :param tsx_data:
+        :param creds:
         :param ctx:
         :return:
         """
@@ -37,11 +38,12 @@ class TokenInterface(object):
         :return:
         """
 
-    async def transaction_step(self, step, sub_step=None):
+    async def transaction_step(self, step, sub_step=None, sub_step_total=None):
         """
         Transaction progress
         :param step:
         :param sub_step:
+        :param sub_step_total:
         :return:
         """
 

@@ -19,15 +19,12 @@ import sys
 import threading
 import time
 
-from monero_glue import protobuf
 from monero_glue.agent import agent_lite, agent_misc
-from monero_glue.hwtoken import token
-from monero_glue.messages import DebugMoneroDiagRequest, DebugMoneroDiagAck
-from monero_glue.protocol import messages
+from monero_glue.messages import DebugMoneroDiagRequest
 from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc
 from monero_poc import cli, misc, trace_logger
 from monero_poc.trezor_server_proxy import TokenProxy
-from monero_serialize import xmrserialize, xmrtypes
+from monero_serialize import xmrtypes
 
 import coloredlogs
 from cmd2 import Cmd

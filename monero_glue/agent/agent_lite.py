@@ -31,8 +31,7 @@ from monero_glue.messages import (
     MoneroTransactionSignInputAck,
     Failure,
 )
-from monero_glue.old import trezor
-from monero_glue.protocol.base import TError
+from monero_glue.protocol_base.base import TError
 from monero_glue.xmr import common, key_image, monero, ring_ct
 from monero_glue.xmr.tsx_data import TsxData
 from monero_glue.xmr.enc import chacha_poly

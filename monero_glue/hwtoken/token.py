@@ -14,7 +14,7 @@ from monero_glue.messages import (
     Failure,
     FailureType,
 )
-from monero_glue.protocol.error import exc2str
+from monero_glue.protocol_base.error import exc2str
 from monero_glue.protocol.key_image_sync import KeyImageSync
 from monero_glue.protocol.tsx_sign import TsxSigner
 from monero_glue.xmr import crypto, monero
@@ -30,6 +30,7 @@ class TokenLite(object):
         self.tsx_ctr = 0
         self.err_ctr = 0
         self.tsx_obj = None  # type: TsxSigner
+        self.tsx_state = None
         self.ki_sync = None  # type: KeyImageSync
         self.creds = None  # type: monero.AccountCreds
         self.iface = iface.TokenInterface()
@@ -107,15 +108,15 @@ class TokenLite(object):
         )
 
     async def tsx_sign(self, msg: MoneroTransactionSignRequest):
-        if self.tsx_obj is None or msg.init:
-            self.tsx_obj = TsxSigner(ctx=self, iface=self.iface, creds=self.creds)
-
         try:
             await self.test_pb_msg(msg)
 
-            res = await self.tsx_obj.sign(self, msg)
-            if await self.tsx_obj.should_purge():
-                self.tsx_obj = None
+            signer = TsxSigner()
+            res = await signer.sign(self, self.tsx_state, msg, iface=self.iface)
+            if await signer.should_purge():
+                self.tsx_state = None
+            else:
+                self.tsx_state = await signer.state_save()
 
             await self.test_pb_msg(res)
             return res

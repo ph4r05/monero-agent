@@ -10,14 +10,13 @@
 
 import binascii
 import logging
-import os
 import pickle
 
 import requests
 from monero_glue import protobuf
 from monero_glue.hwtoken import token
-from monero_glue.protocol import messages
-from monero_serialize import xmrserialize, xmrtypes
+from monero_glue.protocol_base import messages
+from monero_serialize import xmrserialize
 
 logger = logging.getLogger(__name__)
 

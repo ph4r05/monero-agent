@@ -6,13 +6,9 @@
 import os
 
 from monero_glue.hwtoken import token
-from monero_glue.protocol.messages import MessageConverter
+from monero_glue.protocol_base.messages import MessageConverter
 
-from trezorlib import coins
-from trezorlib import messages as proto
-from trezorlib import monero, protobuf, tx_api
 from trezorlib.client import TrezorClient, TrezorClientDebugLink
-from trezorlib.tools import parse_path
 from trezorlib.transport import get_transport
 
 

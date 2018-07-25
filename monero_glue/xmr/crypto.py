@@ -123,7 +123,7 @@ def xmr_base58_addr_decode_check(buff):
     calc_checksum = cn_fast_hash(d[:-4])[:4]
     if addr_checksum == calc_checksum:
         version = ord(d[:1])
-        return version, d[1:]
+        return d[1:], version
 
     else:
         raise ValueError("Invalid address checksum")
