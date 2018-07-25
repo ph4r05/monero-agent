@@ -4,9 +4,9 @@
 
 import hmac
 
+import ctypes as ct
 from Crypto.Protocol.KDF import PBKDF2
 from monero_glue.xmr.core.ec_base import *
-from monero_serialize import xmrtypes
 from trezor_crypto import trezor_cfunc as tcryr
 
 # from monero_glue.misc.devel.call_tracker import CallTracker
@@ -133,7 +133,9 @@ def encodepoint(pt):
 
 
 def encodepoint_into(pt, b):
-    return tcry.ge25519_pack(b, pt)
+    bf = (ct.c_ubyte * 32).from_buffer(b)
+    tcry.ge25519_pack(bf, pt)
+    return b
 
 
 def decodeint(x):
@@ -514,7 +516,7 @@ def cn_fast_hash(buff):
     :param buff:
     :return:
     """
-    return keccak_hash(buff)
+    return keccak_hash(bytes(buff))
 
 
 def hash_to_scalar(data, length=None):

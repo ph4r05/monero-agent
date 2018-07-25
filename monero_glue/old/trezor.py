@@ -7,7 +7,8 @@
 # DEPRECATED
 
 from monero_serialize import xmrtypes, xmrserialize
-from monero_glue.xmr.monero import TsxData, classify_subaddresses
+from monero_glue.xmr.monero import classify_subaddresses
+from monero_glue.xmr.tsx_data import TsxData
 from monero_glue.xmr import monero, mlsag2, ring_ct, crypto, common as common
 
 

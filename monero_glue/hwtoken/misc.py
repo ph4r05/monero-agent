@@ -9,7 +9,7 @@ from monero_glue.messages import (
     MoneroTransactionDestinationEntry,
 )
 from monero_glue.xmr import crypto
-from monero_glue.xmr.monero import TsxData
+from monero_glue.xmr.tsx_data import TsxData
 from monero_serialize import xmrserialize, xmrtypes
 
 
@@ -84,7 +84,7 @@ def translate_monero_dest_entry_pb(dst_entry: xmrtypes.TxDestinationEntry):
 
 async def translate_tsx_data(tsx_data: MoneroTransactionData):
     tsxd = TsxData()
-    for fld in TsxData.MFIELDS:
+    for fld in TsxData.f_specs():
         fname = fld[0]
         if hasattr(tsx_data, fname):
             setattr(tsxd, fname, getattr(tsx_data, fname))
@@ -98,7 +98,7 @@ async def translate_tsx_data(tsx_data: MoneroTransactionData):
 
 async def translate_tsx_data_pb(tsx_data: TsxData):
     tsxd = MoneroTransactionData()
-    for fld in TsxData.MFIELDS:
+    for fld in TsxData.f_specs():
         fname = fld[0]
         if hasattr(tsx_data, fname):
             setattr(tsxd, fname, getattr(tsx_data, fname))

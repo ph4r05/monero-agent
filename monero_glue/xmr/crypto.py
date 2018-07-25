@@ -21,6 +21,7 @@ from monero_glue.xmr.core.ec import *
 from monero_glue.xmr.core.ec_conv import *
 from monero_glue.xmr.core.pycompat import *
 from monero_serialize import xmrserialize
+from monero_glue.misc import b58_mnr
 
 
 def b16_to_scalar(bts):
@@ -30,11 +31,6 @@ def b16_to_scalar(bts):
     :return:
     """
     return decodeint(binascii.unhexlify(bts))
-
-
-#
-# Repr invariant
-#
 
 
 def public_key(sk):
@@ -111,3 +107,23 @@ def check_signature(data, c, r, pub):
     tmp_c = hash_to_scalar(buff)
     res = sc_sub(tmp_c, c)
     return not sc_isnonzero(res)
+
+
+def xmr_base58_addr_encode_check(version, buff):
+    buf = bytes([version]) + buff
+    h = cn_fast_hash(buf)
+    buf = binascii.hexlify(buf + h[0:4])
+    return b58_mnr.b58encode(buf)
+
+
+def xmr_base58_addr_decode_check(buff):
+    d = b58_mnr.b58decode(data_bin=buff)
+
+    addr_checksum = d[-4:]
+    calc_checksum = cn_fast_hash(d[:-4])[:4]
+    if addr_checksum == calc_checksum:
+        version = ord(d[:1])
+        return version, d[1:]
+
+    else:
+        raise ValueError("Invalid address checksum")

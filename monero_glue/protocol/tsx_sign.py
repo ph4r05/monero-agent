@@ -32,7 +32,8 @@ from monero_glue.protocol.error import exc2str
 from monero_glue.trezor import wrapper as twrap
 from monero_glue.xmr import common, crypto, mlsag2, monero, ring_ct
 from monero_glue.xmr.enc import chacha_poly
-from monero_glue.xmr.monero import TsxData, classify_subaddresses
+from monero_glue.xmr.monero import classify_subaddresses
+from monero_glue.xmr.tsx_data import TsxData
 from monero_serialize import xmrserialize, xmrtypes
 
 

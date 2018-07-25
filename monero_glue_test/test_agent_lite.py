@@ -12,7 +12,7 @@ import aiounittest
 import pkg_resources
 from monero_glue.agent import agent_lite
 from monero_glue.hwtoken import token
-from monero_glue.xmr import crypto, monero, wallet
+from monero_glue.xmr import crypto, monero, wallet, ring_ct
 from monero_serialize import xmrboost, xmrserialize, xmrtypes
 
 
@@ -127,6 +127,7 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
         """
         tagent = self.init_agent()
         txes = await tagent.sign_unsigned_tx(unsigned_tx)
+        await self.verify(txes[0], tagent.last_transaction_data())
         return await self.receive(txes[0])
 
     async def tx_sign_unsigned(self, unsigned_tx):
@@ -170,7 +171,43 @@ class AgentLiteTest(aiounittest.AsyncTestCase):
 
         tagent = self.init_agent()
         txes = await tagent.sign_tx(pending.construction_data)
+        await self.verify(txes[0], tagent.last_transaction_data())
         await self.receive(txes[0])
+
+    async def verify(self, tx, con_data=None):
+        """
+        Transaction verification
+        :param tx:
+        :return:
+        """
+
+        # Unserialize the transaction
+        tx_obj = xmrtypes.Transaction()
+        reader = xmrserialize.MemoryReaderWriter(bytearray(tx))
+        ar1 = xmrserialize.Archive(reader, False)
+
+        await ar1.message(tx_obj, msg_type=xmrtypes.Transaction)
+        extras = await monero.parse_extra_fields(tx_obj.extra)
+
+        tx_pub = monero.find_tx_extra_field_by_type(
+            extras, xmrtypes.TxExtraPubKey
+        ).pub_key
+
+        additional_pub_keys = monero.find_tx_extra_field_by_type(
+            extras, xmrtypes.TxExtraAdditionalPubKeys
+        )
+
+        num_outs = len(tx_obj.vout)
+
+        # Verify range proofs
+        for idx, rsig in enumerate(tx_obj.rct_signatures.p.rangeSigs):
+            out_pk = tx_obj.rct_signatures.outPk[idx]
+            C = crypto.decodepoint(out_pk.mask)
+            res = ring_ct.ver_range(C, rsig)
+            self.assertTrue(res)
+
+
+
 
     async def receive(self, tx):
         """

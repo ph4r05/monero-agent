@@ -34,6 +34,7 @@ from monero_glue.messages import (
 from monero_glue.old import trezor
 from monero_glue.protocol.base import TError
 from monero_glue.xmr import common, key_image, monero, ring_ct
+from monero_glue.xmr.tsx_data import TsxData
 from monero_glue.xmr.enc import chacha_poly
 from monero_serialize import xmrserialize, xmrtypes
 
@@ -55,7 +56,7 @@ class TData(object):
     """
 
     def __init__(self):
-        self.tsx_data = None  # type: monero.TsxData
+        self.tsx_data = None  # type: TsxData
         self.tx = xmrtypes.Transaction(version=2, vin=[], vout=[], extra=[])
         self.tx_in_hmacs = []
         self.tx_out_entr_hmacs = []
@@ -193,7 +194,7 @@ class Agent(object):
             )
 
         # Init transaction
-        tsx_data = trezor.TsxData()
+        tsx_data = TsxData()
         tsx_data.version = 1
         tsx_data.payment_id = payment_id
         tsx_data.unlock_time = tx.unlock_time

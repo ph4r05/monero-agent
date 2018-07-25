@@ -9,6 +9,7 @@
 from monero_serialize import xmrtypes
 from monero_glue.xmr import monero
 from monero_glue.old import trezor
+from monero_glue.xmr.tsx_data import TsxData
 
 
 class TData(object):
@@ -48,7 +49,7 @@ class Agent(object):
                 )
 
             # Init transaction
-            tsx_data = trezor.TsxData()
+            tsx_data = TsxData()
             tsx_data.version = 1
             tsx_data.payment_id = payment_id
             tsx_data.unlock_time = tx.unlock_time
