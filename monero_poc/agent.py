@@ -22,8 +22,9 @@ import time
 from monero_glue.agent import agent_lite, agent_misc
 from monero_glue.messages import DebugMoneroDiagRequest
 from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc
-from monero_poc import cli, misc, trace_logger
-from monero_poc.trezor_server_proxy import TokenProxy
+from monero_poc.utils import misc, trace_logger
+from monero_poc.utils import cli
+from monero_poc.utils.trezor_server_proxy import TokenProxy
 from monero_serialize import xmrtypes
 
 import coloredlogs

@@ -2,18 +2,13 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import asyncio
 import getpass
-import json
 import logging
-import os
-import sys
-import time
 
 from blessed import Terminal
 from cmd2 import Cmd
 
-from . import misc, trace_logger
+from monero_poc.utils import misc, trace_logger
 
 logger = logging.getLogger(__name__)
 
