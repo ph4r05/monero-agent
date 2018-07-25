@@ -147,8 +147,7 @@ async def get_pre_mlsag_hash(rv):
     :type rv: RctSig
     :return:
     """
-    from monero_glue.xmr.sub.keccak_hasher import get_keccak_writer, KeccakArchive
-
+    from monero_glue.xmr.sub.keccak_hasher import get_keccak_writer
 
     kc_master = HashWrapper(crypto.get_keccak())
     kc_master.update(rv.message)
