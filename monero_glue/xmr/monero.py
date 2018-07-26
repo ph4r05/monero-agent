@@ -7,7 +7,6 @@ import struct
 
 from monero_glue.misc import b58_mnr
 from monero_glue.xmr import common, crypto, mlsag2, ring_ct
-from monero_glue.xmr.core.tsx_helper import *
 from monero_serialize import protobuf as xproto
 from monero_serialize import xmrserialize, xmrtypes
 from .sub.addr import *
