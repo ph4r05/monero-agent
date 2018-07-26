@@ -2,12 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import argparse
-import asyncio
 import binascii
-import logging
-
-import coloredlogs
 
 from monero_glue.misc.bip import bip32
 from monero_glue.misc.bip import bip39
@@ -32,16 +27,30 @@ class SeedDerivation(object):
         self.view_pub = None
 
     def set_seed(self, seed, path="m/44'/128'/0'/0/0"):
+        """
+        Sets master secret for BIP44 derivation
+        :param seed:
+        :param path:
+        :return:
+        """
         self.master_seed = seed
         wl = bip32.Wallet.from_master_secret(seed)
 
         # Generate private keys based on the gen mechanism. Bip44 path + Monero backward compatible
         data = wl.get_child_for_path(path)
         self.pre_hash = binascii.unhexlify(data.private_key.get_key())
-
-        # to_hash is initial seed in the Monero sense, recoverable from this seed
         self.hashed = crypto.cn_fast_hash(self.pre_hash)
-        self.electrum_words = " ".join(mnemonic.mn_encode(self.hashed))
+        self.set_monero_seed(self.hashed)
+
+    def set_monero_seed(self, seed):
+        """
+        Sets Monero master secret seed.
+        :param seed:
+        :return:
+        """
+        # to_hash is initial seed in the Monero sense, recoverable from this seed
+        self.hashed = seed
+        self.electrum_words = " ".join(mnemonic.mn_encode(self.hashed, True))
 
         keys = monero.generate_monero_keys(self.hashed)
         self.spend_sec, self.spend_pub, self.view_sec, self.view_pub = keys
@@ -86,4 +95,19 @@ class SeedDerivation(object):
     def from_master_seed(cls, seed):
         r = cls()
         r.set_seed(seed)
+        return r
+
+    @classmethod
+    def from_monero_seed(cls, seed):
+        r = cls()
+        r.set_monero_seed(seed)
+        return r
+
+    @classmethod
+    def from_monero_mnemonics(cls, mnemonics_words):
+        mnems = SeedDerivation.clean_input(mnemonics_words)
+        seed = mnemonic.mn_decode(mnems)
+
+        r = cls()
+        r.set_monero_seed(binascii.unhexlify(seed))
         return r
