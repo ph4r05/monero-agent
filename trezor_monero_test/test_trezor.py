@@ -14,11 +14,11 @@ from monero_glue.agent import agent_lite
 from monero_glue.hwtoken import token
 from monero_glue.xmr import crypto, monero, wallet
 from monero_glue.xmr.sub.seed import SeedDerivation
-from monero_glue_test.base_agent_test import BaseTxTest
+from monero_glue_test.base_agent_test import BaseAgentTest
 from monero_glue.trezor import manager as tmanager
 
 
-class TrezorTest(BaseTxTest):
+class TrezorTest(BaseAgentTest):
     def __init__(self, *args, **kwargs):
         super(TrezorTest, self).__init__(*args, **kwargs)
         self.trezor_proxy = None  # type: tmanager.Trezor

@@ -17,7 +17,7 @@ from monero_glue.xmr.sub.addr import get_change_addr_idx
 from monero_glue.xmr.sub.seed import SeedDerivation
 
 
-class BaseTxTest(aiounittest.AsyncTestCase):
+class BaseAgentTest(aiounittest.AsyncTestCase):
 
     def get_trezor_mnemonics(self):
         return [
