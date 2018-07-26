@@ -958,7 +958,8 @@ class HostAgent(cli.BaseCli):
         prefix = binascii.hexlify(hash[:12])
 
         tx_key_salt = crypto.random_bytes(32)
-        tx_view_key = crypto.pbkdf2(crypto.encodeint(self.priv_view), tx_key_salt, 2048)
+        tx_key_inp = hash + crypto.encodeint(self.priv_view)
+        tx_view_key = crypto.pbkdf2(tx_key_inp, tx_key_salt, 2048)
 
         unsigned_data = xmrtypes.UnsignedTxSet()
         unsigned_data.txes = [tx]
@@ -969,9 +970,8 @@ class HostAgent(cli.BaseCli):
         await ar.root()
         await ar.message(unsigned_data)
 
-        ciphertext = chacha.encrypt_xmr(
-            self.priv_view, bytes(writer.get_buffer()), authenticated=True
-        )
+        unsigned_key = crypto.keccak_2hash(b'unsigned;' + tx_view_key)
+        ciphertext = chacha_poly.encrypt_pack(unsigned_key, bytes(writer.get_buffer()))
 
         # Serialize signed transaction
         writer = xmrserialize.MemoryReaderWriter()
