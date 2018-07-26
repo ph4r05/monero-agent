@@ -25,20 +25,43 @@ coloredlogs.install(level=logging.WARNING, use_chroot=False)
 
 
 parser = argparse.ArgumentParser(description="Monero seed utility")
-parser.add_argument('input', metavar='mnemonics', nargs='*',
-                    help='Input')
+parser.add_argument("input", metavar="mnemonics", nargs="*", help="Input")
 
-parser.add_argument("--seed", dest="seed", default=False, action="store_const", const=True,
-                    help="Input is hexcoded seed / master secret, input to Hnode derivation")
+parser.add_argument(
+    "--seed",
+    dest="seed",
+    default=False,
+    action="store_const",
+    const=True,
+    help="Input is hexcoded seed / master secret, input to Hnode derivation",
+)
 
-parser.add_argument("--wlist-seed", dest="wlist_seed", default=False, action="store_const", const=True,
-                    help="Mnemonics converted to seed using the wordlist indices")
+parser.add_argument(
+    "--wlist-seed",
+    dest="wlist_seed",
+    default=False,
+    action="store_const",
+    const=True,
+    help="Mnemonics converted to seed using the wordlist indices",
+)
 
-parser.add_argument("--subs-test", dest="subs_test", default=False, action="store_const", const=True,
-                    help="Compute 5x5 sub addresses on testnet")
+parser.add_argument(
+    "--subs-test",
+    dest="subs_test",
+    default=False,
+    action="store_const",
+    const=True,
+    help="Compute 5x5 sub addresses on testnet",
+)
 
-parser.add_argument("--debug", dest="debug", default=False, action="store_const", const=True,
-                    help="Debug",)
+parser.add_argument(
+    "--debug",
+    dest="debug",
+    default=False,
+    action="store_const",
+    const=True,
+    help="Debug",
+)
 
 args = parser.parse_args()
 
@@ -46,11 +69,11 @@ args = parser.parse_args()
 async def amain(args):
     mnems = []
     for w in args.input:
-        mnems += w.split(' ')
+        mnems += w.split(" ")
     mnems = [x.strip().lower() for x in mnems]
 
     if args.seed:
-        seed = binascii.unhexlify(' '.join(mnems))
+        seed = binascii.unhexlify(" ".join(mnems))
         sd = SeedDerivation.from_master_seed(seed)
 
     else:
@@ -66,11 +89,23 @@ async def amain(args):
     print("Seed Monero:      %s" % binascii.hexlify(sd.hashed).decode("ascii"))
     print("Seed Monero wrds: %s\n" % sd.electrum_words)
 
-    print("Private spend key: %s" % binascii.hexlify(crypto.encodeint(sd.spend_sec)).decode("ascii"))
-    print("Private view key:  %s\n" % binascii.hexlify(crypto.encodeint(sd.view_sec)).decode("ascii"))
+    print(
+        "Private spend key: %s"
+        % binascii.hexlify(crypto.encodeint(sd.spend_sec)).decode("ascii")
+    )
+    print(
+        "Private view key:  %s\n"
+        % binascii.hexlify(crypto.encodeint(sd.view_sec)).decode("ascii")
+    )
 
-    print("Public spend key:  %s" % binascii.hexlify(crypto.encodepoint(sd.spend_pub)).decode("ascii"))
-    print("Public view key:   %s\n" % binascii.hexlify(crypto.encodepoint(sd.view_pub)).decode("ascii"))
+    print(
+        "Public spend key:  %s"
+        % binascii.hexlify(crypto.encodepoint(sd.spend_pub)).decode("ascii")
+    )
+    print(
+        "Public view key:   %s\n"
+        % binascii.hexlify(crypto.encodepoint(sd.view_pub)).decode("ascii")
+    )
 
     print("Mainnet Address:   %s" % main_addr.address.decode("ascii"))
     print("Testnet Address:   %s" % test_addr.address.decode("ascii"))
@@ -84,13 +119,15 @@ async def amain(args):
                 if major == 0 and minor == 0:
                     continue
 
-                D, C = monero.generate_sub_address_keys(sd.view_sec, sd.spend_pub, major, minor)
+                D, C = monero.generate_sub_address_keys(
+                    sd.view_sec, sd.spend_pub, major, minor
+                )
                 addr = encode_addr(
                     net_version(net_type, is_subaddr=True),
                     crypto.encodepoint(D),
                     crypto.encodepoint(C),
                 )
-                print(' %d,%d: %s' % (major, minor, addr))
+                print(" %d,%d: %s" % (major, minor, addr))
 
 
 def main(args):
