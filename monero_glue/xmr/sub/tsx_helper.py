@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from monero_serialize.xmrtypes import TxExtraField, AccountPublicAddress, TxExtraAdditionalPubKeys
+from monero_serialize.xmrtypes import (
+    TxExtraField,
+    AccountPublicAddress,
+    TxExtraAdditionalPubKeys,
+)
 
 from monero_glue.xmr import crypto
 from monero_serialize import xmrserialize
@@ -116,6 +120,8 @@ def get_destination_view_key_pub(destinations, change_addr=None):
     :param change_addr:
     :return:
     """
+    from monero_glue.xmr.sub.addr import addr_eq
+
     addr = AccountPublicAddress(
         m_spend_public_key=crypto.NULL_KEY_ENC, m_view_public_key=crypto.NULL_KEY_ENC
     )
@@ -123,12 +129,12 @@ def get_destination_view_key_pub(destinations, change_addr=None):
     for dest in destinations:
         if dest.amount == 0:
             continue
-        if change_addr and dest.addr == change_addr:
+        if change_addr and addr_eq(dest.addr, change_addr):
             continue
-        if dest.addr == addr:
+        if addr_eq(dest.addr, addr):
             continue
         if count > 0:
-            return bytearray(32)
+            return crypto.NULL_KEY_ENC
         addr = dest.addr
         count += 1
     return addr.m_view_public_key

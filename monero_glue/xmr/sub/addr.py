@@ -63,7 +63,7 @@ def classify_subaddresses(tx_dests, change_addr):
     single_dest_subaddress = None
     addr_set = set()
     for tx in tx_dests:
-        if change_addr and change_addr == tx.addr:
+        if change_addr and addr_eq(change_addr, tx.addr):
             continue
         addr_hashed = addr_to_hash(tx.addr)
         if addr_hashed in addr_set:
@@ -78,5 +78,31 @@ def classify_subaddresses(tx_dests, change_addr):
 
 
 def addr_eq(a, b):
-    return bytes(a.m_spend_public_key) == bytes(b.m_spend_public_key) \
-           and bytes(a.m_view_public_key) == bytes(b.m_view_public_key)
+    """
+    Address comparisson. Allocation free.
+    :param a:
+    :param b:
+    :return:
+    """
+    return pub_eq(a.m_spend_public_key, b.m_spend_public_key) and pub_eq(
+        a.m_view_public_key, b.m_view_public_key
+    )
+
+
+def pub_eq(a, b):
+    """
+    Simple non-constant time public key compare
+    :param a:
+    :param b:
+    :return:
+    """
+    if a == b:
+        return True
+    if (a is None and b is not None) or (a is not None and b is None):
+        return False
+    if len(a) != len(b):
+        return False
+    for i in range(len(a)):
+        if a[i] != b[i]:
+            return False
+    return True
