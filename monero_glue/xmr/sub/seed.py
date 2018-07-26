@@ -53,8 +53,13 @@ class SeedDerivation(object):
     @staticmethod
     def clean_input(inp):
         cleaned = []
-        for w in inp:
-            cleaned += w.split(' ')
+        if isinstance(inp, (str, bytes)):
+            cleaned = [inp]
+
+        else:
+            for w in inp:
+                cleaned += w.split(' ')
+
         cleaned = [x.strip().lower() for x in cleaned]
         return cleaned
 
@@ -66,6 +71,7 @@ class SeedDerivation(object):
             indices = [bip39.english_words.index(x) for x in mnems]
             seed = bip32.Wallet.indices_to_bytes(indices)
         else:
+            print(' '.join(mnems))
             seed = bip39_deriv.mnemonics_to_seed(' '.join(mnems))
 
         r = cls()
