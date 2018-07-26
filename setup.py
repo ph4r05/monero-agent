@@ -9,7 +9,7 @@ from setuptools.command.develop import develop
 from distutils.errors import DistutilsError
 
 
-version = "1.5.0"
+version = "1.5.1"
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
