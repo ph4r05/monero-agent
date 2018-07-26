@@ -7,13 +7,12 @@ import os
 import unittest
 import zlib
 
-import pkg_resources
 from monero_serialize import xmrboost, xmrserialize, xmrtypes
 
 from monero_glue.agent import agent_lite
 from monero_glue.hwtoken import token
 from monero_glue.xmr import crypto, monero, wallet
-from .base_tx_test import BaseTxTest
+from monero_glue_test.base_tx_test import BaseTxTest
 
 
 class AgentLiteTest(BaseTxTest):
