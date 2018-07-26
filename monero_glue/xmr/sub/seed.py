@@ -71,7 +71,6 @@ class SeedDerivation(object):
             indices = [bip39.english_words.index(x) for x in mnems]
             seed = bip32.Wallet.indices_to_bytes(indices)
         else:
-            print(' '.join(mnems))
             seed = bip39_deriv.mnemonics_to_seed(' '.join(mnems))
 
         r = cls()
