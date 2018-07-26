@@ -86,7 +86,7 @@ class TrezorTest(BaseAgentTest):
         self.assertEqual(ki_loaded.m_spend_public_key, crypto.encodepoint(self.creds.spend_key_public))
         self.assertEqual(ki_loaded.m_view_public_key, crypto.encodepoint(self.creds.view_key_public))
         res = await self.agent.import_outputs(ki_loaded.tds)
-        self.assertTrue(len(res) > 0)
+        await self.verify_ki_export(res, ki_loaded)
 
     async def test_transactions(self):
         files = self.get_trezor_tsx_tests()

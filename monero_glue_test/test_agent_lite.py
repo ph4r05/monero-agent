@@ -111,7 +111,7 @@ class AgentLiteTest(BaseAgentTest):
 
         tagent = self.init_agent(creds=creds)
         res = await tagent.import_outputs(ki_loaded.tds)
-        self.assertTrue(len(res) > 0)
+        await self.verify_ki_export(res, ki_loaded)
 
     async def test_trezor_txs(self):
         if os.getenv('SKIP_TREZOR_TSX', False):

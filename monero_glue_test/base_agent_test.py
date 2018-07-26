@@ -91,6 +91,21 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
             __name__, os.path.join("data", fl)
         )
 
+    async def verify_ki_export(self, res, exp):
+        """
+        Verifies key image export
+        :param res:
+        :param exp:
+        :return:
+        """
+        self.assertTrue(len(res) > 0)
+        for idx, kie in enumerate(res):
+            td = exp.tds[idx]
+            ki = crypto.decodepoint(kie[0])
+            pkey = crypto.decodepoint(td.m_tx.vout[td.m_internal_output_index].target.key)
+            sig = [[crypto.decodeint(kie[1][0]), crypto.decodeint(kie[1][1])]]
+            self.assertTrue(ring_ct.check_ring_singature(kie[0], ki, [pkey], sig))
+
     def get_expected_payment_id(self, fl):
         """
         Expected payment id type, data for file name
