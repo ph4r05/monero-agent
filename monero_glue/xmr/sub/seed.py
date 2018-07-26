@@ -48,7 +48,10 @@ class SeedDerivation(object):
 
     def creds(self, network_type=NetworkTypes.MAINNET):
         return monero.AccountCreds.new_wallet(
-            priv_view_key=self.view_sec, priv_spend_key=self.spend_sec, network_type=network_type)
+            priv_view_key=self.view_sec,
+            priv_spend_key=self.spend_sec,
+            network_type=network_type,
+        )
 
     @staticmethod
     def clean_input(inp):
@@ -58,7 +61,7 @@ class SeedDerivation(object):
 
         else:
             for w in inp:
-                cleaned += w.split(' ')
+                cleaned += w.split(" ")
 
         cleaned = [x.strip().lower() for x in cleaned]
         return cleaned
@@ -71,7 +74,7 @@ class SeedDerivation(object):
             indices = [bip39.english_words.index(x) for x in mnems]
             seed = bip32.Wallet.indices_to_bytes(indices)
         else:
-            seed = bip39_deriv.mnemonics_to_seed(' '.join(mnems))
+            seed = bip39_deriv.mnemonics_to_seed(" ".join(mnems))
 
         r = cls()
         r.mnemonics = mnems
