@@ -533,22 +533,32 @@ class TTransactionBuilder(object):
 
         from monero_glue.xmr.sub import tsx_helper
 
-        view_key_pub_enc = tsx_helper.get_destination_view_key_pub(
-            tsx_data.outputs, self.change_address()
-        )
-        if view_key_pub_enc == crypto.NULL_KEY_ENC:
-            raise ValueError(
-                "Destinations have to have exactly one output to support encrypted payment ids"
+        if len(tsx_data.payment_id) == 8:
+            view_key_pub_enc = tsx_helper.get_destination_view_key_pub(
+                tsx_data.outputs, self.change_address()
+            )
+            if view_key_pub_enc == crypto.NULL_KEY_ENC:
+                raise ValueError(
+                    "Destinations have to have exactly one output to support encrypted payment ids"
+                )
+
+            view_key_pub = crypto.decodepoint(view_key_pub_enc)
+            payment_id_encr = tsx_helper.encrypt_payment_id(
+                tsx_data.payment_id, view_key_pub, self.r
             )
 
-        view_key_pub = crypto.decodepoint(view_key_pub_enc)
-        payment_id_encr = tsx_helper.encrypt_payment_id(
-            tsx_data.payment_id, view_key_pub, self.r
-        )
+            extra_nonce = tsx_helper.set_encrypted_payment_id_to_tx_extra_nonce(
+                payment_id_encr
+            )
 
-        extra_nonce = tsx_helper.set_encrypted_payment_id_to_tx_extra_nonce(
-            payment_id_encr
-        )
+        elif len(tsx_data.payment_id) == 32:
+            extra_nonce = tsx_helper.set_payment_id_to_tx_extra_nonce(
+                tsx_data.payment_id
+            )
+
+        else:
+            raise ValueError("Payment ID size invalid")
+
         self.tx.extra = tsx_helper.add_extra_nonce_to_tx_extra(b"", extra_nonce)
 
     async def compute_sec_keys(self, tsx_data, tsx_ctr):
