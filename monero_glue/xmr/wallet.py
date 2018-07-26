@@ -189,6 +189,7 @@ async def load_unsigned_tx(priv_key, data):
         raise ValueError("Unsigned transaction v4 is supported only")
 
     tx_uns_ser = chacha.decrypt_xmr(priv_key, data, authenticated=True)
+
     reader = xmrserialize.MemoryReaderWriter(bytearray(tx_uns_ser))
     ar = xmrboost.Archive(reader, False)
 
@@ -196,6 +197,22 @@ async def load_unsigned_tx(priv_key, data):
     await ar.root()
     await ar.message(msg)
     return msg
+
+
+async def dump_unsigned_tx(priv_key, unsigned_tx):
+    """
+    Dumps unsigned transaction
+    :param priv_key:
+    :param unsigned_tx:
+    :return:
+    """
+    writer = xmrserialize.MemoryReaderWriter()
+    ar = xmrboost.Archive(writer, True)
+    await ar.root()
+    await ar.message(unsigned_tx)
+
+    ciphertext = chacha.encrypt_xmr(priv_key, bytes(writer.get_buffer()), authenticated=True)
+    return UNSIGNED_TX_PREFIX + ciphertext
 
 
 async def dump_signed_tx(priv_key, signed_tx):
