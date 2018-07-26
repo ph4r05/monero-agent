@@ -119,6 +119,23 @@ class AgentLiteTest(BaseTxTest):
         )
         await self.tx_sign_unsigned_msg(unsigned_tx)
 
+    async def test_trezor_ki(self):
+        creds = self.get_trezor_creds(0)
+        ki_data = pkg_resources.resource_string(
+            __name__, os.path.join("data", "ki_sync_01.txt")
+        )
+
+        ki_loaded = await wallet.load_exported_outputs(
+            creds.view_key_private, ki_data
+        )
+
+        self.assertEqual(ki_loaded.m_spend_public_key, crypto.encodepoint(creds.spend_key_public))
+        self.assertEqual(ki_loaded.m_view_public_key, crypto.encodepoint(creds.view_key_public))
+
+        tagent = self.init_agent(creds=creds)
+        res = await tagent.import_outputs(ki_loaded.tds)
+        self.assertTrue(len(res) > 0)
+
     async def test_trezor_txs(self):
         if os.getenv('SKIP_TREZOR_TSX', False):
             self.skipTest('Skipped by ENV var')
