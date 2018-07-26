@@ -100,7 +100,5 @@ class TrezorTest(BaseTxTest):
                     creds.view_key_private, unsigned_tx_c
                 )
 
-                txes = await self.agent.sign_unsigned_tx(unsigned_tx)
-                await self.verify(txes[0], self.agent.last_transaction_data(), creds=creds)
-                await self.receive(txes[0], all_creds)
+                await self.tx_sign_test(self.agent, unsigned_tx, creds, all_creds, fl)
             self.reinit_trezor()
