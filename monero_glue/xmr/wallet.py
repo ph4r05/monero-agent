@@ -211,7 +211,9 @@ async def dump_unsigned_tx(priv_key, unsigned_tx):
     await ar.root()
     await ar.message(unsigned_tx)
 
-    ciphertext = chacha.encrypt_xmr(priv_key, bytes(writer.get_buffer()), authenticated=True)
+    ciphertext = chacha.encrypt_xmr(
+        priv_key, bytes(writer.get_buffer()), authenticated=True
+    )
     return UNSIGNED_TX_PREFIX + ciphertext
 
 
@@ -228,7 +230,9 @@ async def dump_signed_tx(priv_key, signed_tx):
     await ar.root()
     await ar.message(signed_tx)
 
-    ciphertext = chacha.encrypt_xmr(priv_key, bytes(writer.get_buffer()), authenticated=True)
+    ciphertext = chacha.encrypt_xmr(
+        priv_key, bytes(writer.get_buffer()), authenticated=True
+    )
     return SIGNED_TX_PREFIX + ciphertext
 
 

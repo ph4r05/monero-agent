@@ -116,7 +116,9 @@ async def export_key_image(creds, subaddresses, td):
         out_key,
         tx_pub_key,
         additional_tx_pub_keys,
-        td.internal_output_index if isinstance(td, MoneroTransferDetails) else td.m_internal_output_index,
+        td.internal_output_index
+        if isinstance(td, MoneroTransferDetails)
+        else td.m_internal_output_index,
     )
 
     return ki, sig
