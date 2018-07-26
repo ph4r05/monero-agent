@@ -22,6 +22,8 @@ from shlex import quote
 import shellescape
 from sarge import Capture, Feeder, run
 
+from monero_glue.xmr import crypto
+
 logger = logging.getLogger(__name__)
 
 
@@ -227,3 +229,13 @@ def add_readlines(lns, buff):
         return buff
     buff += [x.decode("utf8") for x in lns]
     return buff
+
+
+def wallet_enc_key(salt, password):
+    """
+    Chacha20 password derivation for view key storage
+    :param salt:
+    :param password:
+    :return:
+    """
+    return crypto.pbkdf2(password, salt, count=2048)
