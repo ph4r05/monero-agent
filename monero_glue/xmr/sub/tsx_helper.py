@@ -124,7 +124,7 @@ def encrypt_payment_id(payment_id, public_key, secret_key):
     derivation_p = crypto.generate_key_derivation(public_key, secret_key)
     derivation = bytearray(33)
     derivation = crypto.encodepoint_into(derivation_p, derivation)
-    derivation[32] += 0x8b
+    derivation[32] = 0x8b
     hash = crypto.cn_fast_hash(derivation)
     pm_copy = bytearray(payment_id)
     for i in range(8):
