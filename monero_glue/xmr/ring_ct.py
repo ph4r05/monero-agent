@@ -357,7 +357,6 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
     """
     Generates ring signature with key image.
     void crypto_ops::generate_ring_signature()
-    TODO: test
 
     :param prefix_hash:
     :param image:
