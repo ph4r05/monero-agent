@@ -3,6 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import os
+import binascii
 import collections
 import aiounittest
 import pkg_resources
@@ -12,6 +13,7 @@ from monero_glue.hwtoken import misc
 from monero_serialize import xmrserialize, xmrtypes
 
 from monero_glue.xmr.enc import chacha_poly
+from monero_glue.xmr.sub.addr import get_change_addr_idx
 from monero_glue.xmr.sub.seed import SeedDerivation
 
 
@@ -89,6 +91,46 @@ class BaseTxTest(aiounittest.AsyncTestCase):
             __name__, os.path.join("data", fl)
         )
 
+    def get_expected_payment_id(self, fl):
+        """
+        Expected payment id type, data for file name
+        :param fl:
+        :return:
+        """
+        if fl is None:
+            return None
+
+        bname = os.path.basename(fl)
+        if bname in ['tsx_t_uns_12.txt', 'tsx_t_uns_13.txt', 'tsx_t_uns_14.txt', 'tsx_t_uns_15.txt']:
+            return 1, binascii.unhexlify('deadc0dedeadc0de')
+        elif bname in ['tsx_t_uns_16.txt', ]:
+            return 0, binascii.unhexlify('e8ce72659fbde7cc7c44871ca7784bba24b57323e66f7384ab06f2b8eea40649')
+        elif bname in ['tsx_uns01.txt', 'tsx_uns02.txt', 'tsx_uns03.txt']:
+            return 1, binascii.unhexlify('deadc0dedeadc0d1')
+        elif bname in ['tsx_pending01.txt', ]:
+            return 1, binascii.unhexlify('2f3413399032aeea')
+        else:
+            return None
+
+    async def tx_sign_test(self, agent, con_data, creds, all_creds, fl, sign_tx=False):
+        """
+        General transaction signer / tester
+        :param agent:
+        :param con_data:
+        :param creds:
+        :param all_creds:
+        :param fl:
+        :param sign_tx ca:
+        :return:
+        """
+        if not sign_tx:
+            txes = await agent.sign_unsigned_tx(con_data)
+        else:
+            txes = await agent.sign_tx(con_data)
+
+        await self.verify(txes[0], agent.last_transaction_data(), creds=creds)
+        await self.receive(txes[0], all_creds, agent.last_transaction_data(), self.get_expected_payment_id(fl))
+
     async def verify(self, tx, con_data=None, creds=None):
         """
         Transaction verification
@@ -115,8 +157,6 @@ class BaseTxTest(aiounittest.AsyncTestCase):
             extras, xmrtypes.TxExtraAdditionalPubKeys
         )
         additional_pub_keys = [crypto.decodepoint(x) for x in additional_pub_keys.data] if additional_pub_keys is not None else None
-
-        num_outs = len(tx_obj.vout)
 
         # Verify range proofs
         for idx, rsig in enumerate(tx_obj.rct_signatures.p.rangeSigs):
@@ -160,9 +200,13 @@ class BaseTxTest(aiounittest.AsyncTestCase):
                     tx_obj.rct_signatures.p.MGs[idx], mix_ring, tx_obj.rct_signatures.outPk, txn_fee_key, mlsag_hash
                 ))
 
-    async def receive(self, tx, all_creds):
+    async def receive(self, tx, all_creds, con_data=None, exp_payment_id=None):
         """
         Test transaction receive with known view/spend keys of destinations.
+        :param tx:
+        :param all_creds:
+        :param con_data:
+        :param exp_payment_id:
         :return:
         """
         # Unserialize the transaction
@@ -184,6 +228,8 @@ class BaseTxTest(aiounittest.AsyncTestCase):
         # Try to receive tsx outputs with each account.
         tx_money_got_in_outs = collections.defaultdict(lambda: 0)
         outs = []
+
+        change_idx = get_change_addr_idx(con_data.tsx_data.outputs, con_data.tsx_data.change_dts)
 
         for idx, creds in enumerate(all_creds):
             wallet_subs = {}
@@ -228,6 +274,26 @@ class BaseTxTest(aiounittest.AsyncTestCase):
                         crypto.scalarmult_base(tx_scan_info.in_ephemeral),
                     )
                 )
+
+                if exp_payment_id is not None:
+                    payment_id = None
+                    # Not checking payment id for change transaction
+                    if exp_payment_id[0] == 1 and change_idx is not None and ti == change_idx:
+                        continue
+
+                    payment_id_type = None
+                    extra_nonce = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraNonce)
+                    if extra_nonce and monero.has_encrypted_payment_id(extra_nonce.nonce):
+                        payment_id_type = 1
+                        payment_id = monero.get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce.nonce)
+                        payment_id = monero.encrypt_payment_id(payment_id, crypto.decodepoint(tx_pub), creds.view_key_private)
+
+                    elif extra_nonce and monero.has_payment_id(extra_nonce.nonce):
+                        payment_id_type = 0
+                        payment_id = monero.get_payment_id_from_tx_extra_nonce(extra_nonce.nonce)
+
+                    self.assertEqual(payment_id_type, exp_payment_id[0])
+                    self.assertEqual(payment_id, exp_payment_id[1])
 
         # All outputs have to be successfully received
         self.assertEqual(num_outs, num_received)

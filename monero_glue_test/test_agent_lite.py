@@ -27,97 +27,78 @@ class AgentLiteTest(BaseTxTest):
         Testing tx signature, simple, multiple inputs
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(
-            __name__, os.path.join("data", "tsx_uns01.txt")
-        )
+        unsigned_tx_c = self.get_data_file("tsx_uns01.txt")
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
-
-        await self.tx_sign_unsigned(unsigned_tx)
+        await self.tx_sign_unsigned(unsigned_tx, "tsx_uns01.txt")
 
     async def test_tx_sign(self):
         """
         Testing tx signature, one input. non-simple RCT
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(
-            __name__, os.path.join("data", "tsx_uns02.txt")
-        )
+        unsigned_tx_c = self.get_data_file("tsx_uns02.txt")
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
-        await self.tx_sign_unsigned(unsigned_tx)
+        await self.tx_sign_unsigned(unsigned_tx, "tsx_uns02.txt")
 
     async def test_tx_sign_sub_dest(self):
         """
         Testing tx signature, one input. non-simple RCT
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(
-            __name__, os.path.join("data", "tsx_uns03.txt")
-        )
+        unsigned_tx_c = self.get_data_file("tsx_uns03.txt")
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
-        await self.tx_sign_unsigned(unsigned_tx)
+        await self.tx_sign_unsigned(unsigned_tx, "tsx_uns03.txt")
 
     async def test_tx_sign_sub_2dest(self):
         """
         Testing tx signature, one input. non-simple RCT
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(
-            __name__, os.path.join("data", "tsx_uns04.txt")
-        )
+        unsigned_tx_c = self.get_data_file("tsx_uns04.txt")
         unsigned_tx = zlib.decompress(binascii.unhexlify(unsigned_tx_c))
-        await self.tx_sign_unsigned(unsigned_tx)
+        await self.tx_sign_unsigned(unsigned_tx, "tsx_uns04.txt")
 
     async def test_tx_sign_pending01_boost_full_2dest(self):
         """
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
-        pending_hex = pkg_resources.resource_string(
-            __name__, os.path.join("data", "tsx_pending01.txt")
-        )
+        pending_hex = self.get_data_file("tsx_pending01.txt")
         pending_bin = binascii.unhexlify(pending_hex)
-        await self.tx_sign_pending_boost(pending_bin)
+        await self.tx_sign_pending_boost(pending_bin, "tsx_pending01.txt")
 
     async def test_tx_sign_pending02_boost_full_sub_3dest(self):
         """
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
-        pending_hex = pkg_resources.resource_string(
-            __name__, os.path.join("data", "tsx_pending02.txt")
-        )
+        pending_hex = self.get_data_file("tsx_pending02.txt")
         pending_bin = binascii.unhexlify(pending_hex)
-        await self.tx_sign_pending_boost(pending_bin)
+        await self.tx_sign_pending_boost(pending_bin, "tsx_pending02.txt")
 
     async def test_tx_sign_uns01_boost_full_2dest(self):
         """
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(
-            __name__, os.path.join("data", "tsx_uns_enc01.txt")
-        )
-
+        unsigned_tx_c = self.get_data_file("tsx_uns_enc01.txt")
         creds = self.get_creds()
         unsigned_tx = await wallet.load_unsigned_tx(
             creds.view_key_private, unsigned_tx_c
         )
-        await self.tx_sign_unsigned_msg(unsigned_tx)
+        await self.tx_sign_unsigned_msg(unsigned_tx, "tsx_uns_enc01.txt")
 
     async def test_tx_sign_uns01_boost_full_2dest_sub(self):
         """
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
-        unsigned_tx_c = pkg_resources.resource_string(
-            __name__, os.path.join("data", "tsx_uns_enc02.txt")
-        )
-
+        unsigned_tx_c = self.get_data_file("tsx_uns_enc02.txt")
         creds = self.get_creds()
         unsigned_tx = await wallet.load_unsigned_tx(
             creds.view_key_private, unsigned_tx_c
         )
-        await self.tx_sign_unsigned_msg(unsigned_tx)
+        await self.tx_sign_unsigned_msg(unsigned_tx, "tsx_uns_enc02.txt")
 
     async def test_trezor_ki(self):
         creds = self.get_trezor_creds(0)
@@ -149,39 +130,39 @@ class AgentLiteTest(BaseTxTest):
                 )
 
                 tagent = self.init_agent(creds=creds)
-                txes = await tagent.sign_unsigned_tx(unsigned_tx)
-                await self.verify(txes[0], tagent.last_transaction_data(), creds=creds)
-                await self.receive(txes[0], all_creds)
+                await self.tx_sign_test(tagent, unsigned_tx, creds, all_creds, fl)
 
-    async def tx_sign_unsigned_msg(self, unsigned_tx):
+    async def tx_sign_unsigned_msg(self, unsigned_tx, fl=None):
         """
         Signs tx stored in unsigned tx message
         :param unsigned_tx:
+        :param fl:
         :return:
         """
         tagent = self.init_agent()
-        txes = await tagent.sign_unsigned_tx(unsigned_tx)
-        await self.verify(txes[0], tagent.last_transaction_data(), creds=self.get_creds())
-        return await self.receive(txes[0], [self.get_creds(), self.get_creds_01(), self.get_creds_02()])
+        await self.tx_sign_test(tagent, unsigned_tx, self.get_creds(),
+                                [self.get_creds(), self.get_creds_01(), self.get_creds_02()], fl)
 
-    async def tx_sign_unsigned(self, unsigned_tx):
+    async def tx_sign_unsigned(self, unsigned_tx, fl=None):
         """
         Tx sign test with given unsigned transaction data
         :param unsigned_tx:
+        :param fl:
         :return:
         """
         reader = xmrserialize.MemoryReaderWriter(bytearray(unsigned_tx))
         ar = xmrserialize.Archive(reader, False)
         unsig = xmrtypes.UnsignedTxSet()
         await ar.message(unsig)
-        await self.tx_sign_unsigned_msg(unsig)
+        await self.tx_sign_unsigned_msg(unsig, fl)
 
-    async def tx_sign_unsigned_boost(self, unsigned_tx):
+    async def tx_sign_unsigned_boost(self, unsigned_tx, fl=None):
         """
         Tx sign test with given unsigned transaction data, serialized by boost -
         unsigned tx produced by watch-only cli wallet.
 
         :param unsigned_tx:
+        :param fl:
         :return:
         """
         reader = xmrserialize.MemoryReaderWriter(bytearray(unsigned_tx))
@@ -189,12 +170,13 @@ class AgentLiteTest(BaseTxTest):
         unsig = xmrtypes.UnsignedTxSet()
         await ar.root()
         await ar.message(unsig)
-        await self.tx_sign_unsigned_msg(unsig)
+        await self.tx_sign_unsigned_msg(unsig, fl)
 
-    async def tx_sign_pending_boost(self, pending_tx):
+    async def tx_sign_pending_boost(self, pending_tx, fl=None):
         """
         Signs transaction produced by the wallet-rpc, metadata parser, boost
         :param metadata:
+        :param fl:
         :return:
         """
         reader = xmrserialize.MemoryReaderWriter(bytearray(pending_tx))
@@ -204,9 +186,8 @@ class AgentLiteTest(BaseTxTest):
         await ar.message(pending)
 
         tagent = self.init_agent()
-        txes = await tagent.sign_tx(pending.construction_data)
-        await self.verify(txes[0], tagent.last_transaction_data(), creds=self.get_creds())
-        await self.receive(txes[0], [self.get_creds(), self.get_creds_01(), self.get_creds_02()])
+        await self.tx_sign_test(tagent, pending.construction_data, self.get_creds(),
+                                [self.get_creds(), self.get_creds_01(), self.get_creds_02()], fl, sign_tx=True)
 
     def init_trezor(self, creds=None):
         """
