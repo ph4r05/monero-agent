@@ -106,3 +106,25 @@ def pub_eq(a, b):
         if a[i] != b[i]:
             return False
     return True
+
+
+def get_change_addr_idx(outputs, change_dts):
+    """
+    Returns ID of the change output from the change_dts and outputs
+    :param tsx_data:
+    :return:
+    """
+    if change_dts is None:
+        return None
+
+    change_idx = None
+    change_coord = change_dts.amount, change_dts.addr
+    for idx, dst in enumerate(outputs):
+        if (
+            change_coord
+            and change_coord[0]
+            and change_coord[0] == dst.amount
+            and addr_eq(change_coord[1], dst.addr)
+        ):
+            change_idx = idx
+    return change_idx
