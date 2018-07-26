@@ -62,7 +62,8 @@ def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None)
 
     rand_inp = crypto.sc_add(spend_key_private, rand_mult_num)
     passwd = crypto.keccak_2hash(crypto.encodeint(rand_inp) + tx_prefix_hash)
-    tx_key = crypto.pbkdf2(passwd, salt, count=100)
+    tx_key = crypto.compute_hmac(salt, passwd)
+    # tx_key = crypto.pbkdf2(passwd, salt, count=100)
     return tx_key, salt, rand_mult
 
 
