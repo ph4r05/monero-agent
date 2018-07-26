@@ -194,6 +194,10 @@ class Agent(object):
             payment_id = monero.get_encrypted_payment_id_from_tx_extra_nonce(
                 extra_nonce.nonce
             )
+        elif extra_nonce and monero.has_payment_id(extra_nonce.nonce):
+            payment_id = monero.get_payment_id_from_tx_extra_nonce(
+                extra_nonce.nonce
+            )
 
         # Init transaction
         tsx_data = TsxData()
