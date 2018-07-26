@@ -121,10 +121,7 @@ class AgentLiteTest(BaseTxTest):
 
     async def test_trezor_ki(self):
         creds = self.get_trezor_creds(0)
-        ki_data = pkg_resources.resource_string(
-            __name__, os.path.join("data", "ki_sync_01.txt")
-        )
-
+        ki_data = self.get_data_file("ki_sync_01.txt")
         ki_loaded = await wallet.load_exported_outputs(
             creds.view_key_private, ki_data
         )
@@ -146,10 +143,7 @@ class AgentLiteTest(BaseTxTest):
         
         for fl in files:
             with self.subTest(msg=fl):
-                unsigned_tx_c = pkg_resources.resource_string(
-                    __name__, os.path.join("data", fl)
-                )
-
+                unsigned_tx_c = self.get_data_file(fl)
                 unsigned_tx = await wallet.load_unsigned_tx(
                     creds.view_key_private, unsigned_tx_c
                 )

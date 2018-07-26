@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+import os
 import collections
 import aiounittest
+import pkg_resources
+
 from monero_glue.xmr import crypto, monero, ring_ct, common, mlsag2
 from monero_glue.hwtoken import misc
 from monero_serialize import xmrserialize, xmrtypes
@@ -80,6 +83,11 @@ class BaseTxTest(aiounittest.AsyncTestCase):
 
     def get_trezor_tsx_tests(self):
         return [('tsx_t_uns_%02d.txt' % i) for i in range(1, 12)]
+
+    def get_data_file(self, fl):
+        return pkg_resources.resource_string(
+            __name__, os.path.join("data", fl)
+        )
 
     async def verify(self, tx, con_data=None, creds=None):
         """
