@@ -119,6 +119,29 @@ class AgentLiteTest(BaseTxTest):
         )
         await self.tx_sign_unsigned_msg(unsigned_tx)
 
+    async def test_trezor_txs(self):
+        if os.getenv('SKIP_TREZOR_TSX', False):
+            self.skipTest('Skipped by ENV var')
+
+        files = self.get_trezor_tsx_tests()
+        creds = self.get_trezor_creds(0)
+        all_creds = [self.get_trezor_creds(0), self.get_trezor_creds(1), self.get_trezor_creds(2)]
+        
+        for fl in files:
+            with self.subTest(msg=fl):
+                unsigned_tx_c = pkg_resources.resource_string(
+                    __name__, os.path.join("data", fl)
+                )
+
+                unsigned_tx = await wallet.load_unsigned_tx(
+                    creds.view_key_private, unsigned_tx_c
+                )
+
+                tagent = self.init_agent(creds=creds)
+                txes = await tagent.sign_unsigned_tx(unsigned_tx)
+                await self.verify(txes[0], tagent.last_transaction_data(), creds=creds)
+                await self.receive(txes[0], all_creds)
+
     async def tx_sign_unsigned_msg(self, unsigned_tx):
         """
         Signs tx stored in unsigned tx message
@@ -174,66 +197,22 @@ class AgentLiteTest(BaseTxTest):
         await self.verify(txes[0], tagent.last_transaction_data(), creds=self.get_creds())
         await self.receive(txes[0], [self.get_creds(), self.get_creds_01(), self.get_creds_02()])
 
-    def get_creds(self):
-        """
-        Wallet credentials
-        :return:
-        """
-        return monero.AccountCreds.new_wallet(
-            priv_view_key=crypto.b16_to_scalar(
-                b"4ce88c168e0f5f8d6524f712d5f8d7d83233b1e7a2a60b5aba5206cc0ea2bc08"
-            ),
-            priv_spend_key=crypto.b16_to_scalar(
-                b"f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a"
-            ),
-            network_type=monero.NetworkTypes.TESTNET,
-        )
-
-    def get_creds_01(self):
-        """
-        Wallet 02 credentials
-        :return:
-        """
-        return monero.AccountCreds.new_wallet(
-            priv_view_key=crypto.b16_to_scalar(
-                b"42ba20adb337e5eca797565be11c9adb0a8bef8c830bccc2df712535d3b8f608"
-            ),
-            priv_spend_key=crypto.b16_to_scalar(
-                b"b0ef6bd527b9b23b9ceef70dc8b4cd1ee83ca14541964e764ad23f5151204f0f"
-            ),
-            network_type=monero.NetworkTypes.TESTNET,
-        )
-
-    def get_creds_02(self):
-        """
-        Wallet 01 credentials
-        :return:
-        """
-        return monero.AccountCreds.new_wallet(
-            priv_view_key=crypto.b16_to_scalar(
-                b"9e7aba8ae9ee134e5d5464d9145a4db26793d7411af7d06f20e755cb2a5ad50f"
-            ),
-            priv_spend_key=crypto.b16_to_scalar(
-                b"283d8bab1aeaee8f8b5aed982fc894c67d3e03db9006e488321c053f5183310d"
-            ),
-            network_type=monero.NetworkTypes.TESTNET,
-        )
-
-    def init_trezor(self):
+    def init_trezor(self, creds=None):
         """
         Initialize new trezor instance
+        :type creds: object
         :return:
         """
         trez = token.TokenLite()
-        trez.creds = self.get_creds()
+        trez.creds = self.get_creds() if creds is None else creds
         return trez
 
-    def init_agent(self):
+    def init_agent(self, creds=None):
         """
         Initialize new agent instance
         :return:
         """
-        return agent_lite.Agent(self.init_trezor())
+        return agent_lite.Agent(self.init_trezor(creds=creds))
 
 
 if __name__ == "__main__":
