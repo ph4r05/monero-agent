@@ -22,6 +22,7 @@ import time
 from monero_glue.agent import agent_lite, agent_misc
 from monero_glue.messages import DebugMoneroDiagRequest
 from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc
+from monero_glue.xmr.enc import chacha_poly
 from monero_poc.utils import misc, trace_logger
 from monero_poc.utils import cli
 from monero_poc.utils.trezor_server_proxy import TokenProxy
@@ -52,6 +53,7 @@ class HostAgent(cli.BaseCli):
         self.pub_view = None
         self.pub_spend = None
         self.network_type = None
+        self.wallet_salt = None
         self.wallet_password = b""
         self.wallet_file = None
         self.monero_bin = None
@@ -429,18 +431,22 @@ class HostAgent(cli.BaseCli):
         :param file:
         :return:
         """
+        if self.wallet_salt is None:
+            self.wallet_salt = crypto.random_bytes(32)
+
+        # Wallet view key encryption
+        wallet_enc_key = misc.wallet_enc_key(self.wallet_salt, self.wallet_password)
+        ciphertext = chacha_poly.encrypt_pack(wallet_enc_key, crypto.encodeint(self.priv_view))
+
         with open(file, "w") as fh:
             data = {
-                "view_key": binascii.hexlify(crypto.encodeint(self.priv_view)).decode(
-                    "ascii"
-                ),
+                "view_key_enc": binascii.hexlify(ciphertext).decode("ascii"),
                 "address": self.address.decode("ascii"),
                 "network_type": self.network_type,
-                "wallet_password": self.wallet_password.decode("utf8"),
+                "wallet_salt": binascii.hexlify(self.wallet_salt).decode("ascii"),
                 "rpc_addr": self.rpc_addr,
                 "wallet_file": self.wallet_file,
                 "monero_bin": self.monero_bin,
-                "WARNING": "Agent file is not password encrypted in the PoC",
             }
             json.dump(data, fh, indent=2)
 
@@ -532,18 +538,28 @@ class HostAgent(cli.BaseCli):
         with open(file) as fh:
             js = json.load(fh)
 
+        # Wallet key encryption
         self.wallet_password = await self.prompt_password()
+        self.wallet_salt = common.defvalkey(js, "wallet_salt")
+        if self.wallet_salt is None:
+            self.wallet_salt = crypto.random_bytes(32)
+        else:
+            self.wallet_salt = binascii.unhexlify(self.wallet_salt)
 
-        # Note the agent is not encrypted for PoC - demo.
-        self.priv_view = crypto.b16_to_scalar(js["view_key"].encode("utf8"))
+        # Wallet view key dec.
+        if "view_key" in js:
+            self.priv_view = crypto.b16_to_scalar(js["view_key"].encode("utf8"))
+
+        elif "view_key_enc" in js:
+            wallet_enc_key = misc.wallet_enc_key(self.wallet_salt, self.wallet_password)
+            plain = chacha_poly.decrypt_pack(wallet_enc_key, binascii.unhexlify(js["view_key_enc"]))
+            self.priv_view = crypto.decodeint(plain)
+
         self.address = js["address"].encode("utf8")
         self.wallet_file = js["wallet_file"]
         self.monero_bin = js["monero_bin"]
         self.set_network_type(js["network_type"])
         self.rpc_addr = js["rpc_addr"]
-
-        if self.wallet_password != js["wallet_password"].encode("utf8"):
-            raise ValueError("Password didnt match")
 
         await self.open_with_keys(self.priv_view, self.address)
 
