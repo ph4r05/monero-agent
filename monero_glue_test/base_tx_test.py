@@ -82,7 +82,7 @@ class BaseTxTest(aiounittest.AsyncTestCase):
         )
 
     def get_trezor_tsx_tests(self):
-        return [('tsx_t_uns_%02d.txt' % i) for i in range(1, 12)]
+        return [('tsx_t_uns_%02d.txt' % i) for i in range(1, 16)]
 
     def get_data_file(self, fl):
         return pkg_resources.resource_string(
