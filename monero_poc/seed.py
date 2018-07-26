@@ -15,8 +15,9 @@ from monero_glue.misc.bip import bip39
 from monero_glue.misc.bip import bip39_deriv
 from monero_glue.xmr import crypto, monero
 from monero_glue.xmr.core import mnemonic
+from monero_glue.xmr.sub.addr import encode_addr
 from monero_glue.xmr.sub.seed import SeedDerivation
-from monero_glue.xmr.sub.xmr_net import NetworkTypes
+from monero_glue.xmr.sub.xmr_net import NetworkTypes, net_version
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
@@ -32,6 +33,9 @@ parser.add_argument("--seed", dest="seed", default=False, action="store_const", 
 
 parser.add_argument("--wlist-seed", dest="wlist_seed", default=False, action="store_const", const=True,
                     help="Mnemonics converted to seed using the wordlist indices")
+
+parser.add_argument("--subs-test", dest="subs_test", default=False, action="store_const", const=True,
+                    help="Compute 5x5 sub addresses on testnet")
 
 parser.add_argument("--debug", dest="debug", default=False, action="store_const", const=True,
                     help="Debug",)
@@ -71,6 +75,22 @@ async def amain(args):
     print("Mainnet Address:   %s" % main_addr.address.decode("ascii"))
     print("Testnet Address:   %s" % test_addr.address.decode("ascii"))
     print("Stagenet Address:  %s" % stage_addr.address.decode("ascii"))
+
+    if args.subs_test:
+        net_type = NetworkTypes.TESTNET
+
+        for major in range(5):
+            for minor in range(5):
+                if major == 0 and minor == 0:
+                    continue
+
+                D, C = monero.generate_sub_address_keys(sd.view_sec, sd.spend_pub, major, minor)
+                addr = encode_addr(
+                    net_version(net_type, is_subaddr=True),
+                    crypto.encodepoint(D),
+                    crypto.encodepoint(C),
+                )
+                print(' %d,%d: %s' % (major, minor, addr))
 
 
 def main(args):
