@@ -8,6 +8,7 @@ import traceback
 from monero_glue.agent import agent_misc
 from monero_glue.hwtoken import misc as tmisc
 from monero_glue.messages import (
+    MoneroGetAddress,
     MoneroGetWatchKey,
     MoneroKeyImageSyncRequest,
     MoneroKeyImageSyncFinalRequest,
@@ -428,6 +429,17 @@ class Agent(object):
         :return:
         """
         return self.ct
+
+    async def get_address(self):
+        """
+        Get address from the device
+        :return:
+        """
+        msg = MoneroGetAddress(
+            address_n=self.address_n, network_type=self.network_type
+        )
+        res = await self.trezor.call(msg)
+        return res
 
     async def get_watch_only(self):
         """
