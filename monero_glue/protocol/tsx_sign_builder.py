@@ -184,12 +184,13 @@ class TTransactionBuilder(object):
         :param outputs:
         :return:
         """
+        from monero_glue.xmr.sub.addr import addr_eq
         change_addr = self.change_address()
         if change_addr is None:
             return
 
         for out in outputs:
-            if out.addr == change_addr:
+            if addr_eq(out.addr, change_addr):
                 return True
 
         raise ValueError("Change address not found in outputs")
@@ -1017,7 +1018,8 @@ class TTransactionBuilder(object):
             if not use_provided:
                 self.additional_tx_private_keys.append(additional_txkey_priv)
 
-        if change_addr and dst_entr.addr == change_addr:
+        from monero_glue.xmr.sub.addr import addr_eq
+        if change_addr and addr_eq(dst_entr.addr, change_addr):
             # sending change to yourself; derivation = a*R
             derivation = monero.generate_key_derivation(
                 self.r_pub, self.creds.view_key_private
