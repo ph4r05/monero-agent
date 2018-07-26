@@ -758,6 +758,9 @@ class HostAgent(cli.BaseCli):
         if mixin is not None:
             params["mixin"] = mixin
 
+        if payment_id is not None:
+            params["payment_id"] = payment_id
+
         # Call RPC to prepare unsigned transaction
         self.transfer_params(params)
 
