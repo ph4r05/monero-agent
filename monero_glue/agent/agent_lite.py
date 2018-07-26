@@ -195,9 +195,7 @@ class Agent(object):
                 extra_nonce.nonce
             )
         elif extra_nonce and monero.has_payment_id(extra_nonce.nonce):
-            payment_id = monero.get_payment_id_from_tx_extra_nonce(
-                extra_nonce.nonce
-            )
+            payment_id = monero.get_payment_id_from_tx_extra_nonce(extra_nonce.nonce)
 
         # Init transaction
         tsx_data = TsxData()
@@ -439,9 +437,7 @@ class Agent(object):
         Get address from the device
         :return:
         """
-        msg = MoneroGetAddress(
-            address_n=self.address_n, network_type=self.network_type
-        )
+        msg = MoneroGetAddress(address_n=self.address_n, network_type=self.network_type)
         res = await self.trezor.call(msg)
         return res
 

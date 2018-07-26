@@ -3,7 +3,7 @@ import hmac
 import hashlib
 
 
-def mnemonics_to_seed(seed, passphrase=b''):
+def mnemonics_to_seed(seed, passphrase=b""):
     salt = b"mnemonic" + passphrase
 
     def prf(p, s):
@@ -12,4 +12,3 @@ def mnemonics_to_seed(seed, passphrase=b''):
 
     res = PBKDF2(password=seed, salt=salt, dkLen=64, prf=prf, count=2048)
     return res
-

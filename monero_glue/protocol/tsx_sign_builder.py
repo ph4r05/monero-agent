@@ -185,6 +185,7 @@ class TTransactionBuilder(object):
         :return:
         """
         from monero_glue.xmr.sub.addr import addr_eq
+
         change_addr = self.change_address()
         if change_addr is None:
             return
@@ -514,7 +515,9 @@ class TTransactionBuilder(object):
 
         self._log_trace(6)
 
-        from monero_glue.messages.MoneroTransactionInitAck import MoneroTransactionInitAck
+        from monero_glue.messages.MoneroTransactionInitAck import (
+            MoneroTransactionInitAck
+        )
 
         return MoneroTransactionInitAck(
             in_memory=self.in_memory(),
@@ -1029,6 +1032,7 @@ class TTransactionBuilder(object):
                 self.additional_tx_private_keys.append(additional_txkey_priv)
 
         from monero_glue.xmr.sub.addr import addr_eq
+
         if change_addr and addr_eq(dst_entr.addr, change_addr):
             # sending change to yourself; derivation = a*R
             derivation = monero.generate_key_derivation(
@@ -1456,7 +1460,9 @@ class TTransactionBuilder(object):
         :param kwargs:
         :return:
         """
-        from monero_glue.messages.MoneroTransactionFinalAck import MoneroTransactionFinalAck
+        from monero_glue.messages.MoneroTransactionFinalAck import (
+            MoneroTransactionFinalAck
+        )
         from monero_glue.xmr.enc import chacha_poly
 
         self.state.set_final()

@@ -30,7 +30,7 @@ def error(name, msg, *args):
 
 def exception(name, exc):
     logger = logging.getLogger(name)
-    logger.error(exc,)
+    logger.error(exc)
 
 
 def critical(name, msg, *args):

@@ -9,4 +9,3 @@ def const(x):
 
 def stack_use(*args, **kwargs):
     return
-
