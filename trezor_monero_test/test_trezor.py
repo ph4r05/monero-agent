@@ -101,4 +101,3 @@ class TrezorTest(BaseTxTest):
                 )
 
                 await self.tx_sign_test(self.agent, unsigned_tx, creds, all_creds, fl)
-            self.reinit_trezor()
