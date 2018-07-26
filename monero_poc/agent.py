@@ -22,11 +22,11 @@ import time
 from monero_glue.agent import agent_lite, agent_misc
 from monero_glue.messages import DebugMoneroDiagRequest
 from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc
-from monero_glue.xmr.enc import chacha_poly
+from monero_glue.xmr.enc import chacha_poly, chacha
 from monero_poc.utils import misc, trace_logger
 from monero_poc.utils import cli
 from monero_poc.utils.trezor_server_proxy import TokenProxy
-from monero_serialize import xmrtypes
+from monero_serialize import xmrtypes, xmrserialize, xmrboost
 
 import coloredlogs
 from cmd2 import Cmd
@@ -891,7 +891,7 @@ class HostAgent(cli.BaseCli):
 
             res = await self.agent.sign_transaction_data(tx)
             cdata = self.agent.last_transaction_data()
-            await self.store_cdata(cdata)
+            await self.store_cdata(cdata, res, tx, msg.transfers)
 
             # obj = await xmrobj.dump_message(None, res)
             # print(xmrjson.json_dumps(obj, indent=2))
@@ -941,17 +941,47 @@ class HostAgent(cli.BaseCli):
         # print('Please note that by manual relaying hot wallet key images get out of sync')
         return signed_data
 
-    async def store_cdata(self, cdata):
+    async def store_cdata(self, cdata, signed_tx, tx, transfers):
         """
         Stores transaction data for later usage.
             - cdata.enc_salt1, cdata.enc_salt2, cdata.enc_keys
-        TODO: sign with view key
+            - tx_keys are AEAD protected, key derived from spend key - only token can open.
+            - construction data for further proofs.
 
         :param cdata:
+        :param signed_tx:
+        :param tx:
+        :param transfers:
         :return:
         """
         hash = cdata.tx_prefix_hash
         prefix = binascii.hexlify(hash[:12])
+
+        tx_key_salt = crypto.random_bytes(32)
+        tx_view_key = crypto.pbkdf2(crypto.encodeint(self.priv_view), tx_key_salt, 2048)
+
+        unsigned_data = xmrtypes.UnsignedTxSet()
+        unsigned_data.txes = [tx]
+        unsigned_data.transfers = transfers if transfers is not None else []
+
+        writer = xmrserialize.MemoryReaderWriter()
+        ar = xmrboost.Archive(writer, True)
+        await ar.root()
+        await ar.message(unsigned_data)
+
+        ciphertext = chacha.encrypt_xmr(
+            self.priv_view, bytes(writer.get_buffer()), authenticated=True
+        )
+
+        # Serialize signed transaction
+        writer = xmrserialize.MemoryReaderWriter()
+        ar = xmrserialize.Archive(writer, True)
+        await ar.root()
+        await ar.message(signed_tx)
+        signed_tx_bytes = writer.get_buffer()
+        signed_tx_hmac_key = crypto.keccak_2hash(b'hmac;' + tx_view_key)
+        signed_tx_hmac = crypto.compute_hmac(signed_tx_hmac_key, signed_tx_bytes)
+
         try:
             js = {
                 "time": int(time.time()),
@@ -959,6 +989,10 @@ class HostAgent(cli.BaseCli):
                 "enc_salt1": binascii.hexlify(cdata.enc_salt1).decode("ascii"),
                 "enc_salt2": binascii.hexlify(cdata.enc_salt2).decode("ascii"),
                 "tx_keys": binascii.hexlify(cdata.enc_keys).decode("ascii"),
+                "unsigned_data": binascii.hexlify(ciphertext).decode("ascii"),
+                "tx_salt": binascii.hexlify(tx_key_salt).decode("ascii"),
+                "tx_signed": binascii.hexlify(signed_tx_bytes).decode("ascii"),
+                "tx_signed_hmac": binascii.hexlify(signed_tx_hmac).decode("ascii"),
             }
 
             with open("transaction_%s.json" % prefix.decode("ascii"), "w") as fh:
