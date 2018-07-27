@@ -967,6 +967,52 @@ class TTransactionBuilder(object):
             self.num_dests(), TransactionPrefix.f_specs()[3][1]
         )
 
+    async def _set_out1_additional_keys(self, dst_entr):
+        additional_txkey = None
+        additional_txkey_priv = None
+        if self.need_additional_txkeys:
+            use_provided = self.num_dests() == len(self.additional_tx_private_keys)
+            additional_txkey_priv = (
+                self.additional_tx_private_keys[self.out_idx]
+                if use_provided
+                else crypto.random_scalar()
+            )
+
+            if dst_entr.is_subaddress:
+                additional_txkey = crypto.ge_scalarmult(
+                    additional_txkey_priv,
+                    crypto.decodepoint(dst_entr.addr.m_spend_public_key),
+                )
+            else:
+                additional_txkey = crypto.ge_scalarmult_base(additional_txkey_priv)
+
+            self.additional_tx_public_keys.append(crypto.encodepoint(additional_txkey))
+            if not use_provided:
+                self.additional_tx_private_keys.append(additional_txkey_priv)
+        return additional_txkey_priv
+
+    async def _set_out1_derivation(self, dst_entr, additional_txkey_priv):
+        from monero_glue.xmr.sub.addr import addr_eq
+
+        change_addr = self.change_address()
+        if change_addr and addr_eq(dst_entr.addr, change_addr):
+            # sending change to yourself; derivation = a*R
+            derivation = monero.generate_key_derivation(
+                self.r_pub, self.creds.view_key_private
+            )
+
+        else:
+            # sending to the recipient; derivation = r*A (or s*C in the subaddress scheme)
+            deriv_priv = (
+                additional_txkey_priv
+                if dst_entr.is_subaddress and self.need_additional_txkeys
+                else self.r
+            )
+            derivation = monero.generate_key_derivation(
+                crypto.decodepoint(dst_entr.addr.m_view_public_key), deriv_priv
+            )
+        return derivation
+
     async def set_out1(self, dst_entr, dst_entr_hmac):
         """
         Set destination entry one by one.
@@ -989,7 +1035,6 @@ class TTransactionBuilder(object):
 
         self.state.set_output()
         self.out_idx += 1
-        change_addr = self.change_address()
         self._log_trace(2)
 
         if dst_entr.amount <= 0 and self.tx.version <= 1:
@@ -1009,46 +1054,8 @@ class TTransactionBuilder(object):
         gc.collect()
 
         self._log_trace(4)
-        additional_txkey = None
-        additional_txkey_priv = None
-        if self.need_additional_txkeys:
-            use_provided = self.num_dests() == len(self.additional_tx_private_keys)
-            additional_txkey_priv = (
-                self.additional_tx_private_keys[self.out_idx]
-                if use_provided
-                else crypto.random_scalar()
-            )
-
-            if dst_entr.is_subaddress:
-                additional_txkey = crypto.ge_scalarmult(
-                    additional_txkey_priv,
-                    crypto.decodepoint(dst_entr.addr.m_spend_public_key),
-                )
-            else:
-                additional_txkey = crypto.ge_scalarmult_base(additional_txkey_priv)
-
-            self.additional_tx_public_keys.append(crypto.encodepoint(additional_txkey))
-            if not use_provided:
-                self.additional_tx_private_keys.append(additional_txkey_priv)
-
-        from monero_glue.xmr.sub.addr import addr_eq
-
-        if change_addr and addr_eq(dst_entr.addr, change_addr):
-            # sending change to yourself; derivation = a*R
-            derivation = monero.generate_key_derivation(
-                self.r_pub, self.creds.view_key_private
-            )
-
-        else:
-            # sending to the recipient; derivation = r*A (or s*C in the subaddress scheme)
-            deriv_priv = (
-                additional_txkey_priv
-                if dst_entr.is_subaddress and self.need_additional_txkeys
-                else self.r
-            )
-            derivation = monero.generate_key_derivation(
-                crypto.decodepoint(dst_entr.addr.m_view_public_key), deriv_priv
-            )
+        additional_txkey_priv = await self._set_out1_additional_keys(dst_entr)
+        derivation = await self._set_out1_derivation(dst_entr, additional_txkey_priv)
 
         gc.collect()
         self._log_trace(5)
@@ -1067,6 +1074,7 @@ class TTransactionBuilder(object):
         tx_out = TxOut(amount=0, target=tk)
         self.summary_outs_money += dst_entr.amount
         self._log_trace(6)
+
         # Tx header prefix hashing
         await self.tx_prefix_hasher.ar.field(tx_out, TxOut)
         gc.collect()
