@@ -664,3 +664,13 @@ python setup.py develop
 # 3. Update python-trezor in monero-agent directory (or system wise)
 pip install -U --no-cache ../python-trezor/
 ```
+
+
+### agent
+
+```
+# 1. Update vendor trezor-common submodule in monero-agent
+
+# 2. Rebuild protobuf messages
+python setup.py develop
+```
