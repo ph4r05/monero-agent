@@ -21,10 +21,11 @@ Moreover, the code will probably be subject to a major refactoring and cleaning.
 
 ## Roadmap
 
- - Tests 
+ - Spend proof
+ - Reserver proof
  - Multisig
- - Spend proofs
  - Wallet implementation (funds receiving, UTXO mixing)
+ - Ledger protocol implementation
 
 ## Protocol
 

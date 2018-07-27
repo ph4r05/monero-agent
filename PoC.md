@@ -12,7 +12,7 @@ This code relies on the watch-only features implemented to `monero-wallet-rpc`.
 https://github.com/monero-project/monero/pull/3780
 
 
-In case the code is not yet merged pls compile my fork:
+PR is already merged but should you need any more unmerged features here is my fork:
 
 https://github.com/ph4r05/monero/tree/ph4master
 
@@ -166,12 +166,14 @@ Unlocked Balance: 315.00000
 
 ### Security Note
 
-Trezor and Agent configuration files are not protected / encrypted on purpose in the PoC. The idea is to give freedom
+Trezor configuration files are not protected / encrypted on purpose in the PoC. The idea is to give freedom
 to work with JSON files (e.g, change to another address) if needed.
 
-Note: For the PoC sake the communication between Trezor and Agent is serialized with `pickle`.
+Note: For the PoC sake some communication between Trezor and Agent is serialized with `pickle`.
 This is not secure as `pickle` is not immune to malformed / tampered archives. In the production a `protobuf`
 messages will be constructed and use which are safe w.r.t. tampering.
+
+Transaction signing and key image sync protocol are already transformed to the protocol message form.
 
 # Spending
 
@@ -489,4 +491,88 @@ Transaction successfully submitted, transaction <ffbb3a5147b199debe482de2f7ba2d1
 You can check its status by using the `show_transfers` command.
 ```
 
+# Testing with Trezor
 
+Agent supports also communication with Trezor directly.
+It works in the same way as described above. If the account file does not exist on the agent start it will
+prompt Trezor for watch-only credentials.
+
+The following command for communication with the Trezor Emulator running on port 21324.
+
+```bash
+python -m monero_poc.agent --debug --account-file agent25.json --watch-wallet wallet25 \
+    --monero-bin ~/workspace/monero/build/debug/bin/ \
+    --rpc-addr 127.0.0.1:28081 \
+    --testnet \
+    --trezor --trezor-path udp:127.0.0.1:21324
+```
+
+Or to communicate directly with the Trezor device connected to the USB:
+
+```bash
+python -m monero_poc.agent --debug --account-file agent25.json --watch-wallet wallet25 \
+    --monero-bin ~/workspace/monero/build/debug/bin/ \
+    --rpc-addr 127.0.0.1:28081 \
+    --testnet \
+    --trezor --trezor-path bridge:web01
+```
+
+## Testing
+
+For testing I recommend setting `PYOPT` variable to `0` in `SConstript.firmware` file which enables debug mode on
+the Trezor (both emulator and hardware device).
+
+With the debug mode you are allowed to initialize the device with seed you want so you can run tests with the device.
+
+Also you should get an access to the serial console for the hardware device to see logging output:
+
+```
+$> minicom -b 115200 -D /dev/tty.usbmodem1413
+
+589618000 apps.monero.sign_tx DEBUG TsxSigner. Free: 70784 Allocated: 89728
+589621000 apps.monero.sign_tx DEBUG TsxState: <TsxSignStateHolder object at 20017d60>
+589645000 apps.monero.protocol.tsx_sign DEBUG sign()
+589657000 apps.monero.protocol.tsx_sign DEBUG Mem Free: 69936 Allocated: 90576
+589802000 apps.monero.protocol.tsx_sign_builder DEBUG Log trace (10, False), ... F: 42336 A: 118176, S: 2744
+589809000 apps.monero.protocol.tsx_sign DEBUG sign_sinp
+590049000 apps.monero.protocol.tsx_sign_builder DEBUG Log trace 1, ... F: 43152 A: 117360, S: 2504
+590075000 apps.monero.protocol.tsx_sign_builder DEBUG Log trace 2, ... F: 43088 A: 117424, S: 2504
+590109000 apps.monero.protocol.tsx_sign_builder DEBUG Log trace 3, ... F: 42272 A: 118240, S: 2504
+590155000 apps.monero.protocol.tsx_sign_builder DEBUG Log trace 4, ... F: 42048 A: 118464, S: 2504
+590546000 apps.monero.protocol.tsx_sign_builder DEBUG Log trace 5, ... F: 40672 A: 119840, S: 2504
+590579000 apps.monero.protocol.tsx_sign_builder DEBUG Log trace 6, ... F: 40336 A: 120176, S: 2504
+590604000 apps.monero.protocol.tsx_sign_builder DEBUG Log trace None, ... F: 40336 A: 120176, S: 2504
+590707000 trezor.wire DEBUG 0:0 write: <MoneroTransactionSignInputAck>
+591031000 apps.monero.sign_tx DEBUG ############################ TSX. Free: 64096 Allocated: 96416 thr: 112440
+```
+
+## Testing in emulator
+
+```
+make build_unix
+PYOPT=0 make emu
+```
+
+## Testing with the device
+
+To upload a new firmware image you need to switch Trezor to the bootloader mode.
+This is done by constantly moving finger across device display while connecting device to the USB (on device powerup).
+In case of success the white screen appears, asking whether to connect to the host.
+
+```
+PATH=/absolute_path_to_toolchain/gcc-arm/gcc-arm-none-eabi-5_4-2016q3/bin/:$PATH PYOPT=1 make build_firmware
+PATH=/absolute_path_to_toolchain/gcc-arm/gcc-arm-none-eabi-5_4-2016q3/bin/:$PATH PYOPT=1 make upload
+```
+
+## Running tests
+
+There are tests implemented to test `trezor-core` monero implementation. To run these tests call
+
+```
+EC_BACKEND_FORCE=1 EC_BACKEND=1 python -m unittest trezor_monero_test/test_trezor.py
+```
+
+The environment variables will force monero agent to use py-trezor-crypto library which is fast and secure.
+Tests read `TREZOR_PATH` environment variable which defaults to `udp:127.0.0.1:21324`.
+
+Currently there are 16 different transaction scenarios implemented and one key image sync.
