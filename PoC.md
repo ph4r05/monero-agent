@@ -491,11 +491,71 @@ Transaction successfully submitted, transaction <ffbb3a5147b199debe482de2f7ba2d1
 You can check its status by using the `show_transfers` command.
 ```
 
+# Seed utility
+
+There is a small utility provided for converting mnemonics to Monero wallets.
+
+It generates Monero private/public keys, addresses and sub-addresses from the input which can be:
+
+- BIP44 mnemonics as used with Trezor
+- BIP44 master seed derived from mnemonics
+- Monero electrum mnemonics
+- Monero master seed
+
+Example:
+
+```
+$> python -m monero_poc.seed --electrum-mnemonics --subs --testnet obedient coexist syringe lamb tacit hover hold subtly industrial puppy superior object push lakes geek welders oust colony rapid ointment thorn spiders mechanic nobody ointment
+Seed Monero:      283d8bab1aeaee8f8b5aed982fc894c67d3e03db9006e488321c053f5183310d
+Seed Monero wrds: obedient coexist syringe lamb tacit hover hold subtly industrial puppy superior object push lakes geek welders oust colony rapid ointment thorn spiders mechanic nobody ointment
+
+Private spend key: 283d8bab1aeaee8f8b5aed982fc894c67d3e03db9006e488321c053f5183310d
+Private view key:  9e7aba8ae9ee134e5d5464d9145a4db26793d7411af7d06f20e755cb2a5ad50f
+
+Public spend key:  2ec1035565f1918b8c4740d4e5431ddcf50a670ab51984c78d9c0afff5a46a0d
+Public view key:   f51121f7d68317c2b1b2d0f7ded72e106908cfbc5c0333f07dda1a716385c659
+
+Mainnet Address:   43PsUEA2iAkQLnph1ZNFQgdxZZyGhKRLfaNv7EEgWc1f3LQPSZR7BP4ZZn4oH7kAbX3kCd4oDYHg6hE541rQTKtHB9o6iVc
+Testnet Address:   9twQxUpHzXrQLnph1ZNFQgdxZZyGhKRLfaNv7EEgWc1f3LQPSZR7BP4ZZn4oH7kAbX3kCd4oDYHg6hE541rQTKtHB7ufnmk
+Stagenet Address:  53buZ54zMmrQLnph1ZNFQgdxZZyGhKRLfaNv7EEgWc1f3LQPSZR7BP4ZZn4oH7kAbX3kCd4oDYHg6hE541rQTKtHB7w5L7m
+Testnet Sub addresses:
+ 0, 1: BZZeyHTQYZ9W9KX2M69WWxWat1Z6JQYsi4LjnZxuVTmCbsNxrUyLFbXiZHRwXgBcaESRz8HtHxTDGSCtgxDdEFpQFrKqXoX
+ 0, 2: BhJN8SPSRxWMvawwAy82S2LiMbVMKr8Zefv9kZ3ELYHNQ6jrR18z2jeZxSWz8b25GMFqi8xwuDBYxWRuwNpVf3NKCZbTjkb
+ 0, 3: Bg8XwJYEseMSkQWBGxN7RbTP79s1kbJYCHacSHD3GocQHxs4SayWmFDSDSv81UD3UkbGkG1UV8kqpfAoWbUq4MFs7S6HFyr
+ 0, 4: BbTY7znMxcS5SWCEbMFezuUg3U9dz6cfc5tRLyAGdSHuDPsMpL1PATmfm7r9CpgJoK7oqi4LJzefSKJ6UnLm1rk4K6jBhsc
+ 1, 0: BcACPfJgD79JPEHXGvZ2Wx1GpMBMDMkk16toWj6iLTikVz79X8oCNTM2BaETx7tEMGVRE7Mz4efT5jAfHB3RPvpe5jUhFLG
+ 1, 1: BaLGM1RiMrNCtSFt7GRokGCBMbTNbcbHtCVbLmWXysap1MEbRWhtrXv4fj6ni8wVGVe194ix7d7wp2tvJfDhXrRqQYsKpxt
+ 1, 2: BdGPABuMmjZU9Bwe7mxLq69m32u82PEApdiGajfzQ4UiD59KJs8bRRGWuoPrcPtxZGPnYkwbpMhT4KRa5QF4HcV6K5bpsQQ
+ 1, 3: BZHc5i9TidM3J3Yxffyju7VRJ1Dceh8GTPR1u6FmxqjaASLBbAWymBmPPMuqHLAwSJWcVtjwfnjhfesALb2Rgnr2698mqvT
+ 1, 4: BaNAM54d4NsYvdZZ4UbQQGDehMMg6ZvZzcDyfTcQC5WhSjnAjazDZwPip3E2e1MWo8HRJHjvbzgbxCHSjew76cQwHqWsbg9
+ 2, 0: BetigrX7uP1c3UKDdaicCu7QYtFG1zzvt7VBBPzaGBafZLqp21Rq1BAN8PjtpNJp8tNrqdC7jKnynXpg2fVvzdr9KneLJiK
+ 2, 1: BYjxukg8AXbR1ee3T2kRzQLUfCoSG4uJzGHMW5ZqtpNGiSvmNgKo16MWpAQYP3iDbVhio8p7WWyMQLLMdrXg25ji5Bf7C4c
+ 2, 2: Bd5iVVwrV6g8S3cLdYjegtSKikRCa13PbY6boSdhrtcC4A2SGXpvSauFSV5837R9vSUwEhiu2CVL85UcUhnM1usVMYkHdxE
+ 2, 3: BecHsbxHU79YUb2MLqeCsqChmSv5XFbJe2az3HZNG2EkAVLUautytJUBqhk17CbWzBPW3hAmSpLzxgdcnJC958xw3BNuH5D
+ 2, 4: BYvUqAfzZVmNXyuWgqbxs36yXjFMHpSofHDRm1JfRpUbcGahL4FLZtD5AwkM5jZhZt6188M9u2qkv7UugFhnvKaYUDxLUSg
+ 3, 0: Bc2WDeJR7skc3ds4ZoFboBDFp3AjL1FW4YpKjmzxx4McEnrgAC2hz9ZN7rtyBMWqWmCu68pCHrL9AbVFtoreDHGs5Xg7rPG
+ 3, 1: BakckdKXPA5LZ2ZMdRSvMCgNqtv4ARtZqYSBsMXoyWQKY48c1VyQDD8PhEXgYw4wuPQr9gX2q1Ar1b27Lgy1kBwL3H9czHz
+ 3, 2: BYp7PBihf9zLDEm13w3JJD8ANKo1Hc8WZQrA9irzjUQHVogW8MPdi4HCZzLZkke8sdg5kdP64vnag5fGyveK9wjWNuqRJdP
+ 3, 3: BctxVqtngEg37ximN16rAP5P9egKXmqAnj3TSCfEq1n9Tu3xN3uhgGXTAp7CvtAZrcXEk8Z8rsmhvS7dMTFb5tvh4L4XxbD
+ 3, 4: BdSBrrVpvRzZXn2DVwmqNQbT77DVcoDCmXeFTUQFwaXci9rxEAborJMc32CqRfAGqaFX2UmrjG8JL7QJUYwraShPNFPYvUm
+ 4, 0: Bd6j33Qf37YURkfAJ9PSUAWdATx3bbMj6FF2KTjzKPTN3GpjboGW7BtStrxaydyqQZ8dJNJ9KdJ9LXaMpapnpDjN1jHZ2kp
+ 4, 1: BaHDgRVHiy8MRXdryKaUit8aZzbKGKcxBN2VwSyahpsTYJsahAzD692evawPSuPt1UcmqY9EiWoKpZ2m4GoZoCaqHV7Moxt
+ 4, 2: Bcytpo6X87jGbC7xX8B3kpJMWiTaHtnuNBnzZgY6YLRiJQm17zyaTWhgfGamF3etPhJws4paxNA5mRaHdfpNDQ5bDTetwjG
+ 4, 3: Bcj8Qc2aXXED5f8uhEmRhAL54PmgnWaT7HEMEs5GsRU9Ccuw1FTkhaP1fE3U9Mm69CWjfgGWc9kko4R9RY64rmEe8VZFU4d
+ 4, 4: BaWCZzMwtXFTaCj4wSNDnni13zVszkiBbeP2v7KDG9mZUvQWoE7PtXV5ga4WRrvCrUJ1PjmFP1kFNTowckgndCQYVsmA5nH
+```
+
 # Testing with Trezor
 
 Agent supports also communication with Trezor directly.
 It works in the same way as described above. If the account file does not exist on the agent start it will
 prompt Trezor for watch-only credentials.
+
+Agent requires `python-trezor` which facilitates communication with the Trezor over Trezor protocol.
+
+```
+$> pip install .[trezor]
+```
 
 The following command for communication with the Trezor Emulator running on port 21324.
 
@@ -576,3 +636,31 @@ The environment variables will force monero agent to use py-trezor-crypto librar
 Tests read `TREZOR_PATH` environment variable which defaults to `udp:127.0.0.1:21324`.
 
 Currently there are 16 different transaction scenarios implemented and one key image sync.
+
+
+## Changes on trezor-common updates
+
+Once trezor-common is updated, e.g., new message type is added the following steps are needed to do:
+
+
+### trezor-core
+
+```
+# 1. Update vendor trezor-common submodule in trezor-core
+
+# 2. Regenerate messages
+cd tools
+./build_protobuf
+```
+
+### python-trezor
+
+```
+# 1. Update vendor trezor-common submodule in python-trezor
+
+# 2. Rebuild protobuf messages
+python setup.py develop
+
+# 3. Update python-trezor in monero-agent directory (or system wise)
+pip install -U --no-cache ../python-trezor/
+```
