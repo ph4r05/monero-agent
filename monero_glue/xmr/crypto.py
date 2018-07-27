@@ -14,6 +14,7 @@ import operator
 import sys
 
 from Crypto.Random import random as rand
+from monero_glue.misc import b58_mnr
 from monero_glue.xmr import common
 from monero_glue.xmr.core.backend import ed25519, ed25519_2, keccak2
 from monero_glue.xmr.core.backend.ed25519 import b, d, l, q
@@ -21,7 +22,6 @@ from monero_glue.xmr.core.ec import *
 from monero_glue.xmr.core.ec_conv import *
 from monero_glue.xmr.core.pycompat import *
 from monero_serialize import xmrserialize
-from monero_glue.misc import b58_mnr
 
 
 def b16_to_scalar(bts):
