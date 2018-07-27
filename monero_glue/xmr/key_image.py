@@ -52,14 +52,14 @@ def compute_hash(rr):
     :type rr: TransferDetails
     :return:
     """
-    buff = b""
-    buff += rr.out_key
-    buff += rr.tx_pub_key
+    kck = crypto.get_keccak()
+    kck.update(rr.out_key)
+    kck.update(rr.tx_pub_key)
     if rr.additional_tx_pub_keys:
-        buff += b"".join(rr.additional_tx_pub_keys)
-    buff += xmrserialize.dump_uvarint_b(rr.internal_output_index)
-
-    return crypto.cn_fast_hash(buff)
+        for x in rr.additional_tx_pub_keys:
+            kck.update(x)
+    kck.update(xmrserialize.dump_uvarint_b(rr.internal_output_index))
+    return kck.digest()
 
 
 async def generate_commitment(outputs):
@@ -75,13 +75,14 @@ async def generate_commitment(outputs):
         sub_indices[out.m_subaddr_index.major].add(out.m_subaddr_index.minor)
 
     num = 0
+    kck = crypto.get_keccak()
     iter = await yield_key_image_data(outputs)
     for rr in iter:  # type: MoneroTransferDetails
         hash = compute_hash(rr)
-        hashes.append(hash)
+        kck.update(hash)
         num += 1
 
-    final_hash = crypto.cn_fast_hash(b"".join(hashes))
+    final_hash = kck.digest()
     indices = []
 
     for major in sub_indices:
