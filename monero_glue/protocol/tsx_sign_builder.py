@@ -451,7 +451,7 @@ class TTransactionBuilder(object):
         # Basic transaction parameters
         self.input_count = tsx_data.num_inputs
         self.output_count = len(tsx_data.outputs)
-        self.output_change = tsx_data.change_dts
+        self.output_change = misc.dst_entry_to_stdobj(tsx_data.change_dts)
         self.mixin = tsx_data.mixin
         self.fee = tsx_data.fee
         self.use_simple_rct = self.input_count > 1

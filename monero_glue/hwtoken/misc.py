@@ -163,3 +163,14 @@ async def dump_msg_gc(msg, preallocate=None, msg_type=None, del_msg=False):
 
     gc.collect()
     return b
+
+
+def dst_entry_to_stdobj(dst):
+    if dst is None:
+        return None
+
+    addr = StdObj(
+        m_spend_public_key=dst.addr.m_spend_public_key,
+        m_view_public_key=dst.addr.m_view_public_key,
+    )
+    return StdObj(amount=dst.amount, addr=addr, is_subaddress=dst.is_subaddress)
