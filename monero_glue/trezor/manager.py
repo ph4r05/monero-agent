@@ -73,14 +73,17 @@ class Trezor(token.TokenLite):
 
     async def call(self, msg, recode=True):
         with self.session():
-            if recode:
-                msg = self._to_tlib(msg)
+            return await self.call_in_session(msg, recode)
 
-            res = self.client.call(msg)
+    async def call_in_session(self, msg, recode=True):
+        if recode:
+            msg = self._to_tlib(msg)
 
-            if recode:
-                res = self._from_tlib(res)
-            return res
+        res = self.client.call(msg)
+
+        if recode:
+            res = self._from_tlib(res)
+        return res
 
     async def ping(self, message=None, **kwargs):
         with self.session():

@@ -79,6 +79,9 @@ class TokenProxy(token.TokenLite):
     async def call(self, msg, recode=True):
         return await self.transfer_protobuf("call", msg)
 
+    async def call_in_session(self, msg, recode=True):
+        return await self.transfer_protobuf("call", msg)
+
     async def ping(self, message=None, **kwargs):
         resp = requests.get("%s/ping" % self.endpoint)
         resp.raise_for_status()

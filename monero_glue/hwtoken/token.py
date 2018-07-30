@@ -95,6 +95,9 @@ class TokenLite(object):
     async def call(self, msg, recode=True):
         return Failure(code=FailureType.FirmwareError, message="unsupported")
 
+    async def call_in_session(self, msg, recode=True):
+        return Failure(code=FailureType.FirmwareError, message="unsupported")
+
     async def ping(self, message=None, **kwargs):
         return DebugMoneroDiagAck()
 
