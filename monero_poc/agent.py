@@ -20,7 +20,7 @@ import threading
 import time
 
 from monero_glue.agent import agent_lite, agent_misc
-from monero_glue.messages import DebugMoneroDiagRequest
+from monero_glue.messages import DebugMoneroDiagRequest, GetEntropy, Entropy
 from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc
 from monero_glue.xmr.enc import chacha_poly, chacha
 from monero_poc.utils import misc, trace_logger
@@ -236,6 +236,12 @@ class HostAgent(cli.BaseCli):
             language="english",
         )
 
+    def do_get_entropy(self, line):
+        parts = line.split(' ')
+        size = int(parts[0])
+        path = parts[1]
+        self.wait_coro(self.get_entropy(size, path))
+
     def do_tdeb(self, line):
         is_deb = bool(int(line))
         print("Token debug set to: %s" % is_deb)
@@ -316,6 +322,24 @@ class HostAgent(cli.BaseCli):
 
         except Exception as e:
             raise ValueError(e)
+
+    async def get_entropy(self, size, path):
+        """
+        Loads entropy from the device, writes to the path
+        :param size:
+        :param path:
+        :return:
+        """
+        logger.info('Loading entropy of %s B to %s' % (size, path))
+        with open(path, 'wb+') as fh:
+            csize = 0
+            while csize < size:
+                req = GetEntropy(size=1024*10)
+                res = await self.trezor_proxy.call(req)  # type: Entropy
+                csize += len(res.entropy)
+                logger.debug(' .. loaded %s / %s (%s %%)' % (csize, size, 100.0*csize / size))
+                fh.write(res.entropy)
+        logger.info('Entropy loading done')
 
     def load_params(self):
         """
