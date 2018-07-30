@@ -335,7 +335,7 @@ class HostAgent(cli.BaseCli):
             csize = 0
             while csize < size:
                 req = GetEntropy(size=1024*10)
-                res = await self.trezor_proxy.call(req)  # type: Entropy
+                res = await self.trezor_proxy.call_in_session(req)  # type: Entropy
                 csize += len(res.entropy)
                 logger.debug(' .. loaded %s / %s (%s %%)' % (csize, size, 100.0*csize / size))
                 fh.write(res.entropy)
