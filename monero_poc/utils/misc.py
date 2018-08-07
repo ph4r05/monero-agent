@@ -212,9 +212,15 @@ def escape_shell(inp):
     :return:
     """
     try:
+        inp = inp.decode('utf8')
+    except:
+        pass
+
+    try:
         return shellescape.quote(inp)
     except:
         pass
+
     quote(inp)
 
 
