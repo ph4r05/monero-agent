@@ -906,6 +906,13 @@ class HostAgent(cli.BaseCli):
         # key_images = await self.agent.import_outputs(msg.transfers)
         # For now sync only spent key images to the hot wallet.
         key_images = [td.m_key_image for td in msg.transfers]
+        max_ki_size = 0
+        if len(key_images) == 0:
+            logger.info('Wallet did not return transfer list :/')
+            for tx in msg.txes:
+                for idx in range(len(tx.selected_transfers)):
+                    max_ki_size = max(max_ki_size, tx.selected_transfers[idx])
+            key_images = [b'\x01' + b'\x00'*31] * (max_ki_size + 1)
 
         txes = []
         pendings = []
