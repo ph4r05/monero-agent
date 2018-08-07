@@ -394,7 +394,7 @@ class HostAgent(cli.BaseCli):
         self.load_params()
         if account_file_set and not account_file_ex:
             await self.check_params(True)
-            await self.prompt_password(True)
+            self.wallet_password = await self.prompt_password(True)
 
         # Create watch only wallet file for monero-wallet-rpc
         await self.ensure_watch_only()
