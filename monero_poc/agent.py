@@ -635,7 +635,7 @@ class HostAgent(cli.BaseCli):
         p = misc.run(
             cmd,
             input=feeder,
-            async=True,
+            async_=True,
             stdout=misc.Capture(timeout=1, buffer_size=1),
             stderr=misc.Capture(timeout=1, buffer_size=1),
             cwd=os.getcwd(),

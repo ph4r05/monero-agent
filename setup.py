@@ -46,7 +46,7 @@ poc_extras = [
     "flask-socketio",
     "eventlet",
     "gevent",
-    "sarge",
+    "sarge>=0.1.5",
 ]
 
 tcry_extras = ["py_trezor_crypto_ph4"]
