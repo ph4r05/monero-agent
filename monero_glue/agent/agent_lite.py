@@ -418,7 +418,7 @@ class Agent(object):
             cout_key = t_res.cout_key
             for ccout in couts:
                 self.ct.couts.append(
-                    chacha_poly.decrypt(cout_key, ccout[0], ccout[1], ccout[2])
+                    chacha_poly.decrypt_pack(cout_key, ccout)
                 )
 
         self.ct.enc_salt1, self.ct.enc_salt2 = t_res.salt, t_res.rand_mult
