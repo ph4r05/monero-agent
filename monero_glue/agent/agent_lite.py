@@ -389,13 +389,13 @@ class Agent(object):
         rv.p.MGs = []
         for idx, src in enumerate(tx.sources):
             msg = MoneroTransactionSignInputRequest(
-                await tmisc.dump_msg(src),
-                await tmisc.dump_msg(self.ct.tx.vin[idx]),
-                self.ct.tx_in_hmacs[idx],
-                self.ct.pseudo_outs[idx][0] if not in_memory else None,
-                self.ct.pseudo_outs[idx][1] if not in_memory else None,
-                self.ct.alphas[idx],
-                self.ct.spend_encs[idx],
+                src_entr=await tmisc.dump_msg(src),
+                vini=await tmisc.dump_msg(self.ct.tx.vin[idx]),
+                vini_hmac=self.ct.tx_in_hmacs[idx],
+                pseudo_out=self.ct.pseudo_outs[idx][0] if not in_memory else None,
+                pseudo_out_hmac=self.ct.pseudo_outs[idx][1] if not in_memory else None,
+                alpha_enc=self.ct.alphas[idx],
+                spend_enc=self.ct.spend_encs[idx],
             )
             t_res = await self.trezor.tsx_sign(
                 MoneroTransactionSignRequest(sign_input=msg)
