@@ -94,6 +94,9 @@ from .MoneroKeyImageSyncFinalRequest import MoneroKeyImageSyncFinalRequest
 from .MoneroKeyImageSyncRequest import MoneroKeyImageSyncRequest
 from .MoneroKeyImageSyncStepAck import MoneroKeyImageSyncStepAck
 from .MoneroKeyImageSyncStepRequest import MoneroKeyImageSyncStepRequest
+from .MoneroMultisigKLRki import MoneroMultisigKLRki
+from .MoneroOutputEntry import MoneroOutputEntry
+from .MoneroRctKey import MoneroRctKey
 from .MoneroRingCtSig import MoneroRingCtSig
 from .MoneroSubAddressIndicesList import MoneroSubAddressIndicesList
 from .MoneroTransactionAllOutSetAck import MoneroTransactionAllOutSetAck
@@ -117,6 +120,7 @@ from .MoneroTransactionSetOutputRequest import MoneroTransactionSetOutputRequest
 from .MoneroTransactionSignInputAck import MoneroTransactionSignInputAck
 from .MoneroTransactionSignInputRequest import MoneroTransactionSignInputRequest
 from .MoneroTransactionSignRequest import MoneroTransactionSignRequest
+from .MoneroTransactionSourceEntry import MoneroTransactionSourceEntry
 from .MoneroTransferDetails import MoneroTransferDetails
 from .MoneroWatchKey import MoneroWatchKey
 from .MultisigRedeemScriptType import MultisigRedeemScriptType
