@@ -357,14 +357,14 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
+        from .. import protobuf
         from monero_glue.xmr.sub.keccak_hasher import get_keccak_writer
         from monero_serialize import xmrserialize
-        from monero_serialize.xmrtypes import TxSourceEntry
         from monero_serialize.xmrtypes import TxinToKey
 
         kwriter = get_keccak_writer()
         ar = xmrserialize.Archive(kwriter, True)
-        await ar.message(src_entr, TxSourceEntry)
+        await protobuf.dump_message(kwriter, src_entr)
         await ar.message(vini, TxinToKey)
 
         hmac_key_vini = self.hmac_key_txin(idx)
@@ -379,14 +379,14 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
+        from .. import protobuf
         from monero_glue.xmr.sub.keccak_hasher import get_keccak_writer
         from monero_serialize import xmrserialize
-        from monero_serialize.xmrtypes import TxDestinationEntry
         from monero_serialize.xmrtypes import TxOut
 
         kwriter = get_keccak_writer()
+        await protobuf.dump_message(kwriter, dst_entr)
         ar = xmrserialize.Archive(kwriter, True)
-        await ar.message(dst_entr, TxDestinationEntry)
         await ar.message(tx_out, TxOut)
 
         hmac_key_vouti = self.hmac_key_txout(idx)
@@ -400,13 +400,11 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
+        from .. import protobuf
         from monero_glue.xmr.sub.keccak_hasher import get_keccak_writer
-        from monero_serialize import xmrserialize
-        from monero_serialize.xmrtypes import TxDestinationEntry
 
         kwriter = get_keccak_writer()
-        ar = xmrserialize.Archive(kwriter, True)
-        await ar.message(dst_entr, TxDestinationEntry)
+        await protobuf.dump_message(kwriter, dst_entr)
 
         hmac_key = self.hmac_key_txdst(idx)
         hmac_tsxdest = crypto.compute_hmac(hmac_key, kwriter.get_digest())
@@ -478,7 +476,7 @@ class TTransactionBuilder(object):
         # if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
         if num_stdaddresses == 0 and num_subaddresses == 1:
             self.r_pub = crypto.ge_scalarmult(
-                self.r, crypto.decodepoint(single_dest_subaddress.m_spend_public_key)
+                self.r, crypto.decodepoint(single_dest_subaddress.spend_public_key)
             )
 
         self.need_additional_txkeys = num_subaddresses > 0 and (
@@ -569,12 +567,12 @@ class TTransactionBuilder(object):
         Generate master key H(TsxData || r || c_tsx)
         :return:
         """
+        from .. import protobuf
         from monero_glue.xmr.sub.keccak_hasher import get_keccak_writer
         from monero_serialize import xmrserialize
 
         writer = get_keccak_writer()
-        ar1 = xmrserialize.Archive(writer, True)
-        await ar1.message(tsx_data)
+        await protobuf.dump_message(writer, tsx_data)
         await writer.awrite(crypto.encodeint(self.r))
         await xmrserialize.dump_uvarint(writer, tsx_ctr)
         self.key_master = crypto.keccak_2hash(
@@ -604,7 +602,6 @@ class TTransactionBuilder(object):
         with key derived for exactly this purpose.
 
         :param src_entr:
-        :type src_entr: monero_glue.xmr.serialize_messages.tx_construct.TxSourceEntry
         :return:
         """
         from monero_glue.messages.MoneroTransactionSetInputAck import (
@@ -631,7 +628,7 @@ class TTransactionBuilder(object):
         self.summary_inputs_money += src_entr.amount
 
         # Secrets derivation
-        out_key = crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].dest)
+        out_key = crypto.decodepoint(src_entr.outputs[src_entr.real_output].key.dest)
         tx_key = crypto.decodepoint(src_entr.real_out_tx_key)
         additional_keys = [
             crypto.decodepoint(x) for x in src_entr.real_out_additional_tx_keys
@@ -650,7 +647,7 @@ class TTransactionBuilder(object):
         # Construct tx.vin
         ki_real = src_entr.multisig_kLRki.ki if self.multi_sig else ki
         vini = TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki_real))
-        vini.key_offsets = [x[0] for x in src_entr.outputs]
+        vini.key_offsets = [x.idx for x in src_entr.outputs]
         vini.key_offsets = tsx_helper.absolute_output_offsets_to_relative(
             vini.key_offsets
         )
@@ -981,7 +978,7 @@ class TTransactionBuilder(object):
             if dst_entr.is_subaddress:
                 additional_txkey = crypto.ge_scalarmult(
                     additional_txkey_priv,
-                    crypto.decodepoint(dst_entr.addr.m_spend_public_key),
+                    crypto.decodepoint(dst_entr.addr.spend_public_key),
                 )
             else:
                 additional_txkey = crypto.ge_scalarmult_base(additional_txkey_priv)
@@ -1009,7 +1006,7 @@ class TTransactionBuilder(object):
                 else self.r
             )
             derivation = monero.generate_key_derivation(
-                crypto.decodepoint(dst_entr.addr.m_view_public_key), deriv_priv
+                crypto.decodepoint(dst_entr.addr.view_public_key), deriv_priv
             )
         return derivation
 
@@ -1064,7 +1061,7 @@ class TTransactionBuilder(object):
         tx_out_key = crypto.derive_public_key(
             derivation,
             self.out_idx,
-            crypto.decodepoint(dst_entr.addr.m_spend_public_key),
+            crypto.decodepoint(dst_entr.addr.spend_public_key),
         )
 
         from monero_serialize.xmrtypes import TxoutToKey
@@ -1360,14 +1357,14 @@ class TTransactionBuilder(object):
         # Private key correctness test
         self.assrt(
             crypto.point_eq(
-                crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].dest),
+                crypto.decodepoint(src_entr.outputs[src_entr.real_output].key.dest),
                 crypto.scalarmult_base(in_sk.dest),
             ),
             "a1",
         )
         self.assrt(
             crypto.point_eq(
-                crypto.decodepoint(src_entr.outputs[src_entr.real_output][1].mask),
+                crypto.decodepoint(src_entr.outputs[src_entr.real_output].key.mask),
                 crypto.gen_c(in_sk.mask, src_entr.amount),
             ),
             "a2",
@@ -1383,7 +1380,7 @@ class TTransactionBuilder(object):
         mg = None
         if self.use_simple_rct:
             # Simple RingCT
-            mix_ring = [x[1] for x in src_entr.outputs]
+            mix_ring = [x.key for x in src_entr.outputs]
             mg, msc = mlsag2.prove_rct_mg_simple(
                 self.full_message,
                 mix_ring,
@@ -1405,7 +1402,7 @@ class TTransactionBuilder(object):
         else:
             # Full RingCt, only one input
             txn_fee_key = crypto.scalarmult_h(self.get_fee())
-            mix_ring = [[x[1]] for x in src_entr.outputs]
+            mix_ring = [[x.key] for x in src_entr.outputs]
             mg, msc = mlsag2.prove_rct_mg(
                 self.full_message,
                 mix_ring,

@@ -8,7 +8,7 @@ def addr_to_hash(addr):
     :param addr:
     :return:
     """
-    return bytes(addr.m_spend_public_key + addr.m_view_public_key)
+    return bytes(addr.spend_public_key + addr.view_public_key)
 
 
 def encode_addr(version, spend_pub, view_pub):
@@ -46,7 +46,7 @@ def public_addr_encode(pub_addr, is_sub=False, net=NetworkTypes.MAINNET):
     :return:
     """
     net_ver = net_version(net, is_sub)
-    return encode_addr(net_ver, pub_addr.m_spend_public_key, pub_addr.m_view_public_key)
+    return encode_addr(net_ver, pub_addr.spend_public_key, pub_addr.view_public_key)
 
 
 def classify_subaddresses(tx_dests, change_addr):
@@ -84,8 +84,8 @@ def addr_eq(a, b):
     :param b:
     :return:
     """
-    return pub_eq(a.m_spend_public_key, b.m_spend_public_key) and pub_eq(
-        a.m_view_public_key, b.m_view_public_key
+    return pub_eq(a.spend_public_key, b.spend_public_key) and pub_eq(
+        a.view_public_key, b.view_public_key
     )
 
 

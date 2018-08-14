@@ -30,11 +30,11 @@ from monero_glue.messages import (
     MoneroTransactionSignRequest,
     MoneroTransactionSignInputRequest,
     MoneroTransactionSignInputAck,
+    MoneroTransactionData,
     Failure,
 )
 from monero_glue.protocol_base.base import TError
 from monero_glue.xmr import common, key_image, monero, ring_ct
-from monero_glue.xmr.tsx_data import TsxData
 from monero_glue.xmr.enc import chacha_poly
 from monero_serialize import xmrserialize, xmrtypes
 
@@ -56,7 +56,7 @@ class TData(object):
     """
 
     def __init__(self):
-        self.tsx_data = None  # type: TsxData
+        self.tsx_data = None  # type: MoneroTransactionData
         self.tx_data = None  # construction data
         self.tx = xmrtypes.Transaction(version=2, vin=[], vout=[], extra=[])
         self.tx_in_hmacs = []
@@ -198,12 +198,12 @@ class Agent(object):
             payment_id = monero.get_payment_id_from_tx_extra_nonce(extra_nonce.nonce)
 
         # Init transaction
-        tsx_data = TsxData()
+        tsx_data = MoneroTransactionData()
         tsx_data.version = 1
         tsx_data.payment_id = payment_id
         tsx_data.unlock_time = tx.unlock_time
-        tsx_data.outputs = tx.splitted_dsts
-        tsx_data.change_dts = tx.change_dts
+        tsx_data.outputs = [tmisc.translate_monero_dest_entry_pb(x) for x in tx.splitted_dsts]
+        tsx_data.change_dts = tmisc.translate_monero_dest_entry_pb(tx.change_dts)
         tsx_data.num_inputs = len(tx.sources)
         tsx_data.mixin = len(tx.sources[0].outputs)
         tsx_data.fee = sum([x.amount for x in tx.sources]) - sum(
@@ -218,12 +218,11 @@ class Agent(object):
         self.ct.tx.unlock_time = tx.unlock_time
 
         self.ct.tsx_data = tsx_data
-        tsx_data_pb = await tmisc.translate_tsx_data_pb(tsx_data)
         init_msg = MoneroTransactionInitRequest(
             version=0,
             address_n=self.address_n,
             network_type=self.network_type,
-            tsx_data=tsx_data_pb,
+            tsx_data=tsx_data,
         )
 
         t_res = await self.trezor.tsx_sign(
@@ -236,7 +235,7 @@ class Agent(object):
 
         # Set transaction inputs
         for idx, src in enumerate(tx.sources):
-            src_bin = await tmisc.dump_msg(src)
+            src_bin = tmisc.translate_monero_src_entry_pb(src)
             msg = MoneroTransactionSetInputRequest(src_entr=src_bin)
 
             t_res = await self.trezor.tsx_sign(
@@ -290,7 +289,7 @@ class Agent(object):
         if not in_memory:
             for idx in range(len(self.ct.tx.vin)):
                 msg = MoneroTransactionInputViniRequest(
-                    src_entr=await tmisc.dump_msg(tx.sources[idx]),
+                    src_entr=tmisc.translate_monero_src_entry_pb(tx.sources[idx]),
                     vini=await tmisc.dump_msg(self.ct.tx.vin[idx]),
                     vini_hmac=self.ct.tx_in_hmacs[idx],
                     pseudo_out=self.ct.pseudo_outs[idx][0] if not in_memory else None,
@@ -306,7 +305,7 @@ class Agent(object):
         # Set transaction outputs
         for idx, dst in enumerate(tx.splitted_dsts):
             msg = MoneroTransactionSetOutputRequest(
-                dst_entr=await tmisc.dump_msg(dst),
+                dst_entr=tmisc.translate_monero_dest_entry_pb(dst),
                 dst_entr_hmac=self.ct.tx_out_entr_hmacs[idx],
             )
             t_res = await self.trezor.tsx_sign(
@@ -389,7 +388,7 @@ class Agent(object):
         rv.p.MGs = []
         for idx, src in enumerate(tx.sources):
             msg = MoneroTransactionSignInputRequest(
-                src_entr=await tmisc.dump_msg(src),
+                src_entr=tmisc.translate_monero_src_entry_pb(src),
                 vini=await tmisc.dump_msg(self.ct.tx.vin[idx]),
                 vini_hmac=self.ct.tx_in_hmacs[idx],
                 pseudo_out=self.ct.pseudo_outs[idx][0] if not in_memory else None,

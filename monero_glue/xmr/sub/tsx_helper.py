@@ -4,10 +4,10 @@
 
 from monero_serialize.xmrtypes import (
     TxExtraField,
-    AccountPublicAddress,
     TxExtraAdditionalPubKeys,
 )
 
+from monero_glue.messages.MoneroAccountPublicAddress import MoneroAccountPublicAddress
 from monero_glue.xmr import crypto
 from monero_serialize import xmrserialize
 from monero_serialize.core.readwriter import MemoryReaderWriter
@@ -122,8 +122,8 @@ def get_destination_view_key_pub(destinations, change_addr=None):
     """
     from monero_glue.xmr.sub.addr import addr_eq
 
-    addr = AccountPublicAddress(
-        m_spend_public_key=crypto.NULL_KEY_ENC, m_view_public_key=crypto.NULL_KEY_ENC
+    addr = MoneroAccountPublicAddress(
+        spend_public_key=crypto.NULL_KEY_ENC, view_public_key=crypto.NULL_KEY_ENC
     )
     count = 0
     for dest in destinations:
@@ -137,7 +137,7 @@ def get_destination_view_key_pub(destinations, change_addr=None):
             return crypto.NULL_KEY_ENC
         addr = dest.addr
         count += 1
-    return addr.m_view_public_key
+    return addr.view_public_key
 
 
 def encrypt_payment_id(payment_id, public_key, secret_key):

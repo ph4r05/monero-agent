@@ -8,9 +8,12 @@ from monero_glue.messages import (
     MoneroAccountPublicAddress,
     MoneroTransactionData,
     MoneroTransactionDestinationEntry,
+    MoneroTransactionSourceEntry,
+    MoneroOutputEntry,
+    MoneroMultisigKLRki,
+    MoneroRctKey,
 )
 from monero_glue.xmr import crypto
-from monero_glue.xmr.tsx_data import TsxData
 from monero_serialize import xmrserialize, xmrtypes
 
 
@@ -67,17 +70,6 @@ def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None)
     return tx_key, salt, rand_mult
 
 
-def translate_monero_dest_entry(dst_entry: MoneroTransactionDestinationEntry):
-    d = xmrtypes.TxDestinationEntry()
-    d.amount = dst_entry.amount
-    d.is_subaddress = dst_entry.is_subaddress
-    d.addr = xmrtypes.AccountPublicAddress(
-        m_spend_public_key=dst_entry.addr.spend_public_key,
-        m_view_public_key=dst_entry.addr.view_public_key,
-    )
-    return d
-
-
 def translate_monero_dest_entry_pb(dst_entry: xmrtypes.TxDestinationEntry):
     d = MoneroTransactionDestinationEntry(
         amount=dst_entry.amount,
@@ -90,32 +82,20 @@ def translate_monero_dest_entry_pb(dst_entry: xmrtypes.TxDestinationEntry):
     return d
 
 
-async def translate_tsx_data(tsx_data: MoneroTransactionData):
-    tsxd = TsxData()
-    for fld in TsxData.f_specs():
-        fname = fld[0]
-        if hasattr(tsx_data, fname):
-            setattr(tsxd, fname, getattr(tsx_data, fname))
-
-    if tsx_data.change_dts:
-        tsxd.change_dts = translate_monero_dest_entry(tsx_data.change_dts)
-
-    tsxd.outputs = [translate_monero_dest_entry(x) for x in tsx_data.outputs]
-    return tsxd
-
-
-async def translate_tsx_data_pb(tsx_data: TsxData):
-    tsxd = MoneroTransactionData()
-    for fld in TsxData.f_specs():
-        fname = fld[0]
-        if hasattr(tsx_data, fname):
-            setattr(tsxd, fname, getattr(tsx_data, fname))
-
-    if tsx_data.change_dts:
-        tsxd.change_dts = translate_monero_dest_entry_pb(tsx_data.change_dts)
-
-    tsxd.outputs = [translate_monero_dest_entry_pb(x) for x in tsx_data.outputs]
-    return tsxd
+def translate_monero_src_entry_pb(src_entry: xmrtypes.TxSourceEntry):
+    d = MoneroTransactionSourceEntry()
+    d.outputs = [MoneroOutputEntry(idx=x[0], key=MoneroRctKey(dest=x[1].dest, mask=x[1].mask)) for x in src_entry.outputs]
+    d.real_output = src_entry.real_output
+    d.real_out_tx_key = src_entry.real_out_tx_key
+    d.real_out_additional_tx_keys = list(src_entry.real_out_additional_tx_keys)
+    d.real_output_in_tx_index = src_entry.real_output_in_tx_index
+    d.amount = src_entry.amount
+    d.rct = src_entry.rct
+    d.mask = src_entry.mask
+    if src_entry.multisig_kLRki:
+        s = src_entry.multisig_kLRki
+        src_entry.multisig_kLRki = MoneroMultisigKLRki(K=s.K, L=s.L, R=s.R, ki=s.ki)
+    return d
 
 
 async def parse_msg(bts, msg):
@@ -127,14 +107,6 @@ async def parse_msg(bts, msg):
 async def parse_pb_msg(bts, msg):
     reader = xmrserialize.MemoryReaderWriter(bytearray(bts))
     return await protobuf.load_message(reader, msg)
-
-
-async def parse_src_entry(bts):
-    return await parse_msg(bts, xmrtypes.TxSourceEntry())
-
-
-async def parse_dst_entry(bts):
-    return await parse_msg(bts, xmrtypes.TxDestinationEntry())
 
 
 async def parse_vini(bts):
@@ -170,7 +142,7 @@ def dst_entry_to_stdobj(dst):
         return None
 
     addr = StdObj(
-        m_spend_public_key=dst.addr.m_spend_public_key,
-        m_view_public_key=dst.addr.m_view_public_key,
+        spend_public_key=dst.addr.spend_public_key,
+        view_public_key=dst.addr.view_public_key,
     )
     return StdObj(amount=dst.amount, addr=addr, is_subaddress=dst.is_subaddress)
