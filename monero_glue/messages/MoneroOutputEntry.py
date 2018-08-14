@@ -7,14 +7,14 @@ from .MoneroRctKey import MoneroRctKey
 
 class MoneroOutputEntry(p.MessageType):
     FIELDS = {
-        1: ('amount', p.UVarintType, 0),
+        1: ('idx', p.UVarintType, 0),
         2: ('key', MoneroRctKey, 0),
     }
 
     def __init__(
         self,
-        amount: int = None,
+        idx: int = None,
         key: MoneroRctKey = None,
     ) -> None:
-        self.amount = amount
+        self.idx = idx
         self.key = key

@@ -7,8 +7,7 @@ from .MoneroTransactionSourceEntry import MoneroTransactionSourceEntry
 
 class MoneroTransactionInputViniRequest(p.MessageType):
     FIELDS = {
-        1: ('src_entr', p.BytesType, 0),
-        6: ('src_entr_obj', MoneroTransactionSourceEntry, 0),
+        1: ('src_entr', MoneroTransactionSourceEntry, 0),
         2: ('vini', p.BytesType, 0),
         3: ('vini_hmac', p.BytesType, 0),
         4: ('pseudo_out', p.BytesType, 0),
@@ -17,15 +16,13 @@ class MoneroTransactionInputViniRequest(p.MessageType):
 
     def __init__(
         self,
-        src_entr: bytes = None,
-        src_entr_obj: MoneroTransactionSourceEntry = None,
+        src_entr: MoneroTransactionSourceEntry = None,
         vini: bytes = None,
         vini_hmac: bytes = None,
         pseudo_out: bytes = None,
         pseudo_out_hmac: bytes = None,
     ) -> None:
         self.src_entr = src_entr
-        self.src_entr_obj = src_entr_obj
         self.vini = vini
         self.vini_hmac = vini_hmac
         self.pseudo_out = pseudo_out
