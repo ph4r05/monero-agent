@@ -136,6 +136,10 @@ def decodepoint(x):
     return tcry.ge25519_unpack_vartime_r(tcry.KEY_BUFF(*x))
 
 
+def decodepoint_into(r, x):
+    return tcry.ge25519_unpack_vartime(r, tcry.KEY_BUFF(*x))
+
+
 def encodepoint(pt):
     return tcry.ge25519_pack_r(pt)
 
@@ -148,6 +152,10 @@ def encodepoint_into(pt, b):
 
 def decodeint(x):
     return tcry.expand256_modm_r(tcry.KEY_BUFF(*x))
+
+
+def decodeint_into(r, x):
+    return tcry.expand256_modm(r, tcry.KEY_BUFF(*x))
 
 
 def encodeint(x):
@@ -167,16 +175,32 @@ def scalarmult_base(a):
     return tcry.ge25519_scalarmult_base_wrapper_r(a)
 
 
+def scalarmult_base_into(r, a):
+    return tcry.ge25519_scalarmult_base_wrapper(r, a)
+
+
 def scalarmult(P, e):
     return tcry.ge25519_scalarmult_wrapper_r(P, e)
+
+
+def scalarmult_into(r, P, e):
+    return tcry.ge25519_scalarmult_wrapper(r, P, e)
 
 
 def point_add(P, Q):
     return tcry.ge25519_add_r(P, Q, 0)
 
 
+def point_add_into(r, P, Q):
+    return tcry.ge25519_add(r, P, Q, 0)
+
+
 def point_sub(P, Q):
     return tcry.ge25519_add_r(P, Q, 1)
+
+
+def point_sub_into(r, P, Q):
+    return tcry.ge25519_add(r, P, Q, 1)
 
 
 def point_eq(P, Q):
@@ -627,6 +651,17 @@ def hash_to_scalar(data, length=None):
     return tcry.xmr_hash_to_scalar_r(bytes(dt))
 
 
+def hash_to_scalar_into(r, data, length=None):
+    """
+    H_s(P)
+    :param data:
+    :param length:
+    :return:
+    """
+    dt = data[:length] if length else data
+    return tcry.xmr_hash_to_scalar(r, bytes(dt))
+
+
 def hash_to_ec(buf):
     """
     H_p(buf)
@@ -638,6 +673,19 @@ def hash_to_ec(buf):
     :return:
     """
     return tcry.xmr_hash_to_ec_r(buf)
+
+
+def hash_to_ec_into(r, buf):
+    """
+    H_p(buf)
+
+    Code adapted from MiniNero: https://github.com/monero-project/mininero
+    https://github.com/monero-project/research-lab/blob/master/whitepaper/ge_fromfe_writeup/ge_fromfe.pdf
+    http://archive.is/yfINb
+    :param key:
+    :return:
+    """
+    return tcry.xmr_hash_to_ec(r, buf)
 
 
 #
