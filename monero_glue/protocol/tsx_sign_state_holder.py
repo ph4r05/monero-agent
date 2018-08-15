@@ -26,6 +26,7 @@ class TsxSignStateHolder(object):
         self.output_change = None
         self.mixin = 0
         self.fee = 0
+        self.account_idx = 0
 
         self.additional_tx_private_keys = []
         self.additional_tx_public_keys = []

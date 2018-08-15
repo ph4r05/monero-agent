@@ -39,6 +39,11 @@ class TrezorTxPrefixHashNotMatchingError(TrezorError):
         super().__init__(*args, **kwargs)
 
 
+class TrezorChangeAddressError(TrezorError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 class StdObj(object):
     def __init__(self, **kwargs):
         for kw in kwargs:
@@ -84,7 +89,10 @@ def translate_monero_dest_entry_pb(dst_entry: xmrtypes.TxDestinationEntry):
 
 def translate_monero_src_entry_pb(src_entry: xmrtypes.TxSourceEntry):
     d = MoneroTransactionSourceEntry()
-    d.outputs = [MoneroOutputEntry(idx=x[0], key=MoneroRctKey(dest=x[1].dest, mask=x[1].mask)) for x in src_entry.outputs]
+    d.outputs = [
+        MoneroOutputEntry(idx=x[0], key=MoneroRctKey(dest=x[1].dest, mask=x[1].mask))
+        for x in src_entry.outputs
+    ]
     d.real_output = src_entry.real_output
     d.real_out_tx_key = src_entry.real_out_tx_key
     d.real_out_additional_tx_keys = list(src_entry.real_out_additional_tx_keys)
