@@ -264,6 +264,12 @@ class HostAgent(cli.BaseCli):
     def do_reconnect(self, line):
         self.wait_coro(self.connect())
 
+    def do_enumerate(self, line):
+        from monero_glue.trezor import manager as tmanager
+        r = tmanager.Trezor.enumerate()
+        for x in r:
+            print(x)
+
     def do_diag(self, line):
         diag_code = int(line)
         print("Diagnosis: %d" % diag_code)
