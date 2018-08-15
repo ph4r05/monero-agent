@@ -311,6 +311,17 @@ def sc_add(aa, bb):
     return tcry.add256_modm_r(aa, bb)
 
 
+def sc_add_into(r, aa, bb):
+    """
+    Scalar addition
+    :param r:
+    :param aa:
+    :param bb:
+    :return:
+    """
+    return tcry.add256_modm(r, aa, bb)
+
+
 def sc_sub(aa, bb):
     """
     Scalar subtraction
@@ -319,6 +330,38 @@ def sc_sub(aa, bb):
     :return:
     """
     return tcry.sub256_modm_r(aa, bb)
+
+
+def sc_sub_into(r, aa, bb):
+    """
+    Scalar subtraction
+    :param r:
+    :param aa:
+    :param bb:
+    :return:
+    """
+    return tcry.sub256_modm(r, aa, bb)
+
+
+def sc_mul(aa, bb):
+    """
+    Scalar multiplication
+    :param aa:
+    :param bb:
+    :return:
+    """
+    return tcry.mul256_modm_r(aa, bb)
+
+
+def sc_mul_into(r, aa, bb):
+    """
+    Scalar multiplication
+    :param r:
+    :param aa:
+    :param bb:
+    :return:
+    """
+    return tcry.mul256_modm(r, aa, bb)
 
 
 def sc_isnonzero(c):
@@ -351,6 +394,18 @@ def sc_mulsub(aa, bb, cc):
     return tcry.mulsub256_modm_r(aa, bb, cc)
 
 
+def sc_mulsub_into(r, aa, bb, cc):
+    """
+    (cc - aa * bb) % l
+    :param r:
+    :param aa:
+    :param bb:
+    :param cc:
+    :return:
+    """
+    return tcry.mulsub256_modm(r, aa, bb, cc)
+
+
 def sc_muladd(aa, bb, cc):
     """
     (cc + aa * bb) % l
@@ -362,8 +417,24 @@ def sc_muladd(aa, bb, cc):
     return tcry.muladd256_modm_r(aa, bb, cc)
 
 
+def sc_muladd_into(r, aa, bb, cc):
+    """
+    (cc + aa * bb) % l
+    :param r:
+    :param aa:
+    :param bb:
+    :param cc:
+    :return:
+    """
+    return tcry.muladd256_modm(r, aa, bb, cc)
+
+
 def random_scalar():
     return tcry.xmr_random_scalar_r()
+
+
+def random_scalar_into(r):
+    return tcry.xmr_random_scalar(r)
 
 
 #
