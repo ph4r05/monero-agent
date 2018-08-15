@@ -26,6 +26,10 @@ buff_tmp2 = bytearray(32)
 buff_tmp3 = bytearray(32)
 
 
+# TODO: sc_* functions in crypto with dst provided, sc_add_into(dst, a, b), etc.
+# TODO: crypto should provide constructors for points and scalars (for temporary buffers, avoids fragmentation), will be passed to sc_add_into()
+
+
 def _ensure_dst_key(dst=None):
     if dst is None:
         dst = bytearray(32)
