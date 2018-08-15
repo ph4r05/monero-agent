@@ -145,7 +145,7 @@ def encodepoint(pt):
 
 
 def encodepoint_into(pt, b):
-    bf = (ct.c_ubyte * 32).from_buffer(b)
+    bf = tcry.KEY_BUFF.from_buffer(b)
     tcry.ge25519_pack(bf, pt)
     return b
 
@@ -163,7 +163,8 @@ def encodeint(x):
 
 
 def encodeint_into(x, b):
-    return tcry.contract256_modm(b, x)
+    bf = tcry.KEY_BUFF.from_buffer(b)
+    return tcry.contract256_modm(bf, x)
 
 
 def check_ed25519point(x):
