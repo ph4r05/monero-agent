@@ -251,7 +251,10 @@ class HostAgent(cli.BaseCli):
         path = "bridge:web01"
         if line == "udp":
             path = "udp:127.0.0.1:21324"
-        else:
+        elif ':' in line:
+            path = line
+
+        if 'bridge' in path:
             self.token_debug = False
 
         print("Switching to device: %s" % path)
