@@ -24,6 +24,17 @@ l = 2**252 + 3*610042537739*15158679415041928064055629
 buff_tmp1 = bytearray(32)
 buff_tmp2 = bytearray(32)
 buff_tmp3 = bytearray(32)
+buff_tmp4 = bytearray(32)
+
+tmp_pt_1 = crypto.new_point()
+tmp_pt_2 = crypto.new_point()
+tmp_pt_3 = crypto.new_point()
+tmp_pt_4 = crypto.new_point()
+
+tmp_sc_1 = crypto.new_scalar()
+tmp_sc_2 = crypto.new_scalar()
+tmp_sc_3 = crypto.new_scalar()
+tmp_sc_4 = crypto.new_scalar()
 
 
 # TODO: sc_* functions in crypto with dst provided, sc_add_into(dst, a, b), etc.
@@ -44,13 +55,15 @@ def invert(dst, x):
     :param dst:
     :return:
     """
-    xint = crypto.decodeint(x)
+    dst = _ensure_dst_key(dst)
+    xlimbs = [int(x[i]) for i in range(9)]
+    xint = crypto.decode_modm(xlimbs)  # x is tt.MODM() = ctypes.c_uint32 * 9
     xinv = pow(xint, l - 2, l)
-    if dst is None:
-        crypto.encodeint_into(xinv, dst)
-        return dst
-    else:
-        return crypto.encodeint(xinv)
+    xinvlimbs = crypto.encode_modm(xinv)
+    for i in range(9):
+        tmp_sc_1[i] = xinvlimbs[i]
+    crypto.encodeint_into(tmp_sc_1, dst)
+    return dst
 
 
 def scalarmult_key(dst, P, s):
