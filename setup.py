@@ -49,7 +49,7 @@ poc_extras = [
     "sarge>=0.1.5",
 ]
 
-tcry_extras = ["py_trezor_crypto_ph4"]
+tcry_extras = ["py_trezor_crypto_ph4==0.0.12"]
 
 docs_extras = [
     "Sphinx>=1.0",  # autodoc_member_order = 'bysource', autodoc_default_flags

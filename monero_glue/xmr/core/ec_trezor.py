@@ -18,6 +18,14 @@ tcry = tcryr
 tcry.open_lib()
 
 
+def new_point():
+    return tcry.new_ge25519()
+
+
+def new_scalar():
+    return tcry.init256_modm_r(0)
+
+
 def random_bytes(by):
     """
     Generates X random bytes, returns byte-string
@@ -248,6 +256,14 @@ def sc_0():
     return tcry.init256_modm_r(0)
 
 
+def sc_0_into(r):
+    """
+    Sets 0 to the scalar value Zmod(m)
+    :return:
+    """
+    return tcry.init256_modm(r, 0)
+
+
 def sc_init(x):
     """
     Sets x to the scalar value Zmod(m)
@@ -256,6 +272,16 @@ def sc_init(x):
     if x >= (1 << 64):
         raise ValueError("Initialization works up to 64-bit only")
     return tcry.init256_modm_r(x)
+
+
+def sc_init_into(r, x):
+    """
+    Sets x to the scalar value Zmod(m)
+    :return:
+    """
+    if x >= (1 << 64):
+        raise ValueError("Initialization works up to 64-bit only")
+    return tcry.init256_modm(r, x)
 
 
 def sc_get64(x):
