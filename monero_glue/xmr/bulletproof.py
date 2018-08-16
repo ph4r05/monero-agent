@@ -632,13 +632,13 @@ class BulletProofBuilder(object):
         vpIz = vector_scalar(self.oneN, z)
         aL_vpIz = vector_subtract(self.v_aL, vpIz)
         aR_vpIz = vector_add(self.v_aR, vpIz)
-        vpIz = None
+        del vpIz
         gc.collect()
 
         HyNsR = hadamard(yN, self.v_sR)
         ip1 = inner_product(aL_vpIz, HyNsR)
         ip3 = inner_product(self.v_sL, HyNsR)
-        HyNsR = None
+        del HyNsR
         gc.collect()
 
         sc_add(t1, t1, ip1)
@@ -680,24 +680,24 @@ class BulletProofBuilder(object):
         # PAPER LINES 54-57
         vector_add(aL_vpIz, vector_scalar(self.v_sL, x), l)
         self.v_sL = None
-        aL_vpIz = None
+        del aL_vpIz
         gc.collect()
 
         # Originally:
         # vector_add(hadamard(yN, vector_add(aR_vpIz, vector_scalar(self.v_sR, x))), vp2zsq, r)
         vector_scalar(self.v_sR, x, tmp_vct)
         vector_add(aR_vpIz, tmp_vct, tmp_vct)
-        aR_vpIz = None
+        del aR_vpIz
         gc.collect()
 
         hadamard(yN, tmp_vct, tmp_vct)
-        yN = None
+        del yN
         gc.collect()
 
         vector_add(tmp_vct, vp2zsq, r)
         self.v_sR = None
-        vp2zsq = None
-        tmp_vct = None
+        del vp2zsq
+        del tmp_vct
         gc.collect()
 
         inner_product(l, r, t)
@@ -717,6 +717,7 @@ class BulletProofBuilder(object):
             Gprime[i] = self.Gprec[i]
             scalarmult_key(Hprime[i], self.Hprec[i], yinvpow)
             sc_mul(yinvpow, yinvpow, yinv)
+        gc.collect()
 
         round = 0
         nprime = BP_N
@@ -786,6 +787,7 @@ class BulletProofBuilder(object):
             )
 
             round += 1
+            gc.collect()
 
         copy_key(aprime0, aprime[0])
         copy_key(bprime0, bprime[0])
@@ -887,6 +889,7 @@ class BulletProofBuilder(object):
         sc_mul(xsq, x, x)
         scalarmult_key(tmp, proof.T2, xsq)
         add_keys(L61Right, L61Right, tmp)
+        gc.collect()
 
         if L61Right != L61Left:
             raise ValueError('Verification failure 1')
@@ -919,9 +922,9 @@ class BulletProofBuilder(object):
         for i in range(rounds):
             invert(winv[i], w[i])
 
+        g_scalar = _ensure_dst_key()
+        h_scalar = _ensure_dst_key()
         for i in range(BP_N):
-            g_scalar = _ensure_dst_key()
-            h_scalar = _ensure_dst_key()
             copy_key(g_scalar, proof.a)
             sc_mul(h_scalar, proof.b, yinvpow)
 
@@ -950,6 +953,9 @@ class BulletProofBuilder(object):
                 sc_mul(yinvpow, yinvpow, yinv)
                 sc_mul(ypow, ypow, y)
 
+        del g_scalar
+        del h_scalar
+
         # PAPER LINE 26
         pprime = _ensure_dst_key()
         sc_sub(tmp, ZERO, proof.mu)
@@ -969,6 +975,7 @@ class BulletProofBuilder(object):
         sc_mul(tmp, tmp, x_ip)
         scalarmult_key(tmp, XMR_H, tmp)
         add_keys(tmp, tmp, inner_prod)
+        gc.collect()
 
         if pprime != tmp:
             raise ValueError('Verification failure step 2')
