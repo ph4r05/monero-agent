@@ -507,6 +507,7 @@ def init_constants():
 
 class BulletProofBuilder(object):
     def __init__(self):
+        self.use_det_masks = True
         self.value = None
         self.value_enc = None
         self.gamma = None
@@ -564,10 +565,10 @@ class BulletProofBuilder(object):
         return self._det_mask(i, False, dst)
 
     def sL_vct(self):
-        return KeyVEval(64, lambda x: self.sL(x))
+        return KeyVEval(64, lambda x: self.sL(x)) if self.use_det_masks else self.sX_gen()
 
     def sR_vct(self):
-        return KeyVEval(64, lambda x: self.sR(x))
+        return KeyVEval(64, lambda x: self.sR(x)) if self.use_det_masks else self.sX_gen()
 
     def sX_gen(self):
         buff = bytearray(64 * 32)
