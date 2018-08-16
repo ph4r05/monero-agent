@@ -35,13 +35,7 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         Gi, Hi = bp.init_exponents()
         res = bp.init_constants()
 
-    def test_masks(self):
-        self.skip_if_cannot_test()
-        bpi = bp.BulletProofBuilder()
-        val = crypto.sc_init(123)
-        mask = crypto.sc_init(432)
-        bpi.set_input(val, mask)
-
+    def mask_consistency_check(self, bpi):
         self.assertEqual(bpi.sL(0), bpi.sL(0))
         self.assertEqual(bpi.sL(1), bpi.sL(1))
         self.assertEqual(bpi.sL(63), bpi.sL(63))
@@ -65,6 +59,18 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         bpi.vector_exponent(bpi.v_sL, bpi.v_sR, ve1)
         bpi.vector_exponent(bpi.v_sL, bpi.v_sR, ve2)
         self.assertEqual(ve1, ve2)
+
+    def test_masks(self):
+        self.skip_if_cannot_test()
+        bpi = bp.BulletProofBuilder()
+        val = crypto.sc_init(123)
+        mask = crypto.sc_init(432)
+        bpi.set_input(val, mask)
+        self.mask_consistency_check(bpi)
+
+        # Randomized masks
+        bpi.use_det_masks = False
+        self.mask_consistency_check(bpi)
 
     def test_verify(self):
         self.skip_if_cannot_test()
@@ -150,6 +156,16 @@ class BulletproofTest(aiounittest.AsyncTestCase):
     def test_prove_2(self):
         self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
+        val = crypto.sc_init((1 << 30) - 1 + 16)
+        mask = crypto.random_scalar()
+        bpi.set_input(val, mask)
+        bp_res = bpi.prove()
+        bpi.verify(bp_res)
+
+    def test_prove_random_masks(self):
+        self.skip_if_cannot_test()
+        bpi = bp.BulletProofBuilder()
+        bpi.use_det_masks = False  # trully randomly generated mask vectors
         val = crypto.sc_init((1 << 30) - 1 + 16)
         mask = crypto.random_scalar()
         bpi.set_input(val, mask)
