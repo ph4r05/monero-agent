@@ -675,7 +675,6 @@ def hash_to_ec(buf):
     """
     H_p(buf)
 
-    Code adapted from MiniNero: https://github.com/monero-project/mininero
     https://github.com/monero-project/research-lab/blob/master/whitepaper/ge_fromfe_writeup/ge_fromfe.pdf
     http://archive.is/yfINb
     :param key:
@@ -688,7 +687,6 @@ def hash_to_ec_into(r, buf):
     """
     H_p(buf)
 
-    Code adapted from MiniNero: https://github.com/monero-project/mininero
     https://github.com/monero-project/research-lab/blob/master/whitepaper/ge_fromfe_writeup/ge_fromfe.pdf
     http://archive.is/yfINb
     :param key:
