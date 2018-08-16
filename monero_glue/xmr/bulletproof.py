@@ -55,9 +55,16 @@ BP_IP12 = b'\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00
 # Rct keys operation
 #
 
+tmp_bf_1 = bytearray(32)
+
+tmp_pt_1 = crypto.new_point()
+tmp_pt_2 = crypto.new_point()
+tmp_pt_3 = crypto.new_point()
 
 tmp_sc_1 = crypto.new_scalar()
 tmp_sc_2 = crypto.new_scalar()
+tmp_sc_3 = crypto.new_scalar()
+tmp_sc_4 = crypto.new_scalar()
 
 
 def _ensure_dst_key(dst=None):
@@ -98,25 +105,25 @@ def invert(dst, x):
 
 def scalarmult_key(dst, P, s):
     dst = _ensure_dst_key(dst)
-    Pd = crypto.decodepoint(P)
-    sd = crypto.decodeint(s)
-    res = crypto.scalarmult(Pd, sd)
-    crypto.encodepoint_into(res, dst)
+    crypto.decodepoint_into(tmp_pt_1, P)
+    crypto.decodeint_into_noreduce(tmp_sc_1, s)
+    crypto.scalarmult_into(tmp_pt_2, tmp_pt_1, tmp_sc_1)
+    crypto.encodepoint_into(tmp_pt_2, dst)
     return dst
 
 
 def scalarmult_base(dst, x):
     dst = _ensure_dst_key(dst)
-    xd = crypto.decodeint(x)
-    res = crypto.scalarmult_base(xd)
-    crypto.encodepoint_into(res, dst)
+    crypto.decodeint_into_noreduce(tmp_sc_1, x)
+    crypto.scalarmult_base_into(tmp_pt_1, tmp_sc_1)
+    crypto.encodepoint_into(tmp_pt_1, dst)
     return dst
 
 
 def sc_gen(dst=None):
     dst = _ensure_dst_key(dst)
-    sc = crypto.random_scalar()
-    crypto.encodeint_into(sc, dst)
+    crypto.random_scalar_into(tmp_sc_1)
+    crypto.encodeint_into(tmp_sc_1, dst)
     return dst
 
 
@@ -129,73 +136,85 @@ def full_gen(dst=None):
 
 def sc_add(dst, a, b):
     dst = _ensure_dst_key(dst)
-    r = crypto.sc_add(crypto.decodeint_noreduce(a), crypto.decodeint_noreduce(b))
-    crypto.encodeint_into(r, dst)
+    crypto.decodeint_into_noreduce(tmp_sc_1, a)
+    crypto.decodeint_into_noreduce(tmp_sc_2, b)
+    crypto.sc_add_into(tmp_sc_3, tmp_sc_1, tmp_sc_2)
+    crypto.encodeint_into(tmp_sc_3, dst)
     return dst
 
 
 def sc_sub(dst, a, b):
     dst = _ensure_dst_key(dst)
-    r = crypto.sc_sub(crypto.decodeint_noreduce(a), crypto.decodeint_noreduce(b))
-    crypto.encodeint_into(r, dst)
+    crypto.decodeint_into_noreduce(tmp_sc_1, a)
+    crypto.decodeint_into_noreduce(tmp_sc_2, b)
+    crypto.sc_sub_into(tmp_sc_3, tmp_sc_1, tmp_sc_2)
+    crypto.encodeint_into(tmp_sc_3, dst)
     return dst
 
 
 def sc_mul(dst, a, b):
     dst = _ensure_dst_key(dst)
-    r = crypto.sc_mul(crypto.decodeint_noreduce(a), crypto.decodeint_noreduce(b))
-    crypto.encodeint_into(r, dst)
+    crypto.decodeint_into_noreduce(tmp_sc_1, a)
+    crypto.decodeint_into_noreduce(tmp_sc_2, b)
+    crypto.sc_mul_into(tmp_sc_3, tmp_sc_1, tmp_sc_2)
+    crypto.encodeint_into(tmp_sc_3, dst)
     return dst
 
 
 def sc_muladd(dst, a, b, c):
     dst = _ensure_dst_key(dst)
-    r = crypto.sc_muladd(crypto.decodeint_noreduce(a), crypto.decodeint_noreduce(b), crypto.decodeint_noreduce(c))
-    crypto.encodeint_into(r, dst)
+    crypto.decodeint_into_noreduce(tmp_sc_1, a)
+    crypto.decodeint_into_noreduce(tmp_sc_2, b)
+    crypto.decodeint_into_noreduce(tmp_sc_3, c)
+    crypto.sc_muladd_into(tmp_sc_4, tmp_sc_1, tmp_sc_2, tmp_sc_3)
+    crypto.encodeint_into(tmp_sc_4, dst)
     return dst
 
 
 def sc_mulsub(dst, a, b, c):
     dst = _ensure_dst_key(dst)
-    r = crypto.sc_mulsub(crypto.decodeint_noreduce(a), crypto.decodeint_noreduce(b), crypto.decodeint_noreduce(c))
-    crypto.encodeint_into(r, dst)
+    crypto.decodeint_into_noreduce(tmp_sc_1, a)
+    crypto.decodeint_into_noreduce(tmp_sc_2, b)
+    crypto.decodeint_into_noreduce(tmp_sc_3, c)
+    crypto.sc_mulsub_into(tmp_sc_4, tmp_sc_1, tmp_sc_2, tmp_sc_3)
+    crypto.encodeint_into(tmp_sc_4, dst)
     return dst
 
 
 def add_keys(dst, A, B):
     dst = _ensure_dst_key(dst)
-    t1 = crypto.decodepoint(A)
-    t2 = crypto.decodepoint(B)
-    AB = crypto.point_add(t1, t2)
-    crypto.encodepoint_into(AB, dst)
+    crypto.decodepoint_into(tmp_pt_1, A)
+    crypto.decodepoint_into(tmp_pt_2, B)
+    crypto.point_add_into(tmp_pt_3, tmp_pt_1, tmp_pt_2)
+    crypto.encodepoint_into(tmp_pt_3, dst)
     return dst
 
 
 def add_keys2(dst, a, b, B):
     dst = _ensure_dst_key(dst)
-    a1 = crypto.decodeint_noreduce(a)
-    b1 = crypto.decodeint_noreduce(b)
-    B1 = crypto.decodepoint(B)
-    aGbB = crypto.add_keys2(a1, b1, B1)
-    crypto.encodepoint_into(aGbB, dst)
+    crypto.decodeint_into_noreduce(tmp_sc_1, a)
+    crypto.decodeint_into_noreduce(tmp_sc_2, b)
+    crypto.decodepoint_into(tmp_pt_1, B)
+    crypto.add_keys2_into(tmp_pt_2, tmp_sc_1, tmp_sc_2, tmp_pt_1)
+    crypto.encodepoint_into(tmp_pt_2, dst)
     return dst
 
 
 def add_keys3(dst, a, A, b, B):
     dst = _ensure_dst_key(dst)
-    a1 = crypto.decodeint_noreduce(a)
-    A1 = crypto.decodepoint(A)
-    b1 = crypto.decodeint_noreduce(b)
-    B1 = crypto.decodepoint(B)
-    aAbB = crypto.add_keys3(a1, A1, b1, B1)
-    crypto.encodepoint_into(aAbB, dst)
+    crypto.decodeint_into_noreduce(tmp_sc_1, a)
+    crypto.decodeint_into_noreduce(tmp_sc_2, b)
+    crypto.decodepoint_into(tmp_pt_1, A)
+    crypto.decodepoint_into(tmp_pt_2, B)
+    crypto.add_keys3_into(tmp_pt_3, tmp_sc_1, tmp_pt_1, tmp_sc_2, tmp_pt_2)
+    crypto.encodepoint_into(tmp_pt_3, dst)
     return dst
 
 
 def hash_to_scalar(dst, data):
     dst = _ensure_dst_key(dst)
-    d = crypto.hash_to_scalar(data)
-    crypto.encodeint_into(d, dst)
+    crypto.hash_to_scalar_into(tmp_sc_1, data)
+    crypto.encodeint_into(tmp_sc_1, dst)
     return dst
 
 
