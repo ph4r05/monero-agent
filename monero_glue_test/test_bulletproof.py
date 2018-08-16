@@ -19,7 +19,7 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         super(BulletproofTest, self).__init__(*args, **kwargs)
 
     def can_test(self):
-        return crypto.get_backend().has_into_functions()
+        return crypto.get_backend().has_crypto_into_functions()
 
     def skip_if_cannot_test(self):
         if not self.can_test():
