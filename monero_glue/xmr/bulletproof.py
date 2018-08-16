@@ -521,6 +521,7 @@ class BulletProofBuilder(object):
         self.v_aR = None
         self.v_sL = None
         self.v_sR = None
+        self.tmp_sc_1 = crypto.new_scalar()
 
     def set_input(self, value=None, mask=None):
         self.value = value
@@ -552,10 +553,8 @@ class BulletProofBuilder(object):
     def _det_mask(self, i, is_sL=True, dst=None):
         dst = _ensure_dst_key(dst)
         src = crypto.keccak_2hash(self.proof_sec + (b"sL" if is_sL else b"sR") + dump_uvarint_b(i))
-
-        sc = crypto.new_scalar()
-        crypto.decodeint_into(sc, src)
-        crypto.encodeint_into(sc, dst)
+        crypto.decodeint_into(self.tmp_sc_1, src)
+        crypto.encodeint_into(self.tmp_sc_1, dst)
         return dst
 
     def sL(self, i, dst=None):
@@ -602,6 +601,7 @@ class BulletProofBuilder(object):
         hash_cache_mash(y, hash_cache, A, S)
         hash_to_scalar(hash_cache, y)
         copy_key(z, hash_cache)
+        gc.collect()
 
         # Polynomial construction before PAPER LINE 46
         t0 = _ensure_dst_key()
@@ -609,6 +609,7 @@ class BulletProofBuilder(object):
         t2 = _ensure_dst_key()
 
         yN = vector_powers(y, BP_N)
+        gc.collect()
 
         ip1y = inner_product(self.oneN, yN)
         sc_muladd(t0, z, ip1y, t0)
@@ -625,6 +626,7 @@ class BulletProofBuilder(object):
         sc_mul(zcu, zsq, z)
         sc_mulsub(k, zcu, self.ip12, k)
         sc_add(t0, t0, k)
+        gc.collect()
 
         # step 2
         vpIz = vector_scalar(self.oneN, z)
@@ -641,8 +643,15 @@ class BulletProofBuilder(object):
 
         sc_add(t1, t1, ip1)
 
+        tmp_vct = _ensure_dst_keyvect(None, BP_N)
         vp2zsq = vector_scalar(self.twoN, zsq)
-        ip2 = inner_product(self.v_sL, vector_add(hadamard(yN, aR_vpIz), vp2zsq))
+
+        # Originally:
+        # ip2 = inner_product(self.v_sL, vector_add(hadamard(yN, aR_vpIz), vp2zsq))
+        hadamard(yN, aR_vpIz, tmp_vct)
+        vector_add(tmp_vct, vp2zsq, tmp_vct)
+        ip2 = inner_product(self.v_sL, tmp_vct)
+
         gc.collect()
         sc_add(t1, t1, ip2)
         sc_add(t2, t2, ip3)
@@ -666,6 +675,7 @@ class BulletProofBuilder(object):
         sc_muladd(taux, tau2, xsq, taux)
         sc_muladd(taux, self.gamma_enc, zsq, taux)
         sc_muladd(mu, x, rho, alpha)
+        gc.collect()
 
         # PAPER LINES 54-57
         vector_add(aL_vpIz, vector_scalar(self.v_sL, x), l)
@@ -673,11 +683,21 @@ class BulletProofBuilder(object):
         aL_vpIz = None
         gc.collect()
 
-        vector_add(hadamard(yN, vector_add(aR_vpIz, vector_scalar(self.v_sR, x))), vp2zsq, r)
-        self.v_sR = None
-        yN = None
+        # Originally:
+        # vector_add(hadamard(yN, vector_add(aR_vpIz, vector_scalar(self.v_sR, x))), vp2zsq, r)
+        vector_scalar(self.v_sR, x, tmp_vct)
+        vector_add(aR_vpIz, tmp_vct, tmp_vct)
         aR_vpIz = None
+        gc.collect()
+
+        hadamard(yN, tmp_vct, tmp_vct)
+        yN = None
+        gc.collect()
+
+        vector_add(tmp_vct, vp2zsq, r)
+        self.v_sR = None
         vp2zsq = None
+        tmp_vct = None
         gc.collect()
 
         inner_product(l, r, t)
