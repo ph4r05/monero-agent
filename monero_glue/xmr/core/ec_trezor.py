@@ -154,8 +154,16 @@ def decodeint(x):
     return tcry.expand256_modm_r(tcry.KEY_BUFF(*x))
 
 
+def decodeint_noreduce(x):
+    return tcry.expand_raw256_modm_r(tcry.KEY_BUFF(*x))
+
+
 def decodeint_into(r, x):
     return tcry.expand256_modm(r, tcry.KEY_BUFF(*x))
+
+
+def decodeint_into_noreduce(r, x):
+    return tcry.expand_raw256_modm(r, tcry.KEY_BUFF(*x))
 
 
 def encodeint(x):
@@ -718,6 +726,18 @@ def add_keys2(a, b, B):
     return tcry.xmr_add_keys2_vartime_r(a, b, B)
 
 
+def add_keys2_into(r, a, b, B):
+    """
+    aG + bB, G is basepoint
+    :param r:
+    :param a:
+    :param b:
+    :param B:
+    :return:
+    """
+    return tcry.xmr_add_keys2_vartime(r, a, b, B)
+
+
 def add_keys3(a, A, b, B):
     """
     aA + bB
@@ -728,6 +748,19 @@ def add_keys3(a, A, b, B):
     :return:
     """
     return tcry.xmr_add_keys3_vartime_r(a, A, b, B)
+
+
+def add_keys3_into(r, a, A, b, B):
+    """
+    aA + bB
+    :param r:
+    :param a:
+    :param A:
+    :param b:
+    :param B:
+    :return:
+    """
+    return tcry.xmr_add_keys3_vartime(r, a, A, b, B)
 
 
 def gen_c(a, amount):
