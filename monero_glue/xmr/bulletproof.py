@@ -60,6 +60,7 @@ tmp_bf_1 = bytearray(32)
 tmp_pt_1 = crypto.new_point()
 tmp_pt_2 = crypto.new_point()
 tmp_pt_3 = crypto.new_point()
+tmp_pt_4 = crypto.new_point()
 
 tmp_sc_1 = crypto.new_scalar()
 tmp_sc_2 = crypto.new_scalar()
@@ -351,17 +352,26 @@ def _ensure_dst_keyvect(dst=None, size=None):
 
 def vector_exponent_custom(A, B, a, b, dst=None):
     dst = _ensure_dst_key(dst)
-    pt = crypto.identity()
-    term = crypto.identity()
+
+    crypto.sc_init_into(tmp_sc_1, 0)
+    crypto.scalarmult_base_into(tmp_pt_1, tmp_sc_1)  # identity set
+    crypto.scalarmult_base_into(tmp_pt_2, tmp_sc_1)
+
     for i in range(len(a)):
+        crypto.decodeint_into_noreduce(tmp_sc_1, a[i])
+        crypto.decodepoint_into(tmp_pt_3, A[i])
+        crypto.decodeint_into_noreduce(tmp_sc_2, b[i])
+        crypto.decodepoint_into(tmp_pt_4, B[i])
+
         crypto.add_keys3_into(
-            term,
-            crypto.decodeint_noreduce(a[i]),
-            crypto.decodepoint(A[i]),
-            crypto.decodeint_noreduce(b[i]),
-            crypto.decodepoint(B[i]))
-        crypto.point_add_into(pt, pt, term)
-    crypto.encodepoint_into(pt, dst)
+            tmp_pt_1,
+            tmp_sc_1,
+            tmp_pt_3,
+            tmp_sc_2,
+            tmp_pt_4)
+
+        crypto.point_add_into(tmp_pt_2, tmp_pt_2, tmp_pt_1)
+    crypto.encodepoint_into(tmp_pt_2, dst)
     return dst
 
 
@@ -382,14 +392,17 @@ def inner_product(a, b, dst=None):
     if len(a) != len(b):
         raise ValueError('Incompatible sizes of a and b')
     dst = _ensure_dst_key(dst)
-    sc = crypto.sc_init(0)
+    crypto.sc_init_into(tmp_sc_1, 0)
+
     for i in range(len(a)):
+        crypto.decodeint_into_noreduce(tmp_sc_2, a[i])
+        crypto.decodeint_into_noreduce(tmp_sc_3, b[i])
         crypto.sc_muladd_into(
-            sc,
-            crypto.decodeint_noreduce(a[i]),
-            crypto.decodeint_noreduce(b[i]),
-            sc)
-    crypto.encodeint_into(sc, dst)
+            tmp_sc_1,
+            tmp_sc_2,
+            tmp_sc_3,
+            tmp_sc_1)
+    crypto.encodeint_into(tmp_sc_1, dst)
     return dst
 
 
@@ -435,11 +448,12 @@ def vector_scalar2(a, x, dst=None):
     return dst
 
 
-def hash_cache_mash(dst, hash_cache, mash0, mash1, mash2=None, mash3=None):
+def hash_cache_mash(dst, hash_cache, *args):
     dst = _ensure_dst_key(dst)
-    to_hash = [hash_cache, mash0, mash1, mash2, mash3]
     ctx = crypto.get_keccak()
-    for x in to_hash:
+    ctx.update(hash_cache)
+
+    for x in args:
         if x is None:
             break
         ctx.update(x)
@@ -538,6 +552,7 @@ class BulletProofBuilder(object):
     def _det_mask(self, i, is_sL=True, dst=None):
         dst = _ensure_dst_key(dst)
         src = crypto.keccak_2hash(self.proof_sec + (b"sL" if is_sL else b"sR") + dump_uvarint_b(i))
+
         sc = crypto.new_scalar()
         crypto.decodeint_into(sc, src)
         crypto.encodeint_into(sc, dst)
