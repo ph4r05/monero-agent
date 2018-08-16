@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Author: https://github.com/monero-project/mininero
 # Author: Dusan Klinec, ph4r05, 2018
-
-import logging
-from binascii import hexlify, unhexlify
 
 from monero_serialize.core.int_serialize import dump_uvarint_b, dump_uvarint_b_into
 from monero_serialize.xmrtypes import Bulletproof
@@ -13,10 +9,6 @@ from monero_glue.compat import gc
 from monero_glue.compat.micropython import memcpy
 
 from monero_glue.xmr import crypto
-
-
-logger = logging.getLogger(__name__)
-ATOMS = 64
 
 
 # curve size
