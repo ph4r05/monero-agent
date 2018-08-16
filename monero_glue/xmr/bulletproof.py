@@ -86,6 +86,11 @@ def copy_key(dst, src):
         dst[i] = src[i]
 
 
+def copy_vector(dst, src):
+    for i in range(len(src)):
+        copy_key(dst[i], src[i])
+
+
 def invert(dst, x):
     """
     Modular inversion mod l
@@ -119,6 +124,20 @@ def scalarmult_base(dst, x):
     xd = crypto.decodeint(x)
     res = crypto.scalarmult_base(xd)
     crypto.encodepoint_into(res, dst)
+    return dst
+
+
+def sc_gen(dst=None):
+    dst = _ensure_dst_key(dst)
+    sc = crypto.random_scalar()
+    crypto.encodeint_into(sc, dst)
+    return dst
+
+
+def full_gen(dst=None):
+    dst = _ensure_dst_key(dst)
+    b = crypto.random_bytes(32)
+    copy_key(dst, b)
     return dst
 
 
@@ -266,6 +285,7 @@ class KeyV(object):
     def slice(self, res, start, stop):
         for i in range(start, stop):
             res[i - start] = self[i]
+        return res
 
     def slice_r(self, start, stop):
         res = KeyV(stop - start)
@@ -406,7 +426,7 @@ def vector_scalar(a, x, dst=None):
 def vector_scalar2(a, x, dst=None):
     dst = _ensure_dst_keyvect(dst, len(a))
     for i in range(len(a)):
-        add_keys(dst[i], a[i], x)
+        scalarmult_key(dst[i], a[i], x)
     return dst
 
 
@@ -419,7 +439,12 @@ def hash_cache_mash(dst, hash_cache, mash0, mash1, mash2=None, mash3=None):
             break
         ctx.update(x)
     hsh = ctx.digest()
+
+    sc = crypto.decodeint(hsh)
+    hsh = crypto.encodeint(sc)
+
     copy_key(dst, hsh)
+    copy_key(hash_cache, hsh)
     return dst
 
 
@@ -472,7 +497,11 @@ class BulletProofBuilder(object):
         self.Hprec = KeyV(buffer=BP_HI_PRE)
         self.oneN = KeyV(buffer=BP_ONE_N)
         self.twoN = KeyV(buffer=BP_TWO_N)
-        self.ip12 = KeyV(buffer=BP_IP12)
+        self.ip12 = BP_IP12
+        self.v_aL = None
+        self.v_aR = None
+        self.v_sL = None
+        self.v_sR = None
 
     def set_input(self, value=None, mask=None):
         self.value = value
@@ -534,10 +563,192 @@ class BulletProofBuilder(object):
         return vector_exponent_custom(self.Gprec, self.Hprec, a, b, dst)
 
     def prove_s1(self, V, A, S, T1, T2, taux, mu, t, x_ip, y, hash_cache, l, r):
-        pass
+        add_keys2(V, self.gamma_enc, self.value_enc, XMR_H)
+        hash_to_scalar(hash_cache, V)
+
+        # PAPER LINES 38-39
+        alpha = sc_gen()
+        ve = _ensure_dst_key()
+        self.vector_exponent(self.v_aL, self.v_aR, ve)
+        add_keys(A, ve, scalarmult_base(None, alpha))
+
+        # PAPER LINES 40-42
+        rho = sc_gen()
+        self.vector_exponent(self.v_sL, self.v_sR, ve)
+        add_keys(S, ve, scalarmult_base(None, rho))
+
+        # PAPER LINES 43-45
+        z = _ensure_dst_key()
+        hash_cache_mash(y, hash_cache, A, S)
+        hash_to_scalar(hash_cache, y)
+        copy_key(z, y)
+
+        # Polynomial construction before PAPER LINE 46
+        t0 = _ensure_dst_key()
+        t1 = _ensure_dst_key()
+        t2 = _ensure_dst_key()
+
+        yN = vector_powers(y, BP_N)
+
+        ip1y = inner_product(self.oneN, yN)
+        sc_muladd(t0, z, ip1y, t0)
+
+        zsq = _ensure_dst_key()
+        sc_mul(zsq, z, z)
+        sc_muladd(t0, zsq, self.value_enc, t0)
+
+        k = _ensure_dst_key()
+        copy_key(k, ZERO)
+        sc_mulsub(k, zsq, ip1y, k)
+
+        zcu = _ensure_dst_key()
+        sc_mul(zcu, zsq, z)
+        sc_mulsub(k, zcu, self.ip12, k)
+        sc_add(t0, t0, k)
+
+        # step 2
+        vpIz = vector_scalar(self.oneN, z)
+        aL_vpIz = vector_subtract(self.v_aL, vpIz)
+        aR_vpIz = vector_add(self.v_aR, vpIz)
+        vpIz = None
+        gc.collect()
+
+        HyNsR = hadamard(yN, self.v_sR)
+        ip1 = inner_product(aL_vpIz, HyNsR)
+        ip3 = inner_product(self.v_sL, HyNsR)
+        HyNsR = None
+        gc.collect()
+
+        sc_add(t1, t1, ip1)
+
+        vp2zsq = vector_scalar(self.twoN, zsq)
+        ip2 = inner_product(self.v_sL, vector_add(hadamard(yN, aR_vpIz), vp2zsq))
+        gc.collect()
+        sc_add(t1, t1, ip2)
+        sc_add(t2, t2, ip3)
+
+        # PAPER LINES 47-48
+        tau1 = sc_gen()
+        tau2 = sc_gen()
+
+        add_keys(T1, scalarmult_key(None, XMR_H, t1), scalarmult_base(None, tau1))
+        add_keys(T2, scalarmult_key(None, XMR_H, t2), scalarmult_base(None, tau2))
+
+        # PAPER LINES 49-51
+        x = _ensure_dst_key()
+        hash_cache_mash(x, hash_cache, z, T1, T2)
+
+        # PAPER LINES 52-53
+        copy_key(taux, ZERO)
+        sc_mul(taux, tau1, x)
+        xsq = _ensure_dst_key()
+        sc_mul(xsq, x, x)
+        sc_muladd(taux, tau2, xsq, taux)
+        sc_muladd(taux, self.gamma_enc, zsq, taux)
+        sc_muladd(mu, x, rho, alpha)
+
+        # PAPER LINES 54-57
+        vector_add(aL_vpIz, vector_scalar(self.v_sL, x), l)
+        self.v_sL = None
+        aL_vpIz = None
+        gc.collect()
+
+        vector_add(hadamard(yN, vector_add(aR_vpIz, vector_scalar(self.v_sR, x))), vp2zsq, r)
+        self.v_sR = None
+        yN = None
+        aR_vpIz = None
+        vp2zsq = None
+        gc.collect()
+
+        inner_product(l, r, t)
+        hash_cache_mash(x_ip, hash_cache, x, taux, mu, t)
 
     def prove_s2(self, x_ip, y, hash_cache, l, r, L, R, aprime0, bprime0):
-        pass
+        Gprime = _ensure_dst_keyvect(None, BP_N)
+        Hprime = _ensure_dst_keyvect(None, BP_N)
+
+        aprime = l
+        bprime = r
+
+        yinv = invert(None, y)
+        yinvpow = _ensure_dst_key()
+        copy_key(yinvpow, ONE)
+        for i in range(BP_N):
+            Gprime[i] = self.Gprec[i]
+            scalarmult_key(Hprime[i], self.Hprec[i], yinvpow)
+            sc_mul(yinvpow, yinvpow, yinv)
+
+        round = 0
+        nprime = BP_N
+        tmp = _ensure_dst_key()
+        w = _ensure_dst_keyvect(None, BP_LOG_N)
+
+        # PAPER LINE 13
+        while nprime > 1:
+            # PAPER LINE 15
+            nprime >>= 1
+
+            # PAPER LINES 16-17
+            cL = inner_product(aprime.slice_r(0, nprime), bprime.slice_r(nprime, bprime.size))
+            cR = inner_product(aprime.slice_r(nprime, aprime.size), bprime.slice_r(0, nprime))
+
+            # PAPER LINES 18-19
+            vector_exponent_custom(
+                Gprime.slice_r(nprime, len(Gprime)),
+                Hprime.slice_r(0, nprime),
+                aprime.slice_r(0, nprime),
+                bprime.slice_r(nprime, len(bprime)),
+                L[round]
+            )
+
+            sc_mul(tmp, cL, x_ip)
+            add_keys(L[round], L[round], scalarmult_key(None, XMR_H, tmp))
+
+            vector_exponent_custom(
+                Gprime.slice_r(0, nprime),
+                Hprime.slice_r(nprime, len(Hprime)),
+                aprime.slice_r(nprime, len(aprime)),
+                bprime.slice_r(0, nprime),
+                R[round]
+            )
+
+            sc_mul(tmp, cR, x_ip)
+            add_keys(R[round], R[round], scalarmult_key(None, XMR_H, tmp))
+
+            # PAPER LINES 21-22
+            hash_cache_mash(w[round], hash_cache, L[round], R[round])
+
+            # PAPER LINES 24-25
+            winv = invert(None, w[round])
+            hadamard2(
+                vector_scalar2(Gprime.slice_r(0, nprime), winv),
+                vector_scalar2(Gprime.slice_r(nprime, len(Gprime)), w[round]),
+                Gprime
+            )
+
+            hadamard2(
+                vector_scalar2(Hprime.slice_r(0, nprime), w[round]),
+                vector_scalar2(Hprime.slice_r(nprime, len(Hprime)), winv),
+                Hprime
+            )
+
+            # PAPER LINES 28-29
+            vector_add(
+                vector_scalar(aprime.slice_r(0, nprime), w[round]),
+                vector_scalar(aprime.slice_r(nprime, len(aprime)), winv),
+                aprime
+            )
+
+            vector_add(
+                vector_scalar(bprime.slice_r(0, nprime), winv),
+                vector_scalar(bprime.slice_r(nprime, len(bprime)), w[round]),
+                bprime
+            )
+
+            round += 1
+
+        copy_key(aprime0, aprime[0])
+        copy_key(bprime0, bprime[0])
 
     def prove(self):
         # Prover state
@@ -554,13 +765,167 @@ class BulletProofBuilder(object):
         hash_cache = _ensure_dst_key()
         aprime0 = _ensure_dst_key()
         bprime0 = _ensure_dst_key()
+        hash_cache_m = memoryview(hash_cache)
 
         L = _ensure_dst_keyvect(None, BP_LOG_N)
         R = _ensure_dst_keyvect(None, BP_LOG_N)
         l = _ensure_dst_keyvect(None, BP_N)
         r = _ensure_dst_keyvect(None, BP_N)
 
-        self.prove_s1(V, A, S, T1, T2, taux, mu, t, x_ip, y, hash_cache, l, r)
-        self.prove_s2(x_ip, y, hash_cache, l, r, L, R, aprime0, bprime0)
+        self.v_aL = self.aL_vct()
+        self.v_aR = self.aR_vct()
+        self.v_sL = self.sL_vct()
+        self.v_sR = self.sR_vct()
+        gc.collect()
 
-        return Bulletproof(V=V, A=A, S=S, T1=T1, T2=T2, taux=taux, mu=mu, L=L, R=R, a=aprime0, b=bprime0, t=t)
+        self.prove_s1(V, A, S, T1, T2, taux, mu, t, x_ip, y, hash_cache_m, l, r)
+        gc.collect()
+
+        self.prove_s2(x_ip, y, hash_cache_m, l, r, L, R, aprime0, bprime0)
+        gc.collect()
+
+        return Bulletproof(V=[V], A=A, S=S, T1=T1, T2=T2, taux=taux, mu=mu, L=L, R=R, a=aprime0, b=bprime0, t=t)
+
+    def verify(self, proof):
+        if len(proof.V) != 1:
+            raise ValueError('len(V) != 1')
+        if len(proof.L) != len(proof.R):
+            raise ValueError('|L| != |R|')
+        if len(proof.L) == 0:
+            raise ValueError('Empty proof')
+        if len(proof.L) != 6:
+            raise ValueError('Proof is not for 64 bits')
+
+        hash_cache_buff = _ensure_dst_key()
+        hash_cache = memoryview(hash_cache_buff)  # mutable inside function / pass by reference
+        hash_to_scalar(hash_cache, proof.V[0])
+
+        x = _ensure_dst_key()
+        y = _ensure_dst_key()
+        z = _ensure_dst_key()
+
+        # Reconstruct the challenges
+        hash_cache_mash(y, hash_cache, proof.A, proof.S)
+        hash_to_scalar(hash_cache, y)
+        copy_key(z, hash_cache)
+        hash_cache_mash(z, hash_cache, z, proof.T1, proof.T2)
+
+        # Reconstruct the challenges
+        x_ip = _ensure_dst_key()
+        hash_cache_mash(x_ip, hash_cache, x, proof.taux, proof.mu, proof.t)
+
+        # PAPER LINE 61
+        L61Left = _ensure_dst_key()
+        add_keys(L61Left, scalarmult_base(None, proof.taux), scalarmult_key(None, XMR_H, proof.t))
+
+        k = _ensure_dst_key()
+        yN = vector_powers(y, BP_N)
+        ip1y = inner_product(self.oneN, yN)
+        zsq = _ensure_dst_key()
+        sc_mul(zsq, z, z)
+
+        zcu = _ensure_dst_key()
+        tmp = _ensure_dst_key()
+        tmp2 = _ensure_dst_key()
+        sc_mulsub(k, zsq, ip1y, k)
+        sc_mul(zcu, zsq, z)
+        sc_mulsub(k, zcu, self.ip12, k)
+        sc_muladd(tmp, z, ip1y, k)
+
+        L61Right = _ensure_dst_key()
+        scalarmult_key(L61Right, XMR_H, tmp)
+        scalarmult_key(tmp, proof.V[0], zsq)
+        add_keys(L61Right, L61Right, tmp)
+
+        scalarmult_key(tmp, proof.T1, x)
+        add_keys(L61Right, L61Right, tmp)
+
+        xsq = _ensure_dst_key()
+        sc_mul(xsq, x, x)
+        scalarmult_key(tmp, proof.T2, xsq)
+        add_keys(L61Right, L61Right, tmp)
+
+        if L61Right != L61Left:
+            raise ValueError('Verification failure 1')
+
+        # PAPER LINE 62
+        P = _ensure_dst_key()
+        add_keys(P, proof.A, scalarmult_key(None, proof.S, x))
+
+        # Compute the number of rounds for the inner product
+        rounds = len(proof.L)
+
+        # PAPER LINES 21-22
+        w = _ensure_dst_keyvect(None, rounds)
+        for i in range(rounds):
+            hash_cache_mash(w[i], hash_cache, proof.L[i], proof.R[i])
+
+        # Basically PAPER LINES 24-25
+        # Compute the curvepoints from G[i] and H[i]
+        inner_prod = _ensure_dst_key()
+        yinvpow = _ensure_dst_key()
+        ypow = _ensure_dst_key()
+        yinv = _ensure_dst_key()
+
+        copy_key(inner_prod, ONE)
+        copy_key(yinvpow, ONE)
+        copy_key(ypow, ONE)
+
+        invert(yinv, y)
+        winv = _ensure_dst_keyvect(None, rounds)
+        for i in range(rounds):
+            invert(winv[i], w[i])
+
+        for i in range(BP_N):
+            g_scalar = _ensure_dst_key()
+            h_scalar = _ensure_dst_key()
+            copy_key(g_scalar, proof.a)
+            sc_mul(h_scalar, proof.b, yinvpow)
+
+            for j in range(rounds - 1, -1, -1):
+                J = len(w) - j - 1
+
+                if (i & (1 << j)) == 0:
+                    sc_mul(g_scalar, g_scalar, winv[J])
+                    sc_mul(h_scalar, h_scalar, w[J])
+                else:
+                    sc_mul(g_scalar, g_scalar, w[J])
+                    sc_mul(h_scalar, h_scalar, winv[J])
+
+            # Adjust the scalars using the exponents from PAPER LINE 62
+            sc_add(g_scalar, g_scalar, z)
+            sc_mul(tmp, zsq, self.twoN[i])
+            sc_muladd(tmp, z, ypow, tmp)
+            sc_mulsub(h_scalar, tmp, yinvpow, h_scalar)
+
+            # Now compute the basepoint's scalar multiplication
+            # Each of these could be written as a multiexp operation instead
+            add_keys3(tmp, g_scalar, self.Gprec[i], h_scalar, self.Hprec[i])
+            add_keys(inner_prod, inner_prod, tmp)
+
+            if i != BP_N - 1:
+                sc_mul(yinvpow, yinvpow, yinv)
+                sc_mul(ypow, ypow, y)
+
+        # PAPER LINE 26
+        pprime = _ensure_dst_key()
+        sc_sub(tmp, ZERO, proof.mu)
+        add_keys(pprime, P, scalarmult_base(None, tmp))
+
+        for i in range(rounds):
+            sc_mul(tmp, w[i], w[i])
+            sc_mul(tmp2, winv[i], winv[i])
+
+            add_keys3(tmp, tmp, proof.L[i], tmp2, proof.R[i])
+            add_keys(pprime, pprime, tmp)
+
+        sc_mul(tmp, proof.t, x_ip)
+        add_keys(pprime, pprime, scalarmult_key(None, XMR_H, tmp))
+
+        sc_mul(tmp, proof.a, proof.b)
+        sc_mul(tmp, tmp, x_ip)
+        scalarmult_key(tmp, XMR_H, tmp)
+        add_keys(tmp, tmp, inner_prod)
+
+        if pprime != tmp:
+            raise ValueError('Verification failure step 2')
