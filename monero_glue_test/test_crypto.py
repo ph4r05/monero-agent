@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+import binascii
 import unittest
 
 import aiounittest
@@ -14,11 +15,6 @@ class CryptoTest(aiounittest.AsyncTestCase):
 
     def __init__(self, *args, **kwargs):
         super(CryptoTest, self).__init__(*args, **kwargs)
-
-    def init_sc(self, x):
-        if x < (1 << 64):
-            return crypto.sc_init(x)
-        return crypto.decodeint(ec_py.encodeint(x))
 
     def test_ed_crypto(self):
         sqr = ec_py.fe_expmod(ec_py.py_fe_sqrtm1, 2)
@@ -477,9 +473,8 @@ class CryptoTest(aiounittest.AsyncTestCase):
             ]
         )
         res = crypto.hash_to_scalar(inp)
-        exp = self.init_sc(
-            0x6eca331dd53c2ca07650ed1b005d6a42aef0ffd0dfc092616124e255b920799
-        )
+        exp = crypto.decodeint(binascii.unhexlify(
+            b"9907925b254e12162609fc0dfd0fef2aa4d605b0d10e6507cac253dd31a3ec06"))
         self.assertTrue(crypto.sc_eq(res, exp))
 
     def test_hash_to_point(self):
