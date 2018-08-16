@@ -885,7 +885,7 @@ class TcryECBackend(ECBackendBase):
     def has_rangeproof_bulletproof(self):
         return True
 
-    def has_into_functions(self):
+    def has_crypto_into_functions(self):
         return True
 
 
