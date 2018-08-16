@@ -18,16 +18,25 @@ class BulletproofTest(aiounittest.AsyncTestCase):
     def __init__(self, *args, **kwargs):
         super(BulletproofTest, self).__init__(*args, **kwargs)
 
+    def can_test(self):
+        return crypto.get_backend().has_into_functions()
+
+    def skip_if_cannot_test(self):
+        if not self.can_test():
+            self.skipTest('Crypto backend does not implement required functions')
+
     def test_constants(self):
         """
         Bulletproof constants testing
         :return:
         """
+        self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
         Gi, Hi = bp.init_exponents()
         res = bp.init_constants()
 
     def test_masks(self):
+        self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
         val = crypto.sc_init(123)
         mask = crypto.sc_init(432)
@@ -58,6 +67,7 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         self.assertEqual(ve1, ve2)
 
     def test_verify(self):
+        self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
         bp_proof = Bulletproof(
             V=[bytes(
@@ -122,6 +132,7 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         self.assertTrue(bpi.verify(bp_proof))
 
     def test_prove(self):
+        self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
         val = crypto.sc_init(123)
         mask = crypto.sc_init(432)
@@ -137,6 +148,7 @@ class BulletproofTest(aiounittest.AsyncTestCase):
             pass
 
     def test_prove_2(self):
+        self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
         val = crypto.sc_init((1 << 30) - 1 + 16)
         mask = crypto.random_scalar()
