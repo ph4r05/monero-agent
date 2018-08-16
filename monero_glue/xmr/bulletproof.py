@@ -4,6 +4,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import logging
+from binascii import hexlify, unhexlify
 
 from monero_serialize.core.int_serialize import dump_uvarint_b, dump_uvarint_b_into
 from monero_serialize.xmrtypes import Bulletproof
@@ -55,24 +56,8 @@ BP_IP12 = b'\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00
 #
 
 
-buff_tmp1 = bytearray(32)
-buff_tmp2 = bytearray(32)
-buff_tmp3 = bytearray(32)
-buff_tmp4 = bytearray(32)
-
-tmp_pt_1 = crypto.new_point()
-tmp_pt_2 = crypto.new_point()
-tmp_pt_3 = crypto.new_point()
-tmp_pt_4 = crypto.new_point()
-
 tmp_sc_1 = crypto.new_scalar()
 tmp_sc_2 = crypto.new_scalar()
-tmp_sc_3 = crypto.new_scalar()
-tmp_sc_4 = crypto.new_scalar()
-
-
-# TODO: sc_* functions in crypto with dst provided, sc_add_into(dst, a, b), etc.
-# TODO: crypto should provide constructors for points and scalars (for temporary buffers, avoids fragmentation), will be passed to sc_add_into()
 
 
 def _ensure_dst_key(dst=None):
