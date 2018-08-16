@@ -305,10 +305,10 @@ class KeyV(object):
             dst = KeyV(src=self)
         return dst
 
-    def resize(self, nsize):
+    def resize(self, nsize, chop=False):
         if self.size == nsize:
             return self
-        elif self.size > nsize:
+        elif self.size > nsize and not chop:
             self.d = self.d[ : nsize * 32]
         else:
             self.d = bytearray(nsize * 32)
@@ -338,7 +338,7 @@ class KeyVEval(KeyV):
     def copy(self, dst=None):
         raise ValueError('Not supported')
 
-    def resize(self, nsize):
+    def resize(self, nsize, chop=False):
         raise ValueError('Not supported')
 
 
@@ -721,68 +721,88 @@ class BulletProofBuilder(object):
 
         round = 0
         nprime = BP_N
+
+        _tmp_k_1 = _ensure_dst_key()
+        _tmp_vct_1 = _ensure_dst_keyvect(None, nprime // 2)
+        _tmp_vct_2 = _ensure_dst_keyvect(None, nprime // 2)
+        _tmp_vct_3 = _ensure_dst_keyvect(None, nprime // 2)
+        _tmp_vct_4 = _ensure_dst_keyvect(None, nprime // 2)
+
         tmp = _ensure_dst_key()
+        winv = _ensure_dst_key()
         w = _ensure_dst_keyvect(None, BP_LOG_N)
 
         # PAPER LINE 13
         while nprime > 1:
             # PAPER LINE 15
             nprime >>= 1
+            _tmp_vct_1.resize(nprime, chop=True)
+            _tmp_vct_2.resize(nprime, chop=True)
+            _tmp_vct_3.resize(nprime, chop=True)
+            _tmp_vct_4.resize(nprime, chop=True)
+            gc.collect()
 
             # PAPER LINES 16-17
-            cL = inner_product(aprime.slice_r(0, nprime), bprime.slice_r(nprime, bprime.size))
-            cR = inner_product(aprime.slice_r(nprime, aprime.size), bprime.slice_r(0, nprime))
+            cL = inner_product(
+                aprime.slice(_tmp_vct_1, 0, nprime),
+                bprime.slice(_tmp_vct_2, nprime, bprime.size))
+
+            cR = inner_product(
+                aprime.slice(_tmp_vct_1, nprime, aprime.size),
+                bprime.slice(_tmp_vct_2, 0, nprime))
 
             # PAPER LINES 18-19
             vector_exponent_custom(
-                Gprime.slice_r(nprime, len(Gprime)),
-                Hprime.slice_r(0, nprime),
-                aprime.slice_r(0, nprime),
-                bprime.slice_r(nprime, len(bprime)),
+                Gprime.slice(_tmp_vct_1, nprime, len(Gprime)),
+                Hprime.slice(_tmp_vct_2, 0, nprime),
+                aprime.slice(_tmp_vct_3, 0, nprime),
+                bprime.slice(_tmp_vct_4, nprime, len(bprime)),
                 L[round]
             )
 
             sc_mul(tmp, cL, x_ip)
-            add_keys(L[round], L[round], scalarmult_key(None, XMR_H, tmp))
+            add_keys(L[round], L[round], scalarmult_key(_tmp_k_1, XMR_H, tmp))
 
             vector_exponent_custom(
-                Gprime.slice_r(0, nprime),
-                Hprime.slice_r(nprime, len(Hprime)),
-                aprime.slice_r(nprime, len(aprime)),
-                bprime.slice_r(0, nprime),
+                Gprime.slice(_tmp_vct_1, 0, nprime),
+                Hprime.slice(_tmp_vct_2, nprime, len(Hprime)),
+                aprime.slice(_tmp_vct_3, nprime, len(aprime)),
+                bprime.slice(_tmp_vct_4, 0, nprime),
                 R[round]
             )
+            gc.collect()
 
             sc_mul(tmp, cR, x_ip)
-            add_keys(R[round], R[round], scalarmult_key(None, XMR_H, tmp))
+            add_keys(R[round], R[round], scalarmult_key(_tmp_k_1, XMR_H, tmp))
 
             # PAPER LINES 21-22
             hash_cache_mash(w[round], hash_cache, L[round], R[round])
 
             # PAPER LINES 24-25
-            winv = invert(None, w[round])
+            invert(winv, w[round])
             hadamard2(
-                vector_scalar2(Gprime.slice_r(0, nprime), winv),
-                vector_scalar2(Gprime.slice_r(nprime, len(Gprime)), w[round]),
+                vector_scalar2(Gprime.slice(_tmp_vct_1, 0, nprime), winv, _tmp_vct_3),
+                vector_scalar2(Gprime.slice(_tmp_vct_2, nprime, len(Gprime)), w[round], _tmp_vct_4),
                 Gprime
             )
 
             hadamard2(
-                vector_scalar2(Hprime.slice_r(0, nprime), w[round]),
-                vector_scalar2(Hprime.slice_r(nprime, len(Hprime)), winv),
+                vector_scalar2(Hprime.slice(_tmp_vct_1, 0, nprime), w[round], _tmp_vct_3),
+                vector_scalar2(Hprime.slice(_tmp_vct_2, nprime, len(Hprime)), winv, _tmp_vct_4),
                 Hprime
             )
+            gc.collect()
 
             # PAPER LINES 28-29
             vector_add(
-                vector_scalar(aprime.slice_r(0, nprime), w[round]),
-                vector_scalar(aprime.slice_r(nprime, len(aprime)), winv),
+                vector_scalar(aprime.slice(_tmp_vct_1, 0, nprime), w[round], _tmp_vct_3),
+                vector_scalar(aprime.slice(_tmp_vct_2, nprime, len(aprime)), winv, _tmp_vct_4),
                 aprime
             )
 
             vector_add(
-                vector_scalar(bprime.slice_r(0, nprime), winv),
-                vector_scalar(bprime.slice_r(nprime, len(bprime)), w[round]),
+                vector_scalar(bprime.slice(_tmp_vct_1, 0, nprime), winv, _tmp_vct_3),
+                vector_scalar(bprime.slice(_tmp_vct_2, nprime, len(bprime)), w[round], _tmp_vct_4),
                 bprime
             )
 
@@ -860,8 +880,10 @@ class BulletProofBuilder(object):
         hash_cache_mash(x_ip, hash_cache, x, proof.taux, proof.mu, proof.t)
 
         # PAPER LINE 61
+        _tmp_k_1 = _ensure_dst_key()
+        _tmp_k_2 = _ensure_dst_key()
         L61Left = _ensure_dst_key()
-        add_keys(L61Left, scalarmult_base(None, proof.taux), scalarmult_key(None, XMR_H, proof.t))
+        add_keys(L61Left, scalarmult_base(_tmp_k_1, proof.taux), scalarmult_key(_tmp_k_2, XMR_H, proof.t))
 
         k = _ensure_dst_key()
         yN = vector_powers(y, BP_N)
@@ -896,7 +918,7 @@ class BulletProofBuilder(object):
 
         # PAPER LINE 62
         P = _ensure_dst_key()
-        add_keys(P, proof.A, scalarmult_key(None, proof.S, x))
+        add_keys(P, proof.A, scalarmult_key(_tmp_k_1, proof.S, x))
 
         # Compute the number of rounds for the inner product
         rounds = len(proof.L)
@@ -959,7 +981,7 @@ class BulletProofBuilder(object):
         # PAPER LINE 26
         pprime = _ensure_dst_key()
         sc_sub(tmp, ZERO, proof.mu)
-        add_keys(pprime, P, scalarmult_base(None, tmp))
+        add_keys(pprime, P, scalarmult_base(_tmp_k_1, tmp))
 
         for i in range(rounds):
             sc_mul(tmp, w[i], w[i])
@@ -969,7 +991,7 @@ class BulletProofBuilder(object):
             add_keys(pprime, pprime, tmp)
 
         sc_mul(tmp, proof.t, x_ip)
-        add_keys(pprime, pprime, scalarmult_key(None, XMR_H, tmp))
+        add_keys(pprime, pprime, scalarmult_key(_tmp_k_1, XMR_H, tmp))
 
         sc_mul(tmp, proof.a, proof.b)
         sc_mul(tmp, tmp, x_ip)
