@@ -11,7 +11,7 @@ from monero_serialize.xmrtypes import Bulletproof
 from monero_glue.compat import gc
 from monero_glue.compat.micropython import memcpy
 
-from monero_glue.xmr import common, crypto, monero
+from monero_glue.xmr import crypto
 
 
 logger = logging.getLogger(__name__)
@@ -100,7 +100,8 @@ def invert(dst, x):
     :return:
     """
     dst = _ensure_dst_key(dst)
-    xlimbs = [int(x[i]) for i in range(9)]
+    crypto.decodeint_into_noreduce(tmp_sc_2, x)
+    xlimbs = [int(tmp_sc_2[i]) for i in range(9)]
     xint = crypto.decode_modm(xlimbs)  # x is tt.MODM() = ctypes.c_uint32 * 9
     xinv = pow(xint, l - 2, l)
     xinvlimbs = crypto.encode_modm(xinv)
@@ -512,7 +513,7 @@ class BulletProofBuilder(object):
 
     def aL(self, i, dst=None):
         dst = _ensure_dst_key(dst)
-        if self.value_enc[i//8] & (1 << i%8):
+        if self.value_enc[i//8] & (1 << (i%8)):
             copy_key(dst, ONE)
         else:
             copy_key(dst, ZERO)
@@ -808,7 +809,7 @@ class BulletProofBuilder(object):
         hash_cache_mash(y, hash_cache, proof.A, proof.S)
         hash_to_scalar(hash_cache, y)
         copy_key(z, hash_cache)
-        hash_cache_mash(z, hash_cache, z, proof.T1, proof.T2)
+        hash_cache_mash(x, hash_cache, z, proof.T1, proof.T2)
 
         # Reconstruct the challenges
         x_ip = _ensure_dst_key()
@@ -929,3 +930,4 @@ class BulletProofBuilder(object):
 
         if pprime != tmp:
             raise ValueError('Verification failure step 2')
+        return True
