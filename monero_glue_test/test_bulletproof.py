@@ -136,6 +136,14 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         except:
             pass
 
+    def test_prove_2(self):
+        bpi = bp.BulletProofBuilder()
+        val = crypto.sc_init((1 << 30) - 1 + 16)
+        mask = crypto.random_scalar()
+        bpi.set_input(val, mask)
+        bp_res = bpi.prove()
+        bpi.verify(bp_res)
+
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
