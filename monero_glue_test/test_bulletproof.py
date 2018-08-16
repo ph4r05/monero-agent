@@ -27,6 +27,36 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         Gi, Hi = bp.init_exponents()
         res = bp.init_constants()
 
+    def test_masks(self):
+        bpi = bp.BulletProofBuilder()
+        val = crypto.sc_init(123)
+        mask = crypto.sc_init(432)
+        bpi.set_input(val, mask)
+
+        self.assertEqual(bpi.sL(0), bpi.sL(0))
+        self.assertEqual(bpi.sL(1), bpi.sL(1))
+        self.assertEqual(bpi.sL(63), bpi.sL(63))
+        self.assertNotEqual(bpi.sL(1), bpi.sL(0))
+
+        self.assertEqual(bpi.sR(0), bpi.sR(0))
+        self.assertEqual(bpi.sR(1), bpi.sR(1))
+        self.assertEqual(bpi.sR(63), bpi.sR(63))
+        self.assertNotEqual(bpi.sR(1), bpi.sR(0))
+
+        self.assertNotEqual(bpi.sL(0), bpi.sR(0))
+        self.assertNotEqual(bpi.sL(1), bpi.sR(1))
+        self.assertNotEqual(bpi.sL(63), bpi.sR(63))
+
+        bpi.init_vct()
+        ve1 = bp._ensure_dst_key()
+        ve2 = bp._ensure_dst_key()
+        bpi.vector_exponent(bpi.v_aL, bpi.v_aR, ve1)
+        bpi.vector_exponent(bpi.v_aL, bpi.v_aR, ve2)
+
+        bpi.vector_exponent(bpi.v_sL, bpi.v_sR, ve1)
+        bpi.vector_exponent(bpi.v_sL, bpi.v_sR, ve2)
+        self.assertEqual(ve1, ve2)
+
     def test_verify(self):
         bpi = bp.BulletProofBuilder()
         bp_proof = Bulletproof(
@@ -98,6 +128,13 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         bpi.set_input(val, mask)
         bp_res = bpi.prove()
         bpi.verify(bp_res)
+
+        try:
+            bp_res.S[0] += 1
+            bpi.verify(bp_res)
+            self.fail('Verification should have failed')
+        except:
+            pass
 
 
 if __name__ == "__main__":
