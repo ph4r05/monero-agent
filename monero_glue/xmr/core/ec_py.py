@@ -14,6 +14,14 @@ from monero_glue.xmr.core.ec_base import *
 from monero_serialize import xmrserialize
 
 
+def new_point():
+    return [0, 0, 0, 0]
+
+
+def new_scalar():
+    return 0
+
+
 def random_bytes(by):
     """
     Generates X random bytes, returns byte-string

@@ -206,3 +206,6 @@ class ECBackendBase(object):
 
     def has_rangeproof_bulletproof(self):
         return False
+
+    def has_crypto_into_functions(self):
+        return False
