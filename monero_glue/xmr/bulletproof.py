@@ -356,7 +356,7 @@ def vector_exponent_custom(A, B, a, b, dst=None):
             crypto.decodepoint(A[i]),
             crypto.decodeint_noreduce(b[i]),
             crypto.decodepoint(B[i]))
-        crypto.point_add(pt, term)
+        crypto.point_add_into(pt, pt, term)
     crypto.encodepoint_into(pt, dst)
     return dst
 
@@ -582,7 +582,7 @@ class BulletProofBuilder(object):
         z = _ensure_dst_key()
         hash_cache_mash(y, hash_cache, A, S)
         hash_to_scalar(hash_cache, y)
-        copy_key(z, y)
+        copy_key(z, hash_cache)
 
         # Polynomial construction before PAPER LINE 46
         t0 = _ensure_dst_key()
@@ -751,6 +751,12 @@ class BulletProofBuilder(object):
         copy_key(aprime0, aprime[0])
         copy_key(bprime0, bprime[0])
 
+    def init_vct(self):
+        self.v_aL = self.aL_vct()
+        self.v_aR = self.aR_vct()
+        self.v_sL = self.sL_vct()
+        self.v_sR = self.sR_vct()
+
     def prove(self):
         # Prover state
         V = _ensure_dst_key()
@@ -773,10 +779,7 @@ class BulletProofBuilder(object):
         l = _ensure_dst_keyvect(None, BP_N)
         r = _ensure_dst_keyvect(None, BP_N)
 
-        self.v_aL = self.aL_vct()
-        self.v_aR = self.aR_vct()
-        self.v_sL = self.sL_vct()
-        self.v_sR = self.sR_vct()
+        self.init_vct()
         gc.collect()
 
         self.prove_s1(V, A, S, T1, T2, taux, mu, t, x_ip, y, hash_cache_m, l, r)
