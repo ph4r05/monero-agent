@@ -23,7 +23,7 @@ class BulletproofTest(aiounittest.AsyncTestCase):
 
     def skip_if_cannot_test(self):
         if not self.can_test():
-            self.skipTest('Crypto backend does not implement required functions')
+            self.skipTest("Crypto backend does not implement required functions")
 
     def test_constants(self):
         """
@@ -75,6 +75,8 @@ class BulletproofTest(aiounittest.AsyncTestCase):
     def test_verify(self):
         self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
+
+        # fmt: off
         bp_proof = Bulletproof(
             V=[bytes(
                 [0x67, 0x54, 0xbf, 0x40, 0xcb, 0x45, 0x63, 0x0d, 0x4b, 0xea, 0x08, 0x9e, 0xd7, 0x86, 0xec, 0x3c, 0xe5,
@@ -135,6 +137,8 @@ class BulletproofTest(aiounittest.AsyncTestCase):
                 [0x47, 0x06, 0xea, 0x76, 0x8f, 0xdb, 0xa3, 0x15, 0xe0, 0x2c, 0x6b, 0x25, 0xa1, 0xf7, 0x3c, 0xc8, 0x1d,
                  0x97, 0xa6, 0x52, 0x48, 0x75, 0x37, 0xf9, 0x1e, 0x14, 0xac, 0xb1, 0x2a, 0x34, 0xc6, 0x06])
         )
+        # fmt: on
+
         self.assertTrue(bpi.verify(bp_proof))
 
     def test_prove(self):
@@ -149,7 +153,7 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         try:
             bp_res.S[0] += 1
             bpi.verify(bp_res)
-            self.fail('Verification should have failed')
+            self.fail("Verification should have failed")
         except:
             pass
 
