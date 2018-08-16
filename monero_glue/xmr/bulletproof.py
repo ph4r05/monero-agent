@@ -848,7 +848,6 @@ class BulletProofBuilder(object):
         hash_cache = _ensure_dst_key()
         aprime0 = _ensure_dst_key()
         bprime0 = _ensure_dst_key()
-        hash_cache_m = memoryview(hash_cache)
 
         L = _ensure_dst_keyvect(None, BP_LOG_N)
         R = _ensure_dst_keyvect(None, BP_LOG_N)
@@ -858,10 +857,10 @@ class BulletProofBuilder(object):
         self.init_vct()
         gc.collect()
 
-        self.prove_s1(V, A, S, T1, T2, taux, mu, t, x_ip, y, hash_cache_m, l, r)
+        self.prove_s1(V, A, S, T1, T2, taux, mu, t, x_ip, y, hash_cache, l, r)
         gc.collect()
 
-        self.prove_s2(x_ip, y, hash_cache_m, l, r, L, R, aprime0, bprime0)
+        self.prove_s2(x_ip, y, hash_cache, l, r, L, R, aprime0, bprime0)
         gc.collect()
 
         return Bulletproof(
@@ -889,10 +888,7 @@ class BulletProofBuilder(object):
         if len(proof.L) != 6:
             raise ValueError("Proof is not for 64 bits")
 
-        hash_cache_buff = _ensure_dst_key()
-        hash_cache = memoryview(
-            hash_cache_buff
-        )  # mutable inside function / pass by reference
+        hash_cache = _ensure_dst_key()
         hash_to_scalar(hash_cache, proof.V[0])
 
         x = _ensure_dst_key()
