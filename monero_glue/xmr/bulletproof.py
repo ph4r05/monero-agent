@@ -20,7 +20,8 @@ ATOMS = 64
 
 
 # curve size
-l = 2**252 + 3*610042537739*15158679415041928064055629
+# 2**252 + 3*610042537739*15158679415041928064055629
+ED25519_ORD = 0x1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed
 
 
 # Constants
@@ -84,23 +85,30 @@ def copy_vector(dst, src):
         copy_key(dst[i], src[i])
 
 
+def mul_inverse_egcd(x, n, s=1, t=0, N=0):
+    return (n < 2 and t % N or mul_inverse_egcd(n, x % n, t, s - x // n * t, N or n), -1)[n < 1]
+
+
+def mul_inverse(x, n):
+    return pow(x, n - 2, n)
+
+
 def invert(dst, x):
     """
-    Modular inversion mod l
-    Naive approach
+    Modular inversion mod curve order.
+
+    Naive approach using large arithmetics in Python.
+    Should be moved to the crypto provider later.
     :param x: 32byte contracted
     :param dst:
     :return:
     """
     dst = _ensure_dst_key(dst)
-    crypto.decodeint_into_noreduce(tmp_sc_2, x)
-    xlimbs = [int(tmp_sc_2[i]) for i in range(9)]
-    xint = crypto.decode_modm(xlimbs)  # x is tt.MODM() = ctypes.c_uint32 * 9
-    xinv = pow(xint, l - 2, l)
-    xinvlimbs = crypto.encode_modm(xinv)
-    for i in range(9):
-        tmp_sc_1[i] = xinvlimbs[i]
-    crypto.encodeint_into(tmp_sc_1, dst)
+    xint = 0
+    xint = xint.from_bytes(x, 'little')
+    xinv = mul_inverse(xint, ED25519_ORD)
+    buff = xinv.to_bytes(32, 'little')
+    copy_key(dst, buff)
     return dst
 
 
