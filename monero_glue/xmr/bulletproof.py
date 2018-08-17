@@ -77,37 +77,6 @@ def copy_vector(dst, src):
         copy_key(dst[i], src[i])
 
 
-def extended_gcd(aa, bb):
-    lastremainder, remainder = abs(aa), abs(bb)
-    x, lastx, y, lasty = 0, 1, 1, 0
-    while remainder:
-        lastremainder, (quotient, remainder) = (
-            remainder,
-            divmod(lastremainder, remainder),
-        )
-        x, lastx = lastx - quotient * x, x
-        y, lasty = lasty - quotient * y, y
-    return lastremainder, lastx * (-1 if aa < 0 else 1), lasty * (-1 if bb < 0 else 1)
-
-
-def modinv(a, m):
-    g, x, y = extended_gcd(a, m)
-    if g != 1:
-        raise ValueError
-    return x % m
-
-
-def mul_inverse_egcd(x, n, s=1, t=0, N=0):
-    return (
-        n < 2 and t % N or mul_inverse_egcd(n, x % n, t, s - x // n * t, N or n),
-        -1,
-    )[n < 1]
-
-
-def mul_inverse(x, n):
-    return pow(x, n - 2, n)
-
-
 def invert(dst, x):
     """
     Modular inversion mod curve order.
@@ -119,11 +88,9 @@ def invert(dst, x):
     :return:
     """
     dst = _ensure_dst_key(dst)
-    xint = 0
-    xint = xint.from_bytes(x, "little")
-    xinv = mul_inverse(xint, ED25519_ORD)
-    buff = xinv.to_bytes(32, "little")
-    copy_key(dst, buff)
+    crypto.decodeint_into_noreduce(tmp_sc_1, x)
+    crypto.sc_inv_into(tmp_sc_2, tmp_sc_1)
+    crypto.encodeint_into(tmp_sc_2, dst)
     return dst
 
 
