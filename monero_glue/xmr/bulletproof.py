@@ -759,7 +759,7 @@ class BulletProofBuilder(object):
             _tmp_vct_2.resize(nprime, chop=True)
             _tmp_vct_3.resize(nprime, chop=True)
             _tmp_vct_4.resize(nprime, chop=True)
-            self.gc(21)
+            self.gc(22)
 
             # PAPER LINES 16-17
             cL = inner_product(
@@ -771,6 +771,8 @@ class BulletProofBuilder(object):
                 aprime.slice(_tmp_vct_1, nprime, aprime.size),
                 bprime.slice(_tmp_vct_2, 0, nprime),
             )
+
+            self.gc(23)
 
             # PAPER LINES 18-19
             vector_exponent_custom(
@@ -791,7 +793,7 @@ class BulletProofBuilder(object):
                 bprime.slice(_tmp_vct_4, 0, nprime),
                 R[round],
             )
-            self.gc(22)
+            self.gc(24)
 
             sc_mul(tmp, cR, x_ip)
             add_keys(R[round], R[round], scalarmult_key(_tmp_k_1, XMR_H, tmp))
@@ -801,7 +803,7 @@ class BulletProofBuilder(object):
 
             # PAPER LINES 24-25
             invert(winv, w[round])
-            self.gc(23)
+            self.gc(25)
 
             hadamard2(
                 vector_scalar2(Gprime.slice(_tmp_vct_1, 0, nprime), winv, _tmp_vct_3),
@@ -820,7 +822,7 @@ class BulletProofBuilder(object):
                 ),
                 Hprime,
             )
-            self.gc(24)
+            self.gc(26)
 
             # PAPER LINES 28-29
             vector_add(
@@ -842,7 +844,7 @@ class BulletProofBuilder(object):
             )
 
             round += 1
-            self.gc(25)
+            self.gc(27)
 
         copy_key(aprime0, aprime[0])
         copy_key(bprime0, bprime[0])
