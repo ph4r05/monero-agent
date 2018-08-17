@@ -13,6 +13,9 @@ from trezor_crypto import trezor_cfunc as tcryr
 # tcry = CallTracker(tcryr, print_on_end=True)
 tcry = tcryr
 
+ED25519_ORD = b"\xed\xd3\xf5\x5c\x1a\x63\x12\x58\xd6\x9c\xf7\xa2\xde\xf9\xde\x14\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10"
+ED25519_ORD_BN = None
+
 
 # Load & init the library
 tcry.open_lib()
@@ -496,6 +499,32 @@ def sc_muladd_into(r, aa, bb, cc):
     :return:
     """
     return tcry.muladd256_modm(r, aa, bb, cc)
+
+
+def sc_inv_into(r, x):
+    """
+    Modular inversion mod curve order L
+    :param r:
+    :param x:
+    :return:
+    """
+    global ED25519_ORD_BN
+    if ED25519_ORD_BN is None:
+        bf_p = tcry.KEY_BUFF.from_buffer(bytearray(ED25519_ORD))
+        ED25519_ORD_BN = tcry.bn_zero_r()
+        tcry.bn_read_le(bf_p, ED25519_ORD_BN)
+
+    rr = bytearray(32)
+    xx = bytearray(32)
+    encodeint_into(x, xx)
+    bf_x = tcry.KEY_BUFF.from_buffer(xx)
+    bf_r = tcry.KEY_BUFF.from_buffer(rr)
+
+    bn_x = tcry.bn_zero_r()
+    tcry.bn_read_le(bf_x, bn_x)
+    tcry.bn_inverse(bn_x, ED25519_ORD_BN)
+    tcry.bn_write_le(bn_x, bf_r)
+    return decodeint_into_noreduce(r, rr)
 
 
 def random_scalar():
