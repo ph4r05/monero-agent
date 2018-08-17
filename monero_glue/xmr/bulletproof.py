@@ -645,22 +645,21 @@ class BulletProofBuilder(object):
         sc_add(t0, t0, k)
         self.gc(3)
 
-        # step 2
-        vpIz = vector_scalar(self.oneN, z)
-        aL_vpIz = vector_subtract(self.v_aL, vpIz)
-        aR_vpIz = vector_add(self.v_aR, vpIz)
-        del vpIz
+        # step 2, tmp_vct = vpIz
+        tmp_vct = _ensure_dst_keyvect(None, BP_N)
+        vector_scalar(self.oneN, z, tmp_vct)
+        aL_vpIz = vector_subtract(self.v_aL, tmp_vct)
+        aR_vpIz = vector_add(self.v_aR, tmp_vct)
         self.gc(4)
 
-        HyNsR = hadamard(yN, self.v_sR)
-        ip1 = inner_product(aL_vpIz, HyNsR)
-        ip3 = inner_product(self.v_sL, HyNsR)
-        del HyNsR
+        # tmp_vct = HyNsR
+        hadamard(yN, self.v_sR, tmp_vct)
+        ip1 = inner_product(aL_vpIz, tmp_vct)
+        ip3 = inner_product(self.v_sL, tmp_vct)
         self.gc(5)
 
         sc_add(t1, t1, ip1)
 
-        tmp_vct = _ensure_dst_keyvect(None, BP_N)
         vp2zsq = vector_scalar(self.twoN, zsq)
 
         # Originally:
