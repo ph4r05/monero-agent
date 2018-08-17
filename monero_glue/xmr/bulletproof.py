@@ -785,6 +785,7 @@ class BulletProofBuilder(object):
 
             sc_mul(tmp, cL, x_ip)
             add_keys(L[round], L[round], scalarmult_key(_tmp_k_1, XMR_H, tmp))
+            self.gc(24)
 
             vector_exponent_custom(
                 Gprime.slice(_tmp_vct_1, 0, nprime),
@@ -793,17 +794,17 @@ class BulletProofBuilder(object):
                 bprime.slice(_tmp_vct_4, 0, nprime),
                 R[round],
             )
-            self.gc(24)
 
             sc_mul(tmp, cR, x_ip)
             add_keys(R[round], R[round], scalarmult_key(_tmp_k_1, XMR_H, tmp))
+            self.gc(25)
 
             # PAPER LINES 21-22
             hash_cache_mash(w[round], hash_cache, L[round], R[round])
 
             # PAPER LINES 24-25
             invert(winv, w[round])
-            self.gc(25)
+            self.gc(26)
 
             hadamard2(
                 vector_scalar2(Gprime.slice(_tmp_vct_1, 0, nprime), winv, _tmp_vct_3),
@@ -822,7 +823,7 @@ class BulletProofBuilder(object):
                 ),
                 Hprime,
             )
-            self.gc(26)
+            self.gc(27)
 
             # PAPER LINES 28-29
             vector_add(
@@ -844,7 +845,7 @@ class BulletProofBuilder(object):
             )
 
             round += 1
-            self.gc(27)
+            self.gc(28)
 
         copy_key(aprime0, aprime[0])
         copy_key(bprime0, bprime[0])
