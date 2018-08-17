@@ -687,7 +687,8 @@ class BulletProofBuilder(object):
         self.gc(7)
 
         # PAPER LINES 54-57
-        vector_add(aL_vpIz, vector_scalar(self.v_sL, x), l)
+        vector_scalar(self.v_sL, x, tmp_vct)
+        vector_add(aL_vpIz, tmp_vct, l)
         self.v_sL = None
         del aL_vpIz
         self.gc(8)
