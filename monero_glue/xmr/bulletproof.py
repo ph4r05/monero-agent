@@ -6,14 +6,10 @@ from monero_serialize.core.int_serialize import dump_uvarint_b, dump_uvarint_b_i
 from monero_serialize.xmrtypes import Bulletproof
 
 from monero_glue.compat import gc
+from monero_glue.compat import log
 from monero_glue.compat.micropython import memcpy
 
 from monero_glue.xmr import crypto
-
-
-# curve size
-# 2**252 + 3*610042537739*15158679415041928064055629
-ED25519_ORD = 0x1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed
 
 
 # Constants
@@ -49,6 +45,7 @@ BP_IP12 = b"\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00
 #
 
 tmp_bf_1 = bytearray(32)
+tmp_bf_2 = bytearray(32)
 
 tmp_pt_1 = crypto.new_point()
 tmp_pt_2 = crypto.new_point()
@@ -545,8 +542,8 @@ class BulletProofBuilder(object):
 
     def aR(self, i, dst=None):
         dst = _ensure_dst_key(dst)
-        a_tmp = self.aL(i)
-        sc_sub(dst, a_tmp, ONE)
+        self.aL(i, tmp_bf_1)
+        sc_sub(dst, tmp_bf_1, ONE)
         return dst
 
     def aL_vct(self):
@@ -606,12 +603,12 @@ class BulletProofBuilder(object):
         alpha = sc_gen()
         ve = _ensure_dst_key()
         self.vector_exponent(self.v_aL, self.v_aR, ve)
-        add_keys(A, ve, scalarmult_base(None, alpha))
+        add_keys(A, ve, scalarmult_base(tmp_bf_1, alpha))
 
         # PAPER LINES 40-42
         rho = sc_gen()
         self.vector_exponent(self.v_sL, self.v_sR, ve)
-        add_keys(S, ve, scalarmult_base(None, rho))
+        add_keys(S, ve, scalarmult_base(tmp_bf_1, rho))
 
         # PAPER LINES 43-45
         z = _ensure_dst_key()
@@ -678,8 +675,8 @@ class BulletProofBuilder(object):
         tau1 = sc_gen()
         tau2 = sc_gen()
 
-        add_keys(T1, scalarmult_key(None, XMR_H, t1), scalarmult_base(None, tau1))
-        add_keys(T2, scalarmult_key(None, XMR_H, t2), scalarmult_base(None, tau2))
+        add_keys(T1, scalarmult_key(tmp_bf_1, XMR_H, t1), scalarmult_base(tmp_bf_2, tau1))
+        add_keys(T2, scalarmult_key(tmp_bf_1, XMR_H, t2), scalarmult_base(tmp_bf_2, tau2))
 
         # PAPER LINES 49-51
         x = _ensure_dst_key()
@@ -752,6 +749,8 @@ class BulletProofBuilder(object):
         tmp = _ensure_dst_key()
         winv = _ensure_dst_key()
         w = _ensure_dst_keyvect(None, BP_LOG_N)
+        cL = _ensure_dst_key()
+        cR = _ensure_dst_key()
 
         # PAPER LINE 13
         while nprime > 1:
@@ -764,14 +763,16 @@ class BulletProofBuilder(object):
             self.gc(22)
 
             # PAPER LINES 16-17
-            cL = inner_product(
+            inner_product(
                 aprime.slice(_tmp_vct_1, 0, nprime),
                 bprime.slice(_tmp_vct_2, nprime, bprime.size),
+                cL
             )
 
-            cR = inner_product(
+            inner_product(
                 aprime.slice(_tmp_vct_1, nprime, aprime.size),
                 bprime.slice(_tmp_vct_2, 0, nprime),
+                cR
             )
 
             self.gc(23)
@@ -943,6 +944,8 @@ class BulletProofBuilder(object):
         k = _ensure_dst_key()
         yN = vector_powers(y, BP_N)
         ip1y = inner_product(self.oneN, yN)
+        del yN
+
         zsq = _ensure_dst_key()
         sc_mul(zsq, z, z)
 
@@ -970,6 +973,12 @@ class BulletProofBuilder(object):
 
         if L61Right != L61Left:
             raise ValueError("Verification failure 1")
+
+        del k
+        del ip1y
+        del zcu
+        del L61Left
+        del L61Right
 
         # PAPER LINE 62
         P = _ensure_dst_key()
