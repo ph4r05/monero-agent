@@ -453,11 +453,11 @@ def hash_cache_mash(dst, hash_cache, *args):
         ctx.update(x)
     hsh = ctx.digest()
 
-    sc = crypto.decodeint(hsh)
-    hsh = crypto.encodeint(sc)
+    crypto.decodeint_into(tmp_sc_1, hsh)
+    crypto.encodeint_into(tmp_sc_1, tmp_bf_1)
 
-    copy_key(dst, hsh)
-    copy_key(hash_cache, hsh)
+    copy_key(dst, tmp_bf_1)
+    copy_key(hash_cache, tmp_bf_1)
     return dst
 
 
