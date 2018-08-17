@@ -859,6 +859,19 @@ class CryptoTest(aiounittest.AsyncTestCase):
             R_exp = crypto.point_add(crypto.scalarmult(A, a), crypto.scalarmult_base(b))
             self.assertTrue(crypto.point_eq(R, R_exp))
 
+    def test_pointadd(self):
+        a = crypto.random_scalar()
+        A = crypto.scalarmult_base(a)
+        A2 = crypto.point_add(A, A)
+        A3 = crypto.point_add(A2, A)
+        A4 = crypto.point_add(A3, A)
+        A8 = crypto.scalarmult(A4, crypto.sc_init(2))
+
+        A8p = crypto.ge_mul8(A)
+        self.assertTrue(crypto.point_eq(A8p, A8))
+        self.assertTrue(crypto.point_eq(A4, crypto.scalarmult(A, crypto.sc_init(4))))
+        self.assertTrue(crypto.point_eq(A3, crypto.scalarmult(A, crypto.sc_init(3))))
+        
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
