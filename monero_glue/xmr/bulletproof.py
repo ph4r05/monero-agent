@@ -265,7 +265,7 @@ class KeyV(object):
         :return:
         """
         if self.const:
-            raise ValueError('Constant KeyV')
+            raise ValueError("Constant KeyV")
         ck = self[key]
         for i in range(32):
             ck[i] = value[i]
@@ -816,46 +816,36 @@ class BulletProofBuilder(object):
             invert(winv, w[round])
             self.gc(26)
 
-            hadamard2(
-                vector_scalar2(Gprime.slice(_tmp_vct_1, 0, nprime), winv, _tmp_vct_3),
-                vector_scalar2(
-                    Gprime.slice(_tmp_vct_2, nprime, len(Gprime)), w[round], _tmp_vct_4
-                ),
-                Gprime,
+            vector_scalar2(Gprime.slice(_tmp_vct_1, 0, nprime), winv, _tmp_vct_3)
+            vector_scalar2(
+                Gprime.slice(_tmp_vct_2, nprime, len(Gprime)), w[round], _tmp_vct_4
             )
-
-            hadamard2(
-                vector_scalar2(
-                    Hprime.slice(_tmp_vct_1, 0, nprime), w[round], _tmp_vct_3
-                ),
-                vector_scalar2(
-                    Hprime.slice(_tmp_vct_2, nprime, len(Hprime)), winv, _tmp_vct_4
-                ),
-                Hprime,
-            )
+            hadamard2(_tmp_vct_3, _tmp_vct_4, Gprime)
             self.gc(27)
 
-            # PAPER LINES 28-29
-            vector_add(
-                vector_scalar(
-                    aprime.slice(_tmp_vct_1, 0, nprime), w[round], _tmp_vct_3
-                ),
-                vector_scalar(
-                    aprime.slice(_tmp_vct_2, nprime, len(aprime)), winv, _tmp_vct_4
-                ),
-                aprime,
+            vector_scalar2(Hprime.slice(_tmp_vct_1, 0, nprime), w[round], _tmp_vct_3)
+            vector_scalar2(
+                Hprime.slice(_tmp_vct_2, nprime, len(Hprime)), winv, _tmp_vct_4
             )
+            hadamard2(_tmp_vct_3, _tmp_vct_4, Hprime)
+            self.gc(28)
 
-            vector_add(
-                vector_scalar(bprime.slice(_tmp_vct_1, 0, nprime), winv, _tmp_vct_3),
-                vector_scalar(
-                    bprime.slice(_tmp_vct_2, nprime, len(bprime)), w[round], _tmp_vct_4
-                ),
-                bprime,
+            # PAPER LINES 28-29
+            vector_scalar(aprime.slice(_tmp_vct_1, 0, nprime), w[round], _tmp_vct_3)
+            vector_scalar(
+                aprime.slice(_tmp_vct_2, nprime, len(aprime)), winv, _tmp_vct_4
             )
+            vector_add(_tmp_vct_3, _tmp_vct_4, aprime)
+            self.gc(29)
+
+            vector_scalar(bprime.slice(_tmp_vct_1, 0, nprime), winv, _tmp_vct_3)
+            vector_scalar(
+                bprime.slice(_tmp_vct_2, nprime, len(bprime)), w[round], _tmp_vct_4
+            )
+            vector_add(_tmp_vct_3, _tmp_vct_4, bprime)
 
             round += 1
-            self.gc(28)
+            self.gc(30)
 
         copy_key(aprime0, aprime[0])
         copy_key(bprime0, bprime[0])
