@@ -81,6 +81,16 @@ def keccak_hash(inp):
     return tcry.xmr_fast_hash_r(inp)
 
 
+def keccak_hash_into(r, inp):
+    """
+    Hashesh input in one call
+    :return:
+    """
+    bf = tcry.KEY_BUFF.from_buffer(r)
+    tcry.cl().xmr_fast_hash(bf, bytes(inp), len(inp))
+    return r
+
+
 def keccak_2hash(inp):
     """
     Keccak double hashing
