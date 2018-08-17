@@ -81,7 +81,10 @@ def extended_gcd(aa, bb):
     lastremainder, remainder = abs(aa), abs(bb)
     x, lastx, y, lasty = 0, 1, 1, 0
     while remainder:
-        lastremainder, (quotient, remainder) = remainder, divmod(lastremainder, remainder)
+        lastremainder, (quotient, remainder) = (
+            remainder,
+            divmod(lastremainder, remainder),
+        )
         x, lastx = lastx - quotient * x, x
         y, lasty = lasty - quotient * y, y
     return lastremainder, lastx * (-1 if aa < 0 else 1), lasty * (-1 if bb < 0 else 1)
@@ -604,12 +607,16 @@ class BulletProofBuilder(object):
 
     def sL_vct(self):
         return (
-            KeyVEval(64, lambda x, r: self.sL(x, r)) if self.use_det_masks else self.sX_gen()
+            KeyVEval(64, lambda x, r: self.sL(x, r))
+            if self.use_det_masks
+            else self.sX_gen()
         )
 
     def sR_vct(self):
         return (
-            KeyVEval(64, lambda x, r: self.sR(x, r)) if self.use_det_masks else self.sX_gen()
+            KeyVEval(64, lambda x, r: self.sR(x, r))
+            if self.use_det_masks
+            else self.sX_gen()
         )
 
     def sX_gen(self):
