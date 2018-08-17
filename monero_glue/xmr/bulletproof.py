@@ -742,13 +742,15 @@ class BulletProofBuilder(object):
         bprime = r
 
         yinv = invert(None, y)
+        self.gc(20)
+
         yinvpow = _ensure_dst_key()
         copy_key(yinvpow, ONE)
         for i in range(BP_N):
             Gprime[i] = self.Gprec[i]
             scalarmult_key(Hprime[i], self.Hprec[i], yinvpow)
             sc_mul(yinvpow, yinvpow, yinv)
-        self.gc(20)
+        self.gc(21)
 
         round = 0
         nprime = BP_N
@@ -813,6 +815,8 @@ class BulletProofBuilder(object):
 
             # PAPER LINES 24-25
             invert(winv, w[round])
+            self.gc(23)
+
             hadamard2(
                 vector_scalar2(Gprime.slice(_tmp_vct_1, 0, nprime), winv, _tmp_vct_3),
                 vector_scalar2(
@@ -830,7 +834,7 @@ class BulletProofBuilder(object):
                 ),
                 Hprime,
             )
-            self.gc(23)
+            self.gc(24)
 
             # PAPER LINES 28-29
             vector_add(
@@ -852,7 +856,7 @@ class BulletProofBuilder(object):
             )
 
             round += 1
-            self.gc(24)
+            self.gc(25)
 
         copy_key(aprime0, aprime[0])
         copy_key(bprime0, bprime[0])
@@ -1000,9 +1004,12 @@ class BulletProofBuilder(object):
         copy_key(ypow, ONE)
 
         invert(yinv, y)
+        self.gc(61)
+
         winv = _ensure_dst_keyvect(None, rounds)
         for i in range(rounds):
             invert(winv[i], w[i])
+            self.gc(62)
 
         g_scalar = _ensure_dst_key()
         h_scalar = _ensure_dst_key()
@@ -1037,7 +1044,7 @@ class BulletProofBuilder(object):
 
         del g_scalar
         del h_scalar
-        self.gc(61)
+        self.gc(63)
 
         # PAPER LINE 26
         pprime = _ensure_dst_key()
@@ -1058,7 +1065,7 @@ class BulletProofBuilder(object):
         sc_mul(tmp, tmp, x_ip)
         scalarmult_key(tmp, XMR_H, tmp)
         add_keys(tmp, tmp, inner_prod)
-        self.gc(62)
+        self.gc(64)
 
         if pprime != tmp:
             raise ValueError("Verification failure step 2")
