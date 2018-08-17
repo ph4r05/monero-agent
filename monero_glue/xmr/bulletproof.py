@@ -675,8 +675,12 @@ class BulletProofBuilder(object):
         tau1 = sc_gen()
         tau2 = sc_gen()
 
-        add_keys(T1, scalarmult_key(tmp_bf_1, XMR_H, t1), scalarmult_base(tmp_bf_2, tau1))
-        add_keys(T2, scalarmult_key(tmp_bf_1, XMR_H, t2), scalarmult_base(tmp_bf_2, tau2))
+        add_keys(
+            T1, scalarmult_key(tmp_bf_1, XMR_H, t1), scalarmult_base(tmp_bf_2, tau1)
+        )
+        add_keys(
+            T2, scalarmult_key(tmp_bf_1, XMR_H, t2), scalarmult_base(tmp_bf_2, tau2)
+        )
 
         # PAPER LINES 49-51
         x = _ensure_dst_key()
@@ -766,13 +770,13 @@ class BulletProofBuilder(object):
             inner_product(
                 aprime.slice(_tmp_vct_1, 0, nprime),
                 bprime.slice(_tmp_vct_2, nprime, bprime.size),
-                cL
+                cL,
             )
 
             inner_product(
                 aprime.slice(_tmp_vct_1, nprime, aprime.size),
                 bprime.slice(_tmp_vct_2, 0, nprime),
-                cR
+                cR,
             )
 
             self.gc(23)
