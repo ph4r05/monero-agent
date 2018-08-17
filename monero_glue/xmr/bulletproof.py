@@ -266,6 +266,7 @@ class KeyV(object):
     def __init__(self, elems=64, src=None, buffer=None):
         self.current_idx = 0
         self.d = None
+        self.mv = None
         self.size = elems
         if src:
             self.d = bytearray(src.d)
@@ -275,6 +276,10 @@ class KeyV(object):
             self.size = len(buffer) // 32
         else:
             self.d = bytearray(32 * elems)
+        self._set_mv()
+
+    def _set_mv(self):
+        self.mv = memoryview(self.d)
 
     def __getitem__(self, item):
         """
@@ -282,7 +287,7 @@ class KeyV(object):
         :param item:
         :return:
         """
-        return memoryview(self.d)[item * 32 : (item + 1) * 32]
+        return self.mv[item * 32 : (item + 1) * 32]
 
     def __setitem__(self, key, value):
         """
@@ -318,10 +323,14 @@ class KeyV(object):
         res = KeyV(stop - start)
         return self.slice(res, start, stop)
 
+    def copy_from(self, src):
+        self.size = self.size
+        self.d = bytearray(self.d)
+        self._set_mv()
+
     def copy(self, dst=None):
         if dst:
-            dst.size = self.size
-            dst.d = bytearray(self.d)
+            dst.copy_from(self)
         else:
             dst = KeyV(src=self)
         return dst
@@ -334,6 +343,7 @@ class KeyV(object):
         else:
             self.d = bytearray(nsize * 32)
         self.size = nsize
+        self._set_mv()
 
 
 class KeyVEval(KeyV):
