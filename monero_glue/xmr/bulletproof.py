@@ -650,6 +650,8 @@ class BulletProofBuilder(object):
         vector_scalar(self.oneN, z, tmp_vct)
         aL_vpIz = vector_subtract(self.v_aL, tmp_vct)
         aR_vpIz = vector_add(self.v_aR, tmp_vct)
+        self.v_aL = None
+        self.v_aR = None
         self.gc(4)
 
         # tmp_vct = HyNsR
