@@ -202,7 +202,9 @@ class Agent(object):
         tsx_data.version = 1
         tsx_data.payment_id = payment_id
         tsx_data.unlock_time = tx.unlock_time
-        tsx_data.outputs = [tmisc.translate_monero_dest_entry_pb(x) for x in tx.splitted_dsts]
+        tsx_data.outputs = [
+            tmisc.translate_monero_dest_entry_pb(x) for x in tx.splitted_dsts
+        ]
         tsx_data.change_dts = tmisc.translate_monero_dest_entry_pb(tx.change_dts)
         tsx_data.num_inputs = len(tx.sources)
         tsx_data.mixin = len(tx.sources[0].outputs)
@@ -416,9 +418,7 @@ class Agent(object):
         if multisig:
             cout_key = t_res.cout_key
             for ccout in couts:
-                self.ct.couts.append(
-                    chacha_poly.decrypt_pack(cout_key, ccout)
-                )
+                self.ct.couts.append(chacha_poly.decrypt_pack(cout_key, ccout))
 
         self.ct.enc_salt1, self.ct.enc_salt2 = t_res.salt, t_res.rand_mult
         self.ct.enc_keys = t_res.tx_enc_keys

@@ -2,10 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-from monero_serialize.xmrtypes import (
-    TxExtraField,
-    TxExtraAdditionalPubKeys,
-)
+from monero_serialize.xmrtypes import TxExtraField, TxExtraAdditionalPubKeys
 
 from monero_glue.messages.MoneroAccountPublicAddress import MoneroAccountPublicAddress
 from monero_glue.xmr import crypto
