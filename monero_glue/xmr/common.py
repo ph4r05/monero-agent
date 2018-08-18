@@ -179,6 +179,16 @@ def defvalkeys(js, key, default=None):
     return default
 
 
+def defattr(obj, attr, default=None, take_none=True):
+    if obj is None:
+        return default
+    if not hasattr(obj, attr):
+        return default
+    if getattr(obj, attr) is None and not take_none:
+        return default
+    return getattr(obj, attr)
+
+
 def chunk(arr, size=1):
     res = []
     idx = 0
