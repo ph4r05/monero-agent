@@ -6,7 +6,7 @@
 import logging
 from monero_glue.compat import gc
 
-from monero_glue.xmr import asnl, common, crypto, mlsag2, monero
+from monero_glue.xmr import asnl, common, crypto, mlsag2, monero, bulletproof
 from monero_serialize import xmrtypes
 
 logger = logging.getLogger(__name__)
@@ -35,21 +35,22 @@ def sum_Ci(Cis):
     return CSum
 
 
-def prove_range_bp(amount, last_mask=None):
+async def prove_range_bp(amount, last_mask=None):
     from monero_glue.xmr import bulletproof as bp
 
     bpi = bp.BulletProofBuilder()
 
     mask = last_mask if last_mask is not None else crypto.random_scalar()
-    bpi.set_input(amount, mask)
+    bpi.set_input(crypto.sc_init(amount), mask)
     bp_proof = bpi.prove()
-    C = bp_proof.V[0]
+    C = crypto.decodepoint(bp_proof.V[0])
 
     gc.collect()
-    from monero_glue.hwtoken.misc import dump_msg
 
-    bp_ser = dump_msg(bp_proof, preallocate=9 * 32 + 2 * 6 * 32 + 64)
-    return C, mask, bp_ser
+    # Return as struct as the hash(BP_struct) != hash(BP_serialized)
+    # as the original hashing does not take vector lengths into account which are dynamic
+    # in the serialization scheme (and thus extraneous)
+    return C, mask, bp_proof
 
 
 def prove_range(
@@ -251,12 +252,13 @@ def prove_range_mem(amount, last_mask=None):
     return C, a, R
 
 
-def ver_range(C=None, rsig=None, use_asnl=False, decode=True):
+def ver_range(C=None, rsig=None, use_asnl=False, use_bulletproof=False, decode=True):
     """
     Verifies that \sum Ci = C and that each Ci is a commitment to 0 or 2^i
     :param C:
     :param rsig:
     :param use_asnl: use ASNL, used before Borromean, insecure!
+    :param use_bulletproof: bulletproof
     :param decode: decodes encoded range proof
     :return:
     """
@@ -265,17 +267,21 @@ def ver_range(C=None, rsig=None, use_asnl=False, decode=True):
     C_tmp = crypto.identity()
     c_H = crypto.gen_H()
 
-    if decode:
+    if decode and not use_bulletproof:
         rsig = monero.recode_rangesig(rsig, encode=False, copy=True)
 
-    for i in range(0, n):
-        CiH[i] = crypto.point_sub(rsig.Ci[i], c_H)
-        C_tmp = crypto.point_add(C_tmp, rsig.Ci[i])
-        c_H = crypto.point_double(c_H)
+    if not use_bulletproof:
+        for i in range(0, n):
+            CiH[i] = crypto.point_sub(rsig.Ci[i], c_H)
+            C_tmp = crypto.point_add(C_tmp, rsig.Ci[i])
+            c_H = crypto.point_double(c_H)
 
-    if C is not None and not crypto.point_eq(C_tmp, C):
-        return 0
+        if C is not None and not crypto.point_eq(C_tmp, C):
+            return 0
 
+    if use_bulletproof:
+        bp = bulletproof.BulletProofBuilder()
+        return bp.verify(rsig)
     if use_asnl:
         return asnl.ver_asnl(rsig.Ci, CiH, rsig.asig.s0, rsig.asig.s1, rsig.asig.ee)
     else:
