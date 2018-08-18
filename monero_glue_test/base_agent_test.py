@@ -7,6 +7,7 @@ import binascii
 import collections
 import aiounittest
 import pkg_resources
+from monero_serialize.xmrtypes import RctType
 
 from monero_glue.xmr import crypto, monero, ring_ct, common, mlsag2
 from monero_glue.hwtoken import misc
@@ -174,10 +175,18 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
         additional_pub_keys = [crypto.decodepoint(x) for x in additional_pub_keys.data] if additional_pub_keys is not None else None
 
         # Verify range proofs
-        for idx, rsig in enumerate(tx_obj.rct_signatures.p.rangeSigs):
+        for idx in range(len(tx_obj.rct_signatures.outPk)):
             out_pk = tx_obj.rct_signatures.outPk[idx]
             C = crypto.decodepoint(out_pk.mask)
-            res = ring_ct.ver_range(C, rsig)
+            is_bp = tx_obj.rct_signatures.type in [RctType.SimpleBulletproof, RctType.FullBulletproof]
+
+            if is_bp:
+                rsig = tx_obj.rct_signatures.p.bulletproofs[idx]
+                rsig.V = [out_pk.mask]
+            else:
+                rsig = tx_obj.rct_signatures.p.rangeSigs[idx]
+
+            res = ring_ct.ver_range(C, rsig, use_bulletproof=is_bp)
             self.assertTrue(res)
 
         # Prefix hash

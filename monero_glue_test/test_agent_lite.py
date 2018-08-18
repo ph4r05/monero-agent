@@ -114,19 +114,35 @@ class AgentLiteTest(BaseAgentTest):
         await self.verify_ki_export(res, ki_loaded)
 
     async def test_trezor_txs(self):
+        await self._int_test_trezor_txs()
+
+    async def test_trezor_txs_bp(self):
+        if not crypto.get_backend().has_rangeproof_bulletproof():
+            self.skipTest('Crypto backend does not support BPs')
+        await self._int_test_trezor_txs(as_bulletproof=True)
+
+    async def _int_test_trezor_txs(self, as_bulletproof=False):
         if os.getenv('SKIP_TREZOR_TSX', False):
             self.skipTest('Skipped by ENV var')
 
         files = self.get_trezor_tsx_tests()
         creds = self.get_trezor_creds(0)
         all_creds = [self.get_trezor_creds(0), self.get_trezor_creds(1), self.get_trezor_creds(2)]
-        
+
+        if as_bulletproof:
+            files = files[0:3]
+
         for fl in files:
             with self.subTest(msg=fl):
                 unsigned_tx_c = self.get_data_file(fl)
                 unsigned_tx = await wallet.load_unsigned_tx(
                     creds.view_key_private, unsigned_tx_c
                 )
+
+                for tx in unsigned_tx.txes:
+                    if as_bulletproof:
+                        tx.use_rct = False
+                        tx.use_bulletproofs = True
 
                 tagent = self.init_agent(creds=creds)
                 await self.tx_sign_test(tagent, unsigned_tx, creds, all_creds, fl)
