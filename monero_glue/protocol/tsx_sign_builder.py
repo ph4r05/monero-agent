@@ -935,17 +935,16 @@ class TTransactionBuilder(object):
 
         # Rangeproof
         self._log_trace("pre-rproof", collect=True)
-
         if self.use_bulletproof:
-            self._log_trace("pre-bp", collect=True)
             C, mask, rsig = await ring_ct.prove_range_bp(amount, last_mask)
             self._log_trace("post-bp", collect=True)
 
             # Incremental hashing
-            await self.full_message_hasher.rsig_val(rsig, self.use_bulletproof, raw=False)
+            await self.full_message_hasher.rsig_val(rsig, True, raw=False)
+            self._log_trace("post-bp-hash", collect=True)
 
-            from monero_glue.hwtoken.misc import dump_msg
-            rsig = await dump_msg(rsig, preallocate=9 * 32 + 2 * 6 * 32 + 2)
+            rsig = await misc.dump_msg(rsig, preallocate=9 * 32 + 2 * 6 * 32 + 2)
+            self._log_trace("post-bp-ser", collect=True)
 
         else:
             rsig_buff = bytearray(32 * (64 + 64 + 64 + 1))
@@ -961,7 +960,7 @@ class TTransactionBuilder(object):
                 self.assrt(ring_ct.ver_range(C, rsig_bytes))
 
             # Incremental hashing
-            await self.full_message_hasher.rsig_val(rsig, self.use_bulletproof, raw=True)
+            await self.full_message_hasher.rsig_val(rsig, False, raw=True)
 
         self._log_trace("rproof", collect=True)
         self.assrt(
