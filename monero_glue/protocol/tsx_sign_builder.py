@@ -142,7 +142,7 @@ class TTransactionBuilder(object):
                 setattr(t, attr, cval)
         return t
 
-    def _log_trace(self, x=None):
+    def _log_trace(self, x=None, collect=False):
         log.debug(
             __name__,
             "Log trace %s, ... F: %s A: %s, S: %s",
@@ -151,6 +151,8 @@ class TTransactionBuilder(object):
             gc.mem_alloc(),
             micropython.stack_use(),
         )
+        if collect:
+            gc.collect()
 
     def assrt(self, condition, msg=None):
         """
