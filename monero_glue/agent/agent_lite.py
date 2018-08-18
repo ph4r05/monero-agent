@@ -34,7 +34,7 @@ from monero_glue.messages import (
     Failure,
 )
 from monero_glue.protocol_base.base import TError
-from monero_glue.xmr import common, key_image, monero, ring_ct
+from monero_glue.xmr import common, crypto, key_image, monero, ring_ct
 from monero_glue.xmr.enc import chacha_poly
 from monero_serialize import xmrserialize, xmrtypes
 
@@ -172,6 +172,9 @@ class Agent(object):
         await ar1.message(tx, msg_type=xmrtypes.Transaction)
         return bytes(writer.get_buffer())
 
+    def _is_bulletproof_transaction(self):
+        return self.ct.tsx_data.is_bulletproof
+
     async def sign_transaction_data(
         self, tx, multisig=False, exp_tx_prefix_hash=None, use_tx_keys=None
     ):
@@ -214,7 +217,7 @@ class Agent(object):
         tsx_data.account = tx.subaddr_account
         tsx_data.minor_indices = tx.subaddr_indices
         tsx_data.is_multisig = multisig
-        tsx_data.is_bulletproof = False
+        tsx_data.is_bulletproof = common.defattr(tx, 'use_bulletproofs', False)
         tsx_data.exp_tx_prefix_hash = common.defval(exp_tx_prefix_hash, b"")
         tsx_data.use_tx_keys = common.defval(use_tx_keys, [])
         self.ct.tx.unlock_time = tx.unlock_time
@@ -319,9 +322,6 @@ class Agent(object):
                 await tmisc.parse_msg(t_res.tx_out, xmrtypes.TxOut())
             )
             self.ct.tx_out_hmacs.append(t_res.vouti_hmac)
-            self.ct.tx_out_rsigs.append(
-                await tmisc.parse_msg(t_res.rsig, xmrtypes.RangeSig())
-            )
             self.ct.tx_out_pk.append(
                 await tmisc.parse_msg(t_res.out_pk, xmrtypes.CtKey())
             )
@@ -329,10 +329,19 @@ class Agent(object):
                 await tmisc.parse_msg(t_res.ecdh_info, xmrtypes.EcdhTuple())
             )
 
+            rsig = await tmisc.parse_msg(t_res.rsig, xmrtypes.RangeSig() if not self._is_bulletproof_transaction() else xmrtypes.Bulletproof())
+            if self._is_bulletproof_transaction():
+                rsig.V = [self.ct.tx_out_pk[-1].mask]
+
+            self.ct.tx_out_rsigs.append(rsig)
+
             # Rsig verification
             try:
                 rsig = self.ct.tx_out_rsigs[-1]
-                if not ring_ct.ver_range(C=None, rsig=rsig):
+                if not ring_ct.ver_range(
+                        C=crypto.decodepoint(self.ct.tx_out_pk[-1].mask),
+                        rsig=rsig,
+                        use_bulletproof=self._is_bulletproof_transaction()):
                     logger.warning("Rsing not valid")
 
             except Exception as e:
@@ -367,12 +376,16 @@ class Agent(object):
 
         # Range proof
         rv.p.rangeSigs = []
+        rv.p.bulletproofs = []
         rv.outPk = []
         rv.ecdhInfo = []
         for idx in range(len(self.ct.tx_out_rsigs)):
-            rv.p.rangeSigs.append(self.ct.tx_out_rsigs[idx])
             rv.outPk.append(self.ct.tx_out_pk[idx])
             rv.ecdhInfo.append(self.ct.tx_out_ecdh[idx])
+            if self.is_bulletproof(rv):
+                rv.p.bulletproofs.append(self.ct.tx_out_rsigs[idx])
+            else:
+                rv.p.rangeSigs.append(self.ct.tx_out_rsigs[idx])
 
         # MLSAG message check
         t_res = await self.trezor.tsx_sign(
