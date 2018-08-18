@@ -641,7 +641,7 @@ class TrezorServer(cli.BaseCli):
 
         # Generate private keys based on the gen mechanism. Bip44 path + Monero backward compatible
         data = wl.get_child_for_path("m/44'/128'/0'/0/0")
-        to_hash = data.chain_code + binascii.unhexlify(data.private_key.get_key())
+        to_hash = binascii.unhexlify(data.private_key.get_key())
 
         # to_hash is initial seed in the Monero sense, recoverable from this seed
         hashed = crypto.cn_fast_hash(to_hash)
