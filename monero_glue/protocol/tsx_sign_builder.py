@@ -922,9 +922,6 @@ class TTransactionBuilder(object):
         """
         from monero_glue.xmr import ring_ct
 
-        rsig = bytearray(32 * (64 + 64 + 64 + 1))
-        rsig_mv = memoryview(rsig)
-
         out_pk = misc.StdObj(dest=dest_pub_key, mask=None)
         is_last = idx + 1 == self.num_dests()
         last_mask = (
@@ -937,11 +934,17 @@ class TTransactionBuilder(object):
         C, mask, rsig = None, 0, None
 
         # Rangeproof
-        gc.collect()
+        self._log_trace("pre-rproof", collect=True)
+
         if self.use_bulletproof:
-            raise ValueError("Bulletproof not yet supported")
+            self._log_trace("pre-bp", collect=True)
+            C, mask, rsig = ring_ct.prove_range_bp(amount, last_mask)
+            self._log_trace("post-bp", collect=True)
 
         else:
+            rsig_buff = bytearray(32 * (64 + 64 + 64 + 1))
+            rsig_mv = memoryview(rsig_buff)
+
             C, mask, rsig = ring_ct.prove_range(
                 amount, last_mask, backend_impl=True, byte_enc=True, rsig=rsig_mv
             )
@@ -951,22 +954,19 @@ class TTransactionBuilder(object):
                 rsig_bytes = monero.inflate_rsig(rsig)
                 self.assrt(ring_ct.ver_range(C, rsig_bytes))
 
-            self.assrt(
-                crypto.point_eq(
-                    C,
-                    crypto.point_add(
-                        crypto.scalarmult_base(mask), crypto.scalarmult_h(amount)
-                    ),
+        self.assrt(
+            crypto.point_eq(
+                C,
+                crypto.point_add(
+                    crypto.scalarmult_base(mask), crypto.scalarmult_h(amount)
                 ),
-                "rproof",
-            )
+            ),
+            "rproof",
+        )
 
-            # Incremental hashing
-            await self.full_message_hasher.rsig_val(
-                rsig, self.use_bulletproof, raw=True
-            )
-        gc.collect()
-        self._log_trace("rproof")
+        # Incremental hashing
+        await self.full_message_hasher.rsig_val(rsig, self.use_bulletproof, raw=True)
+        self._log_trace("rproof", collect=True)
 
         # Mask sum
         out_pk.mask = crypto.encodepoint(C)
