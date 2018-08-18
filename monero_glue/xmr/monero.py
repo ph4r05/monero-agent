@@ -43,48 +43,21 @@ class TxScanInfo(object):
     ]
 
 
-def get_subaddress_secret_key(
-    secret_key, index=None, major=None, minor=None, little_endian=True
-):
+def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
     """
     Builds subaddress secret key from the subaddress index
     Hs(SubAddr || a || index_major || index_minor)
 
-    UPDATE: Monero team fixed this problem. Always use little endian.
-    Note: need to handle endianity in the index
-    C-code simply does: memcpy(data + sizeof(prefix) + sizeof(crypto::secret_key), &index, sizeof(subaddress_index));
-    Where the index has the following form:
-
-    struct subaddress_index {
-        uint32_t major;
-        uint32_t minor;
-    }
-
-    https://docs.python.org/3/library/struct.html#byte-order-size-and-alignment
     :param secret_key:
     :param index:
     :param major:
     :param minor:
-    :param little_endian:
     :return:
     """
     if index:
         major = index.major
         minor = index.minor
-    endianity = "<" if little_endian else ">"
-    prefix = b"SubAddr"
-    buffer = bytearray(len(prefix) + 1 + 32 + 4 + 4)
-    struct.pack_into(
-        "%s7sb32sLL" % endianity,
-        buffer,
-        0,
-        prefix,
-        0,
-        crypto.encodeint(secret_key),
-        major,
-        minor,
-    )
-    return crypto.hash_to_scalar(buffer)
+    return crypto.get_subaddress_secret_key(secret_key, major, minor)
 
 
 def get_subaddress_spend_public_key(view_private, spend_public, major, minor):

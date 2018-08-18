@@ -4,6 +4,7 @@
 
 import hashlib
 import hmac
+import struct
 
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
@@ -954,6 +955,25 @@ def derive_secret_key(derivation, output_index, base):
         raise ValueError("cs_check in derive_secret_key")
     scalar = derivation_to_scalar(derivation, output_index)
     return sc_add(base, scalar)
+
+
+def get_subaddress_secret_key(secret_key, major=0, minor=0):
+    """
+    Builds subaddress secret key from the subaddress index
+    Hs(SubAddr || a || index_major || index_minor)
+
+    :param secret_key:
+    :param index:
+    :param major:
+    :param minor:
+    :return:
+    """
+    prefix = b"SubAddr"
+    buffer = bytearray(len(prefix) + 1 + 32 + 4 + 4)
+    struct.pack_into(
+        "<7sb32sLL", buffer, 0, prefix, 0, encodeint(secret_key), major, minor
+    )
+    return hash_to_scalar(buffer)
 
 
 #
