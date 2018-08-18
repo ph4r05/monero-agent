@@ -275,7 +275,7 @@ class KeyV(object):
         return self
 
     def __next__(self):
-        if self.current_idx > self.size:
+        if self.current_idx >= self.size:
             raise StopIteration
         else:
             self.current_idx += 1
