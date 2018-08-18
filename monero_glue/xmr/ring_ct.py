@@ -40,10 +40,7 @@ def prove_range_bp(amount, last_mask=None):
 
     bpi = bp.BulletProofBuilder()
 
-    mask = crypto.random_scalar()
-    if last_mask is not None:
-        mask = crypto.sc_sub(last_mask, last_mask)
-
+    mask = last_mask if last_mask is not None else crypto.random_scalar()
     bpi.set_input(amount, mask)
     bp_proof = bpi.prove()
     C = bp_proof.V[0]
