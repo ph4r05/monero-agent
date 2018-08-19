@@ -24,6 +24,7 @@ class TrezorTest(BaseAgentTest):
         self.trezor_proxy = None  # type: tmanager.Trezor
         self.agent = None  # type: agent_lite.Agent
         self.creds = None
+        self.test_only_tsx = False
 
     def get_trezor_path(self):
         tpath = os.getenv('TREZOR_PATH')
@@ -32,20 +33,22 @@ class TrezorTest(BaseAgentTest):
     def reinit_trezor(self):
         self.deinit()
         path = self.get_trezor_path()
+        is_debug = path.startswith('udp')
         self.creds = self.get_trezor_creds(0)
-        self.trezor_proxy = tmanager.Trezor(path=path, debug=True)
+        self.trezor_proxy = tmanager.Trezor(path=path, debug=is_debug)
         self.agent = agent_lite.Agent(self.trezor_proxy, network_type=monero.NetworkTypes.TESTNET)
 
         client = self.trezor_proxy.client
         client.transport.session_begin()
-        client.wipe_device()
-        client.load_device_by_mnemonic(
-            mnemonic=self.get_trezor_mnemonics()[0],
-            pin="",
-            passphrase_protection=False,
-            label="ph4test",
-            language="english",
-        )
+        if is_debug:
+            client.wipe_device()
+            client.load_device_by_mnemonic(
+                mnemonic=self.get_trezor_mnemonics()[0],
+                pin="",
+                passphrase_protection=False,
+                label="ph4test",
+                language="english",
+            )
         client.transport.session_end()
 
     def deinit(self):
@@ -67,17 +70,23 @@ class TrezorTest(BaseAgentTest):
         await self.trezor_proxy.ping()
 
     async def test_get_address(self):
+        if self.test_only_tsx:
+            self.skipTest()
         res = await self.agent.get_address()
         self.assertIsNotNone(res)
         self.assertEqual(res.address, self.creds.address)
 
     async def test_get_watch(self):
+        if self.test_only_tsx:
+            self.skipTest()
         res = await self.agent.get_watch_only()
         self.assertIsNotNone(res)
         self.assertEqual(res.watch_key, crypto.encodeint(self.creds.view_key_private))
         self.assertEqual(res.address, self.creds.address)
 
     async def test_ki_sync(self):
+        if self.test_only_tsx:
+            self.skipTest()
         ki_data = self.get_data_file("ki_sync_01.txt")
         ki_loaded = await wallet.load_exported_outputs(
             self.creds.view_key_private, ki_data
@@ -100,7 +109,7 @@ class TrezorTest(BaseAgentTest):
         all_creds = [self.get_trezor_creds(0), self.get_trezor_creds(1), self.get_trezor_creds(2)]
 
         if as_bulletproof:
-            files = files[0:3]
+            files = files[0:1]
 
         for fl in files:
             with self.subTest(msg=fl):
