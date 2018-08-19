@@ -634,20 +634,26 @@ class Wallet(object):
         )
 
     @classmethod
-    def from_master_secret(cls, seed, network="monero"):
+    def from_master_secret(cls, seed, network="monero", use_ed25519=False):
         """Generate a new PrivateKey from a secret key.
         :param seed: The key to use to generate this wallet. It may be a long
             string. Do not use a phrase from a book or song, as that will
             be guessed and is not secure. My advice is to not supply this
             argument and let me generate a new random key for you.
         :param network:
+        :param use_ed25519:
         See https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#Serialization_format  # nopep8
+        See https://github.com/satoshilabs/slips/blob/master/slip-0010.md  # nopep8
         """
         network = Wallet.get_network(network)
         seed = ensure_bytes(seed)
         # Given a seed S of at least 128 bits, but 256 is advised
         # Calculate I = HMAC-SHA512(key="Bitcoin seed", msg=S)
-        I = hmac.new(b"Bitcoin seed", msg=seed, digestmod=sha512).digest()
+        cv_seed = b"Bitcoin seed"
+        if use_ed25519:
+            cv_seed = b"ed25519 seed"
+
+        I = hmac.new(cv_seed, msg=seed, digestmod=sha512).digest()
         # Split I into two 32-byte sequences, IL and IR.
         I_L, I_R = I[:32], I[32:]
         # Use IL as master secret key, and IR as master chain code.
