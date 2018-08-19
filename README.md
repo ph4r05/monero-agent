@@ -18,6 +18,7 @@ Moreover, the code will probably be subject to a major refactoring and cleaning.
  - Simple RingCT (more than 1 UTXOs)
  - Sub-addresses
  - Key image sync
+ - Bulletproofs
 
 ## Roadmap
 
