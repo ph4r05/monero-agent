@@ -667,6 +667,8 @@ class BulletProofBuilder(object):
         # Originally:
         # ip2 = inner_product(self.v_sL, vector_add(hadamard(yN, aR_vpIz), vp2zsq))
         hadamard(yN, aR_vpIz, tmp_vct)
+        self.gc(6)
+
         vector_add(tmp_vct, vp2zsq, tmp_vct)
         ip2 = inner_product(self.v_sL, tmp_vct)
 
@@ -1038,6 +1040,7 @@ class BulletProofBuilder(object):
             if i != BP_N - 1:
                 sc_mul(yinvpow, yinvpow, yinv)
                 sc_mul(ypow, ypow, y)
+            self.gc(62)
 
         del g_scalar
         del h_scalar
