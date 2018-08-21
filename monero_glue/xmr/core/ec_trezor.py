@@ -207,11 +207,11 @@ def scalarmult_base_into(r, a):
 
 
 def scalarmult(P, e):
-    return tcry.ge25519_scalarmult_wrapper_r(P, e)
+    return tcry.ge25519_scalarmult_r(P, e)
 
 
 def scalarmult_into(r, P, e):
-    tcry.ge25519_scalarmult_wrapper(r, P, e)
+    tcry.ge25519_scalarmult(r, P, e)
     return r
 
 
