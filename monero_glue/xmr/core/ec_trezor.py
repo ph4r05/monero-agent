@@ -150,7 +150,8 @@ def decodepoint(x):
 
 
 def decodepoint_into(r, x):
-    return tcry.ge25519_unpack_vartime(r, tcry.KEY_BUFF(*x))
+    tcry.ge25519_unpack_vartime(r, tcry.KEY_BUFF(*x))
+    return r
 
 
 def encodepoint(pt):
@@ -172,11 +173,13 @@ def decodeint_noreduce(x):
 
 
 def decodeint_into(r, x):
-    return tcry.expand256_modm(r, tcry.KEY_BUFF(*x))
+    tcry.expand256_modm(r, tcry.KEY_BUFF(*x))
+    return r
 
 
 def decodeint_into_noreduce(r, x):
-    return tcry.expand_raw256_modm(r, tcry.KEY_BUFF(*x))
+    tcry.expand_raw256_modm(r, tcry.KEY_BUFF(*x))
+    return r
 
 
 def encodeint(x):
@@ -185,7 +188,8 @@ def encodeint(x):
 
 def encodeint_into(x, b):
     bf = tcry.KEY_BUFF.from_buffer(b)
-    return tcry.contract256_modm(bf, x)
+    tcry.contract256_modm(bf, x)
+    return b
 
 
 def check_ed25519point(x):
@@ -198,7 +202,8 @@ def scalarmult_base(a):
 
 
 def scalarmult_base_into(r, a):
-    return tcry.ge25519_scalarmult_base_wrapper(r, a)
+    tcry.ge25519_scalarmult_base_wrapper(r, a)
+    return r
 
 
 def scalarmult(P, e):
@@ -206,7 +211,8 @@ def scalarmult(P, e):
 
 
 def scalarmult_into(r, P, e):
-    return tcry.ge25519_scalarmult_wrapper(r, P, e)
+    tcry.ge25519_scalarmult_wrapper(r, P, e)
+    return r
 
 
 def point_add(P, Q):
@@ -214,7 +220,8 @@ def point_add(P, Q):
 
 
 def point_add_into(r, P, Q):
-    return tcry.ge25519_add(r, P, Q, 0)
+    tcry.ge25519_add(r, P, Q, 0)
+    return r
 
 
 def point_sub(P, Q):
@@ -222,7 +229,8 @@ def point_sub(P, Q):
 
 
 def point_sub_into(r, P, Q):
-    return tcry.ge25519_add(r, P, Q, 1)
+    tcry.ge25519_add(r, P, Q, 1)
+    return r
 
 
 def point_eq(P, Q):
@@ -307,7 +315,8 @@ def sc_0_into(r):
     Sets 0 to the scalar value Zmod(m)
     :return:
     """
-    return tcry.init256_modm(r, 0)
+    tcry.init256_modm(r, 0)
+    return r
 
 
 def sc_init(x):
@@ -327,7 +336,8 @@ def sc_init_into(r, x):
     """
     if x >= (1 << 64):
         raise ValueError("Initialization works up to 64-bit only")
-    return tcry.init256_modm(r, x)
+    tcry.init256_modm(r, x)
+    return r
 
 
 def sc_get64(x):
@@ -391,7 +401,8 @@ def sc_add_into(r, aa, bb):
     :param bb:
     :return:
     """
-    return tcry.add256_modm(r, aa, bb)
+    tcry.add256_modm(r, aa, bb)
+    return r
 
 
 def sc_sub(aa, bb):
@@ -412,7 +423,8 @@ def sc_sub_into(r, aa, bb):
     :param bb:
     :return:
     """
-    return tcry.sub256_modm(r, aa, bb)
+    tcry.sub256_modm(r, aa, bb)
+    return r
 
 
 def sc_mul(aa, bb):
@@ -433,7 +445,8 @@ def sc_mul_into(r, aa, bb):
     :param bb:
     :return:
     """
-    return tcry.mul256_modm(r, aa, bb)
+    tcry.mul256_modm(r, aa, bb)
+    return r
 
 
 def sc_isnonzero(c):
@@ -475,7 +488,8 @@ def sc_mulsub_into(r, aa, bb, cc):
     :param cc:
     :return:
     """
-    return tcry.mulsub256_modm(r, aa, bb, cc)
+    tcry.mulsub256_modm(r, aa, bb, cc)
+    return r
 
 
 def sc_muladd(aa, bb, cc):
@@ -498,7 +512,8 @@ def sc_muladd_into(r, aa, bb, cc):
     :param cc:
     :return:
     """
-    return tcry.muladd256_modm(r, aa, bb, cc)
+    tcry.muladd256_modm(r, aa, bb, cc)
+    return r
 
 
 def sc_inv_into(r, x):
@@ -532,7 +547,8 @@ def random_scalar():
 
 
 def random_scalar_into(r):
-    return tcry.xmr_random_scalar(r)
+    tcry.xmr_random_scalar(r)
+    return r
 
 
 #
@@ -707,7 +723,8 @@ def hash_to_scalar_into(r, data, length=None):
     :return:
     """
     dt = data[:length] if length else data
-    return tcry.xmr_hash_to_scalar(r, bytes(dt))
+    tcry.xmr_hash_to_scalar(r, bytes(dt))
+    return r
 
 
 def hash_to_ec(buf):
@@ -731,7 +748,8 @@ def hash_to_ec_into(r, buf):
     :param key:
     :return:
     """
-    return tcry.xmr_hash_to_ec(r, buf)
+    tcry.xmr_hash_to_ec(r, buf)
+    return r
 
 
 #
@@ -772,7 +790,8 @@ def add_keys2_into(r, a, b, B):
     :param B:
     :return:
     """
-    return tcry.xmr_add_keys2_vartime(r, a, b, B)
+    tcry.xmr_add_keys2_vartime(r, a, b, B)
+    return r
 
 
 def add_keys3(a, A, b, B):
@@ -797,7 +816,8 @@ def add_keys3_into(r, a, A, b, B):
     :param B:
     :return:
     """
-    return tcry.xmr_add_keys3_vartime(r, a, A, b, B)
+    tcry.xmr_add_keys3_vartime(r, a, A, b, B)
+    return r
 
 
 def gen_c(a, amount):
