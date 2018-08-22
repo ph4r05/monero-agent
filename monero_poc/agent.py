@@ -176,10 +176,8 @@ class HostAgent(cli.BaseCli):
         print("View key:  %s" % binascii.hexlify(pres.watch_key).decode("utf8"))
         print("Address:   %s" % pres.address.decode("utf8"))
 
-    def do_get_keys(self, line):
-        pres = self.token_cmd(self.agent.get_keys())
-        print("View key:  %s" % binascii.hexlify(pres.watch_key).decode("utf8"))
-        print("Spend key: %s" % binascii.hexlify(pres.spend_key).decode("utf8"))
+    def do_get_address(self, line):
+        pres = self.token_cmd(self.agent.get_address())
         print("Address:   %s" % pres.address.decode("utf8"))
 
     def do_balance(self, line):
