@@ -57,6 +57,10 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
     if index:
         major = index.major
         minor = index.minor
+        
+    if major == 0 and minor == 0:
+        return secret_key
+
     return crypto.get_subaddress_secret_key(secret_key, major, minor)
 
 
@@ -69,6 +73,9 @@ def get_subaddress_spend_public_key(view_private, spend_public, major, minor):
     :param minor:
     :return:
     """
+    if major == 0 and minor == 0:
+        return spend_public
+
     m = get_subaddress_secret_key(view_private, major=major, minor=minor)
     M = crypto.scalarmult_base(m)
     D = crypto.point_add(spend_public, M)
