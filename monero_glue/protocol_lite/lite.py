@@ -43,6 +43,7 @@ class LiteProtocol(object):
         self.state = None
         self.options = None
         self.sig_mode = 0
+        self.account = 0
         self.a = None
         self.A = None
         self.b = None
@@ -490,7 +491,7 @@ class LiteProtocol(object):
 
     async def open_tx(self):
         self.ctx_amount = sha256()
-        account = self._fetch_u32()
+        self.account = self._fetch_u32()
 
         self.r = crypto.random_scalar()
         self.R = crypto.scalarmult_base(self.r)
