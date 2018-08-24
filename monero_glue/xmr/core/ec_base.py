@@ -65,7 +65,7 @@ py_fe_fffb4 = (
     0x1a43f3031067dbf926c0f4887ef7432eee46fc08a13f4a49853d1903b6b39186
 )  # sqrt( sqrt(-1*a) * A * (A + 2))
 
-NULL_KEY_ENC = [0] * 32
+NULL_KEY_ENC = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 
 
 def pow2(x, p):
