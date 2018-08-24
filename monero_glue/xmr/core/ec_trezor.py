@@ -566,6 +566,12 @@ def ge_mul8(P):
     return tcry.ge25519_mul8_r(P)
 
 
+def ge_mul8_into(r, P):
+    check_ed25519point(P)
+    tcry.ge25519_mul8(r, P)
+    return r
+
+
 def ge_scalarmult_base(a):
     a = sc_reduce32(a)
     return scalarmult_base(a)
