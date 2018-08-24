@@ -634,6 +634,15 @@ def identity(byte_enc=False):
     return idd if not byte_enc else encodepoint(idd)
 
 
+def identity_into(r):
+    """
+    Identity point
+    :return:
+    """
+    tcry.ge25519_set_neutral(r)
+    return r
+
+
 def ge_frombytes_vartime_check(point):
     """
     https://www.imperialviolet.org/2013/12/25/elligator.html
