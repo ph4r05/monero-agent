@@ -116,7 +116,7 @@ def generate_key_image(public_key, secret_key):
     :return:
     """
     point = crypto.hash_to_ec(public_key)
-    point2 = crypto.ge_scalarmult(secret_key, point)
+    point2 = crypto.scalarmult(point, secret_key)
     return point2
 
 
@@ -506,5 +506,5 @@ def generate_sub_address_keys(view_sec, spend_pub, major, minor):
     m = get_subaddress_secret_key(view_sec, major=major, minor=minor)
     M = crypto.scalarmult_base(m)
     D = crypto.point_add(spend_pub, M)
-    C = crypto.ge_scalarmult(view_sec, D)
+    C = crypto.scalarmult(D, view_sec)
     return D, C

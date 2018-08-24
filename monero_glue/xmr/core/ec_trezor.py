@@ -555,35 +555,27 @@ def random_scalar_into(r):
 # GE - ed25519 group
 #
 
-
-def ge_scalarmult(a, A):
-    check_ed25519point(A)
-    return scalarmult(A, a)
+INV_EIGHT = b"\x79\x2f\xdc\xe2\x29\xe5\x06\x61\xd0\xda\x1c\x7d\xb3\x9d\xd3\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06"
+INV_EIGHT_SC = decodeint(INV_EIGHT)
 
 
-def ge_mul8(P):
-    check_ed25519point(P)
+def point_mul8(P):
     return tcry.ge25519_mul8_r(P)
 
 
-def ge_mul8_into(r, P):
-    check_ed25519point(P)
+def point_mulinv8(P):
+    return scalarmult(P, INV_EIGHT_SC)
+
+
+def point_mul8_into(r, P):
     tcry.ge25519_mul8(r, P)
     return r
-
-
-def ge_scalarmult_base(a):
-    a = sc_reduce32(a)
-    return scalarmult_base(a)
 
 
 def ge_double_scalarmult_base_vartime(a, A, b):
     """
     void ge25519_double_scalarmult_vartime(ge25519 *r, const ge25519 *p1, const bignum256modm s1, const bignum256modm s2);
     r = a * A + b * B
-        where a = a[0]+256*a[1]+...+256^31 a[31].
-        and b = b[0]+256*b[1]+...+256^31 b[31].
-        B is the Ed25519 base point (x,4/5) with x positive.
 
     :param a:
     :param A:
@@ -654,25 +646,9 @@ def ge_frombytes_vartime_check(point):
     https://www.imperialviolet.org/2013/12/25/elligator.html
     http://elligator.cr.yp.to/
     http://elligator.cr.yp.to/elligator-20130828.pdf
-
-    Basically it takes some bytes of data
-    converts to a point on the edwards curve
-    if the bytes aren't on the curve
-    also does some checking on the numbers
-    ex. your secret key has to be at least >= 4294967277
-    also it rejects certain curve points, i.e. "if x = 0, sign must be positive"
-
-    sqrt(s) = s^((q+3) / 8) if s^((q+3)/4) == s
-            = sqrt(-1) s ^((q+3) / 8) otherwise
-
     :param key:
     :return:
     """
-    # if tcry.ge25519_check(point) != 1:
-    #     raise ValueError('Point check failed')
-    #
-    # return 0
-
     return 0 if tcry.ge25519_check(point) == 1 else -1
 
 

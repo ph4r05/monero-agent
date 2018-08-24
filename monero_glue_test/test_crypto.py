@@ -867,7 +867,7 @@ class CryptoTest(aiounittest.AsyncTestCase):
         A4 = crypto.point_add(A3, A)
         A8 = crypto.scalarmult(A4, crypto.sc_init(2))
 
-        A8p = crypto.ge_mul8(A)
+        A8p = crypto.point_mul8(A)
         self.assertTrue(crypto.point_eq(A8p, A8))
         self.assertTrue(crypto.point_eq(A4, crypto.scalarmult(A, crypto.sc_init(4))))
         self.assertTrue(crypto.point_eq(A3, crypto.scalarmult(A, crypto.sc_init(3))))

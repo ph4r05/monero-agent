@@ -504,8 +504,8 @@ class TTransactionBuilder(object):
 
         # if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
         if num_stdaddresses == 0 and num_subaddresses == 1:
-            self.r_pub = crypto.ge_scalarmult(
-                self.r, crypto.decodepoint(single_dest_subaddress.spend_public_key)
+            self.r_pub = crypto.scalarmult(
+                crypto.decodepoint(single_dest_subaddress.spend_public_key), self.r
             )
 
         self.need_additional_txkeys = num_subaddresses > 0 and (
@@ -1010,12 +1010,12 @@ class TTransactionBuilder(object):
             )
 
             if dst_entr.is_subaddress:
-                additional_txkey = crypto.ge_scalarmult(
-                    additional_txkey_priv,
+                additional_txkey = crypto.scalarmult(
                     crypto.decodepoint(dst_entr.addr.spend_public_key),
+                    additional_txkey_priv,
                 )
             else:
-                additional_txkey = crypto.ge_scalarmult_base(additional_txkey_priv)
+                additional_txkey = crypto.scalarmult_base(additional_txkey_priv)
 
             self.additional_tx_public_keys.append(crypto.encodepoint(additional_txkey))
             if not use_provided:

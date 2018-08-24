@@ -129,7 +129,7 @@ def scalarmult_key(dst, P, s):
 def scalarmult8(dst, P):
     dst = _ensure_dst_key(dst)
     crypto.decodepoint_into(tmp_pt_1, P)
-    crypto.ge_mul8_into(tmp_pt_2, tmp_pt_1)
+    crypto.point_mul8_into(tmp_pt_2, tmp_pt_1)
     crypto.encodepoint_into(tmp_pt_2, dst)
     return dst
 
