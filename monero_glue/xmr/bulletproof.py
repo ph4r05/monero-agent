@@ -9,7 +9,11 @@
 
 import math
 
-from monero_serialize.core.int_serialize import dump_uvarint_b, dump_uvarint_b_into, uvarint_size
+from monero_serialize.core.int_serialize import (
+    dump_uvarint_b,
+    dump_uvarint_b_into,
+    uvarint_size,
+)
 from monero_serialize.xmrtypes import Bulletproof
 
 from monero_glue.compat import gc
@@ -282,6 +286,7 @@ class KeyVBase(object):
     """
     Base KeyVector object
     """
+
     def __init__(self, elems=64):
         self.current_idx = 0
         self.size = elems
@@ -290,14 +295,14 @@ class KeyVBase(object):
         if idx < 0:
             idx = self.size + idx
         if idx >= self.size:
-            raise ValueError('Index out of bounds')
+            raise ValueError("Index out of bounds")
         return idx
 
     def __getitem__(self, item):
-        raise ValueError('Not supported')
+        raise ValueError("Not supported")
 
     def __setitem__(self, key, value):
-        raise ValueError('Not supported')
+        raise ValueError("Not supported")
 
     def __iter__(self):
         self.current_idx = 0
@@ -418,6 +423,7 @@ class KeyVSized(KeyVBase):
     Resized vector, wrapping possibly larger vector
     (e.g., precomputed, but has to have exact size for further computations)
     """
+
     def __init__(self, wrapped, new_size):
         super().__init__(new_size)
         self.wrapped = wrapped
@@ -435,6 +441,7 @@ class KeyVPrecomp(KeyVBase):
     Usable for Gi vector with precomputed usual sizes (i.e., 2 output transactions)
     but possible to compute further
     """
+
     def __init__(self, size, precomp_prefix, aux_comp_fnc):
         super().__init__(size)
         self.precomp_prefix = precomp_prefix
@@ -451,6 +458,7 @@ class KeyVSliced(KeyVBase):
     """
     Sliced in-memory vector version, remapping
     """
+
     def __init__(self, src, start, stop):
         super().__init__(stop - start)
         self.wrapped = src
@@ -463,7 +471,7 @@ class KeyVSliced(KeyVBase):
         self.wrapped[self.offset + self.idxize(key)] = value
 
     def resize(self, nsize, chop=False):
-        raise ValueError('Not supported')
+        raise ValueError("Not supported")
 
 
 def _ensure_dst_keyvect(dst=None, size=None):
@@ -672,7 +680,10 @@ class MultiExp(object):
     Moreover, Monero needs speed for very fast verification for blockchain verification which is not
     priority in this use case.
     """
-    def __init__(self, size=None, scalars=None, points=None, scalar_fnc=None, point_fnc=None):
+
+    def __init__(
+        self, size=None, scalars=None, points=None, scalar_fnc=None, point_fnc=None
+    ):
         self.size = size if size else None
         self.current_idx = 0
 
@@ -681,7 +692,9 @@ class MultiExp(object):
         self.scalar_fnc = scalar_fnc
         self.point_fnc = point_fnc
         if (scalars or points) and size is None:
-            self.size = max(len(scalars) if scalars else 0, len(points) if points else 0)
+            self.size = max(
+                len(scalars) if scalars else 0, len(points) if points else 0
+            )
 
     def add_pair(self, scalar, point):
         self.scalars.append(scalar)
@@ -744,7 +757,7 @@ class MergedMultiExp(object):
 
     def _get_chunk(self, idx):
         if idx >= self.size:
-            raise ValueError('Out of bounds')
+            raise ValueError("Out of bounds")
         x = 0
         while self.bnds[x] < idx and x < len(self.exps):
             x += 1
@@ -759,7 +772,7 @@ class MergedMultiExp(object):
         return self.get_idx(item)
 
     def __setitem__(self, key, value):
-        raise ValueError('Not supported')
+        raise ValueError("Not supported")
 
     def __iter__(self):
         self.current_idx = 0
@@ -847,10 +860,14 @@ class BulletProofBuilder(object):
         return dst
 
     def _gprec_aux(self, size):
-        return KeyVPrecomp(size, self.Gprec, lambda i, d: get_exponent(None, XMR_H, i * 2 + 1))
+        return KeyVPrecomp(
+            size, self.Gprec, lambda i, d: get_exponent(None, XMR_H, i * 2 + 1)
+        )
 
     def _hprec_aux(self, size):
-        return KeyVPrecomp(size, self.Hprec, lambda i, d: get_exponent(None, XMR_H, i * 2))
+        return KeyVPrecomp(
+            size, self.Hprec, lambda i, d: get_exponent(None, XMR_H, i * 2)
+        )
 
     def _two_aux(self, size):
         # Simple recursive exponentiation from precomputed results
@@ -981,12 +998,8 @@ class BulletProofBuilder(object):
         tau1 = sc_gen()
         tau2 = sc_gen()
 
-        add_keys(
-            T1, scalarmultH(tmp_bf_1, t1), scalarmult_base(tmp_bf_2, tau1)
-        )
-        add_keys(
-            T2, scalarmultH(tmp_bf_1, t2), scalarmult_base(tmp_bf_2, tau2)
-        )
+        add_keys(T1, scalarmultH(tmp_bf_1, t1), scalarmult_base(tmp_bf_2, tau1))
+        add_keys(T2, scalarmultH(tmp_bf_1, t2), scalarmult_base(tmp_bf_2, tau2))
 
         # PAPER LINES 49-51
         x = _ensure_dst_key()
@@ -1046,7 +1059,7 @@ class BulletProofBuilder(object):
             Gprime[i] = Gprec[i]
             scalarmult_key(Hprime[i], Hprec[i], yinvpow)
             sc_mul(yinvpow, yinvpow, yinv)
-        del(Gprec, Hprec)
+        del (Gprec, Hprec)
         self.gc(21)
 
         round = 0
@@ -1075,15 +1088,11 @@ class BulletProofBuilder(object):
 
             # PAPER LINES 16-17
             inner_product(
-                aprime.slice_view(0, nprime),
-                bprime.slice_view(nprime, npr2),
-                cL,
+                aprime.slice_view(0, nprime), bprime.slice_view(nprime, npr2), cL
             )
 
             inner_product(
-                aprime.slice_view(nprime, npr2),
-                bprime.slice_view(0, nprime),
-                cR,
+                aprime.slice_view(nprime, npr2), bprime.slice_view(0, nprime), cR
             )
 
             self.gc(23)
@@ -1231,7 +1240,7 @@ class BulletProofBuilder(object):
             j, i = idx // N, idx % N
             if j > num_inp:
                 return ZERO if is_a else MINUS_ONE
-            elif sv[j][i//8] & (1 << i % 8):
+            elif sv[j][i // 8] & (1 << i % 8):
                 return ONE if is_a else ZERO
             else:
                 return ZERO if is_a else MINUS_ONE
@@ -1279,13 +1288,13 @@ class BulletProofBuilder(object):
         y = _ensure_dst_key()
         hash_cache_mash(y, hash_cache, A, S)
         if y == ZERO:
-            return 0,
+            return (0,)
 
         z = _ensure_dst_key()
         hash_to_scalar(hash_cache, y)
         copy_key(z, hash_cache)
         if z == ZERO:
-            return 0,
+            return (0,)
 
         # Polynomial construction by coefficients
         self.gc(13)
@@ -1302,20 +1311,22 @@ class BulletProofBuilder(object):
         for i in range(MN):
             zero_twos[i] = ZERO
             for j in range(1, M + 1):
-                if i >= (j-1)*N and i < j*N:
-                    sc_muladd(zero_twos[i], zpow[1+j], twoN[i-(j-1)*N], zero_twos[i])
+                if i >= (j - 1) * N and i < j * N:
+                    sc_muladd(
+                        zero_twos[i], zpow[1 + j], twoN[i - (j - 1) * N], zero_twos[i]
+                    )
 
         self.gc(15)
 
         r0 = vector_add(aR, zMN)
-        del(zMN, twoN)
+        del (zMN, twoN)
 
         yMN = vector_powers(y, MN)
         hadamard(r0, yMN, dst=r0)
         vector_add(r0, zero_twos, dst=r0)
-        del(zero_twos)
+        del (zero_twos)
         r1 = hadamard(yMN, sR)
-        del(yMN, sR)
+        del (yMN, sR)
         self.gc(16)
 
         # Polynomial construction before PAPER LINE 46
@@ -1323,7 +1334,7 @@ class BulletProofBuilder(object):
         t1_2 = inner_product(l1, r0)
         t1 = sc_add(None, t1_1, t1_2)
         t2 = inner_product(l1, r1)
-        del(t1_1, t1_2)
+        del (t1_1, t1_2)
 
         # PAPER LINES 47-48
         tau1, tau2 = sc_gen(), sc_gen()
@@ -1333,14 +1344,14 @@ class BulletProofBuilder(object):
         scalarmult_key(T1, T1, INV_EIGHT)
         add_keys(T2, scalarmultH(tmp_bf_1, t2), scalarmult_base(tmp_bf_2, tau2))
         scalarmult_key(T2, T2, INV_EIGHT)
-        del(t1, t2)
+        del (t1, t2)
         self.gc(17)
 
         # PAPER LINES 49-51
         x = _ensure_dst_key()
         hash_cache_mash(x, hash_cache, z, T1, T2)
         if x == ZERO:
-            return 0,
+            return (0,)
 
         # PAPER LINES 52-53
         taux = _ensure_dst_key()
@@ -1349,21 +1360,21 @@ class BulletProofBuilder(object):
         xsq = _ensure_dst_key()
         sc_mul(xsq, x, x)
         sc_muladd(taux, tau2, xsq, taux)
-        del(xsq, tau1, tau2)
+        del (xsq, tau1, tau2)
         for j in range(1, len(V) + 1):
-            sc_muladd(taux, zpow[j+1], gamma[j-1], taux)
-        del(zpow)
+            sc_muladd(taux, zpow[j + 1], gamma[j - 1], taux)
+        del (zpow)
 
         self.gc(18)
         mu = _ensure_dst_key()
         sc_muladd(mu, x, rho, alpha)
-        del(rho, alpha)
+        del (rho, alpha)
 
         # PAPER LINES 54-57
         l = vector_add(l0, vector_scalar(l1, x), l0)
         r = vector_add(r0, vector_scalar(r1, x), r0)
         t = inner_product(l, r)
-        del(l1, r1, sL)
+        del (l1, r1, sL)
         self.gc(19)
 
         # PAPER LINES 32-33
@@ -1389,7 +1400,9 @@ class BulletProofBuilder(object):
 
         L = _ensure_dst_keyvect(None, logMN)
         R = _ensure_dst_keyvect(None, logMN)
-        w = _ensure_dst_keyvect(None, logMN)  # this is the challenge x in the inner product protocol
+        w = _ensure_dst_keyvect(
+            None, logMN
+        )  # this is the challenge x in the inner product protocol
         cL = _ensure_dst_key()
         cR = _ensure_dst_key()
         winv = _ensure_dst_key()
@@ -1415,15 +1428,11 @@ class BulletProofBuilder(object):
 
             # PAPER LINES 16-17
             inner_product(
-                aprime.slice_view(0, nprime),
-                bprime.slice_view(nprime, npr2),
-                cL,
+                aprime.slice_view(0, nprime), bprime.slice_view(nprime, npr2), cL
             )
 
             inner_product(
-                aprime.slice_view(nprime, npr2),
-                bprime.slice_view(0, nprime),
-                cR,
+                aprime.slice_view(nprime, npr2), bprime.slice_view(0, nprime), cR
             )
             self.gc(23)
 
@@ -1457,7 +1466,7 @@ class BulletProofBuilder(object):
             # PAPER LINES 21-22
             hash_cache_mash(w[round], hash_cache, L[round], R[round])
             if w[round] == ZERO:
-                return 0,
+                return (0,)
 
             # PAPER LINES 24-25
             invert(winv, w[round])
@@ -1490,19 +1499,22 @@ class BulletProofBuilder(object):
             round += 1
             self.gc(30)
 
-        return 1, Bulletproof(
-            V=V,
-            A=A,
-            S=S,
-            T1=T1,
-            T2=T2,
-            taux=taux,
-            mu=mu,
-            L=L,
-            R=R,
-            a=aprime[0],
-            b=bprime[0],
-            t=t,
+        return (
+            1,
+            Bulletproof(
+                V=V,
+                A=A,
+                S=S,
+                T1=T1,
+                T2=T2,
+                taux=taux,
+                mu=mu,
+                L=L,
+                R=R,
+                a=aprime[0],
+                b=bprime[0],
+                t=t,
+            ),
         )
 
     def verify_testnet(self, proof):
@@ -1545,7 +1557,7 @@ class BulletProofBuilder(object):
         k = _ensure_dst_key()
         yN = vector_powers(y, BP_N)
         ip1y = inner_product(self.oneN, yN)
-        del(yN)
+        del (yN)
 
         zsq = _ensure_dst_key()
         sc_mul(zsq, z, z)
@@ -1575,7 +1587,7 @@ class BulletProofBuilder(object):
         if L61Right != L61Left:
             raise ValueError("Verification failure 1")
 
-        del(k, ip1y, zcu, L61Left, L61Right)
+        del (k, ip1y, zcu, L61Left, L61Right)
 
         # PAPER LINE 62
         P = _ensure_dst_key()
@@ -1637,7 +1649,7 @@ class BulletProofBuilder(object):
                 sc_mul(ypow, ypow, y)
             self.gc(62)
 
-        del(g_scalar, h_scalar, twoN, Gprec, Hprec)
+        del (g_scalar, h_scalar, twoN, Gprec, Hprec)
         self.gc(63)
 
         # PAPER LINE 26
@@ -1714,7 +1726,7 @@ class BulletProofBuilder(object):
                 M = 1 << logM
 
             self.assrt(len(proof.L) == 6 + logM, "Proof is not the expected size")
-            MN = M*N
+            MN = M * N
             weight = crypto.encodeint(crypto.random_scalar())
 
             # Reconstruct the challenges
@@ -1732,7 +1744,7 @@ class BulletProofBuilder(object):
 
             # PAPER LINE 61
             sc_muladd(y0, proof.taux, weight, y0)
-            zpow = vector_powers(z, M+3)
+            zpow = vector_powers(z, M + 3)
 
             k = _ensure_dst_key()
             ip1y = vector_power_sum(y, MN)
@@ -1748,7 +1760,7 @@ class BulletProofBuilder(object):
 
             muex = MultiExp(point_fnc=lambda i, d: proof.V[i])
             for j in range(len(proof.V)):
-                sc_mul(tmp, zpow[j+2], EIGHT)
+                sc_mul(tmp, zpow[j + 2], EIGHT)
                 muex.add_scalar(tmp)
 
             add_keys(Y2, Y2, scalarmult_key(None, multiexp(None, muex, False), weight))
@@ -1764,12 +1776,19 @@ class BulletProofBuilder(object):
 
             # PAPER LINE 62
             sc_mul(tmp, x, EIGHT)
-            add_keys(Z0, Z0,
-                     scalarmult_key(None,
-                                    add_keys(None,
-                                             scalarmult8(None, proof.A),
-                                             scalarmult_key(None, proof.S, tmp)),
-                                    weight))
+            add_keys(
+                Z0,
+                Z0,
+                scalarmult_key(
+                    None,
+                    add_keys(
+                        None,
+                        scalarmult8(None, proof.A),
+                        scalarmult_key(None, proof.S, tmp),
+                    ),
+                    weight,
+                ),
+            )
 
             # Compute the number of rounds for the inner product
             rounds = logM + logN
@@ -1813,9 +1832,9 @@ class BulletProofBuilder(object):
 
                 # Adjust the scalars using the exponents from PAPER LINE 62
                 sc_add(g_scalar, g_scalar, z)
-                self.assrt(2+i//N < len(zpow), "invalid zpow index")
+                self.assrt(2 + i // N < len(zpow), "invalid zpow index")
                 self.assrt(i % N < len(twoN), "invalid twoN index")
-                sc_mul(tmp, zpow[2+i//N], twoN[i % N])
+                sc_mul(tmp, zpow[2 + i // N], twoN[i % N])
                 sc_muladd(tmp, z, ypow, tmp)
                 sc_mulsub(h_scalar, tmp, yinvpow, h_scalar)
 
@@ -1827,11 +1846,15 @@ class BulletProofBuilder(object):
                     sc_mul(ypow, ypow, y)
                 self.gc(62)
 
-            del(g_scalar, h_scalar, twoN)
+            del (g_scalar, h_scalar, twoN)
             self.gc(63)
 
             sc_muladd(z1, proof.mu, weight, z1)
-            muex = MultiExp(point_fnc=lambda i, d: proof.L[i//2] if i&1 == 0 else proof.R[i//2])
+            muex = MultiExp(
+                point_fnc=lambda i, d: proof.L[i // 2]
+                if i & 1 == 0
+                else proof.R[i // 2]
+            )
             for i in range(rounds):
                 sc_mul(tmp, w[i], w[i])
                 sc_mul(tmp, tmp, EIGHT)
@@ -1854,24 +1877,30 @@ class BulletProofBuilder(object):
         sub_keys(check1, check1, Y3)
         sub_keys(check1, check1, Y4)
         if check1 != ONE:
-            raise ValueError('Verification failure at step 1')
+            raise ValueError("Verification failure at step 1")
 
         sc_sub(tmp, ZERO, z1)
-        check2 = crypto.ge_double_scalarmult_base_vartime(crypto.decodeint(z3), crypto.gen_H(), crypto.decodeint(tmp))
+        check2 = crypto.ge_double_scalarmult_base_vartime(
+            crypto.decodeint(z3), crypto.gen_H(), crypto.decodeint(tmp)
+        )
         crypto.point_add_into(check2, check2, crypto.decodepoint(Z0))
         crypto.point_add_into(check2, check2, crypto.decodepoint(Z2))
 
         Gprec = self._gprec_aux(maxMN)
         Hprec = self._hprec_aux(maxMN)
-        muex = MultiExp(point_fnc=lambda i, d: Gprec[i // 2] if i & 1 == 0 else Hprec[i // 2])
+        muex = MultiExp(
+            point_fnc=lambda i, d: Gprec[i // 2] if i & 1 == 0 else Hprec[i // 2]
+        )
         for i in range(maxMN):
             sc_sub(tmp, ZERO, z4[i])
             muex.add_scalar(tmp)
             sc_sub(tmp, ZERO, z5[i])
             muex.add_scalar(tmp)
 
-        crypto.point_add_into(check2, check2, crypto.decodepoint(multiexp(None, muex, True)))
+        crypto.point_add_into(
+            check2, check2, crypto.decodepoint(multiexp(None, muex, True))
+        )
         check2_enc = crypto.encodepoint(check2)
         if check2_enc != ONE:
-            raise ValueError('Verification failure at step 2')
+            raise ValueError("Verification failure at step 2")
         return True

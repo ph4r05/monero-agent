@@ -217,7 +217,7 @@ class Agent(object):
         tsx_data.account = tx.subaddr_account
         tsx_data.minor_indices = tx.subaddr_indices
         tsx_data.is_multisig = multisig
-        tsx_data.is_bulletproof = common.defattr(tx, 'use_bulletproofs', False)
+        tsx_data.is_bulletproof = common.defattr(tx, "use_bulletproofs", False)
         tsx_data.exp_tx_prefix_hash = common.defval(exp_tx_prefix_hash, b"")
         tsx_data.use_tx_keys = common.defval(use_tx_keys, [])
         self.ct.tx.unlock_time = tx.unlock_time
@@ -329,9 +329,20 @@ class Agent(object):
                 await tmisc.parse_msg(t_res.ecdh_info, xmrtypes.EcdhTuple())
             )
 
-            rsig = await tmisc.parse_msg(t_res.rsig, xmrtypes.RangeSig() if not self._is_bulletproof_transaction() else xmrtypes.Bulletproof())
+            rsig = await tmisc.parse_msg(
+                t_res.rsig,
+                xmrtypes.RangeSig()
+                if not self._is_bulletproof_transaction()
+                else xmrtypes.Bulletproof(),
+            )
             if self._is_bulletproof_transaction():
-                rsig.V = [crypto.encodepoint(ring_ct.bp_comm_to_v(crypto.decodepoint(self.ct.tx_out_pk[-1].mask)))]
+                rsig.V = [
+                    crypto.encodepoint(
+                        ring_ct.bp_comm_to_v(
+                            crypto.decodepoint(self.ct.tx_out_pk[-1].mask)
+                        )
+                    )
+                ]
 
             self.ct.tx_out_rsigs.append(rsig)
 
@@ -339,9 +350,10 @@ class Agent(object):
             try:
                 rsig = self.ct.tx_out_rsigs[-1]
                 if not ring_ct.ver_range(
-                        C=crypto.decodepoint(self.ct.tx_out_pk[-1].mask),
-                        rsig=rsig,
-                        use_bulletproof=self._is_bulletproof_transaction()):
+                    C=crypto.decodepoint(self.ct.tx_out_pk[-1].mask),
+                    rsig=rsig,
+                    use_bulletproof=self._is_bulletproof_transaction(),
+                ):
                     logger.warning("Rsing not valid")
 
             except Exception as e:

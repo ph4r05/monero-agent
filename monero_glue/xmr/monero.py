@@ -57,7 +57,7 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
     if index:
         major = index.major
         minor = index.minor
-        
+
     if major == 0 and minor == 0:
         return secret_key
 

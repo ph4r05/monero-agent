@@ -651,7 +651,7 @@ class LiteProtocol(object):
 
         sw = 0x6F01
         try:
-            log.debug(__name__, 'Ins: %s, %s %s', ins, p1, p2)
+            log.debug(__name__, "Ins: %s, %s %s", ins, p1, p2)
             sw = await self._sub_dispatch(ins, p1)
         except Exception as e:
             log.error(__name__, "Exception dispatching: %s", e)

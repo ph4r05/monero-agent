@@ -28,4 +28,3 @@ def decrypt(key, ciphertext, iv=None):
     """
     cipher = AES.new(key, AES.MODE_CBC, iv=iv)
     return cipher.decrypt(ciphertext)
-
