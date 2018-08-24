@@ -182,7 +182,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
 
             if is_bp:
                 rsig = tx_obj.rct_signatures.p.bulletproofs[idx]
-                rsig.V = [out_pk.mask]
+                rsig.V = [crypto.encodepoint(ring_ct.bp_comm_to_v(crypto.decodepoint(out_pk.mask)))]
             else:
                 rsig = tx_obj.rct_signatures.p.rangeSigs[idx]
 
