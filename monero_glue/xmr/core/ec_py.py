@@ -566,56 +566,19 @@ def point_norm(P):
     return P
 
 
-def ge_scalarmult(a, A):
-    """
-    a*A
-    http://cr.yp.to/highspeed/naclcrypto-20090310.pdf
-    :param a: scalar
-    :param A: point
-    :return:
-    """
-    # Alice's secret key a is a uniform random 32-byte string then
-    # clampC(a) is a uniform random Curve25519 secret key
-    # i.e. n, where n/8 is a uniform random integer between
-    # 2^251 and 2^252-1
-    # Alice's public key is n/Q compressed to the x-coordinate
-    # so that means, ge_scalarmult is not actually doing scalar mult
-    # clamping makes the secret be between 2^251 and 2^252 and should really be done
-    check_ed25519point(A)
-    return scalarmult(A, a)
-
-
-def ge_mul8(P):
+def point_mul8(P):
     """
     3 times doubling the point
     :param P:
     :return:
     """
-    check_ed25519point(P)
-    return ge_scalarmult(8, P)
-
-
-def ge_scalarmult_base(a):
-    """
-    In this function in the original code, they've assumed it's already clamped ...
-    c.f. also https://godoc.org/github.com/agl/ed25519/edwards25519
-    It will return h = a*B, where B is ed25519 bp (x,4/5)
-    And a = a[0] + 256a[1] + ... + 256^31 a[31]
-    it assumes that a[31 <= 127 already
-    :param a:
-    :return:
-    """
-    a = sc_reduce32(a)
-    return scalarmult_base(a)
+    return scalarmult(P, 8)
 
 
 def ge_double_scalarmult_base_vartime(a, A, b):
     """
     void ge_double_scalarmult_base_vartime(ge_p2 *r, const unsigned char *a, const ge_p3 *A, const unsigned char *b)
     r = a * A + b * B
-        where a = a[0]+256*a[1]+...+256^31 a[31].
-        and b = b[0]+256*b[1]+...+256^31 b[31].
-        B is the Ed25519 base point (x,4/5) with x positive.
 
     :param a:
     :param A:
@@ -904,8 +867,8 @@ def generate_key_derivation(key1, key2):
         raise ValueError("didn't pass curve checks in keyder")
 
     check_ed25519point(key1)
-    point2 = ge_scalarmult(key2, key1)
-    point3 = ge_mul8(
+    point2 = scalarmult(key1, key2)
+    point3 = point_mul8(
         point2
     )  # This has to do with n==0 mod 8 by dedfinition, c.f. the top paragraph of page 5 of http://cr.yp.to/ecdh/curve25519-20060209.pdf
     # and also c.f. middle of page 8 in same document (Bernstein)
