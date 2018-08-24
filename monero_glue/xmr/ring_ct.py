@@ -41,16 +41,25 @@ async def prove_range_bp(amount, last_mask=None):
     bpi = bp.BulletProofBuilder()
 
     mask = last_mask if last_mask is not None else crypto.random_scalar()
-    bpi.set_input(crypto.sc_init(amount), mask)
-    bp_proof = bpi.prove()
+    bp_proof = bpi.prove(crypto.sc_init(amount), mask)
     C = crypto.decodepoint(bp_proof.V[0])
-
+    C = crypto.point_mul8(C)
     gc.collect()
 
     # Return as struct as the hash(BP_struct) != hash(BP_serialized)
     # as the original hashing does not take vector lengths into account which are dynamic
     # in the serialization scheme (and thus extraneous)
     return C, mask, bp_proof
+
+
+def bp_comm_to_v(C):
+    """
+    Commitment to proof.V
+    In mainnet it holds C = 8V
+    :param C:
+    :return:
+    """
+    return crypto.point_mulinv8(C)
 
 
 def prove_range(

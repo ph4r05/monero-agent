@@ -331,7 +331,7 @@ class Agent(object):
 
             rsig = await tmisc.parse_msg(t_res.rsig, xmrtypes.RangeSig() if not self._is_bulletproof_transaction() else xmrtypes.Bulletproof())
             if self._is_bulletproof_transaction():
-                rsig.V = [self.ct.tx_out_pk[-1].mask]
+                rsig.V = [crypto.encodepoint(ring_ct.bp_comm_to_v(crypto.decodepoint(self.ct.tx_out_pk[-1].mask)))]
 
             self.ct.tx_out_rsigs.append(rsig)
 
