@@ -61,12 +61,240 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         bpi.vector_exponent(bpi.v_sL, bpi.v_sR, ve2)
         self.assertEqual(ve1, ve2)
 
+    # fmt: off
+    def bproof_1(self):
+        return Bulletproof(
+            V=[
+                unhexlify(b"3c705e1da4bbe43a0535a5ad3a8e6c148fb8c1a4118ba6b65412b2fe6511b261"),
+            ],
+            A=unhexlify(b"7372db75c0d9d409524924fff5dd13e867eb4c5789f3f5cc6ef860be68d5e4e5"),
+            S=unhexlify(b"be8f2d87ace0a528056d567881e74f44817a811e110cdb3890376262a2084ab3"),
+            T1=unhexlify(b"8dfc541c379efbe6000bb2339c3a52288ffa4300fcc0f0f0de777e54b5488160"),
+            T2=unhexlify(b"cf7d046c86c33bea6c5167bb6482c0a31332989dc9493eacc04a07deb6536953"),
+            taux=unhexlify(b"abaaf209cc9a800d933d51bb398b81ee7284efc9c92727066a640fdccc954009"),
+            mu=unhexlify(b"ec743e23abb555dca26164a86614306f117a733fcd395eb8675411cd31915608"),
+            L=[unhexlify(b"0ee1acc28126656eaf0934314a97e1cf2232a13f5636d319a233cedd58b2882f"),
+               unhexlify(b"cc3d2ec5635de569343bea37fc46a93413ae66bf803a4333f427f79f341d1696"),
+               unhexlify(b"518c80669bed0960fd03e802a9e837e1aa4a4910bb5853067447d7d22eaca325"),
+               unhexlify(b"251a586e8e79a5d767b89931e012acdae317c13c434a6f5f121e44b3b59240b2"),
+               unhexlify(b"09b41426e6c9808f6a58ded987cc39936f703f136b50493dd1c92c9b1ec4e7fc"),
+               unhexlify(b"984d1369c3c7f2687eebca26395576810c66623408958efde4f36b0bb63a2475"),
+               ],
+            R=[unhexlify(b"31768a0465315ff0dd1ea2228ae8c34d1474e873a863362feab7b050f29a211a"),
+               unhexlify(b"27d1b2533ed78d3dacc396afa50fa533cffc5d1563b679a4049a482436718d3c"),
+               unhexlify(b"a49388b042c8a4c6526054661fac1706cf450181ec1f9eed005b283614ec7f95"),
+               unhexlify(b"3f053243fe16f8fd302395c125ffedd93831829b13abbb195bf69fc139069de9"),
+               unhexlify(b"5a32d7f7132043d1f0cc8cd88cce94e5241337ed616c35a1d753436b2d1c4a93"),
+               unhexlify(b"bbd7f9b3031cf41b613a9ee726de9693457238b4be6317083d278e00717f8c14"),
+               ],
+            a=unhexlify(b"83d8d128f35aa02fc063792df9f4e9de0d4e58b8c6e7c449a672d6e4286ee309"),
+            b=unhexlify(b"741d679f1dfe749f7d1ede687f8dd48f7fd3b5a52a5e6a453488d5e25b3fff0e"),
+            t=unhexlify(b"88331e9fd7573135016629f337240225f9c0a5b70bad4157ad60d4260feb2b03")
+        )
+
+    def bproof_2(self):
+        return Bulletproof(
+            V=[
+                unhexlify(b"3c705e1da4bbe43a0535a5ad3a8e6c148fb8c1a4118ba6b65412b2fe6511b261"),
+                unhexlify(b"de5b617501a37ff257e05b0cf93041253fdb85126549640891f7471d4ede167c"),
+            ],
+            A=unhexlify(b"447843c57f05fc8d68c5fdc96fe09d3599aacfe9b25e403d67482fdbe8ffbdbb"),
+            S=unhexlify(b"105b0186d1ec9a8e17e3f6f7909317458681275f888f6ac8a891ec3b5d51dfd5"),
+            T1=unhexlify(b"552c8f7b1e382842feb79b982738350b0d7aeed850ac06bc86ca7c99e43fbfcc"),
+            T2=unhexlify(b"2947b12ecc6c1667b0f0233ec1290893c992f655351edfd1ca877f8bcc070fc0"),
+            taux=unhexlify(b"8cceaccd9626c55166e8892fa6a7e200f9db27e3b46619f6c84e20b3c7ab200c"),
+            mu=unhexlify(b"c08a546e487b0c19e1e125c5dda6032bf198fe296d0dff52d58d091737a97b03"),
+            L=[unhexlify(b"4c5f56522c1e239ccc7edd45b6cc03c7ea46c3d521953bf529989f9d5935a01d"),
+               unhexlify(b"ba764db54e1ed9472df5d1527badd51be2a0223695a136d2114be631d135e1a9"),
+               unhexlify(b"7fecaae48171615c9f282c146ade72befc0f88c402a178be133b5f51afd3dbfc"),
+               unhexlify(b"3c66bbea3376133d8c571fced01b98ce96326fe233f311b4faf77564598d2021"),
+               unhexlify(b"1179c7e24a6d7655bff0b5017ccb85b21f39822c6d845cb1894737a33030e17a"),
+               unhexlify(b"461a200a1b5a7194c021faac7cda64a80388cea2ca26330ca06179aab409d6b1"),
+               unhexlify(b"5e5c377a648ac4d5c900a1ea527a9358083aa1c7777085c3ef81d0316ed16b47"),
+               ],
+            R=[unhexlify(b"110ea38dd587c1f53a8211198cd033a982d173c4d1cdbb0873685a37c7126cb5"),
+               unhexlify(b"960d6ef5dd857bb48148b4fb6927468d02f2a6474d535fd571b61c2c9b2b5613"),
+               unhexlify(b"dd6454b5e029fe4ff8f9647be237a68d0de9457e742df9dafe6e20c1f6ead444"),
+               unhexlify(b"ba9e3d1d9758184679283ee611144ed31d242700af13ac543bf5901472686d1a"),
+               unhexlify(b"05db7c85b62d95dd74f56fab6e3eee3b72b01514640601200770869616b123d1"),
+               unhexlify(b"b8b037b10f5647e79c7c5e7f735a554c8fb656037b304bd94383b769095bc17a"),
+               unhexlify(b"43f4bd0bc55b60c73ab73bb5c3f9376165f815364dc97ae62de2447e0b428632"),
+               ],
+            a=unhexlify(b"0f7696d2b23cfd84f9b62ce906458580db6fe73aaba1682e0e17e4cb9dae1b02"),
+            b=unhexlify(b"76541c70a127d08110a4bc09e6c6c6a0104956d089bcc0699f32dc5fde20ff03"),
+            t=unhexlify(b"66b4498e8980dafea640ce36c763367aba1b415c2d469b564c96d718ff009d0a")
+        )
+
+    def bproof_2_invalid(self):
+        return Bulletproof(
+            V=[
+                unhexlify(b"3c705e1da4bbe43a0535a5ad3a8e6c148fb8c1a4118ba6b65412b2fe6511b261"),
+                unhexlify(b"de5b617501a37ff257e05b0cf93041253fdb85126549640891f7471d4ede167c"),
+            ],
+            A=unhexlify(b"447843c57f05fc8d68c5fdc96fe09d3599aacfe9b25e403d67482fdbe8ffbdbb"),
+            S=unhexlify(b"005b0186d1ec9a8e17e3f6f7909317458681275f888f6ac8a891ec3b5d51dfd5"),
+            T1=unhexlify(b"552c8f7b1e382842feb79b982738350b0d7aeed850ac06bc86ca7c99e43fbfcc"),
+            T2=unhexlify(b"2947b12ecc6c1667b0f0233ec1290893c992f655351edfd1ca877f8bcc070fc0"),
+            taux=unhexlify(b"8cceaccd9626c55166e8892fa6a7e200f9db27e3b46619f6c84e20b3c7ab200c"),
+            mu=unhexlify(b"c08a546e487b0c19e1e125c5dda6032bf198fe296d0dff52d58d091737a97b03"),
+            L=[unhexlify(b"4c5f56522c1e239ccc7edd45b6cc03c7ea46c3d521953bf529989f9d5935a01d"),
+               unhexlify(b"ba764db54e1ed9472df5d1527badd51be2a0223695a136d2114be631d135e1a9"),
+               unhexlify(b"7fecaae48171615c9f282c146ade72befc0f88c402a178be133b5f51afd3dbfc"),
+               unhexlify(b"3c66bbea3376133d8c571fced01b98ce96326fe233f311b4faf77564598d2021"),
+               unhexlify(b"1179c7e24a6d7655bff0b5017ccb85b21f39822c6d845cb1894737a33030e17a"),
+               unhexlify(b"461a200a1b5a7194c021faac7cda64a80388cea2ca26330ca06179aab409d6b1"),
+               unhexlify(b"5e5c377a648ac4d5c900a1ea527a9358083aa1c7777085c3ef81d0316ed16b47"),
+               ],
+            R=[unhexlify(b"110ea38dd587c1f53a8211198cd033a982d173c4d1cdbb0873685a37c7126cb5"),
+               unhexlify(b"960d6ef5dd857bb48148b4fb6927468d02f2a6474d535fd571b61c2c9b2b5613"),
+               unhexlify(b"dd6454b5e029fe4ff8f9647be237a68d0de9457e742df9dafe6e20c1f6ead444"),
+               unhexlify(b"ba9e3d1d9758184679283ee611144ed31d242700af13ac543bf5901472686d1a"),
+               unhexlify(b"05db7c85b62d95dd74f56fab6e3eee3b72b01514640601200770869616b123d1"),
+               unhexlify(b"b8b037b10f5647e79c7c5e7f735a554c8fb656037b304bd94383b769095bc17a"),
+               unhexlify(b"43f4bd0bc55b60c73ab73bb5c3f9376165f815364dc97ae62de2447e0b428632"),
+               ],
+            a=unhexlify(b"0f7696d2b23cfd84f9b62ce906458580db6fe73aaba1682e0e17e4cb9dae1b02"),
+            b=unhexlify(b"76541c70a127d08110a4bc09e6c6c6a0104956d089bcc0699f32dc5fde20ff03"),
+            t=unhexlify(b"66b4498e8980dafea640ce36c763367aba1b415c2d469b564c96d718ff009d0a")
+        )
+
+    def bproof_4(self):
+        return Bulletproof(
+            V=[
+                unhexlify(b"3c705e1da4bbe43a0535a5ad3a8e6c148fb8c1a4118ba6b65412b2fe6511b261"),
+                unhexlify(b"de5b617501a37ff257e05b0cf93041253fdb85126549640891f7471d4ede167c"),
+            ],
+            A=unhexlify(b"0a02f19df52bcfda354f3cc515d03f5532862af89eacd0b56f6e8ca17503fff1"),
+            S=unhexlify(b"5f953599e1b88c59baa70f0f7795624b77469bfb397fbb9484d47613798c2624"),
+            T1=unhexlify(b"6234181eef72022085d415fc609a90a10eea057d0ec7d0adfc1e776ece84699c"),
+            T2=unhexlify(b"f657ba9c4cd10b1931e9928eb16f2e65f53a065b73deb40c9a0c5a2e78687868"),
+            taux=unhexlify(b"7ad0c094b38e15bb23df62a9a41b5e0b1d4561cb77dcc2976ee0d38713def90f"),
+            mu=unhexlify(b"560010a571f1d3a69057b45ce82c6b3a402d5fb6045a983baa42caaa7eee3d00"),
+            L=[unhexlify(b"d673e3ba092e6f46dc5816ced7b33a20d6af75ff8162697d373b58fd8c1380c9"),
+               unhexlify(b"5d635dd832d81477bd50d174c3a2c36fcd30e688e62eed1e9fa053182f0e365a"),
+               unhexlify(b"6366d0466fafe459ac9a4629f5d120e7b87c0a56dedb1d584297c5aafc15e72d"),
+               unhexlify(b"2660611d05850a85498ca331ea953eda61c5dd471724e4dbe274beefd53fbd4d"),
+               unhexlify(b"b9c42eca044094f3ccb2be5651a7ef7d83dd180948a460312c319f392450f6fa"),
+               unhexlify(b"f37df7f3a5f751b27d8fd34d60683f2f27dacf34ed50f29748748d1c7ee353d9"),
+               unhexlify(b"1cab771eeb9e0ecf5211a48e8a39f06363a6551b42f98dd0e7622ec9e6bdf19a"),
+               ],
+            R=[unhexlify(b"36320b7173bb3d8a1bfe41c66a2717df72a42636992b1e0cc9f8638a9d67ed1c"),
+               unhexlify(b"9732bb4d5389de513115a2ffe8d5e6f1b9098c3dc1d00d387bb551eb7d8dd022"),
+               unhexlify(b"56850096f4611e1e392909b04337eb12236f79f8c010037ab0c35db46a3fcad8"),
+               unhexlify(b"a7d1b0a207ef8a1646949a5e065e0691d3b9d98c2746341f5d6580c9d142b95a"),
+               unhexlify(b"33ebc87cd1e5e38278ebc32203e2ca7a1ffb766266f66a86ddc03b051320f3e0"),
+               unhexlify(b"8b36a8f0e414f8510c60fa4fc40db7aa7b02b17dc75e0e62a7fba8827232e806"),
+               unhexlify(b"80c434594af995bfeb2dcb928474f3d0fb538fd4eb44b87d9faef12b55dbb6e2"),
+               ],
+            a=unhexlify(b"30285eb1a038c77a9698d261c00c27d9fd32cf124a58f2c406a3e7fd6e284b03"),
+            b=unhexlify(b"6b481825832f16efcb471bb3876a085a73a1e8a741c6e53a7398e06e29ee5300"),
+            t=unhexlify(b"d4856d5a48189eef25deb1949ab1bf79d72e8dece521a200576b02786992ab04")
+        )
+
+    def bproof_8(self):
+        return Bulletproof(
+            V=[
+                unhexlify(b"8968230f6104ecadab81a61b71d7e5d35b62fb5e983ef0fa143f399e1b455556"),
+                unhexlify(b"3ad4c8fc2476f239767b2c98b8adbd613e1d48290577ac2f060e5eae4578bc07"),
+                unhexlify(b"5bfa33de351ec800057b9a94009cbe3c4b2207f8518adf338db39a4a541f99fb"),
+                unhexlify(b"65ad56ed1e1253f3f6d912e46ce76a59f1e0ce76133e94c6fcff06aa8e57847f"),
+                unhexlify(b"0b6c65c33a06a5fe402c735c5e58981e9cc5ed6d7020df746d828b203566010f"),
+                unhexlify(b"eb01d17406d4b71b5b01358c3a8187da02de64cd6a18dcaaff107e1c0310283b"),
+                unhexlify(b"5826183d16cc353b8b07778354b4d5e4bec71c9c915b8db4cd314e1a4fc8515c"),
+                unhexlify(b"cf980756a69c3535f9a52897e13cb3649211bc9870246b8456a55311b9d47b65"),
+            ],
+            A=unhexlify(b"9a8aa683d90464a9a02ab9d002bdaf04d306c271285caa916d0275bfed5786a8"),
+            S=unhexlify(b"6eee7bf4b3b9fd00b0018c4a95d9e0dbdf4a4d8d68891c212a99ae040fad12db"),
+            T1=unhexlify(b"d8b154556661544b0967529ddbb1650d8e82f6c43a2698f4191e36f815c44106"),
+            T2=unhexlify(b"21a987b97cebcc51116dcdffc0576a8d727970bc5e075d4c885c9612ec53f01a"),
+            taux=unhexlify(b"3f7b2ea15183fed911215d05d839907d057f324c01e630bb66dfb7f2e939f601"),
+            mu=unhexlify(b"86440d5b853a4d39b43a05346535f6c62d434d3543eda161c2415f8a62387403"),
+            L=[unhexlify(b"110ddcd1c72e576fa2a7388a31e5632779a15394a8f82c6db4a16aa12ee8c673"),
+               unhexlify(b"0013e290ca6453f4327d79a010d7158588e4df5da07e64913ec460ebf1992729"),
+               unhexlify(b"1f4af7b9e76c84fdd28ed1419f9b7d90f42c87399f8aca81b52dcf4f22dcf4db"),
+               unhexlify(b"2e05fcc9835dac5e6a3124068726fdcfab49e6c5215dcb0d6ccf55befacbcc10"),
+               unhexlify(b"0a8564bb2c7938382541e2f51996eb0d8c9a944a1c4c7abba51938fd3a2498b1"),
+               unhexlify(b"a3b02cdbe3af1bb9f5961cdee787b1a55ce1e083cd4377543e7c11b3aa3a4789"),
+               unhexlify(b"1d3301fe9b7438dcced3ca052a364aa442b1abe189f4013003e7ec8245331e5a"),
+               unhexlify(b"31a0387da1091c18618ffc85ae1c84774ddd3885e6f9a525e108dab92333151a"),
+               unhexlify(b"550e00179778a332d960438d443caab60b571c878787c3dc90a056cb102c47bb"),
+               ],
+            R=[unhexlify(b"b8d336c3521a854856bd1f78d8c7566f4cfe1441af74f38562bca947d98ab884"),
+               unhexlify(b"b5514c68e2765ee4c39af1c65360a42f76e2538cea04de97e4e5cfb159fa46bc"),
+               unhexlify(b"9f41d7fa770cae09b83600a5852ed36ef3418ec9bca566881046db6ceddaa87a"),
+               unhexlify(b"b9dfcd2f889ccff138b98e84aad4cbbcb1723db0722950b421f0c7f7ca550312"),
+               unhexlify(b"6fdcc16d2f6c202a2c386eb7d3b61dad86b8fe7d2c4d87c73a87fd87fa931828"),
+               unhexlify(b"90aa28db8b75a86c7a867ae8323b5e327086047fe88131230c874fcae818a711"),
+               unhexlify(b"398bfe592022ec1c801e13bd35577d563faa727d37f37daea5977c8abe584d69"),
+               unhexlify(b"7dd85aff7c63f98b65384e0439407db98df9428f0375b7d7581291e519b097ec"),
+               unhexlify(b"27a37d34a9f0fc5e1b7f20256a2b59b19954b52ae39f29870731750dab52bb1f"),
+               ],
+            a=unhexlify(b"de7d5bebe81a3ca0cb151e187e078ce98e7c19cc3f4ba448c2ccadee969a0f0a"),
+            b=unhexlify(b"f8f88ee64bc03c68fa40d855f96b3d9f0cf16e3035aef3a129f76c89196b7207"),
+            t=unhexlify(b"e9f0f74b2efcff21ac16c842e27b79d6615a31873be399d38e257a85bcc7c00b")
+        )
+
+    def bproof_16(self):
+        return Bulletproof(
+            V=[
+                unhexlify(b"fcb9064e19894c5703f49d515ab0e6e98c87f9ec4230f0b898bc22061bb8d39f"),
+                unhexlify(b"507ff564c127cc2beb83c9a539408ffd2ec5f648dda711724bba1a8b79d66e32"),
+                unhexlify(b"dbd4de0ef0184378c483b9e821a6da2d80ed24d0c7444104efa4bbc710ed14ef"),
+                unhexlify(b"8baeb7c9d69946547a8f73cdb0e6fae3134fe5e1734e8bbefe8bb452da1ae59e"),
+                unhexlify(b"7f28196a49a4130b68b5589df47d9a2a08dc27518809016a3753ab2db4d8c453"),
+                unhexlify(b"708ad84f91f702dbcdeee179f7e94328314190935ada0f85eddd5db35d631c8c"),
+                unhexlify(b"3925935ecd1d2bb5fda9a15a822db8128c045b1b9fa017f4913231289329ff41"),
+                unhexlify(b"d75438e7d308bb758e68d6af7d80087755dcffc0a47255ce17c2f653501997ef"),
+                unhexlify(b"dd24a43fc1c31240c7d64248bd100e4ed7cefd9bd80ac05471ce947a71176de6"),
+                unhexlify(b"c0011f8ae31c76f3658eb971bb520cac0d051fee4e5cf3ba833d55e093643f08"),
+                unhexlify(b"c7b7edc4c584a1cc41b079550ce9e6ff7bc781b52d16c0c4b667988f422d66a8"),
+                unhexlify(b"483d8df224106bbb6f45f50becbc70b55bbcbd262c0447a42d16f62ad57c057d"),
+                unhexlify(b"9af16713061f6a43112092a3221a07ab7dd377145dc705611ad03f7cc407626a"),
+                unhexlify(b"74b066e1866043d736bde08a790879e5387838e793fbdfb1e05d11404ad4c08f"),
+                unhexlify(b"add0f5a30bf8111541ce5ab176bebf77f0b470f5ccac57ec5fda1dd5da641dfd"),
+                unhexlify(b"d74989bc336a0557a027ad440683406273ca4d04d4138eac69107074ea7e18ed"),
+            ],
+            A=unhexlify(b"a66ce244c86883c8b8ef5ad8e38b3cb8db00306698813f9858edb226d294e52d"),
+            S=unhexlify(b"34be5df1324bd561fd94695eb4b6e084068f188039831ca81be0e77849b639a7"),
+            T1=unhexlify(b"6a86c12f2c1bd2c2c43193da1a1b4c13e8829c0583318977417a6e1144e3c1e9"),
+            T2=unhexlify(b"f16761fd77f03a3d74854fe33143e2b02274747f27c6a4b45973622a0d1cec73"),
+            taux=unhexlify(b"272decc39da7103cddfa0dc7ea4042ea313ab3f740c9234d060d35db04b9700b"),
+            mu=unhexlify(b"acaa00e33078217cc1ee795e2886b771dded4da964ea8db682b7c4a9039c4906"),
+            L=[unhexlify(b"f964f4a86362e788978371d38052e825e22e17e8e52a82a5b61cff4447516d1d"),
+               unhexlify(b"ea7d1b2e10fb0aa15b8bf4be7300c0619036a0846bc0ae4ef62eca61fd2545f3"),
+               unhexlify(b"d4cdfb68a899503f317edd6050da54e85a2979c7b145c10c76f69899a1dee450"),
+               unhexlify(b"9c56aadad7366addf6c7ea3e39bde810056dd59ee9a6020109c92e8939734583"),
+               unhexlify(b"56685894507fdbb994ff007f94ac16ad5b5d7e4cec2a2de6bbc0c0532b5cb190"),
+               unhexlify(b"023f99b43ae8509446f625241bf263052c141a49f02356ff65d9eeec287ecd05"),
+               unhexlify(b"eee0982bd28d2e85f0712d043879c00c1899de69ab1362cc0ac5369b3b17f32d"),
+               unhexlify(b"8d4f9f498d376fda7b06a5dd95be852b32b65d6e2e38363f3e805477e996eec4"),
+               unhexlify(b"e5d9ee5f8910b67c1cc02232e8bb018f0c39966f76b34aee2ce3441fd2737da2"),
+               unhexlify(b"620ab92c82b294a97815d06548a4ac669228d04551c24d174902db1cbb8f10aa"),
+               ],
+            R=[unhexlify(b"a7b55c962351bd40dffe898a5192a3f05a6a89a0e3e61d6a2c4af27640c9cafe"),
+               unhexlify(b"010a1259e188677332b3e3b60030f9b8fe57ff95d4ff4a3c110a147f26a0bf07"),
+               unhexlify(b"891a65627a950b55428d86e2face1543b3297ec5d13839d7de684d92a9c7626b"),
+               unhexlify(b"382e4354aad61f42223c9ff903aee83557716130bb159645ac48e8d27485feb9"),
+               unhexlify(b"e8cd6098fdf7fba0f03db32e0fd41b549bfeaf489bfccf72c391fba9d5046737"),
+               unhexlify(b"ed15099d4d39a73dc48a338246828c6ce60c8f68b648a0d205bf65b3d5a3623b"),
+               unhexlify(b"8d1deb97bbfb33bec7dda8f56428a588a92512ee41ebdcb7b2f7631fc45d1a12"),
+               unhexlify(b"35bd424cef108222b900b58078b90387a65c70f3fd1e1367dd827ee172f393fd"),
+               unhexlify(b"63ecb848be5fab31d355c976876abd892cdc9d0ebc90e90cd8dab46e7f417740"),
+               unhexlify(b"9189a79c56400ac08d8821d283d94f1f5ebebaf6f9660a62c995fccb192431d6"),
+               ],
+            a=unhexlify(b"e43b7890911f413e0d870f099961da40d8e053d9ddd21a56f7eb3308828dbc04"),
+            b=unhexlify(b"dfea0fe39d9a7c5497fd01e92fc7fa8b39cda75b340322f77e0cac15194aa007"),
+            t=unhexlify(b"0de43b393686af8dd0d89f4832a2995cda14e6288de9ecd2b4bf2fa39baba408")
+        )
+        # fmt: on
+
     def test_masks(self):
         self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
         bpi.proof_sec = bytearray(32)
         bpi.value_enc = crypto.encodeint(crypto.sc_init(123))
         bpi.gamma_enc = crypto.encodeint(crypto.sc_init(432))
+        bpi._det_mask_init()
         self.mask_consistency_check(bpi)
 
         # Randomized masks
@@ -178,6 +406,9 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         # fmt: on
 
         self.assertTrue(bpi.verify(bp_proof))
+        with self.assertRaises(ValueError):
+            bp_proof.S = bp_proof.A
+            self.assertTrue(bpi.verify(bp_proof))
 
     def test_prove_testnet(self):
         self.skip_if_cannot_test()
@@ -206,66 +437,16 @@ class BulletproofTest(aiounittest.AsyncTestCase):
 
     def test_verify_batch_1(self):
         self.skip_if_cannot_test()
-        proof1 = Bulletproof(
-            V=[
-                unhexlify(b"3c705e1da4bbe43a0535a5ad3a8e6c148fb8c1a4118ba6b65412b2fe6511b261"),
-            ],
-            A=unhexlify(b"8c05311efed953678c15c5abd6a7b4bc5de8146e1543e380fe07dc598df65084"),
-            S=unhexlify(b"cf2435426c841e094d53ac1f900b4aeaf0678f6e75806da8b250e72d6b0db9fe"),
-            T1=unhexlify(b"49e8d85264d5dfcdf50dc25fab6b2033925ff4cbf5fcf60ef38005aa17513b82"),
-            T2=unhexlify(b"48803cbf46e21d0a4c887678cc59b2ef4ae6f8fa5e799d406590b648ac8201be"),
-            taux=unhexlify(b"081f957b19e44ba9b7b24655fe3922daabfc1bab1c673e07dc2338f3e82ae301"),
-            mu=unhexlify(b"84941385ca48731745006054eae175370a5f4de141f253f0f5c80169ba6ab806"),
-            L=[unhexlify(b"f500b583f2632b4b8df16ff7a0b385f269d2af7697d0d880455e541e87cf7275"),
-               unhexlify(b"48a9d34e919cef59f23d7f37bc065f65fa04eeeb16a23f189686068b94acca4c"),
-               unhexlify(b"6b86649c1c3bdfd2b4127940d90d573dd5545edba42bf0bddccde32d4c3d31a9"),
-               unhexlify(b"b5563c4953a2a038df85fd9fa9effc28e0a8d4fdbb0afd79f87c728e3baf26d6"),
-               unhexlify(b"405c833acbc49260342efebfeb1d6d3f78bb14880dff91d2da6b48492b5c93e5"),
-               unhexlify(b"3984b85b3aa86fce40be26a1906a5030e1c1f1f4c9754274ad653e8ccb19d77a"),
-               ],
-            R=[unhexlify(b"ec998c442b4f34ffd2c04cb841830f3327c2bd5155ab6b85831a2b007ac2241e"),
-               unhexlify(b"176082c148ff8cb89e87eab5e1949482829a55cdf0bd0ad7de97dc3b96e51702"),
-               unhexlify(b"e34bd13d7a3c2dea113e97ca2bd3b9f661242d378ddac04d7cc2c09ea5d3714c"),
-               unhexlify(b"286d1b72503e0641eae2c986f00344130e1756dfe002c8b06f0df1e62cbefc70"),
-               unhexlify(b"152948ab81532772646d40f44192da69122ae14c20b9fd0b52d969764d374a77"),
-               unhexlify(b"6c97a306c3f03f15454fda896a6feb508c029463310d2d0205b55271db68df30"),
-               ],
-            a=unhexlify(b"8b25662dcd953095b799389336c1a9a4afc8540a250252b188d6311e2857e208"),
-            b=unhexlify(b"64c38a82dc5e629168b0284e00d40df80b5d72fdf443e19e8a890d49692faa0d"),
-            t=unhexlify(b"328effcadf4324536545ec9fc44216eb1041ef8474fa0f54b62b36ee08be4f0b")
-        )
-
-        proof2 = Bulletproof(
-            V=[
-                unhexlify(b"3c705e1da4bbe43a0535a5ad3a8e6c148fb8c1a4118ba6b65412b2fe6511b261"),
-            ],
-            A=unhexlify(b"7372db75c0d9d409524924fff5dd13e867eb4c5789f3f5cc6ef860be68d5e4e5"),
-            S=unhexlify(b"be8f2d87ace0a528056d567881e74f44817a811e110cdb3890376262a2084ab3"),
-            T1=unhexlify(b"8dfc541c379efbe6000bb2339c3a52288ffa4300fcc0f0f0de777e54b5488160"),
-            T2=unhexlify(b"cf7d046c86c33bea6c5167bb6482c0a31332989dc9493eacc04a07deb6536953"),
-            taux=unhexlify(b"abaaf209cc9a800d933d51bb398b81ee7284efc9c92727066a640fdccc954009"),
-            mu=unhexlify(b"ec743e23abb555dca26164a86614306f117a733fcd395eb8675411cd31915608"),
-            L=[unhexlify(b"0ee1acc28126656eaf0934314a97e1cf2232a13f5636d319a233cedd58b2882f"),
-               unhexlify(b"cc3d2ec5635de569343bea37fc46a93413ae66bf803a4333f427f79f341d1696"),
-               unhexlify(b"518c80669bed0960fd03e802a9e837e1aa4a4910bb5853067447d7d22eaca325"),
-               unhexlify(b"251a586e8e79a5d767b89931e012acdae317c13c434a6f5f121e44b3b59240b2"),
-               unhexlify(b"09b41426e6c9808f6a58ded987cc39936f703f136b50493dd1c92c9b1ec4e7fc"),
-               unhexlify(b"984d1369c3c7f2687eebca26395576810c66623408958efde4f36b0bb63a2475"),
-               ],
-            R=[unhexlify(b"31768a0465315ff0dd1ea2228ae8c34d1474e873a863362feab7b050f29a211a"),
-               unhexlify(b"27d1b2533ed78d3dacc396afa50fa533cffc5d1563b679a4049a482436718d3c"),
-               unhexlify(b"a49388b042c8a4c6526054661fac1706cf450181ec1f9eed005b283614ec7f95"),
-               unhexlify(b"3f053243fe16f8fd302395c125ffedd93831829b13abbb195bf69fc139069de9"),
-               unhexlify(b"5a32d7f7132043d1f0cc8cd88cce94e5241337ed616c35a1d753436b2d1c4a93"),
-               unhexlify(b"bbd7f9b3031cf41b613a9ee726de9693457238b4be6317083d278e00717f8c14"),
-               ],
-            a=unhexlify(b"83d8d128f35aa02fc063792df9f4e9de0d4e58b8c6e7c449a672d6e4286ee309"),
-            b=unhexlify(b"741d679f1dfe749f7d1ede687f8dd48f7fd3b5a52a5e6a453488d5e25b3fff0e"),
-            t=unhexlify(b"88331e9fd7573135016629f337240225f9c0a5b70bad4157ad60d4260feb2b03")
-        )
 
         bpi = bp.BulletProofBuilder()
-        bpi.verify_batch([proof1, proof2])
+        bpi.verify_batch([self.bproof_1()])
+        bpi.verify_batch([self.bproof_1(), self.bproof_2()])
+        bpi.verify_batch([self.bproof_4(), self.bproof_8(), self.bproof_2()])
+        bpi.verify_batch([self.bproof_2(), self.bproof_16()])
+        with self.assertRaises(Exception):
+            bpi.verify_batch([self.bproof_4(), self.bproof_2_invalid()])
+        with self.assertRaises(Exception):
+            bpi.verify_batch([self.bproof_2_invalid(), self.bproof_2_invalid()])
 
     def test_prove_random_masks(self):
         self.skip_if_cannot_test()
@@ -300,18 +481,26 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         self.assertEqual(len(muex), len(scalars))
         res = bp.multiexp(None, muex)
         res2 = bp.vector_exponent_custom(
-            A=bp.KeyVEval(3, lambda i, d: crypto.encodepoint(crypto.scalarmult_base(crypto.sc_init(point_base[i])))),
-            B=bp.KeyVEval(3, lambda i, d: crypto.encodepoint(crypto.scalarmult_base(crypto.sc_init(point_base[3+i])))),
-            a=bp.KeyVEval(3, lambda i, d: crypto.encodeint(crypto.sc_init(scalars[i]))),
-            b=bp.KeyVEval(3, lambda i, d: crypto.encodeint(crypto.sc_init(scalars[i+3]))),
+            A=bp.KeyVEval(3, lambda i, d: crypto.encodepoint_into(crypto.scalarmult_base(crypto.sc_init(point_base[i])), d)),
+            B=bp.KeyVEval(3, lambda i, d: crypto.encodepoint_into(crypto.scalarmult_base(crypto.sc_init(point_base[3+i])), d)),
+            a=bp.KeyVEval(3, lambda i, d: crypto.encodeint_into(crypto.sc_init(scalars[i]), d)),
+            b=bp.KeyVEval(3, lambda i, d: crypto.encodeint_into(crypto.sc_init(scalars[i+3]), d)),
         )
         self.assertEqual(res, res2)
 
     def test_prove_batch(self):
         self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
-        sv = [crypto.sc_init(123), crypto.sc_init(768)]
-        gamma = [crypto.sc_init(456), crypto.sc_init(901)]
+        sv = [crypto.sc_init(123), crypto.sc_init(768),
+              crypto.sc_init(1231), crypto.sc_init(7681),
+              crypto.sc_init(1232), crypto.sc_init(7682),
+              crypto.sc_init(1232), crypto.sc_init(7682),
+              ]
+        gamma = [crypto.sc_init(456), crypto.sc_init(901),
+                 crypto.sc_init(4561), crypto.sc_init(9011),
+                 crypto.sc_init(4562), crypto.sc_init(9012),
+                 crypto.sc_init(4562), crypto.sc_init(9012),
+                 ]
         proof = bpi.prove_batch(sv, gamma)
         bpi.verify_batch([proof])
 
