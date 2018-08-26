@@ -587,7 +587,14 @@ With the debug mode you are allowed to initialize the device with seed you want 
 Also you should get an access to the serial console for the hardware device to see logging output:
 
 ```
+# Minicom serial console:
 $> minicom -b 115200 -D /dev/tty.usbmodem1413
+
+# Screen also works, set 3000 lines limit
+$> screen -h 3000 /dev/tty.usbmodem1413 115200
+
+# My utility, simple scrolling, augmenting log output with time
+$> python -m monero_poc.log_aux --serial /dev/tty.usbmodem1413
 
 589618000 apps.monero.sign_tx DEBUG TsxSigner. Free: 70784 Allocated: 89728
 589621000 apps.monero.sign_tx DEBUG TsxState: <TsxSignStateHolder object at 20017d60>
