@@ -739,7 +739,8 @@ def hash_to_ec_into(r, buf):
     :param key:
     :return:
     """
-    tcry.xmr_hash_to_ec(r, buf)
+    bf = tcry.KEY_BUFF.from_buffer(buf)
+    tcry.xmr_hash_to_ec(r, bf)
     return r
 
 
