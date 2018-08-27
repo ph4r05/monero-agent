@@ -572,6 +572,10 @@ def point_mul8_into(r, P):
     return r
 
 
+def sc_inv_eight():
+    return INV_EIGHT_SC
+
+
 def ge_double_scalarmult_base_vartime(a, A, b):
     """
     void ge25519_double_scalarmult_vartime(ge25519 *r, const ge25519 *p1, const bignum256modm s1, const bignum256modm s2);
