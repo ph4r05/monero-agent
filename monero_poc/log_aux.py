@@ -23,9 +23,11 @@ class LogAnalyzer(object):
         self.max_line_len = 0
         self.time_prev = 0
         self.time_ref = 0
+        self.time_ref_r = 0
         self.mem_alloc_prev = 0
         self.mem_alloc_ref = None
         self.mem_alloc_max = 0
+        self.serial_device = None
 
     def process(self, line):
         line = line.strip()
@@ -33,6 +35,7 @@ class LogAnalyzer(object):
         if m is None:
             return
 
+        ctime_r = time.time()
         ctime = int(m.group(1))
         c_prev = self.time_prev
         c_prev_alloc = self.mem_alloc_prev
@@ -40,6 +43,7 @@ class LogAnalyzer(object):
 
         if '----diagnostic' in line:
             self.time_ref = ctime
+            self.time_ref_r = ctime_r
             return
 
         self.max_line_len = max(self.max_line_len, min(len(line), 140))
@@ -72,8 +76,13 @@ class LogAnalyzer(object):
         print('%s%s |  AbsTime: %7.3f,   Diff %5.3f  | %s' % (line, ' '*ldiff, abs_time, diff_time, memstr))
 
         if '====' in line:
-            print(' ++ TOTAL: %7.2f, mem max: %s' % (abs_time, self.mem_alloc_max - self.mem_alloc_ref))
+            abs_r = ''
+            if self.serial_device:
+                abs_r = 'r: %7.2f' % (ctime_r - self.time_ref_r)
+            print(' ++ TOTAL: %7.2f, %s mem max: %s' % (abs_time, abs_r, self.mem_alloc_max - self.mem_alloc_ref))
+
             self.time_ref = ctime
+            self.time_ref_r = ctime_r
             if mem_alloc is not None:
                 self.mem_alloc_ref = mem_alloc
                 self.mem_alloc_max = mem_alloc
@@ -116,6 +125,7 @@ class LogAnalyzer(object):
         args = parser.parse_args()
 
         if args.serial:
+            self.serial_device = args.serial
             self.read_serial(args.serial, args.brate)
         else:
             self.read_files(args.files)
