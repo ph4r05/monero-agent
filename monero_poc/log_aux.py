@@ -11,7 +11,7 @@ coloredlogs.CHROOT_FILES = []
 coloredlogs.install(level=logging.INFO, use_chroot=False)
 
 
-TICKS_PER_SECOND = 970000.
+TICKS_PER_SECOND = 1000000.
 
 
 def tic2sec(tic):
@@ -78,7 +78,8 @@ class LogAnalyzer(object):
         if '====' in line:
             abs_r = ''
             if self.serial_device:
-                abs_r = 'r: %7.2f' % (ctime_r - self.time_ref_r)
+                abs_time_r = ctime_r - self.time_ref_r
+                abs_r = 'r: %7.2f, ticks p.s.: %7.3f' % (abs_time_r, (ctime - self.time_ref) / float(abs_time_r))
             print(' ++ TOTAL: %7.2f, %s mem max: %s' % (abs_time, abs_r, self.mem_alloc_max - self.mem_alloc_ref))
 
             self.time_ref = ctime
