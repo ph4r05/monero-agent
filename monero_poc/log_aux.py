@@ -75,7 +75,7 @@ class LogAnalyzer(object):
         ldiff = self.max_line_len - len(line)
         print('%s%s |  AbsTime: %7.3f,   Diff %5.3f  | %s' % (line, ' '*ldiff, abs_time, diff_time, memstr))
 
-        if '====' in line:
+        if '====' in line or '####' in line:
             abs_r = ''
             if self.serial_device:
                 abs_time_r = ctime_r - self.time_ref_r
