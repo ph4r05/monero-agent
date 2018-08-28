@@ -108,8 +108,8 @@ class TrezorTest(BaseAgentTest):
         creds = self.get_trezor_creds(0)
         all_creds = [self.get_trezor_creds(0), self.get_trezor_creds(1), self.get_trezor_creds(2)]
 
-        if as_bulletproof:
-            files = files[0:1]
+        # if as_bulletproof:
+        #     files = files[0:1]
 
         for fl in files:
             with self.subTest(msg=fl):
