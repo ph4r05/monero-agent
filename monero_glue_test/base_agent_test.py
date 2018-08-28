@@ -175,23 +175,27 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
         additional_pub_keys = [crypto.decodepoint(x) for x in additional_pub_keys.data] if additional_pub_keys is not None else None
 
         # Verify range proofs
-        for idx in range(len(tx_obj.rct_signatures.outPk)):
-            out_pk = tx_obj.rct_signatures.outPk[idx]
-            C = crypto.decodepoint(out_pk.mask)
-            is_bp = tx_obj.rct_signatures.type in [RctType.SimpleBulletproof, RctType.FullBulletproof]
-
-            if is_bp:
-                rsig = tx_obj.rct_signatures.p.bulletproofs[idx]
-                rsig.V = [crypto.encodepoint(ring_ct.bp_comm_to_v(crypto.decodepoint(out_pk.mask)))]
-            else:
+        out_idx = 0
+        is_bp = tx_obj.rct_signatures.type in [RctType.SimpleBulletproof, RctType.FullBulletproof]
+        if not is_bp:
+            for idx, rsig in enumerate(tx_obj.rct_signatures.p.rangeSigs):
+                out_pk = tx_obj.rct_signatures.outPk[idx]
+                C = crypto.decodepoint(out_pk.mask)
                 rsig = tx_obj.rct_signatures.p.rangeSigs[idx]
+                res = ring_ct.ver_range(C, rsig, use_bulletproof=is_bp)
+                self.assertTrue(res)
 
-            res = ring_ct.ver_range(C, rsig, use_bulletproof=is_bp)
-            self.assertTrue(res)
+        else:
+            for idx, rsig in enumerate(tx_obj.rct_signatures.p.bulletproofs):
+                rsig_num_outs = min(len(tx_obj.rct_signatures.outPk), 1 << (len(rsig.L) - 6))
+                outs = tx_obj.rct_signatures.outPk[out_idx : out_idx + rsig_num_outs]
+                rsig.V = [crypto.encodepoint(ring_ct.bp_comm_to_v(crypto.decodepoint(xx.mask))) for xx in outs]
+                res = ring_ct.ver_range(None, rsig, use_bulletproof=is_bp)
+                self.assertTrue(res)
 
         # Prefix hash
         prefix_hash = await monero.get_transaction_prefix_hash(tx_obj)
-        is_simple = len(tx_obj.vin) > 1
+        is_simple = len(tx_obj.vin) > 1 or is_bp
 
         self.assertEqual(prefix_hash, con_data.tx_prefix_hash)
         tx_obj.rct_signatures.message = prefix_hash
@@ -212,7 +216,10 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
         for idx in range(len(tx_obj.vin)):
             if is_simple:
                 mix_ring = [x[1] for x in con_data.tx_data.sources[idx].outputs]
-                pseudo_out = crypto.decodepoint(bytes(tx_obj.rct_signatures.pseudoOuts[idx]))
+                if is_bp:
+                    pseudo_out = crypto.decodepoint(bytes(tx_obj.rct_signatures.p.pseudoOuts[idx]))
+                else:
+                    pseudo_out = crypto.decodepoint(bytes(tx_obj.rct_signatures.pseudoOuts[idx]))
                 self.assertTrue(mlsag2.ver_rct_mg_simple(
                     mlsag_hash, tx_obj.rct_signatures.p.MGs[idx], mix_ring, pseudo_out
                 ))
