@@ -4,10 +4,10 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 import logging
+
 from monero_glue.compat import gc
 from monero_glue.compat.utils import memcpy
-
-from monero_glue.xmr import asnl, common, crypto, mlsag2, monero, bulletproof
+from monero_glue.xmr import asnl, bulletproof, common, crypto, mlsag2, monero
 from monero_serialize import xmrtypes
 
 logger = logging.getLogger(__name__)

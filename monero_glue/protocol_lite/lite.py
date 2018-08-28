@@ -10,12 +10,10 @@
 # from apps.monero.xmr.enc import aescbc
 # from apps.monero.xmr.serialize.int_serialize import dump_uvarint_b, load_uvarint_b
 
-from hashlib import sha256
 import struct as ustruct
+from hashlib import sha256
 
-from monero_glue.compat import gc
-from monero_glue.compat import micropython
-from monero_glue.compat import log
+from monero_glue.compat import gc, log, micropython
 from monero_glue.hwtoken import misc
 from monero_glue.xmr import common, crypto, monero
 from monero_glue.xmr.enc import aescbc

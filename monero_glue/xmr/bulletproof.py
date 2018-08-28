@@ -7,15 +7,11 @@
 #
 #
 
+from monero_glue.compat import gc, log
+from monero_glue.compat.utils import memcpy as _memcpy
+from monero_glue.xmr import crypto
 from monero_serialize.core.int_serialize import dump_uvarint_b_into, uvarint_size
 from monero_serialize.xmrtypes import Bulletproof
-
-from monero_glue.compat import gc
-from monero_glue.compat import log
-from monero_glue.compat.utils import memcpy as _memcpy
-
-from monero_glue.xmr import crypto
-
 
 # Constants
 

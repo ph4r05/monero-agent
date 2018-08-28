@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
+import ctypes as ct
 import hmac
 
-import ctypes as ct
 from Crypto.Protocol.KDF import PBKDF2
 from monero_glue.xmr.core.ec_base import *
 from trezor_crypto import trezor_cfunc as tcryr

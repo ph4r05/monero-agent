@@ -1,7 +1,6 @@
-from monero_serialize import xmrserialize
-
 from monero_glue.xmr import crypto
 from monero_glue.xmr.sub.keccak_hasher import HashWrapper
+from monero_serialize import xmrserialize
 
 
 class PreMlsagHasher(object):

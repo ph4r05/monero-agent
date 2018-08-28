@@ -1,9 +1,5 @@
-from monero_glue.compat import gc
-from monero_glue.compat import micropython
-from monero_glue.compat import log
-from monero_glue.compat import utils
+from monero_glue.compat import gc, log, micropython, utils
 from monero_glue.compat.micropython import const
-
 from monero_glue.hwtoken import misc
 from monero_glue.xmr import common, crypto, monero
 

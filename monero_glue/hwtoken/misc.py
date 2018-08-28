@@ -6,12 +6,12 @@ from monero_glue import protobuf
 from monero_glue.compat import gc
 from monero_glue.messages import (
     MoneroAccountPublicAddress,
+    MoneroMultisigKLRki,
+    MoneroOutputEntry,
+    MoneroRctKey,
     MoneroTransactionData,
     MoneroTransactionDestinationEntry,
     MoneroTransactionSourceEntry,
-    MoneroOutputEntry,
-    MoneroMultisigKLRki,
-    MoneroRctKey,
 )
 from monero_glue.xmr import crypto
 from monero_serialize import xmrserialize, xmrtypes

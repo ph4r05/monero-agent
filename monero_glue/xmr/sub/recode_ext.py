@@ -1,7 +1,6 @@
-from monero_serialize import xmrtypes
-
 from monero_glue.xmr import crypto
 from monero_glue.xmr.sub.recode import recode_msg
+from monero_serialize import xmrtypes
 
 
 def recode_rangesig(rsig, encode=True, copy=False):

@@ -9,7 +9,7 @@ from monero_glue.hwtoken import token
 from monero_glue.protocol_base.messages import MessageConverter
 
 from trezorlib.client import TrezorClient, TrezorClientDebugLink
-from trezorlib.transport import get_transport, enumerate_devices
+from trezorlib.transport import enumerate_devices, get_transport
 
 
 class TrezorSession(object):

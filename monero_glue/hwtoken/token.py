@@ -7,16 +7,16 @@ import traceback
 from monero_glue.hwtoken import iface, misc
 from monero_glue.messages import (
     DebugMoneroDiagAck,
+    Failure,
+    FailureType,
     MoneroGetWatchKey,
     MoneroKeyImageSyncRequest,
     MoneroTransactionSignRequest,
     MoneroWatchKey,
-    Failure,
-    FailureType,
 )
-from monero_glue.protocol_base.error import exc2str
 from monero_glue.protocol.key_image_sync import KeyImageSync
 from monero_glue.protocol.tsx_sign import TsxSigner
+from monero_glue.protocol_base.error import exc2str
 from monero_glue.xmr import crypto, monero
 
 

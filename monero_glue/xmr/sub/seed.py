@@ -4,9 +4,7 @@
 
 import binascii
 
-from monero_glue.misc.bip import bip32
-from monero_glue.misc.bip import bip39
-from monero_glue.misc.bip import bip39_deriv
+from monero_glue.misc.bip import bip32, bip39, bip39_deriv
 from monero_glue.xmr import crypto, monero
 from monero_glue.xmr.core import mnemonic
 from monero_glue.xmr.sub.xmr_net import NetworkTypes

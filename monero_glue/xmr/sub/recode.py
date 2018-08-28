@@ -1,6 +1,5 @@
-from monero_serialize.xmrtypes import EcdhTuple
-
 from monero_glue.xmr import crypto
+from monero_serialize.xmrtypes import EcdhTuple
 
 
 def copy_ecdh(ecdh):

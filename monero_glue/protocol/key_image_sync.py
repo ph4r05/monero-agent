@@ -4,14 +4,14 @@
 
 
 from monero_glue.messages import (
-    MoneroExportedKeyImage,
-    MoneroKeyImageExportInitRequest,
-    MoneroKeyImageExportInitAck,
-    MoneroKeyImageSyncFinalAck,
-    MoneroKeyImageSyncStepRequest,
-    MoneroKeyImageSyncStepAck,
     Failure,
     FailureType,
+    MoneroExportedKeyImage,
+    MoneroKeyImageExportInitAck,
+    MoneroKeyImageExportInitRequest,
+    MoneroKeyImageSyncFinalAck,
+    MoneroKeyImageSyncStepAck,
+    MoneroKeyImageSyncStepRequest,
 )
 from monero_glue.trezor import wrapper as twrap
 from monero_glue.xmr import common, crypto, key_image, monero

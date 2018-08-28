@@ -1,6 +1,7 @@
-from Crypto.Protocol.KDF import PBKDF2
-import hmac
 import hashlib
+import hmac
+
+from Crypto.Protocol.KDF import PBKDF2
 
 
 def mnemonics_to_seed(seed, passphrase=b""):

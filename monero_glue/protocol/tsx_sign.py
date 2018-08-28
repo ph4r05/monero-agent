@@ -3,8 +3,7 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 
-from monero_glue.compat import gc
-from monero_glue.compat import log
+from monero_glue.compat import gc, log
 
 from apps.monero.controller import misc
 
