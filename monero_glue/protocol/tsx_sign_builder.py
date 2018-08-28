@@ -98,7 +98,7 @@ class TTransactionBuilder(object):
     def state_load(self, t):
         from monero_glue.protocol.tsx_sign_state import TState
 
-        self._log_trace(t.state)
+        self._log_trace("Restore: %s" % str(t.state), True)
 
         for attr in t.__dict__:
             if attr.startswith("_"):
@@ -1020,7 +1020,6 @@ class TTransactionBuilder(object):
     def _return_rsig_data(self, rsig):
         if rsig is None:
             return None
-
         from monero_glue.messages import MoneroTransactionRsigData
 
         return MoneroTransactionRsigData(rsig=rsig)
