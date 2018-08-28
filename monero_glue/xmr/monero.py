@@ -401,7 +401,11 @@ def expand_transaction(tx):
         for n in range(len(tx.vin)):
             rv.p.MGs[0].II[n] = tx.vin[n].k_image
 
-    elif rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.FullBulletproof, xmrtypes.RctType.SimpleBulletproof]:
+    elif rv.type in [
+        xmrtypes.RctType.Simple,
+        xmrtypes.RctType.FullBulletproof,
+        xmrtypes.RctType.SimpleBulletproof,
+    ]:
         if len(rv.p.MGs) != len(tx.vin):
             raise ValueError("Bad MGs size")
         for n in range(len(tx.vin)):

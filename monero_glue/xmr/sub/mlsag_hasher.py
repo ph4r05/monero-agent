@@ -59,6 +59,7 @@ class PreMlsagHasher(object):
         self.state = 2
 
         from monero_serialize.xmrtypes import RctSigBase
+
         rfields = RctSigBase.f_specs()
         await self.rtcsig_hasher.message_field(None, field=rfields[0], fvalue=rv_type)
         await self.rtcsig_hasher.message_field(None, field=rfields[1], fvalue=fee)
@@ -69,6 +70,7 @@ class PreMlsagHasher(object):
         self.state = 3
 
         from monero_serialize.xmrtypes import KeyV
+
         await self.rtcsig_hasher.field(out, KeyV.ELEM_TYPE)
 
     async def set_ecdh(self, ecdh):
@@ -77,6 +79,7 @@ class PreMlsagHasher(object):
         self.state = 4
 
         from monero_serialize.xmrtypes import EcdhInfo
+
         await self.rtcsig_hasher.field(ecdh, EcdhInfo.ELEM_TYPE)
 
     async def set_out_pk(self, out_pk, mask=None):
@@ -85,6 +88,7 @@ class PreMlsagHasher(object):
         self.state = 5
 
         from monero_serialize.xmrtypes import ECKey
+
         await self.rtcsig_hasher.field(mask if mask else out_pk.mask, ECKey)
 
     async def rctsig_base_done(self):

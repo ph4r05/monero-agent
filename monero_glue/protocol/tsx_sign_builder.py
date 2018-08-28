@@ -562,8 +562,12 @@ class TTransactionBuilder(object):
 
         self._log_trace(6)
 
-        from monero_glue.messages.MoneroTransactionInitAck import MoneroTransactionInitAck
-        from monero_glue.messages.MoneroTransactionRsigData import MoneroTransactionRsigData
+        from monero_glue.messages.MoneroTransactionInitAck import (
+            MoneroTransactionInitAck
+        )
+        from monero_glue.messages.MoneroTransactionRsigData import (
+            MoneroTransactionRsigData
+        )
 
         rsig_data = MoneroTransactionRsigData(offload_type=self.rsig_offload)
         return MoneroTransactionInitAck(

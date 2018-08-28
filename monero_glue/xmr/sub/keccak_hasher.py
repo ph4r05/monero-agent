@@ -4,6 +4,7 @@ from monero_glue.xmr import crypto
 class KeccakArchive(object):
     def __init__(self, ctx=None):
         from monero_serialize import xmrserialize
+
         self.kwriter = get_keccak_writer(ctx=ctx)
         self.ar = xmrserialize.Archive(self.kwriter, True)
 
@@ -12,6 +13,7 @@ class KeccakArchive(object):
 
     def refresh(self, ctx=None, xser=None):
         from monero_serialize import xmrserialize
+
         if ctx is None:
             ctx = self.kwriter.ctx()
         if xser is None:

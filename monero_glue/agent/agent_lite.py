@@ -531,7 +531,10 @@ class Agent(object):
         if not self._is_offloading():
             return msg
 
-        if self.ct.rsig_batches[self.ct.cur_batch_idx] > self.ct.cur_output_in_batch_idx:
+        if (
+            self.ct.rsig_batches[self.ct.cur_batch_idx]
+            > self.ct.cur_output_in_batch_idx
+        ):
             return msg
 
         rsig_data = MoneroTransactionRsigData()
@@ -539,7 +542,7 @@ class Agent(object):
 
         if not self._is_req_bulletproof():
             if batch_size > 1:
-                raise ValueError('Borromean cannot batch outputs')
+                raise ValueError("Borromean cannot batch outputs")
 
             mask = crypto.decodeint(self.ct.rsig_gamma[idx])
             C, a, R = ring_ct.prove_range_mem(dst.amount, mask)
@@ -550,8 +553,12 @@ class Agent(object):
             amounts = []
             masks = []
             for i in range(batch_size):
-                amounts.append(self.ct.tx_data.splitted_dsts[1 + idx - batch_size + i].amount)
-                masks.append(crypto.decodeint(self.ct.rsig_gamma[1 + idx - batch_size + i]))
+                amounts.append(
+                    self.ct.tx_data.splitted_dsts[1 + idx - batch_size + i].amount
+                )
+                masks.append(
+                    crypto.decodeint(self.ct.rsig_gamma[1 + idx - batch_size + i])
+                )
 
             bp = await ring_ct.prove_range_bp_batch(amounts, masks)
             self.ct.tx_out_rsigs.append(bp)
@@ -568,7 +575,9 @@ class Agent(object):
             await tmisc.parse_msg(t_res.ecdh_info, xmrtypes.EcdhTuple())
         )
 
-        has_rsig = t_res.rsig_data and t_res.rsig_data.rsig and len(t_res.rsig_data.rsig) > 0
+        has_rsig = (
+            t_res.rsig_data and t_res.rsig_data.rsig and len(t_res.rsig_data.rsig) > 0
+        )
         rsig_data = t_res.rsig_data
 
         if has_rsig and not self._is_req_bulletproof():
@@ -582,8 +591,12 @@ class Agent(object):
             rsig.V = []
             batch_size = self.ct.rsig_batches[self.ct.cur_batch_idx]
             for i in range(batch_size):
-                commitment = self.ct.tx_out_pk[1 + self.ct.cur_output_idx - batch_size + i].mask
-                commitment = crypto.scalarmult(crypto.decodepoint(commitment), crypto.sc_inv_eight())
+                commitment = self.ct.tx_out_pk[
+                    1 + self.ct.cur_output_idx - batch_size + i
+                ].mask
+                commitment = crypto.scalarmult(
+                    crypto.decodepoint(commitment), crypto.sc_inv_eight()
+                )
                 rsig.V.append(crypto.encodepoint(commitment))
 
         self.ct.tx_out_rsigs.append(rsig)
