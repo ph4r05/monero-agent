@@ -35,21 +35,59 @@ def sum_Ci(Cis):
     return CSum
 
 
+def bp_size(outputs):
+    M, logM = 1, 0
+    while M <= 16 and M < outputs:
+        logM += 1
+        M = 1 << logM
+
+    return 32 * (21 + outputs + 2 * logM)
+
+
 async def prove_range_bp(amount, last_mask=None):
-    from monero_glue.xmr import bulletproof as bp
-
-    bpi = bp.BulletProofBuilder()
-
     mask = last_mask if last_mask is not None else crypto.random_scalar()
-    bp_proof = bpi.prove(crypto.sc_init(amount), mask)
+    bp_proof = await prove_range_bp_batch([amount], [mask])
+
     C = crypto.decodepoint(bp_proof.V[0])
     C = crypto.point_mul8(C)
+
     gc.collect()
 
     # Return as struct as the hash(BP_struct) != hash(BP_serialized)
     # as the original hashing does not take vector lengths into account which are dynamic
     # in the serialization scheme (and thus extraneous)
     return C, mask, bp_proof
+
+
+async def prove_range_bp_batch(amounts, masks):
+    from monero_glue.xmr import bulletproof as bp
+
+    bpi = bp.BulletProofBuilder()
+    bp_proof = bpi.prove_batch([crypto.sc_init(a) for a in amounts], masks)
+    del (bpi, bp)
+    gc.collect()
+
+    return bp_proof
+
+
+async def verify_bp(bp_proof, amounts=None, masks=None):
+    from monero_glue.xmr import bulletproof as bp
+
+    if amounts:
+        bp_proof.V = []
+        for i in range(len(amounts)):
+            C = crypto.gen_c(masks[i], amounts[i])
+            crypto.scalarmult_into(C, C, crypto.sc_inv_eight())
+            bp_proof.V.append(crypto.encodepoint(C))
+
+    bpi = bp.BulletProofBuilder()
+    res = bpi.verify(bp_proof)
+    gc.collect()
+
+    # Return as struct as the hash(BP_struct) != hash(BP_serialized)
+    # as the original hashing does not take vector lengths into account which are dynamic
+    # in the serialization scheme (and thus extraneous)
+    return res
 
 
 def bp_comm_to_v(C):
