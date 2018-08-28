@@ -1290,12 +1290,16 @@ class BulletProofBuilder(object):
         hash_cache = _ensure_dst_key()
         while True:
             self.gc(10)
-            r = self._prove_batch_main(V, gamma, aL, aR, hash_cache, logM, logN, M, N, proof_v8)
+            r = self._prove_batch_main(
+                V, gamma, aL, aR, hash_cache, logM, logN, M, N, proof_v8
+            )
             if r[0]:
                 break
         return r[1]
 
-    def _prove_batch_main(self, V, gamma, aL, aR, hash_cache, logM, logN, M, N, proof_v8=False):
+    def _prove_batch_main(
+        self, V, gamma, aL, aR, hash_cache, logM, logN, M, N, proof_v8=False
+    ):
         logMN = logM + logN
         MN = M * N
         hash_vct_to_scalar(hash_cache, V)
