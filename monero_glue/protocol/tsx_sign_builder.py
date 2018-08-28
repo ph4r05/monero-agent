@@ -295,15 +295,36 @@ class TTransactionBuilder(object):
         )
         return rv
 
+    def _build_key(self, secret, discriminator=None, index=None):
+        """
+        Creates an unique-purpose key
+        :param secret:
+        :param discriminator:
+        :param index:
+        :return:
+        """
+        from monero_glue.compat.micropython import memcpy
+        key_buff = bytearray(32 + 12 + 4)  # key + disc + index
+        offset = 32
+        memcpy(key_buff, 0, secret, 0, len(secret))
+
+        if discriminator is not None:
+            memcpy(key_buff, offset, discriminator, 0, len(discriminator))
+            offset += len(discriminator)
+
+        if index is not None:
+            from monero_serialize.core.int_serialize import dump_uvarint_b_into
+            dump_uvarint_b_into(index, key_buff, offset)
+
+        return crypto.keccak_2hash(key_buff)
+
     def hmac_key_txin(self, idx):
         """
         (TxSourceEntry[i] || tx.vin[i]) hmac key
         :param idx:
         :return:
         """
-        from monero_serialize.core.int_serialize import dump_uvarint_b
-
-        return crypto.keccak_2hash(self.key_hmac + b"txin" + dump_uvarint_b(idx))
+        return self._build_key(self.key_hmac, b"txin", idx)
 
     def hmac_key_txin_comm(self, idx):
         """
@@ -311,9 +332,7 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
-        from monero_serialize.core.int_serialize import dump_uvarint_b
-
-        return crypto.keccak_2hash(self.key_hmac + b"txin-comm" + dump_uvarint_b(idx))
+        return self._build_key(self.key_hmac, b"txin-comm", idx)
 
     def hmac_key_txdst(self, idx):
         """
@@ -321,9 +340,7 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
-        from monero_serialize.core.int_serialize import dump_uvarint_b
-
-        return crypto.keccak_2hash(self.key_hmac + b"txdest" + dump_uvarint_b(idx))
+        return self._build_key(self.key_hmac, b"txdest", idx)
 
     def hmac_key_txout(self, idx):
         """
@@ -331,9 +348,7 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
-        from monero_serialize.core.int_serialize import dump_uvarint_b
-
-        return crypto.keccak_2hash(self.key_hmac + b"txout" + dump_uvarint_b(idx))
+        return self._build_key(self.key_hmac, b"txout", idx)
 
     def hmac_key_txout_asig(self, idx):
         """
@@ -341,9 +356,7 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
-        from monero_serialize.core.int_serialize import dump_uvarint_b
-
-        return crypto.keccak_2hash(self.key_hmac + b"txout-asig" + dump_uvarint_b(idx))
+        return self._build_key(self.key_hmac, b"txout-asig", idx)
 
     def enc_key_txin_alpha(self, idx):
         """
@@ -351,9 +364,7 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
-        from monero_serialize.core.int_serialize import dump_uvarint_b
-
-        return crypto.keccak_2hash(self.key_enc + b"txin-alpha" + dump_uvarint_b(idx))
+        return self._build_key(self.key_enc, b"txin-alpha", idx)
 
     def enc_key_spend(self, idx):
         """
@@ -361,9 +372,7 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
-        from monero_serialize.core.int_serialize import dump_uvarint_b
-
-        return crypto.keccak_2hash(self.key_enc + b"txin-spend" + dump_uvarint_b(idx))
+        return self._build_key(self.key_enc, b"txin-spend", idx)
 
     def enc_key_cout(self, idx=None):
         """
@@ -371,11 +380,7 @@ class TTransactionBuilder(object):
         :param idx:
         :return:
         """
-        from monero_serialize.core.int_serialize import dump_uvarint_b
-
-        return crypto.keccak_2hash(
-            self.key_enc + b"cout" + (dump_uvarint_b(idx) if idx else b"")
-        )
+        return self._build_key(self.key_enc, b"cout", idx)
 
     async def gen_hmac_vini(self, src_entr, vini, idx):
         """
