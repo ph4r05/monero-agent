@@ -12,7 +12,7 @@ from monero_serialize.xmrtypes import Bulletproof
 
 from monero_glue.compat import gc
 from monero_glue.compat import log
-from monero_glue.compat.micropython import memcpy as _memcpy
+from monero_glue.compat.utils import memcpy as _memcpy
 
 from monero_glue.xmr import crypto
 

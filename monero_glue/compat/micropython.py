@@ -9,9 +9,3 @@ def const(x):
 
 def stack_use(*args, **kwargs):
     return
-
-
-def memcpy(dst, dst_off, src, src_off, len):
-    for i in range(len):
-        dst[dst_off + i] = src[src_off + i]
-    return dst

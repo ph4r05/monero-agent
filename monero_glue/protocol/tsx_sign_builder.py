@@ -303,13 +303,13 @@ class TTransactionBuilder(object):
         :param index:
         :return:
         """
-        from monero_glue.compat.micropython import memcpy
+        from monero_glue.compat import utils
         key_buff = bytearray(32 + 12 + 4)  # key + disc + index
         offset = 32
-        memcpy(key_buff, 0, secret, 0, len(secret))
+        utils.memcpy(key_buff, 0, secret, 0, len(secret))
 
         if discriminator is not None:
-            memcpy(key_buff, offset, discriminator, 0, len(discriminator))
+            utils.memcpy(key_buff, offset, discriminator, 0, len(discriminator))
             offset += len(discriminator)
 
         if index is not None:
