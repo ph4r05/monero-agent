@@ -396,12 +396,12 @@ def expand_transaction(tx):
     :return:
     """
     rv = tx.rct_signatures
-    if rv.type in [xmrtypes.RctType.Full, xmrtypes.RctType.FullBulletproof]:
+    if rv.type in [xmrtypes.RctType.Full]:
         rv.p.MGs[0].II = [None] * len(tx.vin)
         for n in range(len(tx.vin)):
             rv.p.MGs[0].II[n] = tx.vin[n].k_image
 
-    elif rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.SimpleBulletproof]:
+    elif rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.FullBulletproof, xmrtypes.RctType.SimpleBulletproof]:
         if len(rv.p.MGs) != len(tx.vin):
             raise ValueError("Bad MGs size")
         for n in range(len(tx.vin)):

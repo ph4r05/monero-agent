@@ -115,10 +115,11 @@ class TokenLite(object):
             await self.test_pb_msg(msg)
 
             signer = TsxSigner()
-            res = await signer.sign(self, self.tsx_state, msg, iface=self.iface)
-            if await signer.should_purge():
-                self.tsx_state = None
-            else:
+            await signer.wake_up(self, self.tsx_state, msg, iface=self.iface)
+            self.tsx_state = None
+
+            res = await signer.sign(msg)
+            if not await signer.should_purge():
                 self.tsx_state = await signer.state_save()
 
             await self.test_pb_msg(res)

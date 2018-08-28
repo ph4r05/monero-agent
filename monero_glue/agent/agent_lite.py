@@ -13,6 +13,8 @@ from monero_glue.messages import (
     MoneroKeyImageSyncRequest,
     MoneroKeyImageSyncFinalRequest,
     MoneroKeyImageSyncStepRequest,
+    MoneroTransactionAllInputsSetRequest,
+    MoneroTransactionAllInputsSetAck,
     MoneroTransactionAllOutSetRequest,
     MoneroTransactionAllOutSetAck,
     MoneroTransactionFinalRequest,
@@ -31,6 +33,7 @@ from monero_glue.messages import (
     MoneroTransactionSignInputRequest,
     MoneroTransactionSignInputAck,
     MoneroTransactionData,
+    MoneroTransactionRsigData,
     Failure,
 )
 from monero_glue.protocol_base.base import TError
@@ -50,6 +53,48 @@ DEFAULT_MONERO_BIP44 = [
 ]  # parse_path(monero.DEFAULT_BIP32_PATH)
 
 
+def get_rsig_type(us_bulletproof, num_outputs):
+    if not us_bulletproof:
+        return 0  # Borromean
+    elif num_outputs > 16:
+        return 2  # Multioutputs
+    else:
+        return 3  # Padded
+
+
+def generate_rsig_batch_sizes(rsig_type, num_outputs):
+    amount_batched = 0
+    batches = []
+
+    while amount_batched < num_outputs:
+        if rsig_type == 0 or rsig_type == 1:  # Borromean, BP per output
+            batches.append(1)
+            amount_batched += 1
+
+        elif rsig_type == 3:  # BP padded
+            if num_outputs > 16:
+                raise ValueError(
+                    "BP padded can support only BULLETPROOF_MAX_OUTPUTS statements"
+                )
+
+            batches.append(num_outputs)
+            amount_batched += num_outputs
+
+        elif rsig_type == 2:  # multioutput
+            batch_size = 1
+            while (
+                batch_size * 2 + amount_batched <= num_outputs and batch_size * 2 <= 16
+            ):
+                batch_size *= 2
+            batch_size = min(batch_size, num_outputs - amount_batched)
+            batches.append(batch_size)
+            amount_batched += batch_size
+
+        else:
+            raise ValueError("Unknown rsig type")
+    return batches
+
+
 class TData(object):
     """
     Agent transaction-scoped data
@@ -58,6 +103,13 @@ class TData(object):
     def __init__(self):
         self.tsx_data = None  # type: MoneroTransactionData
         self.tx_data = None  # construction data
+        self.rsig_type = 0
+        self.rsig_batches = []
+        self.rsig_param = None
+        self.cur_input_idx = 0
+        self.cur_output_idx = 0
+        self.cur_batch_idx = 0
+        self.cur_output_in_batch_idx = 0
         self.tx = xmrtypes.Transaction(version=2, vin=[], vout=[], extra=[])
         self.tx_in_hmacs = []
         self.tx_out_entr_hmacs = []
@@ -70,10 +122,12 @@ class TData(object):
         self.spend_encs = []
         self.pseudo_outs = []
         self.couts = []
+        self.rsig_gamma = []
         self.tx_prefix_hash = None
         self.enc_salt1 = None
         self.enc_salt2 = None
         self.enc_keys = None  # encrypted tx keys
+        self.rv = None
 
 
 class Agent(object):
@@ -93,7 +147,7 @@ class Agent(object):
         :param rv:
         :return:
         """
-        return rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.SimpleBulletproof]
+        return rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.FullBulletproof]
 
     def is_bulletproof(self, rv):
         """
@@ -172,8 +226,27 @@ class Agent(object):
         await ar1.message(tx, msg_type=xmrtypes.Transaction)
         return bytes(writer.get_buffer())
 
-    def _is_bulletproof_transaction(self):
-        return self.ct.tsx_data.is_bulletproof
+    def _is_req_bulletproof(self):
+        return self.ct.rsig_type != 0
+
+    def _is_bulletproof(self):
+        if self.ct.rv is None:
+            raise ValueError("RV is None")
+        return self.ct.rv.type == 3
+
+    def _is_simple(self):
+        if self.ct.rv is None:
+            raise ValueError("RV is None")
+        return self.ct.rv.type == 2
+
+    def _is_offloading(self):
+        return self.ct and self.ct.rsig_param and self.ct.rsig_param.offload_type != 0
+
+    def _num_outputs(self):
+        return len(self.ct.tx_data.splitted_dsts)
+
+    def _num_inputs(self):
+        return len(self.ct.tx_data.sources)
 
     async def sign_transaction_data(
         self, tx, multisig=False, exp_tx_prefix_hash=None, use_tx_keys=None
@@ -217,10 +290,19 @@ class Agent(object):
         tsx_data.account = tx.subaddr_account
         tsx_data.minor_indices = tx.subaddr_indices
         tsx_data.is_multisig = multisig
-        tsx_data.is_bulletproof = common.defattr(tx, "use_bulletproofs", False)
         tsx_data.exp_tx_prefix_hash = common.defval(exp_tx_prefix_hash, b"")
         tsx_data.use_tx_keys = common.defval(use_tx_keys, [])
         self.ct.tx.unlock_time = tx.unlock_time
+
+        # Rsig
+        num_outputs = len(tsx_data.outputs)
+        use_bp = common.defattr(tx, "use_bulletproofs", False)
+        self.ct.rsig_type = get_rsig_type(use_bp, num_outputs)
+        self.ct.rsig_batches = generate_rsig_batch_sizes(self.ct.rsig_type, num_outputs)
+        rsig_data = MoneroTransactionRsigData(
+            rsig_type=self.ct.rsig_type, grouping=self.ct.rsig_batches
+        )
+        tsx_data.rsig_data = rsig_data
 
         self.ct.tsx_data = tsx_data
         init_msg = MoneroTransactionInitRequest(
@@ -237,6 +319,7 @@ class Agent(object):
 
         in_memory = t_res.in_memory
         self.ct.tx_out_entr_hmacs = t_res.hmacs
+        self.ct.rsig_param = t_res.rsig_data
 
         # Set transaction inputs
         for idx, src in enumerate(tx.sources):
@@ -307,58 +390,25 @@ class Agent(object):
                 )
                 self.handle_error(t_res)
 
+        # All inputs set
+        t_res = await self.trezor.tsx_sign(
+            MoneroTransactionSignRequest(
+                all_in_set=MoneroTransactionAllInputsSetRequest()
+            )
+        )  # type: MoneroTransactionAllInputsSetAck
+        self.handle_error(t_res)
+        await self._on_all_input_set(t_res)
+
         # Set transaction outputs
         for idx, dst in enumerate(tx.splitted_dsts):
-            msg = MoneroTransactionSetOutputRequest(
-                dst_entr=tmisc.translate_monero_dest_entry_pb(dst),
-                dst_entr_hmac=self.ct.tx_out_entr_hmacs[idx],
-            )
+            msg = await self._step_set_outputs(idx, dst)
+
             t_res = await self.trezor.tsx_sign(
                 MoneroTransactionSignRequest(set_output=msg)
             )  # type: MoneroTransactionSetOutputAck
             self.handle_error(t_res)
 
-            self.ct.tx.vout.append(
-                await tmisc.parse_msg(t_res.tx_out, xmrtypes.TxOut())
-            )
-            self.ct.tx_out_hmacs.append(t_res.vouti_hmac)
-            self.ct.tx_out_pk.append(
-                await tmisc.parse_msg(t_res.out_pk, xmrtypes.CtKey())
-            )
-            self.ct.tx_out_ecdh.append(
-                await tmisc.parse_msg(t_res.ecdh_info, xmrtypes.EcdhTuple())
-            )
-
-            rsig = await tmisc.parse_msg(
-                t_res.rsig,
-                xmrtypes.RangeSig()
-                if not self._is_bulletproof_transaction()
-                else xmrtypes.Bulletproof(),
-            )
-            if self._is_bulletproof_transaction():
-                rsig.V = [
-                    crypto.encodepoint(
-                        ring_ct.bp_comm_to_v(
-                            crypto.decodepoint(self.ct.tx_out_pk[-1].mask)
-                        )
-                    )
-                ]
-
-            self.ct.tx_out_rsigs.append(rsig)
-
-            # Rsig verification
-            try:
-                rsig = self.ct.tx_out_rsigs[-1]
-                if not ring_ct.ver_range(
-                    C=crypto.decodepoint(self.ct.tx_out_pk[-1].mask),
-                    rsig=rsig,
-                    use_bulletproof=self._is_bulletproof_transaction(),
-                ):
-                    logger.warning("Rsing not valid")
-
-            except Exception as e:
-                logger.error("Exception rsig: %s" % e)
-                traceback.print_exc()
+            await self._on_set_outputs_ack(t_res)
 
         t_res = await self.trezor.tsx_sign(
             MoneroTransactionSignRequest(
@@ -391,9 +441,11 @@ class Agent(object):
         rv.p.bulletproofs = []
         rv.outPk = []
         rv.ecdhInfo = []
-        for idx in range(len(self.ct.tx_out_rsigs)):
+        for idx in range(len(self.ct.tx_out_pk)):
             rv.outPk.append(self.ct.tx_out_pk[idx])
             rv.ecdhInfo.append(self.ct.tx_out_ecdh[idx])
+
+        for idx in range(len(self.ct.tx_out_rsigs)):
             if self.is_bulletproof(rv):
                 rv.p.bulletproofs.append(self.ct.tx_out_rsigs[idx])
             else:
@@ -448,6 +500,109 @@ class Agent(object):
         self.ct.enc_salt1, self.ct.enc_salt2 = t_res.salt, t_res.rand_mult
         self.ct.enc_keys = t_res.tx_enc_keys
         return self.ct.tx
+
+    async def _on_all_input_set(self, ack):
+        if not self._is_offloading():
+            return
+        if ack.rsig_data is None:
+            raise ValueError("Rsig offloading requires rsig param")
+
+        rsig_data = ack.rsig_data
+        if rsig_data.mask is None:
+            raise ValueError("Gamma masks not present in offloaded version")
+
+        mask = rsig_data.mask
+        if len(mask) != self._num_outputs() * 32:
+            raise ValueError("Invalid number of masks")
+
+        for i in range(len(mask) // 32):
+            self.ct.rsig_gamma.append(mask[i * 32 : (i + 1) * 32])
+
+    async def _step_set_outputs(self, idx, dst):
+        self.ct.cur_output_idx = idx
+        self.ct.cur_output_in_batch_idx += 1
+
+        msg = MoneroTransactionSetOutputRequest(
+            dst_entr=tmisc.translate_monero_dest_entry_pb(dst),
+            dst_entr_hmac=self.ct.tx_out_entr_hmacs[idx],
+        )
+
+        # Range sig offloading to the host
+        if not self._is_offloading():
+            return msg
+
+        if self.ct.rsig_batches[self.ct.cur_batch_idx] > self.ct.cur_output_in_batch_idx:
+            return msg
+
+        rsig_data = MoneroTransactionRsigData()
+        batch_size = self.ct.rsig_batches[self.ct.cur_batch_idx]
+
+        if not self._is_req_bulletproof():
+            if batch_size > 1:
+                raise ValueError('Borromean cannot batch outputs')
+
+            mask = crypto.decodeint(self.ct.rsig_gamma[idx])
+            C, a, R = ring_ct.prove_range_mem(dst.amount, mask)
+            rsig_data.rsig = tmisc.dump_msg(R)
+            self.ct.tx_out_rsigs.append(R)
+
+        else:
+            amounts = []
+            masks = []
+            for i in range(batch_size):
+                amounts.append(self.ct.tx_data.splitted_dsts[1 + idx - batch_size + i].amount)
+                masks.append(crypto.decodeint(self.ct.rsig_gamma[1 + idx - batch_size + i]))
+
+            bp = await ring_ct.prove_range_bp_batch(amounts, masks)
+            self.ct.tx_out_rsigs.append(bp)
+
+            rsig_data.rsig = await tmisc.dump_msg(bp)
+        msg.rsig_data = rsig_data
+        return msg
+
+    async def _on_set_outputs_ack(self, t_res):
+        self.ct.tx.vout.append(await tmisc.parse_msg(t_res.tx_out, xmrtypes.TxOut()))
+        self.ct.tx_out_hmacs.append(t_res.vouti_hmac)
+        self.ct.tx_out_pk.append(await tmisc.parse_msg(t_res.out_pk, xmrtypes.CtKey()))
+        self.ct.tx_out_ecdh.append(
+            await tmisc.parse_msg(t_res.ecdh_info, xmrtypes.EcdhTuple())
+        )
+
+        has_rsig = t_res.rsig_data and t_res.rsig_data.rsig and len(t_res.rsig_data.rsig) > 0
+        rsig_data = t_res.rsig_data
+
+        if has_rsig and not self._is_req_bulletproof():
+            rsig = await tmisc.parse_msg(rsig_data.rsig, xmrtypes.RangeSig())
+        elif has_rsig:
+            rsig = await tmisc.parse_msg(rsig_data.rsig, xmrtypes.Bulletproof())
+        else:
+            return
+
+        if self._is_req_bulletproof():
+            rsig.V = []
+            batch_size = self.ct.rsig_batches[self.ct.cur_batch_idx]
+            for i in range(batch_size):
+                commitment = self.ct.tx_out_pk[1 + self.ct.cur_output_idx - batch_size + i].mask
+                commitment = crypto.scalarmult(crypto.decodepoint(commitment), crypto.sc_inv_eight())
+                rsig.V.append(crypto.encodepoint(commitment))
+
+        self.ct.tx_out_rsigs.append(rsig)
+
+        # Rsig verification
+        try:
+            if not ring_ct.ver_range(
+                C=crypto.decodepoint(self.ct.tx_out_pk[-1].mask),
+                rsig=rsig,
+                use_bulletproof=self._is_req_bulletproof(),
+            ):
+                logger.warning("Rsing not valid")
+
+        except Exception as e:
+            logger.error("Exception rsig: %s" % e)
+            traceback.print_exc()
+
+        self.ct.cur_batch_idx += 1
+        self.ct.cur_output_in_batch_idx = 0
 
     def last_transaction_data(self):
         """
