@@ -1371,8 +1371,8 @@ class BulletProofBuilder(object):
             lambda i, d: crypto.encodeint_into(
                 crypto.sc_add_into(
                     tmp_sc_1,
-                    zero_twos[i],
-                    crypto.decodeint_into_noreduce(tmp_sc_2, r0.to(i)),
+                    zero_twos[i],  # noqa: F821
+                    crypto.decodeint_into_noreduce(tmp_sc_2, r0.to(i)),  # noqa: F821
                 ),
                 d,
             ),
@@ -1438,14 +1438,18 @@ class BulletProofBuilder(object):
         # PAPER LINES 54-57
         # l = l0 \odot x*l1, has to evaluated as it becomes aprime in the loop
         l = vector_gen(
-            l0, len(l0), lambda i, d: sc_add(d, d, sc_mul(tmp_bf_1, l1.to(i), x))
+            l0,
+            len(l0),
+            lambda i, d: sc_add(d, d, sc_mul(tmp_bf_1, l1.to(i), x)),  # noqa: F821
         )
         del (l0, l1, sL)
         self.gc(19)
 
         # r = r0 \odot x*r1, has to evaluated as it becomes bprime in the loop
         r = vector_gen(
-            r0, len(r0), lambda i, d: sc_add(d, d, sc_mul(tmp_bf_1, r1.to(i), x))
+            r0,
+            len(r0),
+            lambda i, d: sc_add(d, d, sc_mul(tmp_bf_1, r1.to(i), x)),  # noqa: F821
         )
         t = inner_product(l, r)
         del (r1, r0)
