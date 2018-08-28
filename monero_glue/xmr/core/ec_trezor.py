@@ -81,7 +81,7 @@ def keccak_hash(inp):
     Hashesh input in one call
     :return:
     """
-    return tcry.xmr_fast_hash_r(inp)
+    return tcry.xmr_fast_hash_r(bytes(inp))
 
 
 def keccak_hash_into(r, inp):
@@ -696,7 +696,7 @@ def cn_fast_hash(buff):
     :param buff:
     :return:
     """
-    return keccak_hash(bytes(buff))
+    return keccak_hash(buff)
 
 
 def hash_to_scalar(data, length=None):
