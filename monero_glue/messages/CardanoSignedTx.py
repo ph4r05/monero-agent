@@ -3,7 +3,7 @@
 from .. import protobuf as p
 
 
-class CardanoSignedTransaction(p.MessageType):
+class CardanoSignedTx(p.MessageType):
     MESSAGE_WIRE_TYPE = 310
     FIELDS = {
         1: ('tx_hash', p.BytesType, 0),
