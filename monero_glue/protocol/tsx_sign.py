@@ -51,6 +51,13 @@ class TsxSigner(object):
         """
         return self.purge or (self.tsx_obj and self.tsx_obj.is_terminal())
 
+    def _log_trace(self, x=None, collect=False):
+        log.debug(
+            __name__, "Log trace: %s, ... F: %s A: %s", x, gc.mem_free(), gc.mem_alloc()
+        )
+        if collect:
+            gc.collect()
+
     async def setup(self, msg):
         from apps.monero.controller import wrapper
 
@@ -62,6 +69,7 @@ class TsxSigner(object):
         from monero_glue.protocol.tsx_sign_builder import TTransactionBuilder
 
         self.tsx_obj = TTransactionBuilder(self, creds=self.creds, state=state)
+        self._log_trace("Restored", True)
 
     async def state_save(self):
         try:
@@ -69,15 +77,13 @@ class TsxSigner(object):
             self.tsx_obj = None
         finally:
             gc.collect()
+        self._log_trace("State saved")
         return s
 
-    async def sign(self, ctx, state, msg, iface=None):
+    async def wake_up(self, ctx, state, msg, iface=None):
         """
-        Main multiplex point
-        :param ctx:
+        Restore from the stored state
         :param state:
-        :param msg:
-        :param iface:
         :return:
         """
         from apps.monero.controller import iface as mod_iface
@@ -86,42 +92,51 @@ class TsxSigner(object):
         self.iface = mod_iface.get_iface(ctx) if not iface else iface
         gc.collect()
 
-        log.debug(__name__, "sign()")
-        log.debug(
-            __name__, "Mem Free: {} Allocated: {}".format(gc.mem_free(), gc.mem_alloc())
-        )
+        self._log_trace("wake_up()", True)
 
         if msg.init:
-            log.debug(__name__, "setup")
+            self._log_trace("init")
             await self.setup(msg.init)
-        await self.restore(state if not msg.init else None)
 
+        await self.restore(state if not msg.init else None)
+        self._log_trace("wake_up() end", True)
+
+    async def sign(self, msg):
+        """
+        Main multiplex point
+        :param msg:
+        :return:
+        """
+        self._log_trace("sign()", True)
         if msg.init:
-            log.debug(__name__, "sign_init")
+            self._log_trace("sign_init")
             return await self.tsx_init(msg.init.tsx_data)
         elif msg.set_input:
-            log.debug(__name__, "sign_inp")
+            self._log_trace("sign_inp")
             return await self.tsx_set_input(msg.set_input)
         elif msg.input_permutation:
-            log.debug(__name__, "sign_perm")
+            self._log_trace("sign_perm")
             return await self.tsx_inputs_permutation(msg.input_permutation)
         elif msg.input_vini:
-            log.debug(__name__, "sign_vin")
+            self._log_trace("sign_vin")
             return await self.tsx_input_vini(msg.input_vini)
+        elif msg.all_in_set:
+            self._log_trace("all_in_set")
+            return await self.tsx_all_in_set(msg.all_in_set)
         elif msg.set_output:
-            log.debug(__name__, "sign_out")
+            self._log_trace("sign_out")
             return await self.tsx_set_output1(msg.set_output)
         elif msg.all_out_set:
-            log.debug(__name__, "sign_out_set")
+            self._log_trace("sign_out_set")
             return await self.tsx_all_out1_set(msg.all_out_set)
         elif msg.mlsag_done:
-            log.debug(__name__, "sign_done")
+            self._log_trace("sign_done")
             return await self.tsx_mlsag_done()
         elif msg.sign_input:
-            log.debug(__name__, "sign_sinp")
+            self._log_trace("sign_sinp")
             return await self.tsx_sign_input(msg.sign_input)
         elif msg.final_msg:
-            log.debug(__name__, "sign_final")
+            self._log_trace("sign_final")
             return await self.tsx_sign_final(msg.final_msg)
         else:
             raise ValueError("Unknown message")
@@ -187,6 +202,19 @@ class TsxSigner(object):
             await self.tsx_exc_handler(e)
             raise
 
+    async def tsx_all_in_set(self, msg):
+        """
+        All inputs set. Defining rsig parameters.
+
+        :param msg:
+        :return:
+        """
+        try:
+            return await self.tsx_obj.all_in_set(msg.rsig_data)
+        except Exception as e:
+            await self.tsx_exc_handler(e)
+            raise
+
     async def tsx_set_output1(self, msg):
         """
         Set destination entry one by one.
@@ -196,7 +224,10 @@ class TsxSigner(object):
         :return:
         """
         try:
-            return await self.tsx_obj.set_out1(msg.dst_entr, msg.dst_entr_hmac)
+            dst, dst_hmac, rsig_data = msg.dst_entr, msg.dst_entr_hmac, msg.rsig_data
+            del (msg)
+
+            return await self.tsx_obj.set_out1(dst, dst_hmac, rsig_data)
         except Exception as e:
             await self.tsx_exc_handler(e)
             raise

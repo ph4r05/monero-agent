@@ -1,6 +1,7 @@
 from monero_glue.compat import gc
 from monero_glue.compat import micropython
 from monero_glue.compat import log
+from monero_glue.compat import utils
 from monero_glue.compat.micropython import const
 
 from monero_glue.hwtoken import misc
@@ -23,6 +24,7 @@ class TTransactionBuilder(object):
     STEP_INP = const(100)
     STEP_PERM = const(200)
     STEP_VINI = const(300)
+    STEP_ALL_IN = const(350)
     STEP_OUT = const(400)
     STEP_ALL_OUT = const(500)
     STEP_MLSAG = const(600)
@@ -62,6 +64,11 @@ class TTransactionBuilder(object):
         self.input_pseudo_outs = []
         self.output_sk = []
         self.output_pk = []
+        self.output_amounts = []
+        self.output_masks = []
+        self.rsig_type = 0
+        self.rsig_grp = []
+        self.rsig_offload = 0
         self.sumout = crypto.sc_0()
         self.sumpouts_alphas = crypto.sc_0()
         self.subaddresses = {}
@@ -79,18 +86,16 @@ class TTransactionBuilder(object):
             self.state_load(state)
 
     def _init(self):
-        from monero_glue.xmr.sub.keccak_hasher import KeccakArchive
+        from monero_glue.xmr.sub.keccak_hasher import KeccakXmrArchive
         from monero_glue.xmr.sub.mlsag_hasher import PreMlsagHasher
         from monero_glue.protocol.tsx_sign_state import TState
 
         self.state = TState()
         self.tx = TprefixStub(vin=[], vout=[], extra=b"")
-        self.tx_prefix_hasher = KeccakArchive()
+        self.tx_prefix_hasher = KeccakXmrArchive()
         self.full_message_hasher = PreMlsagHasher()
 
     def state_load(self, t):
-        from monero_glue.xmr.sub.keccak_hasher import KeccakArchive
-        from monero_glue.xmr.sub.mlsag_hasher import PreMlsagHasher
         from monero_glue.protocol.tsx_sign_state import TState
 
         self._log_trace(t.state)
@@ -108,11 +113,16 @@ class TTransactionBuilder(object):
                 self.state = TState()
                 self.state.state_load(t.state)
             elif attr == "tx_prefix_hasher":
-                self.tx_prefix_hasher = KeccakArchive(ctx=t.tx_prefix_hasher)
+                from monero_glue.xmr.sub.keccak_hasher import KeccakXmrArchive
+
+                self.tx_prefix_hasher = KeccakXmrArchive(ctx=t.tx_prefix_hasher)
             elif attr == "full_message_hasher":
+                from monero_glue.xmr.sub.mlsag_hasher import PreMlsagHasher
+
                 self.full_message_hasher = PreMlsagHasher(state=t.full_message_hasher)
             else:
                 setattr(self, attr, cval)
+            gc.collect()
 
     def state_save(self):
         from monero_glue.protocol.tsx_sign_state_holder import TsxSignStateHolder
@@ -145,11 +155,11 @@ class TTransactionBuilder(object):
     def _log_trace(self, x=None, collect=False):
         log.debug(
             __name__,
-            "Log trace %s, ... F: %s A: %s, S: %s",
+            "Log trace: %s, ... F: %s A: %s",
             x,
             gc.mem_free(),
             gc.mem_alloc(),
-            micropython.stack_use(),
+            # micropython.stack_use(),
         )
         if collect:
             gc.collect()
@@ -281,9 +291,9 @@ class TTransactionBuilder(object):
         from monero_serialize.xmrtypes import RctType
 
         if self.use_simple_rct:
-            return RctType.SimpleBulletproof if self.use_bulletproof else RctType.Simple
+            return RctType.FullBulletproof if self.use_bulletproof else RctType.Simple
         else:
-            return RctType.FullBulletproof if self.use_bulletproof else RctType.Full
+            return RctType.Full
 
     def init_rct_sig(self):
         """
@@ -303,7 +313,6 @@ class TTransactionBuilder(object):
         :param index:
         :return:
         """
-        from monero_glue.compat import utils
         key_buff = bytearray(32 + 12 + 4)  # key + disc + index
         offset = 32
         utils.memcpy(key_buff, 0, secret, 0, len(secret))
@@ -314,6 +323,7 @@ class TTransactionBuilder(object):
 
         if index is not None:
             from monero_serialize.core.int_serialize import dump_uvarint_b_into
+
             dump_uvarint_b_into(index, key_buff, offset)
 
         return crypto.keccak_2hash(key_buff)
@@ -447,12 +457,12 @@ class TTransactionBuilder(object):
         from monero_serialize.xmrtypes import TransactionPrefix
 
         tx_fields = TransactionPrefix.f_specs()
-        await self.tx_prefix_hasher.ar.message_field(self.tx, tx_fields[0])
-        await self.tx_prefix_hasher.ar.message_field(self.tx, tx_fields[1])
-        await self.tx_prefix_hasher.ar.container_size(
-            self.num_inputs(), tx_fields[2][1]
-        )
-        self._log_trace(10)
+        self.tx_prefix_hasher.keep()
+        await self.tx_prefix_hasher.message_field(self.tx, tx_fields[0])
+        await self.tx_prefix_hasher.message_field(self.tx, tx_fields[1])
+        await self.tx_prefix_hasher.container_size(self.num_inputs(), tx_fields[2][1])
+        self.tx_prefix_hasher.release()
+        self._log_trace(10, True)
 
     async def init_transaction(self, tsx_data, tsx_ctr):
         """
@@ -486,12 +496,17 @@ class TTransactionBuilder(object):
         self.mixin = tsx_data.mixin
         self.fee = tsx_data.fee
         self.account_idx = tsx_data.account
-        self.use_simple_rct = self.input_count > 1
-        self.use_bulletproof = tsx_data.is_bulletproof
         self.multi_sig = tsx_data.is_multisig
         self.state.inp_cnt(self.in_memory())
         self.check_change(tsx_data.outputs)
         self.exp_tx_prefix_hash = common.defval_empty(tsx_data.exp_tx_prefix_hash, None)
+
+        # Rsig data
+        self.rsig_type = tsx_data.rsig_data.rsig_type
+        self.rsig_grp = tsx_data.rsig_data.grouping
+        self.rsig_offload = self.rsig_type > 0 and self.output_count > 2
+        self.use_bulletproof = self.rsig_type > 0
+        self.use_simple_rct = self.input_count > 1 or self.rsig_type != 0
 
         # Provided tx key, used mostly in multisig.
         if len(tsx_data.use_tx_keys) > 0:
@@ -516,7 +531,7 @@ class TTransactionBuilder(object):
         self.need_additional_txkeys = num_subaddresses > 0 and (
             num_stdaddresses > 0 or num_subaddresses > 1
         )
-        self._log_trace(4)
+        self._log_trace(4, True)
 
         # Extra processing, payment id
         self.tx.version = 2
@@ -536,7 +551,7 @@ class TTransactionBuilder(object):
         # Sub address precomputation
         if tsx_data.account is not None and tsx_data.minor_indices:
             self.precompute_subaddr(tsx_data.account, tsx_data.minor_indices)
-        self._log_trace(5)
+        self._log_trace(5, True)
 
         # HMAC outputs - pinning
         hmacs = []
@@ -547,15 +562,16 @@ class TTransactionBuilder(object):
 
         self._log_trace(6)
 
-        from monero_glue.messages.MoneroTransactionInitAck import (
-            MoneroTransactionInitAck
-        )
+        from monero_glue.messages.MoneroTransactionInitAck import MoneroTransactionInitAck
+        from monero_glue.messages.MoneroTransactionRsigData import MoneroTransactionRsigData
 
+        rsig_data = MoneroTransactionRsigData(offload_type=self.rsig_offload)
         return MoneroTransactionInitAck(
             in_memory=self.in_memory(),
             many_inputs=self.many_inputs(),
             many_outputs=self.many_outputs(),
             hmacs=hmacs,
+            rsig_data=rsig_data,
         )
 
     async def process_payment_id(self, tsx_data):
@@ -609,6 +625,7 @@ class TTransactionBuilder(object):
         await protobuf.dump_message(writer, tsx_data)
         await writer.awrite(crypto.encodeint(self.r))
         await xmrserialize.dump_uvarint(writer, tsx_ctr)
+
         self.key_master = crypto.keccak_2hash(
             writer.get_digest() + crypto.encodeint(crypto.random_scalar())
         )
@@ -702,7 +719,7 @@ class TTransactionBuilder(object):
         spend_enc = None
 
         if self.use_simple_rct:
-            alpha, pseudo_out = await self.commitment(src_entr.amount)
+            alpha, pseudo_out = self._gen_commitment(src_entr.amount)
             pseudo_out = crypto.encodepoint(pseudo_out)
 
             # In full version the alpha is encrypted and passed back for storage
@@ -816,6 +833,7 @@ class TTransactionBuilder(object):
         if self.in_memory():
             for idx in range(self.num_inputs()):
                 await self.hash_vini_pseudo_out(self.tx.vin[idx], idx)
+                self._log_trace("i: %s" % idx, True)
 
     async def input_vini(self, src_entr, vini, hmac, pseudo_out, pseudo_out_hmac):
         """
@@ -871,12 +889,10 @@ class TTransactionBuilder(object):
         from monero_serialize import xmrserialize
         from monero_serialize.xmrtypes import TxInV
 
-        self.tx_prefix_hasher.refresh(xser=xmrserialize)
-
-        await self.tx_prefix_hasher.ar.field(vini, TxInV)
+        await self.tx_prefix_hasher.field(vini, TxInV, xser=xmrserialize)
 
         # Pseudo_out incremental hashing - applicable only in simple rct
-        if not self.use_simple_rct:
+        if not self.use_simple_rct or self.use_bulletproof:
             return
 
         if not self.in_memory():
@@ -891,7 +907,81 @@ class TTransactionBuilder(object):
 
         await self.full_message_hasher.set_pseudo_out(pseudo_out)
 
-    async def commitment(self, in_amount):
+    async def all_in_set(self, rsig_data):
+        """
+        If in the applicable offloading mode, generate commitment masks.
+        :param rsig_data:
+        :return:
+        """
+        self._log_trace(0)
+        self.state.input_all_done()
+        await self.trezor.iface.transaction_step(self.STEP_ALL_IN)
+
+        from monero_glue.messages import MoneroTransactionAllInputsSetAck
+        from monero_glue.messages import MoneroTransactionRsigData
+
+        rsig_data = MoneroTransactionRsigData()
+        resp = MoneroTransactionAllInputsSetAck(rsig_data=rsig_data)
+
+        if not self.rsig_offload:
+            return resp
+
+        # Simple offloading - generate random masks that sum to the input mask sum.
+        tmp_buff = bytearray(32)
+        rsig_data.mask = bytearray(32 * self.num_dests())
+        self.sumout = crypto.sc_init(0)
+        for i in range(self.num_dests()):
+            cur_mask = crypto.new_scalar()
+            is_last = i + 1 == self.num_dests()
+            if is_last and self.use_simple_rct:
+                crypto.sc_sub_into(cur_mask, self.sumpouts_alphas, self.sumout)
+            else:
+                crypto.random_scalar_into(cur_mask)
+
+            crypto.sc_add_into(self.sumout, self.sumout, cur_mask)
+            self.output_masks.append(cur_mask)
+            crypto.encodeint_into(cur_mask, tmp_buff)
+            utils.memcpy(rsig_data.mask, 32 * i, tmp_buff, 0, 32)
+
+        self.assrt(crypto.sc_eq(self.sumout, self.sumpouts_alphas), "Invalid masks sum")
+        self.sumout = crypto.sc_init(0)
+        return resp
+
+    def _get_out_mask(self, idx):
+        if self.rsig_offload:
+            return self.output_masks[idx]
+        else:
+            is_last = idx + 1 == self.num_dests()
+            if is_last:
+                return crypto.sc_sub(self.sumpouts_alphas, self.sumout)
+            else:
+                return crypto.random_scalar()
+
+    def _get_rsig_batch(self, idx):
+        """
+        Returns index of the current rsig batch
+        :param idx:
+        :return:
+        """
+        r = 0
+        c = 0
+        while c < idx + 1:
+            c += self.rsig_grp[r]
+            r += 1
+        return r - 1
+
+    def _is_last_in_batch(self, idx, bidx=None):
+        """
+        Returns true if the current output is last in the rsig batch
+        :param idx:
+        :param bidx:
+        :return:
+        """
+        bidx = self._get_rsig_batch(idx) if bidx is None else bidx
+        batch_size = self.rsig_grp[bidx]
+        return (idx - sum(self.rsig_grp[:bidx])) + 1 == batch_size
+
+    def _gen_commitment(self, in_amount):
         """
         Computes Pedersen commitment - pseudo outs
         Here is slight deviation from the original protocol.
@@ -907,7 +997,35 @@ class TTransactionBuilder(object):
         self.sumpouts_alphas = crypto.sc_add(self.sumpouts_alphas, alpha)
         return alpha, crypto.gen_c(alpha, in_amount)
 
-    async def range_proof(self, idx, dest_pub_key, amount, amount_key):
+    def _check_out_commitment(self, amount, mask, C):
+        self.assrt(
+            crypto.point_eq(
+                C,
+                crypto.point_add(
+                    crypto.scalarmult_base(mask), crypto.scalarmult_h(amount)
+                ),
+            ),
+            "OutC fail",
+        )
+
+    def _check_bproof(self, batch_size, rsig, masks):
+        if len(rsig.V) < batch_size:
+            raise misc.TrezorError("Bulletproof to small")
+
+        for i in range(batch_size):
+            C = crypto.decodepoint(rsig.V[i])
+            C = crypto.point_mul8(C)
+            self._check_out_commitment(self.output_amounts[i], masks[i], C)
+
+    def _return_rsig_data(self, rsig):
+        if rsig is None:
+            return None
+
+        from monero_glue.messages import MoneroTransactionRsigData
+
+        return MoneroTransactionRsigData(rsig=rsig)
+
+    async def _range_proof(self, idx, amount, rsig_data=None):
         """
         Computes rangeproof and related information - out_sk, out_pk, ecdh_info.
         In order to optimize incremental transaction build, the mask computation is changed compared
@@ -920,66 +1038,107 @@ class TTransactionBuilder(object):
         The range proof is incrementally hashed to the final_message.
 
         :param idx:
-        :param dest_pub_key:
         :param amount:
-        :param amount_key:
+        :param rsig_data:
         :return:
         """
         from monero_glue.xmr import ring_ct
 
-        out_pk = misc.StdObj(dest=dest_pub_key, mask=None)
-        is_last = idx + 1 == self.num_dests()
-        last_mask = (
-            None
-            if not is_last or not self.use_simple_rct
-            else crypto.sc_sub(self.sumpouts_alphas, self.sumout)
+        mask = self._get_out_mask(idx)
+        self.output_amounts.append(amount)
+        provided_rsig = (
+            rsig_data.rsig
+            if rsig_data and rsig_data.rsig and len(rsig_data.rsig) > 0
+            else None
         )
+        if not self.rsig_offload and provided_rsig:
+            raise misc.TrezorError("Provided unexpected rsig")
+        if not self.rsig_offload:
+            self.output_masks.append(mask)
 
-        # Pedersen commitment on the value, mask from the commitment, range signature.
-        C, mask, rsig = None, 0, None
+        # Batching
+        bidx = self._get_rsig_batch(idx)
+        batch_size = self.rsig_grp[bidx]
+        last_in_batch = self._is_last_in_batch(idx, bidx)
+        if self.rsig_offload and provided_rsig and not last_in_batch:
+            raise misc.TrezorError("Provided rsig too early")
+        if self.rsig_offload and last_in_batch and not provided_rsig:
+            raise misc.TrezorError("Rsig expected, not provided")
+
+        # Batch not finished, skip range sig generation now
+        if not last_in_batch:
+            return None, mask
 
         # Rangeproof
+        # Pedersen commitment on the value, mask from the commitment, range signature.
+        C, rsig = None, None
+
         self._log_trace("pre-rproof", collect=True)
-        if self.use_bulletproof:
-            C, mask, rsig = await ring_ct.prove_range_bp(amount, last_mask)
+        if not self.rsig_offload and self.use_bulletproof:
+            rsig = await ring_ct.prove_range_bp_batch(
+                self.output_amounts, self.output_masks
+            )
             self._log_trace("post-bp", collect=True)
 
             # Incremental hashing
             await self.full_message_hasher.rsig_val(rsig, True, raw=False)
             self._log_trace("post-bp-hash", collect=True)
 
-            rsig = await misc.dump_msg(rsig, preallocate=9 * 32 + 2 * 6 * 32 + 2)
-            self._log_trace("post-bp-ser", collect=True)
+            rsig = await misc.dump_msg_gc(
+                rsig, preallocate=ring_ct.bp_size(batch_size) + 8, del_msg=True
+            )
+            self._log_trace("post-bp-ser, size: %s" % len(rsig), collect=True)
 
-        else:
+        elif not self.rsig_offload and not self.use_bulletproof:
             rsig_buff = bytearray(32 * (64 + 64 + 64 + 1))
             rsig_mv = memoryview(rsig_buff)
 
             C, mask, rsig = ring_ct.prove_range(
-                amount, last_mask, backend_impl=True, byte_enc=True, rsig=rsig_mv
+                amount, mask, backend_impl=True, byte_enc=True, rsig=rsig_mv
             )
             rsig = memoryview(rsig)
-
-            if __debug__:
-                rsig_bytes = monero.inflate_rsig(rsig)
-                self.assrt(ring_ct.ver_range(C, rsig_bytes))
+            del (rsig_buff, rsig_mv, ring_ct)
 
             # Incremental hashing
             await self.full_message_hasher.rsig_val(rsig, False, raw=True)
+            self._check_out_commitment(amount, mask, C)
+
+        elif self.rsig_offload and self.use_bulletproof:
+            from monero_serialize.xmrtypes import Bulletproof
+
+            masks = [
+                self._get_out_mask(1 + idx - batch_size + ix)
+                for ix in range(batch_size)
+            ]
+
+            bp_obj = await misc.parse_msg(rsig_data.rsig, Bulletproof())
+            rsig_data.rsig = None
+
+            await self.full_message_hasher.rsig_val(bp_obj, True, raw=False)
+            res = await ring_ct.verify_bp(bp_obj, self.output_amounts, masks)
+            self.assrt(res, "BP verification fail")
+            self._log_trace("BP verified", collect=True)
+            del (bp_obj, ring_ct)
+
+        elif self.rsig_offload and not self.use_bulletproof:
+            await self.full_message_hasher.rsig_val(rsig_data.rsig, False, raw=True)
+            rsig_data.rsig = None
+
+        else:
+            raise misc.TrezorError("Unexpected rsig state")
 
         self._log_trace("rproof", collect=True)
-        self.assrt(
-            crypto.point_eq(
-                C,
-                crypto.point_add(
-                    crypto.scalarmult_base(mask), crypto.scalarmult_h(amount)
-                ),
-            ),
-            "rproof",
-        )
+        self.output_amounts = []
+        if not self.rsig_offload:
+            self.output_masks = []
+        return rsig, mask
+
+    async def _set_out1_ecdh(self, idx, dest_pub_key, amount, mask, amount_key):
+        from monero_glue.xmr import ring_ct
 
         # Mask sum
-        out_pk.mask = crypto.encodepoint(C)
+        out_pk = misc.StdObj(dest=crypto.encodepoint(dest_pub_key), mask=None)
+        out_pk.mask = crypto.encodepoint(crypto.gen_c(mask, amount))
         self.sumout = crypto.sc_add(self.sumout, mask)
         self.output_sk.append(misc.StdObj(mask=mask))
 
@@ -994,12 +1153,12 @@ class TTransactionBuilder(object):
         recode_ecdh(ecdh_info, encode=True)
         gc.collect()
 
-        return rsig, out_pk, ecdh_info
+        return out_pk, ecdh_info
 
     async def _set_out1_prefix(self):
         from monero_serialize.xmrtypes import TransactionPrefix
 
-        await self.tx_prefix_hasher.ar.container_size(
+        await self.tx_prefix_hasher.container_size(
             self.num_dests(), TransactionPrefix.f_specs()[3][1]
         )
 
@@ -1049,17 +1208,37 @@ class TTransactionBuilder(object):
             )
         return derivation
 
-    async def set_out1(self, dst_entr, dst_entr_hmac):
+    async def _set_out1_tx_out(self, dst_entr, tx_out_key):
+        from monero_serialize.xmrtypes import TxoutToKey
+        from monero_serialize.xmrtypes import TxOut
+
+        tk = TxoutToKey(key=crypto.encodepoint(tx_out_key))
+        tx_out = TxOut(amount=0, target=tk)
+        self._log_trace(8)
+
+        # Tx header prefix hashing
+        await self.tx_prefix_hasher.field(tx_out, TxOut)
+        self._log_trace(9, True)
+
+        # Hmac dest_entr.
+        hmac_vouti = await self.gen_hmac_vouti(dst_entr, tx_out, self.out_idx)
+        self._log_trace(10, True)
+
+        tx_out_bin = await misc.dump_msg(tx_out, preallocate=34)
+        return tx_out_bin, hmac_vouti
+
+    async def set_out1(self, dst_entr, dst_entr_hmac, rsig_data=None):
         """
         Set destination entry one by one.
         Computes destination stealth address, amount key, range proof + HMAC, out_pk, ecdh_info.
 
         :param dst_entr
-        :type dst_entr: TxDestinationEntry
         :param dst_entr_hmac
+        :param rsig_data
         :return:
         """
-        from monero_serialize import xmrserialize
+        self._log_trace(0, True)
+        mods = utils.unimport_begin()
 
         await self.trezor.iface.transaction_step(
             self.STEP_OUT, self.out_idx + 1, self.num_dests()
@@ -1071,7 +1250,7 @@ class TTransactionBuilder(object):
 
         self.state.set_output()
         self.out_idx += 1
-        self._log_trace(2)
+        self._log_trace(2, True)
 
         if dst_entr.amount <= 0 and self.tx.version <= 1:
             raise ValueError("Destination with wrong amount: %s" % dst_entr.amount)
@@ -1080,75 +1259,67 @@ class TTransactionBuilder(object):
         dst_entr_hmac_computed = await self.gen_hmac_tsxdest(dst_entr, self.out_idx)
         if not common.ct_equal(dst_entr_hmac, dst_entr_hmac_computed):
             raise ValueError("HMAC invalid")
-        gc.collect()
-        self._log_trace(3)
+        del (dst_entr_hmac, dst_entr_hmac_computed)
+        self._log_trace(3, True)
 
         # First output - tx prefix hasher - size of the container
-        self.tx_prefix_hasher.refresh(xser=xmrserialize)
         if self.out_idx == 0:
             await self._set_out1_prefix()
-        gc.collect()
+        self._log_trace(4, True)
 
-        self._log_trace(4)
+        self.summary_outs_money += dst_entr.amount
+        utils.unimport_end(mods)
+        self._log_trace(5, True)
+
+        # Range proof first, memory intensive
+        rsig, mask = await self._range_proof(self.out_idx, dst_entr.amount, rsig_data)
+        utils.unimport_end(mods)
+        self._log_trace(6, True)
+
+        # Amount key, tx out key
         additional_txkey_priv = await self._set_out1_additional_keys(dst_entr)
         derivation = await self._set_out1_derivation(dst_entr, additional_txkey_priv)
-
-        gc.collect()
-        self._log_trace(5)
-
         amount_key = crypto.derivation_to_scalar(derivation, self.out_idx)
         tx_out_key = crypto.derive_public_key(
             derivation, self.out_idx, crypto.decodepoint(dst_entr.addr.spend_public_key)
         )
+        del (derivation, additional_txkey_priv)
+        self._log_trace(7, True)
 
-        from monero_serialize.xmrtypes import TxoutToKey
-        from monero_serialize.xmrtypes import TxOut
+        # Tx header prefix hashing, hmac dst_entr
+        tx_out_bin, hmac_vouti = await self._set_out1_tx_out(dst_entr, tx_out_key)
+        self._log_trace(11, True)
 
-        tk = TxoutToKey(key=crypto.encodepoint(tx_out_key))
-        tx_out = TxOut(amount=0, target=tk)
-        self.summary_outs_money += dst_entr.amount
-        self._log_trace(6)
-
-        # Tx header prefix hashing
-        await self.tx_prefix_hasher.ar.field(tx_out, TxOut)
-        gc.collect()
-
-        # Hmac dest_entr.
-        hmac_vouti = await self.gen_hmac_vouti(dst_entr, tx_out, self.out_idx)
-        gc.collect()
-        self._log_trace(7)
-
-        # Range proof, out_pk, ecdh_info
-        rsig, out_pk, ecdh_info = await self.range_proof(
+        # Out_pk, ecdh_info
+        out_pk, ecdh_info = await self._set_out1_ecdh(
             self.out_idx,
-            dest_pub_key=tk.key,
+            dest_pub_key=tx_out_key,
             amount=dst_entr.amount,
+            mask=mask,
             amount_key=amount_key,
         )
-        gc.collect()
-        self._log_trace(8)
+        self._log_trace(12, True)
 
         # Incremental hashing of the ECDH info.
         # RctSigBase allows to hash only one of the (ecdh, out_pk) as they are serialized
         # as whole vectors. Hashing ECDH info saves state space.
         await self.full_message_hasher.set_ecdh(ecdh_info)
-        self._log_trace(9)
+        self._log_trace(13, True)
 
         # Output_pk is stored to the state as it is used during the signature and hashed to the
         # RctSigBase later.
         self.output_pk.append(out_pk)
-        gc.collect()
+        self._log_trace(14, True)
 
-        self._log_trace(10)
         from monero_glue.messages.MoneroTransactionSetOutputAck import (
             MoneroTransactionSetOutputAck
         )
         from monero_serialize.xmrtypes import CtKey
 
         return MoneroTransactionSetOutputAck(
-            tx_out=await misc.dump_msg(tx_out, preallocate=34),
+            tx_out=tx_out_bin,
             vouti_hmac=hmac_vouti,
-            rsig=rsig,  # rsig is already byte-encoded
+            rsig_data=self._return_rsig_data(rsig),
             out_pk=await misc.dump_msg(out_pk, preallocate=64, msg_type=CtKey),
             ecdh_info=await misc.dump_msg(ecdh_info, preallocate=64),
         )
@@ -1168,11 +1339,9 @@ class TTransactionBuilder(object):
     async def all_out1_set_tx_prefix(self):
         from monero_serialize.core.message_types import BlobType
 
-        await self.tx_prefix_hasher.ar.message_field(
-            self.tx, ("extra", BlobType)
-        )  # extra
+        await self.tx_prefix_hasher.message_field(self.tx, ("extra", BlobType))  # extra
 
-        self.tx_prefix_hash = self.tx_prefix_hasher.kwriter.get_digest()
+        self.tx_prefix_hash = self.tx_prefix_hasher.get_digest()
         self.tx_prefix_hasher = None
 
         # Hash message to the final_message
@@ -1310,7 +1479,6 @@ class TTransactionBuilder(object):
         Generates a signature for one input.
 
         :param src_entr: Source entry
-        :type src_entr: monero_glue.xmr.serialize_messages.tx_construct.TxSourceEntry
         :param vini: tx.vin[i] for the transaction. Contains key image, offsets, amount (usually zero)
         :param hmac_vini: HMAC for the tx.vin[i] as returned from Trezor
         :param pseudo_out: pedersen commitment for the current input, uses alpha as the mask.
@@ -1440,6 +1608,7 @@ class TTransactionBuilder(object):
             # Full RingCt, only one input
             txn_fee_key = crypto.scalarmult_h(self.get_fee())
             mix_ring = [[x.key] for x in src_entr.outputs]
+
             mg, msc = mlsag2.prove_rct_mg(
                 self.full_message,
                 mix_ring,

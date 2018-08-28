@@ -39,6 +39,11 @@ class TsxSignStateHolder(object):
         self.input_pseudo_outs = []
         self.output_sk = []
         self.output_pk = []
+        self.output_amounts = []
+        self.output_masks = []
+        self.rsig_type = 0
+        self.rsig_grp = []
+        self.rsig_offload = 0
         self.sumout = None
         self.sumpouts_alphas = None
         self.subaddresses = {}

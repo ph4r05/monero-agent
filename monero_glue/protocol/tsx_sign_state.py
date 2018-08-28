@@ -13,12 +13,14 @@ class TState(object):
     INPUT_DONE = const(4)
     INPUT_PERM = const(5)
     INPUT_VINS = const(6)
-    OUTPUT = const(7)
-    OUTPUT_DONE = const(8)
-    FINAL_MESSAGE = const(9)
-    SIGNATURE = const(10)
-    SIGNATURE_DONE = const(11)
-    FINAL = const(12)
+    INPUT_ALL_DONE = const(7)
+    OUTPUT = const(8)
+    RSIG = const(9)
+    OUTPUT_DONE = const(10)
+    FINAL_MESSAGE = const(11)
+    SIGNATURE = const(12)
+    SIGNATURE_DONE = const(13)
+    FINAL = const(14)
     FAIL = const(250)
 
     def __init__(self):
@@ -65,11 +67,15 @@ class TState(object):
     def is_input_vins(self):
         return self.s == self.INPUT_VINS
 
+    def input_all_done(self):
+        if (not self.in_mem and self.s != self.INPUT_VINS) or (
+            self.in_mem and self.s != self.INPUT_PERM
+        ):
+            raise ValueError("Illegal state")
+        self.s = self.INPUT_ALL_DONE
+
     def set_output(self):
-        if (
-            (not self.in_mem and self.s != self.INPUT_VINS)
-            or (self.in_mem and self.s != self.INPUT_PERM)
-        ) and self.s != self.OUTPUT:
+        if self.s != self.INPUT_ALL_DONE and self.s != self.OUTPUT:
             raise ValueError("Illegal state")
         self.s = self.OUTPUT
 
