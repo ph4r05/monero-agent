@@ -1,5 +1,4 @@
 from monero_serialize import xmrserialize
-from monero_serialize.xmrtypes import RctType, ECKey, EcdhInfo, KeyV, RctSigBase
 
 from monero_glue.xmr import crypto
 from monero_glue.xmr.sub.keccak_hasher import HashWrapper
@@ -11,7 +10,7 @@ class PreMlsagHasher(object):
     """
 
     def __init__(self, state=None):
-        from monero_glue.xmr.sub.keccak_hasher import HashWrapper, KeccakArchive
+        from monero_glue.xmr.sub.keccak_hasher import HashWrapper, KeccakXmrArchive
 
         self.is_simple = state[0] if state else None
         self.state = state[1] if state else 0
@@ -19,9 +18,9 @@ class PreMlsagHasher(object):
         self.rsig_hasher = state[3] if state else crypto.get_keccak()
         self.rtcsig_hasher = None
         if state:
-            self.rtcsig_hasher = KeccakArchive(state[4]) if state[4] else None
+            self.rtcsig_hasher = KeccakXmrArchive(state[4]) if state[4] else None
         else:
-            self.rtcsig_hasher = KeccakArchive()
+            self.rtcsig_hasher = KeccakXmrArchive()
 
     def state_save(self):
         return (
@@ -33,14 +32,14 @@ class PreMlsagHasher(object):
         )
 
     def state_load(self, x):
-        from monero_glue.xmr.sub.keccak_hasher import HashWrapper, KeccakArchive
+        from monero_glue.xmr.sub.keccak_hasher import HashWrapper, KeccakXmrArchive
 
         self.is_simple = x[0]
         self.state = x[1]
         self.kc_master = HashWrapper(x[2])
         self.rsig_hasher = x[3]
         if x[4]:
-            self.rtcsig_hasher = KeccakArchive(x[4])
+            self.rtcsig_hasher = KeccakXmrArchive(x[4])
         else:
             self.rtcsig_hasher = None
 
@@ -59,39 +58,41 @@ class PreMlsagHasher(object):
             raise ValueError("State error")
         self.state = 2
 
+        from monero_serialize.xmrtypes import RctSigBase
         rfields = RctSigBase.f_specs()
-        await self.rtcsig_hasher.ar.message_field(
-            None, field=rfields[0], fvalue=rv_type
-        )
-        await self.rtcsig_hasher.ar.message_field(None, field=rfields[1], fvalue=fee)
+        await self.rtcsig_hasher.message_field(None, field=rfields[0], fvalue=rv_type)
+        await self.rtcsig_hasher.message_field(None, field=rfields[1], fvalue=fee)
 
     async def set_pseudo_out(self, out):
         if self.state != 2 and self.state != 3:
             raise ValueError("State error")
         self.state = 3
 
-        await self.rtcsig_hasher.ar.field(out, KeyV.ELEM_TYPE)
+        from monero_serialize.xmrtypes import KeyV
+        await self.rtcsig_hasher.field(out, KeyV.ELEM_TYPE)
 
     async def set_ecdh(self, ecdh):
         if self.state != 2 and self.state != 3 and self.state != 4:
             raise ValueError("State error")
         self.state = 4
 
-        await self.rtcsig_hasher.ar.field(ecdh, EcdhInfo.ELEM_TYPE)
+        from monero_serialize.xmrtypes import EcdhInfo
+        await self.rtcsig_hasher.field(ecdh, EcdhInfo.ELEM_TYPE)
 
     async def set_out_pk(self, out_pk, mask=None):
         if self.state != 4 and self.state != 5:
             raise ValueError("State error")
         self.state = 5
 
-        await self.rtcsig_hasher.ar.field(mask if mask else out_pk.mask, ECKey)
+        from monero_serialize.xmrtypes import ECKey
+        await self.rtcsig_hasher.field(mask if mask else out_pk.mask, ECKey)
 
     async def rctsig_base_done(self):
         if self.state != 5:
             raise ValueError("State error")
         self.state = 6
 
-        c_hash = self.rtcsig_hasher.kwriter.get_digest()
+        c_hash = self.rtcsig_hasher.get_digest()
         self.kc_master.update(c_hash)
         self.rtcsig_hasher = None
 
@@ -148,6 +149,7 @@ async def get_pre_mlsag_hash(rv):
     :return:
     """
     from monero_glue.xmr.sub.keccak_hasher import get_keccak_writer
+    from monero_serialize.xmrtypes import RctType
 
     kc_master = HashWrapper(crypto.get_keccak())
     kc_master.update(rv.message)
