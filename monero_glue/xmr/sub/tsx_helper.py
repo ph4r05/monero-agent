@@ -193,7 +193,7 @@ def add_extra_nonce_to_tx_extra(extra, extra_nonce):
     """
     if len(extra_nonce) > 255:
         raise ValueError("Nonce could be 255 bytes max")
-    extra += b"\x02" + len(extra_nonce).to_bytes(1, byteorder="big") + extra_nonce
+    extra += b"\x02" + len(extra_nonce).to_bytes(1, "big") + extra_nonce
     return extra
 
 
