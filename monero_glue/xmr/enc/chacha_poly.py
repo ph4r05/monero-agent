@@ -23,7 +23,7 @@ def encrypt(key, plaintext, associated_data=None):
     """
     cipher = ChaCha20Poly1305(key)
     nonce = os.urandom(12)
-    ciphertext = cipher.encrypt(nonce, plaintext, associated_data)
+    ciphertext = cipher.encrypt(bytes(nonce), bytes(plaintext), associated_data)
     return nonce, ciphertext, b""
 
 
