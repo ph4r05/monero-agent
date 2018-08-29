@@ -44,7 +44,7 @@ class EcTrezorTest(aiounittest.AsyncTestCase):
         if not LOADED:
             self.skipTest("Trezor crypto missing")
 
-        x = ec_py.encodeint(0xaa)
+        x = ec_py.encodeint(ec_py.sc_init(0xaa))
         y = ec_trezor.decodeint(x)
         yy = ec_trezor.encodeint(y)
         self.assertEqual(yy[0], 0xaa)
