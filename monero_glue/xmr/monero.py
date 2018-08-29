@@ -171,7 +171,7 @@ def generate_key_image_helper_precomp(
     :param received_index: subaddress index this payment was received to
     :return:
     """
-    if ack.spend_key_private == 0:
+    if not crypto.sc_isnonzero(ack.spend_key_private):
         raise ValueError("Watch-only wallet not supported")
 
     # derive secret key with subaddress - step 1: original CN derivation
