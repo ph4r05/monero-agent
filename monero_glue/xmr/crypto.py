@@ -97,8 +97,6 @@ def check_signature(data, c, r, pub):
     :return:
     """
     check_ed25519point(pub)
-    c = sc_reduce32(c)
-    r = sc_reduce32(r)
     if sc_check(c) != 0 or sc_check(r) != 0:
         raise ValueError("Signature error")
 

@@ -103,7 +103,7 @@ def prove_range_mem(amount, last_mask=None):
         c_H = crypto.point_double(c_H)
 
     # Compute ee, memory cleanup
-    ee = crypto.sc_reduce32(crypto.decodeint(kck.digest()))
+    ee = crypto.decodeint(kck.digest())
     crypto.encodeint_into(ee, mv[64 * 32 * 2 :])
     del kck
     gc.collect()

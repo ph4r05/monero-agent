@@ -274,7 +274,7 @@ def gen_borromean(x, P1, P2, indices):
         else:
             kck.update(crypto.encodepoint(L))
 
-    ee = crypto.sc_reduce32(crypto.decodeint(kck.digest()))
+    ee = crypto.decodeint(kck.digest())
     del kck
 
     s0 = key_zero_vector(n)
@@ -314,7 +314,7 @@ def ver_borromean(P1, P2, s0, s1, ee):
         kck.update(crypto.encodepoint(Lv1[ii]))
 
     # ee_computed = crypto.hash_to_scalar(crypto.encodepoint(Lv1))
-    ee_computed = crypto.sc_reduce32(crypto.decodeint(kck.digest()))
+    ee_computed = crypto.decodeint(kck.digest())
 
     return crypto.sc_eq(ee_computed, ee)
 
@@ -420,7 +420,7 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
         hasher.update(crypto.encodepoint(aGi))
 
     c_old = hasher.digest()
-    c_old = crypto.sc_reduce32(crypto.decodeint(c_old))
+    c_old = crypto.decodeint(c_old)
     return c_old, Ip, alpha
 
 
@@ -469,7 +469,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
             hasher.update(crypto.encodepoint(pk[i][j]))
             hasher.update(crypto.encodepoint(L))
 
-        c = crypto.sc_reduce32(crypto.decodeint(hasher.digest()))
+        c = crypto.decodeint(hasher.digest())
         c_old = c
         i = (i + 1) % cols
 
@@ -558,7 +558,7 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
             hasher.update(crypto.encodepoint(pk[i][j]))
             hasher.update(crypto.encodepoint(L))
 
-        c = crypto.sc_reduce32(crypto.decodeint(hasher.digest()))
+        c = crypto.decodeint(hasher.digest())
         c_old = c
         i += 1
 

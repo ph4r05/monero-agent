@@ -475,9 +475,8 @@ def generate_keys(recovery_key):
     :param recovery_key:
     :return:
     """
-    sec = crypto.sc_reduce32(recovery_key)
-    pub = crypto.scalarmult_base(sec)
-    return sec, pub
+    pub = crypto.scalarmult_base(recovery_key)
+    return recovery_key, pub
 
 
 def generate_monero_keys(seed):
