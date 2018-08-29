@@ -9,18 +9,164 @@ import struct
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 from Crypto.Random import random as rand
+
+from monero_glue.xmr.core.backend import ed25519ietf
 from monero_glue.xmr.core.backend.ed25519 import expmod
 from monero_glue.xmr.core.backend.ed25519_2 import inv
 from monero_glue.xmr.core.ec_base import *
 from monero_serialize import xmrserialize
 
 
+def cmp(a, b):
+    return (a > b) - (a < b)
+
+
+def memcpy(dst, dst_off, src, src_off, len):
+    for i in range(len):
+        dst[dst_off + i] = src[src_off + i]
+    return dst
+
+
+_decodeint = ed25519.decodeint
+_encodeint = ed25519.encodeint
+_encodepoint = ed25519_2.encodepoint
+_decodepoint = ed25519_2.decodepoint
+
+
+class EdScalar(object):
+    def __init__(self, v=None, offset=0):
+        self.v = 0
+        self.init(v, offset)
+
+    def init(self, src=None, offset=0):
+        if src is None:
+            self.v = 0
+        elif isinstance(src, int):
+            self.v = src % l
+        elif isinstance(src, EdScalar):
+            self.v = src.v
+        else:
+            self.v = _decodeint(src[offset:]) % l
+        return self
+
+    def _assert_scalar(self, other):
+        if not isinstance(other, EdScalar):
+            raise ValueError("operand is not EdScalar")
+
+    def __repr__(self):
+        return "EdScalar(%s)" % binascii.hexlify(_encodeint(self.v))
+
+    def __cmp__(self, other):
+        if isinstance(other, int):
+            return cmp(self.v, other)
+        if not isinstance(other, EdScalar):
+            raise ValueError("Neither EdScalar nor integer")
+        return cmp(self.v, other.v)
+
+    def __eq__(self, other):
+        self._assert_scalar(other)
+        return self.v == other.v
+
+    def __bytes__(self):
+        return _encodeint(self.v)
+
+    def modinv(self):
+        self.v = pow(self.v, l - 2, l)
+        return self
+
+    def __neg__(self):
+        return EdScalar(-1 * self.v)
+
+    def __add__(self, other):
+        self._assert_scalar(other)
+        return EdScalar(self.v + other.v)
+
+    def __sub__(self, other):
+        return EdScalar(self.v - other.v)
+
+    def __mul__(self, other):
+        return EdScalar(self.v * other.v)
+
+    @classmethod
+    def ensure_scalar(cls, x):
+        if isinstance(x, EdScalar):
+            return x
+        return EdScalar(x)
+
+
+class EdPoint(object):
+    def __init__(self, v=None, offset=0):
+        self.v = ed25519_2.ident
+        self.init(v, offset)
+
+    def init(self, src=None, offset=0):
+        if src is None:
+            self.v = ed25519_2.ident
+        elif isinstance(src, EdPoint):
+            self.v = src.v
+        elif isinstance(src, tuple):
+            self.v = src
+        else:
+            self.v = _decodepoint(src[offset:])
+        return self
+
+    def __repr__(self):
+        return "EdPoint(%r)" % binascii.hexlify(_encodepoint(self.v))
+
+    def __getitem__(self, item):
+        return self.v[item]
+
+    def __eq__(self, other):
+        if isinstance(other, EdPoint):
+            return ed25519ietf.point_equal(self.v, other.v)
+        elif isinstance(other, tuple):
+            return ed25519ietf.point_equal(self.v, other)
+        else:
+            ValueError("Neither EdPoint nor quadruple")
+
+    def __bytes__(self):
+        return _encodepoint(self.v)
+
+    def check(self):
+        if not ed25519_2.isoncurve(self.v):
+            raise ValueError("P is not on ed25519 curve")
+
+    @staticmethod
+    def invert_v(v):
+        return -1 * v[0] % q, v[1], v[2], -1 * v[3] % q
+
+    def invert(self):
+        self.v = EdPoint.invert_v(self.v)
+        return self
+
+    def _assert_point(self, other):
+        if not isinstance(other, EdPoint):
+            raise ValueError("operand is not EdPoint")
+
+    def __add__(self, other):
+        self._assert_point(other)
+        return EdPoint(ed25519_2.edwards_add(self.v, other.v))
+
+    def __neg__(self):
+        return EdPoint(self).invert()
+
+    def __sub__(self, other):
+        self._assert_point(other)
+        return EdPoint(ed25519_2.edwards_add(self.v, EdPoint.invert_v(other.v)))
+
+    def __mul__(self, other):
+        return EdPoint(ed25519_2.scalarmult(self.v, other.v))
+
+
+BASE = EdPoint(ed25519_2.B)
+
+
 def new_point():
-    return [0, 0, 0, 0]
+    return EdPoint()
 
 
 def new_scalar():
-    return 0
+    return EdScalar()
 
 
 def random_bytes(by):
@@ -48,6 +194,11 @@ def keccak_hash(inp):
     ctx = get_keccak()
     ctx.update(inp)
     return ctx.digest()
+
+
+def keccak_hash_into(r, inp):
+    b = keccak_hash(inp)
+    return memcpy(r, 0, b, 0, 32)
 
 
 def keccak_2hash(inp):
@@ -108,7 +259,16 @@ def decodeint(x):
     :param x:
     :return:
     """
-    return ed25519.decodeint(x)
+    return EdScalar(x)
+
+
+def decodeint_into(r, x):
+    return r.init(x)
+
+
+def decodeint_into_noreduce(r, x):
+    r.v = _decodeint(x)
+    return r
 
 
 def encodeint(x):
@@ -117,14 +277,12 @@ def encodeint(x):
     :param x:
     :return:
     """
-    return ed25519.encodeint(x)
+    return bytes(x)
 
 
-def encodeint_into(x, b):
-    r = ed25519.encodeint(x)
-    for i in range(32):
-        b[i] = r[i]
-    return b
+def encodeint_into(x, b, offset=0):
+    r = bytes(x)
+    return memcpy(b, offset, r, 0, 32)
 
 
 def check_ed25519point(P):
@@ -133,9 +291,7 @@ def check_ed25519point(P):
     :param P:
     :return:
     """
-    check_point_fmt(P)
-    if not isoncurve(P):
-        raise ValueError("P is not on ed25519 curve")
+    P.check()
 
 
 def encodepoint(P):
@@ -144,51 +300,12 @@ def encodepoint(P):
     :param P:
     :return:
     """
-    check_ed25519point(P)
-    (x, y, z, t) = P
-    zi = inv(z)
-    x = (x * zi) % q
-    y = (y * zi) % q
-    bits = [(y >> i) & 1 for i in range(b - 1)] + [x & 1]
-
-    # noinspection PyTypeChecker
-    return b"".join(
-        [int2byte(sum([bits[i * 8 + j] << j for j in range(8)])) for i in range(b // 8)]
-    )
+    return bytes(P)
 
 
-def encodepoint_into(P, b):
-    r = encodepoint(P)
-    for i in range(32):
-        b[i] = r[i]
-    return b
-
-
-def isoncurve_ext(P):
-    """
-    Tests if P is on Ed25519
-    :param P:
-    :return:
-    """
-    (x, y, z, t) = P
-    return (
-        z % q != 0
-        and x * y % q == z * t % q
-        and (y * y - x * x - z * z - ed25519.d * t * t) % q == 0
-    )
-
-
-def decodepoint_ext(s):
-    """
-    Decodes point representation to the extended coordinates (x,y,z,t) point representation
-    :param s:
-    :return:
-    """
-    x, y = ed25519.decodepointcheck(s)
-    P = (x, y, 1, (x * y) % q)
-    if not isoncurve_ext(P):
-        raise ValueError("decoding point that is not on curve")
-    return P
+def encodepoint_into(P, b, offset=0):
+    r = bytes(P)
+    return memcpy(b, offset, r, 0, 32)
 
 
 def conv_xy_to_ext(P):
@@ -250,39 +367,7 @@ def invert_ext(P):
     :param P:
     :return:
     """
-    check_ed25519point(P)
-    return -1 * P[0] % q, P[1], P[2], -1 * P[3] % q
-
-
-def check_ext(P):
-    """
-    Check format of the Ext point
-    :param P:
-    :return:
-    """
-    if not isinstance(P, (list, tuple)) or len(P) != 4:
-        raise ValueError("P is not a ed25519 ext point")
-
-
-def check_xy(P):
-    """
-    Check format of the xy point
-    :param P:
-    :return:
-    """
-    if not isinstance(P, (list, tuple)) or len(P) != 2:
-        raise ValueError("P is not a ed25519 ext point")
-
-
-def point_sub(A, B):
-    """
-    Subtracts,  A - B points in ext coords
-    :param A:
-    :param B:
-    :return:
-    """
-    check_ed25519point(A)
-    return ed25519_2.edwards_add(A, invert_ext(B))
+    return P.invert()
 
 
 def point_eq(P, Q):
@@ -293,37 +378,16 @@ def point_eq(P, Q):
     :param Q:
     :return:
     """
-    check_ed25519point(P)
-    check_ed25519point(Q)
-    if (P[0] * Q[2] - Q[0] * P[2]) % q != 0:
-        return False
-    if (P[1] * Q[2] - Q[1] * P[2]) % q != 0:
-        return False
-    return True
-
-
-def point_eq_xy(P, Q):
-    """
-    Point equivalence
-    :param P:
-    :param Q:
-    :return:
-    """
-    check_ed25519point(P)
-    check_ed25519point(Q)
+    P.check() and Q.check()
     return P == Q
 
 
-#
-# Point representation
-#
+def decodepoint(b):
+    return EdPoint(b)
 
-decodepoint = decodepoint_ext
-isoncurve = isoncurve_ext
-check_point_fmt = check_ext
-scalarmult_base = ed25519_2.scalarmult_B
-scalarmult = ed25519_2.scalarmult
-point_add = ed25519_2.edwards_add
+
+def decodepoint_into(r, b):
+    return r.init(b)
 
 
 #
@@ -387,28 +451,27 @@ def fe_isnonzero(x):
 
 
 def sc_0():
-    """
-    Sets 0 to the scalar value Zmod(m)
-    :return:
-    """
-    return 0
+    return EdScalar(0)
+
+
+def sc_0_into(r):
+    return r.init(0)
 
 
 def sc_init(x):
-    """
-    Sets x to the scalar value Zmod(m)
-    :return:
-    """
-    return sc_reduce32(x)
+    if x >= (1 << 64):
+        raise ValueError("Initialization works up to 64-bit only")
+    return EdScalar(x)
+
+
+def sc_init_into(r, x):
+    if x >= (1 << 64):
+        raise ValueError("Initialization works up to 64-bit only")
+    return r.init(x)
 
 
 def sc_get64(x):
-    """
-    Returns 64bit value from the sc
-    :param x:
-    :return:
-    """
-    return x
+    return x.v
 
 
 def sc_check(key):
@@ -418,9 +481,9 @@ def sc_check(key):
     :param key:
     :return:
     """
-    if key % l == 0:
+    if key.v % l == 0:
         return -1
-    return 0 if key == sc_reduce32(key) else -1
+    return 0 if key.v == sc_reduce32(key.v) else -1
 
 
 def check_sc(key):
@@ -434,90 +497,77 @@ def check_sc(key):
 
 
 def sc_reduce32(data):
-    """
-    Exactly the same as sc_reduce (which is default lib sodium)
-    except it is assumed that your input s is alread in the form:
-    s[0]+256*s[1]+...+256^31*s[31] = s
-
-    And the rest is reducing mod l,
-    so basically take a 32 byte input, and reduce modulo the prime.
-    :param data:
-    :return:
-    """
     return data % l
 
 
 def sc_add(aa, bb):
-    """
-    Scalar addition
-    :param aa:
-    :param bb:
-    :return:
-    """
-    return (aa + bb) % l
+    return aa + bb
+
+
+def sc_add_into(r, aa, bb):
+    return r.init(aa + bb)
 
 
 def sc_sub(aa, bb):
-    """
-    Scalar subtraction
-    :param aa:
-    :param bb:
-    :return:
-    """
-    return (aa - bb) % l
+    return aa - bb
+
+
+def sc_sub_into(r, aa, bb):
+    return r.init(aa - bb)
 
 
 def sc_isnonzero(c):
-    """
-    Returns true if scalar is non-zero
-    :param c:
-    :return:
-    """
-    return c % l != 0
+    return c != ZERO
 
 
 def sc_eq(a, b):
-    """
-    Returns true if scalars are equal
-    :param a:
-    :param b:
-    :return:
-    """
-    return (a - b) % l == 0
+    return a == b
+
+
+def sc_mul(a, b):
+    return a * b
+
+
+def sc_mul_into(r, a, b):
+    return r.init(a * b)
 
 
 def sc_mulsub(aa, bb, cc):
     """
     (cc - aa * bb) % l
-    :param aa:
-    :param bb:
-    :param cc:
-    :return:
     """
-    return (cc - aa * bb) % l
+    return cc - aa * bb
+
+
+def sc_mulsub_into(r, aa, bb, cc):
+    """
+    (cc - aa * bb) % l
+    """
+    return r.init(cc - aa * bb)
 
 
 def sc_muladd(aa, bb, cc):
-    """
-    (cc + aa * bb) % l
-    :param aa:
-    :param bb:
-    :param cc:
-    :return:
-    """
-    return (cc + aa * bb) % l
+    return cc + aa * bb
+
+
+def sc_muladd_into(r, aa, bb, cc):
+    return r.init(cc + aa * bb)
 
 
 def sc_inv(aa):
-    return pow(aa, py_l - 2, py_l)
+    return EdScalar(aa).modinv()
+
+
+def sc_inv_into(r, x):
+    return r.init(x).modinv()
 
 
 def random_scalar():
-    """
-    Generates random scalar (secret key)
-    :return:
-    """
-    return sc_reduce32(rand.getrandbits(64 * 8))
+    return EdScalar(rand.getrandbits(64 * 8) % l)
+
+
+def random_scalar_into(r):
+    return r.init(random_scalar())
 
 
 def extended_gcd(aa, bb):
@@ -552,27 +602,68 @@ def mul_inverse_egcd(x, n, s=1, t=0, N=0):
 #
 
 
+def scalarmult_base(a):
+    return EdPoint(ed25519_2.scalarmult_B(a.v))
+
+
+def scalarmult_base_into(r, a):
+    return r.init(ed25519_2.scalarmult_B(a.v))
+
+
+def scalarmult(P, e):
+    return P * e
+
+
+def scalarmult_into(r, P, e):
+    return r.init(P * e)
+
+
+def point_add(A, B):
+    return A + B
+
+
+def point_add_into(r, A, B):
+    return r.init(A + B)
+
+
+def point_sub(A, B):
+    return A - B
+
+
+def point_sub_into(r, A, B):
+    return r.init(A - B)
+
+
 def point_double(P):
-    return scalarmult(P, 2)
+    return EdPoint(P + P)
 
 
 def point_norm(P):
-    """
-    Normalizes point after multiplication
-    Extended edwards coordinates (X,Y,Z,T)
-    :param P:
-    :return:
-    """
     return P
 
 
 def point_mul8(P):
-    """
-    3 times doubling the point
-    :param P:
-    :return:
-    """
-    return scalarmult(P, 8)
+    return P * EIGHT
+
+
+INV_EIGHT = b"\x79\x2f\xdc\xe2\x29\xe5\x06\x61\xd0\xda\x1c\x7d\xb3\x9d\xd3\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06"
+INV_EIGHT_SC = EdScalar(decodeint(INV_EIGHT))
+ZERO = EdScalar(0)
+ONE = EdScalar(1)
+TWO = EdScalar(2)
+EIGHT = EdScalar(8)
+
+
+def point_mulinv8(P):
+    return P * INV_EIGHT_SC
+
+
+def point_mul8_into(r, P):
+    return r.init(P * INV_EIGHT_SC)
+
+
+def sc_inv_eight():
+    return INV_EIGHT_SC
 
 
 def ge_double_scalarmult_base_vartime(a, A, b):
@@ -627,8 +718,12 @@ def identity(byte_enc=False):
     Identity point
     :return:
     """
-    idd = scalarmult_base(0)
-    return idd if not byte_enc else encodepoint(idd)
+    idd = EdPoint()
+    return idd if not byte_enc else bytes(idd)
+
+
+def identity_into(r):
+    return r.init(ed25519_2.ident)
 
 
 def ge_frombytes_vartime_check(point):
@@ -723,8 +818,11 @@ def hash_to_scalar(data, length=None):
     :return:
     """
     hash = cn_fast_hash(data[:length] if length else data)
-    res = decodeint(hash)
-    return sc_reduce32(res)
+    return decodeint(hash)
+
+
+def hash_to_scalar_into(r, data, length=None):
+    return r.init(hash_to_scalar(data, length))
 
 
 def hash_to_ec(buf):
@@ -737,7 +835,7 @@ def hash_to_ec(buf):
     :param key:
     :return:
     """
-    u = decodeint(cn_fast_hash(buf)) % q
+    u = _decodeint(cn_fast_hash(buf)) % q
     A = 486662
 
     w = (2 * u * u + 1) % q
@@ -792,9 +890,13 @@ def hash_to_ec(buf):
     # extended representation
     rt = ((rx * ry % q) * inv(rz)) % q
 
-    P = (rx, ry, rz, rt)
-    P8 = scalarmult(P, 8)
+    P = EdPoint((rx, ry, rz, rt))
+    P8 = scalarmult(P, EdScalar(8))
     return P8
+
+
+def hash_to_ec_into(r, buf):
+    return r.init(hash_to_ec(buf))
 
 
 #
@@ -802,7 +904,11 @@ def hash_to_ec(buf):
 #
 
 
-def gen_H():
+XMR_H = b"\x8b\x65\x59\x70\x15\x37\x99\xaf\x2a\xea\xdc\x9f\xf1\xad\xd0\xea\x6c\x72\x51\xd5\x41\x54\xcf\xa9\x2c\x17\x3a\x0d\xd3\x9c\x1f\x94"
+XMR_H_PT = EdPoint(XMR_H)
+
+
+def compute_H():
     """
     Returns point H
     8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94
@@ -812,8 +918,12 @@ def gen_H():
     return scalarmult(decodepoint(h), 8)
 
 
+def gen_H():
+    return EdPoint(XMR_H_PT)
+
+
 def scalarmult_h(i):
-    return scalarmult(gen_H(), i)
+    return XMR_H_PT * EdScalar.ensure_scalar(i)
 
 
 def add_keys2(a, b, B):
@@ -827,6 +937,10 @@ def add_keys2(a, b, B):
     return point_add(scalarmult_base(a), scalarmult(B, b))
 
 
+def add_keys2_into(r, a, b, B):
+    return r.init(add_keys2(a, b, B))
+
+
 def add_keys3(a, A, b, B):
     """
     aA + bB
@@ -837,6 +951,10 @@ def add_keys3(a, A, b, B):
     :return:
     """
     return point_add(scalarmult(A, a), scalarmult(B, b))
+
+
+def add_keys3_into(r, a, A, b, B):
+    return r.init(add_keys3(a, A, b, B))
 
 
 def gen_c(a, amount):
@@ -947,6 +1065,12 @@ def get_subaddress_secret_key(secret_key, major=0, minor=0):
 class PyECBackend(ECBackendBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def has_crypto_into_functions(self):
+        return True
+
+    def is_fast(self):
+        return False
 
 
 BACKEND_OBJ = None

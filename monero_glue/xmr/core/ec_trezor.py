@@ -87,7 +87,7 @@ def keccak_hash(inp):
 def keccak_hash_into(r, inp):
     """
     Hashesh input in one call
-    :return:
+    :return:point_add
     """
     bf = tcry.KEY_BUFF.from_buffer(r)
     tcry.cl().xmr_fast_hash(bf, bytes(inp), len(inp))
@@ -190,65 +190,6 @@ def encodeint_into(x, b):
     bf = tcry.KEY_BUFF.from_buffer(b)
     tcry.contract256_modm(bf, x)
     return b
-
-
-def check_ed25519point(x):
-    if tcry.ge25519_check(x) != 1:
-        raise ValueError("P is not on ed25519 curve")
-
-
-def scalarmult_base(a):
-    return tcry.ge25519_scalarmult_base_wrapper_r(a)
-
-
-def scalarmult_base_into(r, a):
-    tcry.ge25519_scalarmult_base_wrapper(r, a)
-    return r
-
-
-def scalarmult(P, e):
-    return tcry.ge25519_scalarmult_r(P, e)
-
-
-def scalarmult_into(r, P, e):
-    tcry.ge25519_scalarmult(r, P, e)
-    return r
-
-
-def point_add(P, Q):
-    return tcry.ge25519_add_r(P, Q, 0)
-
-
-def point_add_into(r, P, Q):
-    tcry.ge25519_add(r, P, Q, 0)
-    return r
-
-
-def point_sub(P, Q):
-    return tcry.ge25519_add_r(P, Q, 1)
-
-
-def point_sub_into(r, P, Q):
-    tcry.ge25519_add(r, P, Q, 1)
-    return r
-
-
-def point_eq(P, Q):
-    return tcry.ge25519_eq(P, Q)
-
-
-def point_double(P):
-    return tcry.ge25519_double_r(P)
-
-
-def point_norm(P):
-    """
-    Normalizes point after multiplication
-    Extended edwards coordinates (X,Y,Z,T)
-    :param P:
-    :return:
-    """
-    return tcry.ge25519_norm_r(P)
 
 
 #
@@ -370,111 +311,47 @@ def check_sc(key):
 
 
 def sc_reduce32(data):
-    """
-    Exactly the same as sc_reduce (which is default lib sodium)
-    except it is assumed that your input s is alread in the form:
-    s[0]+256*s[1]+...+256^31*s[31] = s
-
-    And the rest is reducing mod l,
-    so basically take a 32 byte input, and reduce modulo the prime.
-    :param data:
-    :return:
-    """
     return tcry.barrett_reduce256_modm_r(sc_0(), data)
 
 
 def sc_add(aa, bb):
-    """
-    Scalar addition
-    :param aa:
-    :param bb:
-    :return:
-    """
     return tcry.add256_modm_r(aa, bb)
 
 
 def sc_add_into(r, aa, bb):
-    """
-    Scalar addition
-    :param r:
-    :param aa:
-    :param bb:
-    :return:
-    """
     tcry.add256_modm(r, aa, bb)
     return r
 
 
 def sc_sub(aa, bb):
-    """
-    Scalar subtraction
-    :param aa:
-    :param bb:
-    :return:
-    """
     return tcry.sub256_modm_r(aa, bb)
 
 
 def sc_sub_into(r, aa, bb):
-    """
-    Scalar subtraction
-    :param r:
-    :param aa:
-    :param bb:
-    :return:
-    """
     tcry.sub256_modm(r, aa, bb)
     return r
 
 
 def sc_mul(aa, bb):
-    """
-    Scalar multiplication
-    :param aa:
-    :param bb:
-    :return:
-    """
     return tcry.mul256_modm_r(aa, bb)
 
 
 def sc_mul_into(r, aa, bb):
-    """
-    Scalar multiplication
-    :param r:
-    :param aa:
-    :param bb:
-    :return:
-    """
     tcry.mul256_modm(r, aa, bb)
     return r
 
 
 def sc_isnonzero(c):
-    """
-    Returns true if scalar is non-zero
-    :param c:
-    :return:
-    """
     return not tcry.iszero256_modm(c)
 
 
 def sc_eq(a, b):
-    """
-    Returns true if scalars are equal
-    :param a:
-    :param b:
-    :return:
-    """
     return tcry.eq256_modm(a, b)
 
 
 def sc_mulsub(aa, bb, cc):
     """
     (cc - aa * bb) % l
-    :param aa:
-    :param bb:
-    :param cc:
-    :return:
     """
     return tcry.mulsub256_modm_r(aa, bb, cc)
 
@@ -482,11 +359,6 @@ def sc_mulsub(aa, bb, cc):
 def sc_mulsub_into(r, aa, bb, cc):
     """
     (cc - aa * bb) % l
-    :param r:
-    :param aa:
-    :param bb:
-    :param cc:
-    :return:
     """
     tcry.mulsub256_modm(r, aa, bb, cc)
     return r
@@ -495,10 +367,6 @@ def sc_mulsub_into(r, aa, bb, cc):
 def sc_muladd(aa, bb, cc):
     """
     (cc + aa * bb) % l
-    :param aa:
-    :param bb:
-    :param cc:
-    :return:
     """
     return tcry.muladd256_modm_r(aa, bb, cc)
 
@@ -506,11 +374,6 @@ def sc_muladd(aa, bb, cc):
 def sc_muladd_into(r, aa, bb, cc):
     """
     (cc + aa * bb) % l
-    :param r:
-    :param aa:
-    :param bb:
-    :param cc:
-    :return:
     """
     tcry.muladd256_modm(r, aa, bb, cc)
     return r
@@ -557,6 +420,65 @@ def random_scalar_into(r):
 
 INV_EIGHT = b"\x79\x2f\xdc\xe2\x29\xe5\x06\x61\xd0\xda\x1c\x7d\xb3\x9d\xd3\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06"
 INV_EIGHT_SC = decodeint(INV_EIGHT)
+
+
+def check_ed25519point(x):
+    if tcry.ge25519_check(x) != 1:
+        raise ValueError("P is not on ed25519 curve")
+
+
+def scalarmult_base(a):
+    return tcry.ge25519_scalarmult_base_wrapper_r(a)
+
+
+def scalarmult_base_into(r, a):
+    tcry.ge25519_scalarmult_base_wrapper(r, a)
+    return r
+
+
+def scalarmult(P, e):
+    return tcry.ge25519_scalarmult_r(P, e)
+
+
+def scalarmult_into(r, P, e):
+    tcry.ge25519_scalarmult(r, P, e)
+    return r
+
+
+def point_add(P, Q):
+    return tcry.ge25519_add_r(P, Q, 0)
+
+
+def point_add_into(r, P, Q):
+    tcry.ge25519_add(r, P, Q, 0)
+    return r
+
+
+def point_sub(P, Q):
+    return tcry.ge25519_add_r(P, Q, 1)
+
+
+def point_sub_into(r, P, Q):
+    tcry.ge25519_add(r, P, Q, 1)
+    return r
+
+
+def point_eq(P, Q):
+    return tcry.ge25519_eq(P, Q)
+
+
+def point_double(P):
+    return tcry.ge25519_double_r(P)
+
+
+def point_norm(P):
+    """
+    Normalizes point after multiplication
+    Extended edwards coordinates (X,Y,Z,T)
+    :param P:
+    :return:
+    """
+    return tcry.ge25519_norm_r(P)
 
 
 def point_mul8(P):
@@ -953,6 +875,9 @@ class TcryECBackend(ECBackendBase):
         return True
 
     def has_crypto_into_functions(self):
+        return True
+
+    def is_fast(self):
         return True
 
 

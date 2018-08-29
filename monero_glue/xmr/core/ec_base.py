@@ -209,3 +209,6 @@ class ECBackendBase(object):
 
     def has_crypto_into_functions(self):
         return False
+
+    def is_fast(self):
+        return False
