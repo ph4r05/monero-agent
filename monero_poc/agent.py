@@ -61,6 +61,7 @@ class HostAgent(cli.BaseCli):
         self.rpc_passwd = None
         self.rpc_bind_port = 48084
         self.rpc_running = False
+        self.rpc_ready = False
 
         self.trace_logger = trace_logger.Tracelogger(logger)
         self.loop = asyncio.get_event_loop()
@@ -133,8 +134,12 @@ class HostAgent(cli.BaseCli):
         Prompt update
         :return:
         """
-        rpc_flag = "" if self.rpc_running else "R!"
-        flags = [rpc_flag]
+        flags = []
+        if not self.rpc_running:
+            flags.append("R!")
+        if not self.rpc_ready:
+            flags.append('Loading')
+
         flags_str = "|".join(flags)
         flags_suffix = "|" + flags_str if len(flags_str) > 0 else ""
 
@@ -155,6 +160,24 @@ class HostAgent(cli.BaseCli):
     #
     # Handlers
     #
+
+    def check_rpc(self):
+        try_debug = None
+        if not self.args.debug_rpc:
+            try_debug = 'Consider running with --debug-rpc flag to show RPC wallet ' \
+                        'output for closer inspection and diagnosis'
+
+        if not self.rpc_running:
+            self.perror('Monero RPC wallet is not running.')
+            if try_debug:
+                self.poutput(try_debug)
+            return
+
+        elif not self.rpc_ready:
+            self.perror('Monero RPC wallet is not yet ready, please wait a moment')
+            self.poutput('RPC wallet is not available during the blockchain scanning, it may take a while')
+            if try_debug:
+                self.poutput(try_debug)
 
     def do_quit(self, line):
         self.terminating = True
@@ -181,6 +204,7 @@ class HostAgent(cli.BaseCli):
         print("Address:   %s" % pres.address.decode("utf8"))
 
     def do_balance(self, line):
+        self.check_rpc()
         res = self.wallet_proxy.balance()
         print("Balance: %.5f" % wallet.conv_disp_amount(res["result"]["balance"]))
         print(
@@ -189,25 +213,31 @@ class HostAgent(cli.BaseCli):
         )
 
     def do_height(self, line):
+        self.check_rpc()
         res = self.wallet_proxy.height()
         print("Height: %s" % res["result"]["height"])
 
     def do_get_transfers(self, line):
+        self.check_rpc()
         res = self.wallet_proxy.get_transfers({"pool": True, "in": True, "out": True})
         print(json.dumps(res, indent=2))
 
     def do_rescan_bc(self, line):
+        self.check_rpc()
         res = self.wallet_proxy.rescan_bc()
         print(json.dumps(res, indent=2))
 
     def do_key_image_sync(self, line):
+        self.check_rpc()
         self.wait_coro(self.key_image_sync(line))
 
     def do_refresh(self, line):
+        self.check_rpc()
         res = self.wallet_proxy.refresh()
         print(json.dumps(res, indent=2))
 
     def do_transfer(self, line):
+        self.check_rpc()
         if len(line) == 0:
             print(
                 "Usage: transfer [<priority>] [<ring_size>] <address> <amount> [<payment_id>]"
@@ -218,6 +248,7 @@ class HostAgent(cli.BaseCli):
         return self.transfer_cmd(res)
 
     def do_sign(self, line):
+        self.check_rpc()
         self.wait_coro(self.sign_wrap(line))
 
     def do_init(self, line):
@@ -631,17 +662,18 @@ class HostAgent(cli.BaseCli):
         self.rpc_passwd = misc.gen_simple_passwd(16)
         self.wallet_proxy.set_creds(["trezor", self.rpc_passwd])
 
-        # TODO: pass via config-file. Passwords visible via proclist. ideally ENV VARS
         args = [
             "--daemon-address %s" % misc.escape_shell(self.rpc_addr),
             "--wallet-file %s" % misc.escape_shell(self.wallet_file),
-            "--password %s" % misc.escape_shell(self.wallet_password),
-            "--rpc-login=%s" % ("trezor:%s" % self.rpc_passwd),
+            "--prompt-for-password",
+            "--rpc-login=trezor",
             "--rpc-bind-port %s" % int(self.rpc_bind_port),
         ]
 
         if self.args.testnet or self.network_type == monero.NetworkTypes.TESTNET:
             args.append("--testnet")
+        if self.args.debug_rpc:
+            logger.debug('RPC credentials: trezor:%s' % self.rpc_passwd)
 
         cmd = "%s %s" % (rpc_cmd, " ".join(args))
 
@@ -650,8 +682,8 @@ class HostAgent(cli.BaseCli):
             cmd,
             input=feeder,
             async_=True,
-            stdout=misc.Capture(timeout=1, buffer_size=1),
-            stderr=misc.Capture(timeout=1, buffer_size=1),
+            stdout=misc.Capture(timeout=0.1, buffer_size=1),
+            stderr=misc.Capture(timeout=0.1, buffer_size=1),
             cwd=os.getcwd(),
             env=None,
             shell=True,
@@ -659,29 +691,73 @@ class HostAgent(cli.BaseCli):
 
         ret_code = 1
         out_acc, err_acc = [], []
+        out_cur, err_cur = [""], [""]
+        passwd_set = False
+
+        def process_line(line, is_err=False):
+            dst = err_acc if is_err else out_acc
+            dst.extend(line)
+            if self.args.debug_rpc:
+                logger.debug('RPC_%s: %s' % ('ERR' if is_err else 'OUT', line))
+            line_low = line.lower()
+            if 'starting wallet' in line_low:
+                self.rpc_ready = True
+                self.on_rpc_ready()
+
+        def add_output(buffers, is_err=False):
+            buffers = [x.decode("utf8") for x in buffers]
+            lines = [""]
+
+            dst_cur = err_cur if is_err else out_cur
+            for x in buffers:
+                clines = [v.strip() for v in x.split('\n')]
+                lines[-1] += clines[0]
+                lines.extend(clines[1:])
+
+            dst_cur[0] += lines[0]
+            nlines = len(lines)
+            if nlines > 1:
+                process_line(dst_cur[0])
+                dst_cur[0] = ''
+
+            for line in lines[1:-1]:
+                process_line(line, is_err)
+
+            dst_cur[0] = lines[-1] or ''
+
         try:
-            self.rpc_running = True
-            self.update_prompt()
             while len(p.commands) == 0:
                 time.sleep(0.15)
 
+            self.rpc_running = True
+            self.update_prompt()
+
             while p.commands[0].returncode is None:
-                out, err = p.stdout.read(1), p.stderr.read(1)
+                if not passwd_set:
+                    passwd_set = True
+                    feeder.feed(self.wallet_password)
+                    feeder.feed("\n")
+                    feeder.feed(self.rpc_passwd)
+                    feeder.feed("\n")
+
+                out, err = p.stdout.read(-1, False), p.stderr.read(-1, False)
                 if not common.is_empty(out):
-                    out_acc.append(out.decode("utf8"))
+                    add_output([out])
                 if not common.is_empty(err):
-                    err_acc.append(err.decode("utf8"))
+                    add_output([err], True)
 
                 p.commands[0].poll()
                 if self.terminating and p.commands[0].returncode is None:
                     feeder.feed("quit\n\n")
                     misc.sarge_sigint(p.commands[0])
                     p.close()
-
+                if not common.is_empty(out) or not common.is_empty(err):
+                    continue
                 time.sleep(0.01)
+
             ret_code = p.commands[0].returncode
-            out_acc = misc.add_readlines(p.stdout.readlines(), out_acc)
-            err_acc = misc.add_readlines(p.stderr.readlines(), err_acc)
+            add_output(p.stdout.readlines())
+            add_output(p.stderr.readlines(), True)
             self.rpc_running = False
             self.update_prompt()
 
@@ -718,6 +794,13 @@ class HostAgent(cli.BaseCli):
         self.terminating = True
         while self.rpc_running:
             time.sleep(0.1)
+
+    def on_rpc_ready(self):
+        """
+        Called when RPC is started
+        :return:
+        """
+        self.update_prompt()
 
     async def wallet_rpc(self):
         """
@@ -1156,6 +1239,15 @@ class HostAgent(cli.BaseCli):
             action="store_const",
             const=True,
             help="Debugging output",
+        )
+
+        parser.add_argument(
+            "--debug-rpc",
+            dest="debug_rpc",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Prints output of the RPC wallet",
         )
 
         parser.add_argument(
