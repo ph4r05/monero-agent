@@ -269,9 +269,16 @@ class HostAgent(cli.BaseCli):
             print(x)
 
     def do_diag(self, line):
-        diag_code = int(line)
-        print("Diagnosis: %d" % diag_code)
-        msg = DebugMoneroDiagRequest(ins=diag_code)
+        m = re.match(r'^(\d+)(?:(\s+\d+)(\s+\d+)?)?', line.strip())
+        if m is None:
+            print('Usage: diag INS [p1 [p2]]')
+            return
+
+        diag_code = int(m.group(1))
+        p1 = int(m.group(2)) if m.group(2) else None
+        p2 = int(m.group(3)) if m.group(3) else None
+        print("Diagnosis: %d p1: %s p2: %s" % (diag_code, p1, p2))
+        msg = DebugMoneroDiagRequest(ins=diag_code, p1=p1, p2=p2)
         try:
             resp = self.wait_coro(self.trezor_proxy.call(msg))
             print(resp)
