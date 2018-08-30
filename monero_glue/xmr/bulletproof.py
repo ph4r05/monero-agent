@@ -830,6 +830,7 @@ def vector_z_two_i(logN, zpow, twoN, i, dst_sc=None):
     crypto.decodeint_into_noreduce(tmp_sc_1, zpow.to(j + 2))
     crypto.decodeint_into_noreduce(tmp_sc_2, twoN.to(i & ((1 << logN) - 1)))
     crypto.sc_mul_into(dst_sc, tmp_sc_1, tmp_sc_2)
+    return dst_sc
 
 
 def vector_z_two(N, logN, M, zpow, twoN, zero_twos=None, dynamic=False, **kwargs):
