@@ -1114,8 +1114,6 @@ def multiexp(dst=None, data=None, GiHi=False):
 class BulletProofBuilder(object):
     def __init__(self):
         self.use_det_masks = True
-        self.value_enc = None
-        self.gamma_enc = None
         self.proof_sec = None
 
         self.Gprec = KeyV(buffer=BP_GI_PRE, const=True)
@@ -1123,11 +1121,7 @@ class BulletProofBuilder(object):
         self.oneN = const_vector(ONE, 64)
         self.twoN = KeyV(buffer=BP_TWO_N, const=True)
         self.ip12 = BP_IP12
-
-        self.v_aL = None
-        self.v_aR = None
-        self.v_sL = None
-        self.v_sR = None
+        self.fnc_det_mask = None
 
         self.tmp_sc_1 = crypto.new_scalar()
         self.tmp_det_buff = bytearray(64 + 1 + 4)
@@ -1145,25 +1139,33 @@ class BulletProofBuilder(object):
         if not cond:
             raise ValueError(msg)
 
-    def aX(self, i, dst=None, is_a=True):
-        dst = _ensure_dst_key(dst)
-        if self.value_enc[i // 8] & (1 << (i % 8)):
-            copy_key(dst, ONE if is_a else ZERO)
-        else:
-            copy_key(dst, ZERO if is_a else MINUS_ONE)
-        return dst
+    def aX_vcts(self, sv, MN):
+        num_inp = len(sv)
 
-    def aL_vct(self):
-        return KeyVEval(64, lambda x, r: self.aX(x, r, True))
+        def e_xL(idx, d=None, is_a=True):
+            j, i = idx // BP_N, idx % BP_N
+            r = None
+            if j >= num_inp:
+                r = ZERO if is_a else MINUS_ONE
+            elif sv[j][i // 8] & (1 << i % 8):
+                r = ONE if is_a else ZERO
+            else:
+                r = ZERO if is_a else MINUS_ONE
+            if d:
+                memcpy(d, 0, r, 0, 32)
+            return r
 
-    def aR_vct(self):
-        return KeyVEval(64, lambda x, r: self.aX(x, r, False))
+        aL = KeyVEval(MN, lambda i, d: e_xL(i, d, True))
+        aR = KeyVEval(MN, lambda i, d: e_xL(i, d, False))
+        return aL, aR
 
     def _det_mask_init(self):
         memcpy(self.tmp_det_buff, 0, self.proof_sec, 0, len(self.proof_sec))
 
     def _det_mask(self, i, is_sL=True, dst=None):
         dst = _ensure_dst_key(dst)
+        if self.fnc_det_mask:
+            return self.fnc_det_mask(i, is_sL, dst)
         self.tmp_det_buff[64] = int(is_sL)
         memcpy(self.tmp_det_buff, 65, ZERO, 0, 4)
         dump_uvarint_b_into(i, self.tmp_det_buff, 65)
@@ -1196,27 +1198,21 @@ class BulletProofBuilder(object):
 
         return KeyVPrecomp(size, self.twoN, pow_two)
 
-    def sL(self, i, dst=None):
-        return self._det_mask(i, True, dst)
-
-    def sR(self, i, dst=None):
-        return self._det_mask(i, False, dst)
-
-    def sL_vct(self, ln=64):
+    def sL_vct(self, ln=BP_N):
         return (
-            KeyVEval(ln, lambda x, r: self.sL(x, r))
+            KeyVEval(ln, lambda i, dst: self._det_mask(i, True, dst))
             if self.use_det_masks
             else self.sX_gen(ln)
         )
 
-    def sR_vct(self, ln=64):
+    def sR_vct(self, ln=BP_N):
         return (
-            KeyVEval(ln, lambda x, r: self.sR(x, r))
+            KeyVEval(ln, lambda i, dst: self._det_mask(i, False, dst))
             if self.use_det_masks
             else self.sX_gen(ln)
         )
 
-    def sX_gen(self, ln=64):
+    def sX_gen(self, ln=BP_N):
         buff = bytearray(ln * 32)
         buff_mv = memoryview(buff)
         sc = crypto.new_scalar()
@@ -1229,19 +1225,13 @@ class BulletProofBuilder(object):
     def vector_exponent(self, a, b, dst=None):
         return vector_exponent_custom(self.Gprec, self.Hprec, a, b, dst)
 
-    def init_vct(self):
-        self.v_aL = self.aL_vct()
-        self.v_aR = self.aR_vct()
-        self.v_sL = self.sL_vct()
-        self.v_sR = self.sR_vct()
-
     def prove_testnet(self, sv, gamma):
         return self.prove(sv, gamma, proof_v8=True)
 
     def prove(self, sv, gamma, proof_v8=False):
         return self.prove_batch([sv], [gamma], proof_v8=proof_v8)
 
-    def prove_batch(self, sv, gamma, proof_v8=False):
+    def prove_setup(self, sv, gamma, proof_v8=False):
         self.assrt(len(sv) == len(gamma), "|sv| != |gamma|")
         self.assrt(len(sv) > 0, "sv empty")
 
@@ -1250,13 +1240,11 @@ class BulletProofBuilder(object):
         sv = [crypto.encodeint(x) for x in sv]
         gamma = [crypto.encodeint(x) for x in gamma]
 
-        logN = 6
-        N = 1 << logN
         M, logM = 1, 0
         while M <= BP_M and M < len(sv):
             logM += 1
             M = 1 << logM
-        MN = M * N
+        MN = M * BP_N
 
         V = _ensure_dst_keyvect(None, len(sv))
         for i in range(len(sv)):
@@ -1265,29 +1253,16 @@ class BulletProofBuilder(object):
                 scalarmult_key(tmp_bf_0, tmp_bf_0, INV_EIGHT)
             V.read(i, tmp_bf_0)
 
-        num_inp = len(sv)
+        aL, aR = self.aX_vcts(sv, MN)
+        return M, logM, aL, aR, V, gamma
 
-        def e_xL(idx, d=None, is_a=True):
-            j, i = idx // N, idx % N
-            r = None
-            if j >= num_inp:
-                r = ZERO if is_a else MINUS_ONE
-            elif sv[j][i // 8] & (1 << i % 8):
-                r = ONE if is_a else ZERO
-            else:
-                r = ZERO if is_a else MINUS_ONE
-            if d:
-                memcpy(d, 0, r, 0, 32)
-            return r
-
-        aL = KeyVEval(MN, lambda i, d: e_xL(i, d, True))
-        aR = KeyVEval(MN, lambda i, d: e_xL(i, d, False))
-
+    def prove_batch(self, sv, gamma, proof_v8=False):
+        M, logM, aL, aR, V, gamma = self.prove_setup(sv, gamma, proof_v8)
         hash_cache = _ensure_dst_key()
         while True:
             self.gc(10)
             r = self._prove_batch_main(
-                V, gamma, aL, aR, hash_cache, logM, logN, M, N, proof_v8
+                V, gamma, aL, aR, hash_cache, logM, BP_LOG_N, M, BP_N, proof_v8
             )
             if r[0]:
                 break

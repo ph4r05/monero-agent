@@ -37,28 +37,38 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         res = bp.init_constants()
 
     def mask_consistency_check(self, bpi):
-        self.assertEqual(bpi.sL(0), bpi.sL(0))
-        self.assertEqual(bpi.sL(1), bpi.sL(1))
-        self.assertEqual(bpi.sL(63), bpi.sL(63))
-        self.assertNotEqual(bpi.sL(1), bpi.sL(0))
+        sv = [crypto.sc_init(123)]
+        gamma = [crypto.sc_init(432)]
+        
+        M, logM, aL, aR, V, gamma = bpi.prove_setup(sv, gamma)
+        x = bp._ensure_dst_key()
+        y = bp._ensure_dst_key()
 
-        self.assertEqual(bpi.sR(0), bpi.sR(0))
-        self.assertEqual(bpi.sR(1), bpi.sR(1))
-        self.assertEqual(bpi.sR(63), bpi.sR(63))
-        self.assertNotEqual(bpi.sR(1), bpi.sR(0))
+        sL = bpi.sL_vct(64)
+        sR = bpi.sR_vct(64)
 
-        self.assertNotEqual(bpi.sL(0), bpi.sR(0))
-        self.assertNotEqual(bpi.sL(1), bpi.sR(1))
-        self.assertNotEqual(bpi.sL(63), bpi.sR(63))
+        self.assertEqual(sL.to(0, x), sL.to(0, y))
+        self.assertEqual(sL.to(1, x), sL.to(1, y))
+        self.assertEqual(sL.to(63, x), sL.to(63, y))
+        self.assertNotEqual(sL.to(1, x), sL.to(0, y))
+        self.assertNotEqual(sL.to(10, x), sL.to(0, y))
 
-        bpi.init_vct()
+        self.assertEqual(sR.to(0, x), sR.to(0, y))
+        self.assertEqual(sR.to(1, x), sR.to(1, y))
+        self.assertEqual(sR.to(63, x), sR.to(63, y))
+        self.assertNotEqual(sR.to(1, x), sR.to(0, y))
+
+        self.assertNotEqual(sL.to(0, x), sR.to(0, y))
+        self.assertNotEqual(sL.to(1, x), sR.to(1, y))
+        self.assertNotEqual(sL.to(63, x), sR.to(63, y))
+
         ve1 = bp._ensure_dst_key()
         ve2 = bp._ensure_dst_key()
-        bpi.vector_exponent(bpi.v_aL, bpi.v_aR, ve1)
-        bpi.vector_exponent(bpi.v_aL, bpi.v_aR, ve2)
+        bpi.vector_exponent(aL, aR, ve1)
+        bpi.vector_exponent(aL, aR, ve2)
 
-        bpi.vector_exponent(bpi.v_sL, bpi.v_sR, ve1)
-        bpi.vector_exponent(bpi.v_sL, bpi.v_sR, ve2)
+        bpi.vector_exponent(sL, sR, ve1)
+        bpi.vector_exponent(sL, sR, ve2)
         self.assertEqual(ve1, ve2)
 
     # fmt: off
@@ -295,10 +305,6 @@ class BulletproofTest(aiounittest.AsyncTestCase):
     def test_masks(self):
         self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
-        bpi.proof_sec = bytearray(32)
-        bpi.value_enc = crypto.encodeint(crypto.sc_init(123))
-        bpi.gamma_enc = crypto.encodeint(crypto.sc_init(432))
-        bpi._det_mask_init()
         self.mask_consistency_check(bpi)
 
         # Randomized masks
