@@ -940,7 +940,7 @@ class TTransactionBuilder(object):
 
             crypto.sc_add_into(self.sumout, self.sumout, cur_mask)
             self.output_masks.append(cur_mask)
-            crypto.encodeint_into(cur_mask, tmp_buff)
+            crypto.encodeint_into(tmp_buff, cur_mask)
             utils.memcpy(rsig_data.mask, 32 * i, tmp_buff, 0, 32)
 
         self.assrt(crypto.sc_eq(self.sumout, self.sumpouts_alphas), "Invalid masks sum")

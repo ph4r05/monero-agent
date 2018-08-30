@@ -252,58 +252,43 @@ def pbkdf2(inp, salt, length=32, count=1000, prf=None):
 # Basic point enc/dec
 #
 
-
-def decodeint(x):
-    """
-    bytearray to integer scalar
-    :param x:
-    :return:
-    """
-    return EdScalar(x)
+def _offset(x, offset=0):
+    if offset == 0:
+        return x
+    return x[offset : ]
 
 
-def decodeint_into(r, x):
-    return r.init(x)
+def decodeint(x, offset=0):
+    return EdScalar(_offset(x, offset))
 
 
-def decodeint_into_noreduce(r, x):
-    r.v = _decodeint(x)
+def decodeint_into(r, x, offset=0):
+    return r.init(_offset(x, offset))
+
+
+def decodeint_into_noreduce(r, x, offset=0):
+    r.v = _decodeint(_offset(x, offset))
     return r
 
 
 def encodeint(x):
-    """
-    Encodeint
-    :param x:
-    :return:
-    """
     return bytes(x)
 
 
-def encodeint_into(x, b, offset=0):
+def encodeint_into(b, x, offset=0):
     r = bytes(x)
     return memcpy(b, offset, r, 0, 32)
 
 
 def check_ed25519point(P):
-    """
-    Simple check if the point has exactly 2 coordinates
-    :param P:
-    :return:
-    """
     P.check()
 
 
 def encodepoint(P):
-    """
-    Encodes point in extended coordinates form (x,y,z,t) to the bit representation
-    :param P:
-    :return:
-    """
     return bytes(P)
 
 
-def encodepoint_into(P, b, offset=0):
+def encodepoint_into(b, P, offset=0):
     r = bytes(P)
     return memcpy(b, offset, r, 0, 32)
 
@@ -371,23 +356,16 @@ def invert_ext(P):
 
 
 def point_eq(P, Q):
-    """
-    Point equivalence, extended coordinates
-    x1 / z1 == x2 / z2  <==>  x1 * z2 == x2 * z1
-    :param P:
-    :param Q:
-    :return:
-    """
     P.check() and Q.check()
     return P == Q
 
 
-def decodepoint(b):
-    return EdPoint(b)
+def decodepoint(b, offset=0):
+    return EdPoint(_offset(b, offset))
 
 
-def decodepoint_into(r, b):
-    return r.init(b)
+def decodepoint_into(r, b, offset=0):
+    return r.init(_offset(b, offset))
 
 
 #

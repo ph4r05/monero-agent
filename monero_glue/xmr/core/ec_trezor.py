@@ -145,12 +145,18 @@ def pbkdf2(inp, salt, length=32, count=1000, prf=None):
 #
 
 
-def decodepoint(x):
-    return tcry.ge25519_unpack_vartime_r(tcry.KEY_BUFF(*x))
+def _offset(x, offset=0):
+    if offset == 0:
+        return x
+    return x[offset : ]
 
 
-def decodepoint_into(r, x):
-    tcry.ge25519_unpack_vartime(r, tcry.KEY_BUFF(*x))
+def decodepoint(x, offset=0):
+    return tcry.ge25519_unpack_vartime_r(tcry.KEY_BUFF(*_offset(x, offset)))
+
+
+def decodepoint_into(r, x, offset=0):
+    tcry.ge25519_unpack_vartime(r, tcry.KEY_BUFF(*_offset(x, offset)))
     return r
 
 
@@ -158,27 +164,27 @@ def encodepoint(pt):
     return tcry.ge25519_pack_r(pt)
 
 
-def encodepoint_into(pt, b):
-    bf = tcry.KEY_BUFF.from_buffer(b)
+def encodepoint_into(b, pt, offset=0):
+    bf = tcry.KEY_BUFF.from_buffer(_offset(b, offset))
     tcry.ge25519_pack(bf, pt)
     return b
 
 
-def decodeint(x):
-    return tcry.expand256_modm_r(tcry.KEY_BUFF(*x))
+def decodeint(x, offset=0):
+    return tcry.expand256_modm_r(tcry.KEY_BUFF(*_offset(x, offset)))
 
 
-def decodeint_noreduce(x):
-    return tcry.expand_raw256_modm_r(tcry.KEY_BUFF(*x))
+def decodeint_noreduce(x, offset=0):
+    return tcry.expand_raw256_modm_r(tcry.KEY_BUFF(*_offset(x, offset)))
 
 
-def decodeint_into(r, x):
-    tcry.expand256_modm(r, tcry.KEY_BUFF(*x))
+def decodeint_into(r, x, offset=0):
+    tcry.expand256_modm(r, tcry.KEY_BUFF(*_offset(x, offset)))
     return r
 
 
-def decodeint_into_noreduce(r, x):
-    tcry.expand_raw256_modm(r, tcry.KEY_BUFF(*x))
+def decodeint_into_noreduce(r, x, offset=0):
+    tcry.expand_raw256_modm(r, tcry.KEY_BUFF(*_offset(x, offset)))
     return r
 
 
@@ -186,8 +192,8 @@ def encodeint(x):
     return tcry.contract256_modm_r(x)
 
 
-def encodeint_into(x, b):
-    bf = tcry.KEY_BUFF.from_buffer(b)
+def encodeint_into(b, x, offset=0):
+    bf = tcry.KEY_BUFF.from_buffer(_offset(b, offset))
     tcry.contract256_modm(bf, x)
     return b
 
@@ -394,7 +400,7 @@ def sc_inv_into(r, x):
 
     rr = bytearray(32)
     xx = bytearray(32)
-    encodeint_into(x, xx)
+    encodeint_into(xx, x)
     bf_x = tcry.KEY_BUFF.from_buffer(xx)
     bf_r = tcry.KEY_BUFF.from_buffer(rr)
 

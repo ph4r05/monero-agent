@@ -491,10 +491,10 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         self.assertEqual(len(muex), len(scalars))
         res = bp.multiexp(None, muex)
         res2 = bp.vector_exponent_custom(
-            A=bp.KeyVEval(3, lambda i, d: crypto.encodepoint_into(crypto.scalarmult_base(crypto.sc_init(point_base[i])), d)),
-            B=bp.KeyVEval(3, lambda i, d: crypto.encodepoint_into(crypto.scalarmult_base(crypto.sc_init(point_base[3+i])), d)),
-            a=bp.KeyVEval(3, lambda i, d: crypto.encodeint_into(crypto.sc_init(scalars[i]), d)),
-            b=bp.KeyVEval(3, lambda i, d: crypto.encodeint_into(crypto.sc_init(scalars[i+3]), d)),
+            A=bp.KeyVEval(3, lambda i, d: crypto.encodepoint_into(d, crypto.scalarmult_base(crypto.sc_init(point_base[i])))),
+            B=bp.KeyVEval(3, lambda i, d: crypto.encodepoint_into(d, crypto.scalarmult_base(crypto.sc_init(point_base[3+i])))),
+            a=bp.KeyVEval(3, lambda i, d: crypto.encodeint_into(d, crypto.sc_init(scalars[i]))),
+            b=bp.KeyVEval(3, lambda i, d: crypto.encodeint_into(d, crypto.sc_init(scalars[i+3]))),
         )
         self.assertEqual(res, res2)
 

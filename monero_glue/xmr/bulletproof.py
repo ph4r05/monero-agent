@@ -128,7 +128,7 @@ def invert(dst, x):
     dst = _ensure_dst_key(dst)
     crypto.decodeint_into_noreduce(tmp_sc_1, x)
     crypto.sc_inv_into(tmp_sc_2, tmp_sc_1)
-    crypto.encodeint_into(tmp_sc_2, dst)
+    crypto.encodeint_into(dst, tmp_sc_2)
     return dst
 
 
@@ -137,7 +137,7 @@ def scalarmult_key(dst, P, s):
     crypto.decodepoint_into(tmp_pt_1, P)
     crypto.decodeint_into_noreduce(tmp_sc_1, s)
     crypto.scalarmult_into(tmp_pt_2, tmp_pt_1, tmp_sc_1)
-    crypto.encodepoint_into(tmp_pt_2, dst)
+    crypto.encodepoint_into(dst, tmp_pt_2)
     return dst
 
 
@@ -145,7 +145,7 @@ def scalarmult8(dst, P):
     dst = _ensure_dst_key(dst)
     crypto.decodepoint_into(tmp_pt_1, P)
     crypto.point_mul8_into(tmp_pt_2, tmp_pt_1)
-    crypto.encodepoint_into(tmp_pt_2, dst)
+    crypto.encodepoint_into(dst, tmp_pt_2)
     return dst
 
 
@@ -153,7 +153,7 @@ def scalarmultH(dst, x):
     dst = _ensure_dst_key(dst)
     crypto.decodeint_into(tmp_sc_1, x)
     crypto.scalarmult_into(tmp_pt_1, XMR_HP, tmp_sc_1)
-    crypto.encodepoint_into(tmp_pt_1, dst)
+    crypto.encodepoint_into(dst, tmp_pt_1)
     return dst
 
 
@@ -161,14 +161,14 @@ def scalarmult_base(dst, x):
     dst = _ensure_dst_key(dst)
     crypto.decodeint_into_noreduce(tmp_sc_1, x)
     crypto.scalarmult_base_into(tmp_pt_1, tmp_sc_1)
-    crypto.encodepoint_into(tmp_pt_1, dst)
+    crypto.encodepoint_into(dst, tmp_pt_1)
     return dst
 
 
 def sc_gen(dst=None):
     dst = _ensure_dst_key(dst)
     crypto.random_scalar_into(tmp_sc_1)
-    crypto.encodeint_into(tmp_sc_1, dst)
+    crypto.encodeint_into(dst, tmp_sc_1)
     return dst
 
 
@@ -177,7 +177,7 @@ def sc_add(dst, a, b):
     crypto.decodeint_into_noreduce(tmp_sc_1, a)
     crypto.decodeint_into_noreduce(tmp_sc_2, b)
     crypto.sc_add_into(tmp_sc_3, tmp_sc_1, tmp_sc_2)
-    crypto.encodeint_into(tmp_sc_3, dst)
+    crypto.encodeint_into(dst, tmp_sc_3)
     return dst
 
 
@@ -186,7 +186,7 @@ def sc_sub(dst, a, b):
     crypto.decodeint_into_noreduce(tmp_sc_1, a)
     crypto.decodeint_into_noreduce(tmp_sc_2, b)
     crypto.sc_sub_into(tmp_sc_3, tmp_sc_1, tmp_sc_2)
-    crypto.encodeint_into(tmp_sc_3, dst)
+    crypto.encodeint_into(dst, tmp_sc_3)
     return dst
 
 
@@ -195,7 +195,7 @@ def sc_mul(dst, a, b):
     crypto.decodeint_into_noreduce(tmp_sc_1, a)
     crypto.decodeint_into_noreduce(tmp_sc_2, b)
     crypto.sc_mul_into(tmp_sc_3, tmp_sc_1, tmp_sc_2)
-    crypto.encodeint_into(tmp_sc_3, dst)
+    crypto.encodeint_into(dst, tmp_sc_3)
     return dst
 
 
@@ -205,7 +205,7 @@ def sc_muladd(dst, a, b, c):
     crypto.decodeint_into_noreduce(tmp_sc_2, b)
     crypto.decodeint_into_noreduce(tmp_sc_3, c)
     crypto.sc_muladd_into(tmp_sc_4, tmp_sc_1, tmp_sc_2, tmp_sc_3)
-    crypto.encodeint_into(tmp_sc_4, dst)
+    crypto.encodeint_into(dst, tmp_sc_4)
     return dst
 
 
@@ -215,7 +215,7 @@ def sc_mulsub(dst, a, b, c):
     crypto.decodeint_into_noreduce(tmp_sc_2, b)
     crypto.decodeint_into_noreduce(tmp_sc_3, c)
     crypto.sc_mulsub_into(tmp_sc_4, tmp_sc_1, tmp_sc_2, tmp_sc_3)
-    crypto.encodeint_into(tmp_sc_4, dst)
+    crypto.encodeint_into(dst, tmp_sc_4)
     return dst
 
 
@@ -224,7 +224,7 @@ def add_keys(dst, A, B):
     crypto.decodepoint_into(tmp_pt_1, A)
     crypto.decodepoint_into(tmp_pt_2, B)
     crypto.point_add_into(tmp_pt_3, tmp_pt_1, tmp_pt_2)
-    crypto.encodepoint_into(tmp_pt_3, dst)
+    crypto.encodepoint_into(dst, tmp_pt_3)
     return dst
 
 
@@ -233,7 +233,7 @@ def sub_keys(dst, A, B):
     crypto.decodepoint_into(tmp_pt_1, A)
     crypto.decodepoint_into(tmp_pt_2, B)
     crypto.point_sub_into(tmp_pt_3, tmp_pt_1, tmp_pt_2)
-    crypto.encodepoint_into(tmp_pt_3, dst)
+    crypto.encodepoint_into(dst, tmp_pt_3)
     return dst
 
 
@@ -243,7 +243,7 @@ def add_keys2(dst, a, b, B):
     crypto.decodeint_into_noreduce(tmp_sc_2, b)
     crypto.decodepoint_into(tmp_pt_1, B)
     crypto.add_keys2_into(tmp_pt_2, tmp_sc_1, tmp_sc_2, tmp_pt_1)
-    crypto.encodepoint_into(tmp_pt_2, dst)
+    crypto.encodepoint_into(dst, tmp_pt_2)
     return dst
 
 
@@ -254,14 +254,14 @@ def add_keys3(dst, a, A, b, B):
     crypto.decodepoint_into(tmp_pt_1, A)
     crypto.decodepoint_into(tmp_pt_2, B)
     crypto.add_keys3_into(tmp_pt_3, tmp_sc_1, tmp_pt_1, tmp_sc_2, tmp_pt_2)
-    crypto.encodepoint_into(tmp_pt_3, dst)
+    crypto.encodepoint_into(dst, tmp_pt_3)
     return dst
 
 
 def hash_to_scalar(dst, data):
     dst = _ensure_dst_key(dst)
     crypto.hash_to_scalar_into(tmp_sc_1, data)
-    crypto.encodeint_into(tmp_sc_1, dst)
+    crypto.encodeint_into(dst, tmp_sc_1)
     return dst
 
 
@@ -273,7 +273,7 @@ def hash_vct_to_scalar(dst, data):
     hsh = ctx.digest()
 
     crypto.decodeint_into(tmp_sc_1, hsh)
-    crypto.encodeint_into(tmp_sc_1, tmp_bf_1)
+    crypto.encodeint_into(tmp_bf_1, tmp_sc_1)
     copy_key(dst, tmp_bf_1)
     return dst
 
@@ -289,7 +289,7 @@ def get_exponent(dst, base, idx):
     dump_uvarint_b_into(idx, buff, 32 + len(salt))
     crypto.keccak_hash_into(tmp_bf_1, buff[:final_size])
     crypto.hash_to_ec_into(tmp_pt_1, tmp_bf_1)
-    crypto.encodepoint_into(tmp_pt_1, dst)
+    crypto.encodepoint_into(dst, tmp_pt_1)
     return dst
 
 
@@ -582,7 +582,7 @@ class KeyVZtwo(KeyVBase):
         if self.raw:
             return self.sc
 
-        crypto.encodeint_into(self.sc, self.cur)
+        crypto.encodeint_into(self.cur, self.sc)
         return self.cur
 
 
@@ -611,7 +611,7 @@ def vector_exponent_custom(A, B, a, b, dst=None):
         crypto.add_keys3_into(tmp_pt_1, tmp_sc_1, tmp_pt_3, tmp_sc_2, tmp_pt_4)
         crypto.point_add_into(tmp_pt_2, tmp_pt_2, tmp_pt_1)
         gc_iter(i)
-    crypto.encodepoint_into(tmp_pt_2, dst)
+    crypto.encodepoint_into(dst, tmp_pt_2)
     return dst
 
 
@@ -630,7 +630,7 @@ def vector_powers(x, n, dst=None, dynamic=False, **kwargs):
     crypto.decodeint_into_noreduce(tmp_sc_2, x)
     for i in range(2, n):
         crypto.sc_mul_into(tmp_sc_1, tmp_sc_1, tmp_sc_2)
-        crypto.encodeint_into(tmp_sc_1, tmp_bf_0)
+        crypto.encodeint_into(tmp_bf_0, tmp_sc_1)
         dst.read(i, tmp_bf_0)
         gc_iter(i)
     return dst
@@ -666,7 +666,7 @@ def inner_product(a, b, dst=None):
         crypto.sc_muladd_into(tmp_sc_1, tmp_sc_2, tmp_sc_3, tmp_sc_1)
         gc_iter(i)
 
-    crypto.encodeint_into(tmp_sc_1, dst)
+    crypto.encodeint_into(dst, tmp_sc_1)
     return dst
 
 
@@ -704,7 +704,7 @@ def hadamard_fold(v, a, b, into=None, into_offset=0):
         crypto.decodepoint_into(tmp_pt_1, v.to(i))
         crypto.decodepoint_into(tmp_pt_2, v.to(h + i))
         crypto.add_keys3_into(tmp_pt_3, tmp_sc_1, tmp_pt_1, tmp_sc_2, tmp_pt_2)
-        crypto.encodepoint_into(tmp_pt_3, tmp_bf_0)
+        crypto.encodepoint_into(tmp_bf_0, tmp_pt_3)
         into.read(i + into_offset, tmp_bf_0)
         gc_iter(i)
 
@@ -728,7 +728,7 @@ def scalar_fold(v, a, b, into=None, into_offset=0):
         crypto.sc_mul_into(tmp_sc_3, tmp_sc_3, tmp_sc_1)
         crypto.sc_mul_into(tmp_sc_4, tmp_sc_4, tmp_sc_2)
         crypto.sc_add_into(tmp_sc_3, tmp_sc_3, tmp_sc_4)
-        crypto.encodeint_into(tmp_sc_3, tmp_bf_0)
+        crypto.encodeint_into(tmp_bf_0, tmp_sc_3)
         into.read(i + into_offset, tmp_bf_0)
         gc_iter(i)
 
@@ -862,7 +862,7 @@ def hash_cache_mash(dst, hash_cache, *args):
     hsh = ctx.digest()
 
     crypto.decodeint_into(tmp_sc_1, hsh)
-    crypto.encodeint_into(tmp_sc_1, tmp_bf_1)
+    crypto.encodeint_into(tmp_bf_1, tmp_sc_1)
 
     copy_key(dst, tmp_bf_1)
     copy_key(hash_cache, tmp_bf_1)
@@ -941,7 +941,7 @@ class MultiExpEval(object):
             crypto.decodepoint_into(tmp_pt_2, pti)
             crypto.scalarmult_into(tmp_pt_3, tmp_pt_2, tmp_sc_1)
             crypto.point_add_into(tmp_pt_1, tmp_pt_1, tmp_pt_3)
-        crypto.encodepoint_into(tmp_pt_1, dst)
+        crypto.encodepoint_into(dst, tmp_pt_1)
         return dst
 
     def eval(self, dst, GiHi=False):
@@ -1046,7 +1046,7 @@ class MultiExpSequential(MultiExp):
 
     def eval(self, dst, GiHi=False):
         dst = _ensure_dst_key(dst)
-        return crypto.encodepoint_into(self.acc, dst)
+        return crypto.encodepoint_into(dst, self.acc)
 
 
 class MergedMultiExp(MultiExpEval):
@@ -1104,7 +1104,7 @@ class MergedMultiExp(MultiExpEval):
             sub.eval(tmp, GiHi)
             crypto.point_add_into(acc, acc, tmp)
 
-        crypto.encodepoint_into(acc, dst)
+        crypto.encodepoint_into(dst, acc)
         return dst
 
 
@@ -1171,7 +1171,7 @@ class BulletProofBuilder(object):
         memcpy(self.tmp_det_buff, 65, ZERO, 0, 4)
         dump_uvarint_b_into(i, self.tmp_det_buff, 65)
         crypto.hash_to_scalar_into(self.tmp_sc_1, self.tmp_det_buff)
-        crypto.encodeint_into(self.tmp_sc_1, dst)
+        crypto.encodeint_into(dst, self.tmp_sc_1)
         return dst
 
     def _gprec_aux(self, size):
@@ -1219,7 +1219,7 @@ class BulletProofBuilder(object):
         sc = crypto.new_scalar()
         for i in range(ln):
             crypto.random_scalar_into(sc)
-            crypto.encodeint_into(sc, buff_mv[i * 32 : (i + 1) * 32])
+            crypto.encodeint_into(buff_mv[i * 32 : (i + 1) * 32], sc)
             gc_iter(i)
         return KeyV(buffer=buff)
 
@@ -1341,12 +1341,12 @@ class BulletProofBuilder(object):
             r0,
             len(r0),
             lambda i, d: crypto.encodeint_into(
+                d,
                 crypto.sc_add_into(
                     tmp_sc_1,
                     zero_twos[i],  # noqa: F821
                     crypto.decodeint_into_noreduce(tmp_sc_2, r0.to(i)),  # noqa: F821
                 ),
-                d,
             ),
         )
 
