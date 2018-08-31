@@ -101,6 +101,22 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--slip0010",
+    dest="slip0010",
+    default=False,
+    action="store_const",
+    const=True,
+    help="Use SLIP-0010 derivation with ED25519",
+)
+
+parser.add_argument(
+    "--path",
+    dest="path",
+    default=None,
+    help="Custom derivation path",
+)
+
+parser.add_argument(
     "--debug",
     dest="debug",
     default=False,
@@ -119,25 +135,34 @@ async def amain(args):
     mnems = [x.strip().lower() for x in mnems]
 
     bip44_derived = True
+    deriv_args = {}
+    if args.slip0010:
+        deriv_args['slip0010'] = True
+    if args.path:
+        deriv_args['path'] = args.path
 
     if sum([args.electrum_mnemonics, args.wlist_seed, args.monero_master, args.seed]) > 1:
         raise ValueError('Conflicting input options')
 
     if args.electrum_mnemonics:
+        if args.slip0010 or args.path:
+            raise ValueError('--electrum-mnemonics is conflicting with --slip0010 and --path')
         bip44_derived = False
         sd = SeedDerivation.from_monero_mnemonics(mnems)
 
     elif args.monero_master:
+        if args.slip0010 or args.path:
+            raise ValueError('--monero-master is conflicting with --slip0010 and --path')
         bip44_derived = False
         seed = binascii.unhexlify(" ".join(mnems))
         sd = SeedDerivation.from_monero_seed(seed)
 
     elif args.seed:
         seed = binascii.unhexlify(" ".join(mnems))
-        sd = SeedDerivation.from_master_seed(seed)
+        sd = SeedDerivation.from_master_seed(seed, **deriv_args)
 
     else:
-        sd = SeedDerivation.from_mnemonics(mnems, args.wlist_seed)
+        sd = SeedDerivation.from_mnemonics(mnems, args.wlist_seed, **deriv_args)
 
     main_addr = sd.creds(network_type=NetworkTypes.MAINNET)
     test_addr = sd.creds(network_type=NetworkTypes.TESTNET)
@@ -147,8 +172,10 @@ async def amain(args):
         print("Seed bip39 words: %s" % " ".join(mnems))
         print("Seed bip32 b58:   %s\n" % binascii.hexlify(sd.master_seed).decode("ascii"))
 
-    print("Seed Monero:      %s" % binascii.hexlify(sd.hashed).decode("ascii"))
-    print("Seed Monero wrds: %s\n" % sd.electrum_words)
+    if sd.monero_master:
+        print("Seed Monero:      %s" % binascii.hexlify(sd.monero_master).decode("ascii"))
+    if sd.electrum_words:
+        print("Seed Monero wrds: %s\n" % sd.electrum_words)
 
     print(
         "Private spend key: %s"
