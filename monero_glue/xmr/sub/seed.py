@@ -10,6 +10,10 @@ from monero_glue.xmr.core import mnemonic
 from monero_glue.xmr.sub.xmr_net import NetworkTypes
 
 
+DEFAULT_BIP44_PATH = "m/44'/128'/0'/0/0"
+DEFAULT_SLIP0010_PATH = "m/44'/128'/0'"
+
+
 class SeedDerivation(object):
     def __init__(self):
         self.mnemonics = None
@@ -26,7 +30,7 @@ class SeedDerivation(object):
         self.view_sec = None
         self.view_pub = None
 
-    def set_seed(self, seed, path="m/44'/128'/0'/0/0", slip0010=False):
+    def set_seed(self, seed, path=None, slip0010=False):
         """
         Sets master secret for BIP44 derivation
         :param seed:
@@ -36,11 +40,14 @@ class SeedDerivation(object):
         """
         self.master_seed = seed
         self.is_slip0010 = slip0010
-        self.path = path
+        if path is None:
+            self.path = DEFAULT_BIP44_PATH if not slip0010 else DEFAULT_SLIP0010_PATH
+        else:
+            self.path = path
         wl = bip32.Wallet.from_master_secret(seed, use_ed25519=slip0010)
 
         # Generate private keys based on the gen mechanism. Bip44 path + Monero backward compatible
-        data = wl.get_child_for_path(path)
+        data = wl.get_child_for_path(self.path)
         self.pre_hash = binascii.unhexlify(data.private_key.get_key())
 
         if slip0010:

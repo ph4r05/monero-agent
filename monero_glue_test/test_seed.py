@@ -133,6 +133,19 @@ class SeedTest(aiounittest.AsyncTestCase):
             ),
         )
 
+    def test_slip0010_3(self):
+        seed_wlist = "permit universe parent weapon amused modify essay borrow tobacco budget walnut lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple"
+        d = SeedDerivation.from_mnemonics(seed_wlist.split(" "), slip0010=True)
+
+        self.assertEqual(
+            d.creds(network_type=NetworkTypes.MAINNET).address,
+            b"497MP7bh5MkCZ1TiZZoYi84s39n5V5HpSgPvrqqUMqw6XcWDu4QhBs4VkqiPsNMhTUPAHHE6DUo9UUqpfSZfxkANPw44Fgn",
+        )
+        self.assertEqual(
+            d.creds(network_type=NetworkTypes.TESTNET).address,
+            b"9zetsNFxMirCZ1TiZZoYi84s39n5V5HpSgPvrqqUMqw6XcWDu4QhBs4VkqiPsNMhTUPAHHE6DUo9UUqpfSZfxkANPwbdsur",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()  # pragma: no cover
