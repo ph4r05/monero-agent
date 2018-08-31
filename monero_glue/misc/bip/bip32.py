@@ -71,7 +71,9 @@ class Wallet(object):
         of the 'from_master_secret' or 'deserialize' cosntructors.
         """
 
-        if not (private_exponent or private_key) and (not use_ed25519 and not (public_pair or public_key)):
+        if not (private_exponent or private_key) and (
+            not use_ed25519 and not (public_pair or public_key)
+        ):
             raise InsufficientKeyDataError(
                 "You must supply one of private_exponent or public_pair"
             )
@@ -109,7 +111,11 @@ class Wallet(object):
         else:
             self.public_key = self.private_key.get_public_key()
 
-        if not self.use_ed25519 and self.private_key and self.private_key.get_public_key() != self.public_key:
+        if (
+            not self.use_ed25519
+            and self.private_key
+            and self.private_key.get_public_key() != self.public_key
+        ):
             raise KeyMismatchError("Provided private and public values do not match")
 
         def h(val, hex_len):
@@ -393,7 +399,7 @@ class Wallet(object):
         else:
             data = self.get_public_key_hex()
             if self.use_ed25519:
-                raise InvalidPathError('Ed25519 public derivation is not implemented')
+                raise InvalidPathError("Ed25519 public derivation is not implemented")
 
         data += child_number_hex
 
@@ -413,7 +419,7 @@ class Wallet(object):
         public_key = None
 
         if self.use_ed25519 and not self.private_key:
-            raise InvalidPathError('Ed25519 public derivation is not implemented')
+            raise InvalidPathError("Ed25519 public derivation is not implemented")
 
         if self.use_ed25519:
             private_key = Ed25519PrivateKey.from_hex_key(I_L)
@@ -664,7 +670,9 @@ class Wallet(object):
         )
 
     @classmethod
-    def from_master_secret(cls, seed, network="monero", use_ed25519=False, use_slip0010=False):
+    def from_master_secret(
+        cls, seed, network="monero", use_ed25519=False, use_slip0010=False
+    ):
         """Generate a new PrivateKey from a secret key.
         :param seed: The key to use to generate this wallet. It may be a long
             string. Do not use a phrase from a book or song, as that will
@@ -694,7 +702,7 @@ class Wallet(object):
             network=network,
             seed_secret=seed,
             use_ed25519=use_ed25519,
-            use_slip0010=use_slip0010
+            use_slip0010=use_slip0010,
         )
 
     @classmethod

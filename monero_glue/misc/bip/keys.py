@@ -367,7 +367,9 @@ class Ed25519PrivateKey(PrivateKey):
         return Ed25519PublicKey(crypto.scalarmult_base(self._key))
 
     def get_extended_key(self):
-        return ensure_bytes(hexlify(crypto.encodepoint(crypto.scalarmult_base(self._key))))
+        return ensure_bytes(
+            hexlify(crypto.encodepoint(crypto.scalarmult_base(self._key)))
+        )
 
     def export_to_wif(self, compressed=None):
         return super().export_to_wif(compressed)
