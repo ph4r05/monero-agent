@@ -1,5 +1,33 @@
 from monero_glue.xmr import crypto
-from monero_glue.xmr.sub.xmr_net import NetworkTypes, net_version
+from monero_glue.xmr.sub.xmr_net import (
+    NetworkTypes,
+    net_version,
+    MainNet,
+    TestNet,
+    StageNet,
+)
+
+
+class AddrInfo(object):
+    def __init__(self, ver=None, data=None):
+        self.view_key = None
+        self.spend_key = None
+        self.net_type = None
+        self.is_sub_address = None
+        self.is_integrated = None
+        self.payment_id = None
+        if ver is not None and data is not None:
+            self.set_addr(ver, data)
+
+    def set_addr(self, ver, data):
+        self.net_type = get_addr_type(ver)
+        self.is_sub_address = is_subaddress(ver)
+        self.is_integrated = is_integrated(ver)
+        self.spend_key = data[0:32]
+        self.view_key = data[32:64]
+        if self.is_integrated:
+            self.payment_id = data[64:]
+        return self
 
 
 def addr_to_hash(addr):
@@ -31,9 +59,7 @@ def decode_addr(addr):
     :return:
     """
     d, version = crypto.xmr_base58_addr_decode_check(bytes(addr))
-    pub_spend_key = d[0:32]
-    pub_view_key = d[32:64]
-    return version, pub_spend_key, pub_view_key
+    return AddrInfo(version, d)
 
 
 def public_addr_encode(pub_addr, is_sub=False, net=NetworkTypes.MAINNET):
@@ -128,3 +154,42 @@ def get_change_addr_idx(outputs, change_dts):
         ):
             change_idx = idx
     return change_idx
+
+
+def is_integrated(ver):
+    return ver in [
+        MainNet.PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+        TestNet.PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+        StageNet.PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+    ]
+
+
+def is_subaddress(ver):
+    return ver in [
+        MainNet.PUBLIC_SUBADDRESS_BASE58_PREFIX,
+        TestNet.PUBLIC_SUBADDRESS_BASE58_PREFIX,
+        StageNet.PUBLIC_SUBADDRESS_BASE58_PREFIX,
+    ]
+
+
+def get_addr_type(ver):
+    if ver in [
+        MainNet.PUBLIC_ADDRESS_BASE58_PREFIX,
+        MainNet.PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+        MainNet.PUBLIC_SUBADDRESS_BASE58_PREFIX,
+    ]:
+        return NetworkTypes.MAINNET
+    elif ver in [
+        TestNet.PUBLIC_ADDRESS_BASE58_PREFIX,
+        TestNet.PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+        TestNet.PUBLIC_SUBADDRESS_BASE58_PREFIX,
+    ]:
+        return NetworkTypes.TESTNET
+    elif ver in [
+        StageNet.PUBLIC_ADDRESS_BASE58_PREFIX,
+        StageNet.PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX,
+        StageNet.PUBLIC_SUBADDRESS_BASE58_PREFIX,
+    ]:
+        return NetworkTypes.STAGENET
+    else:
+        raise ValueError("Unknown address type")
