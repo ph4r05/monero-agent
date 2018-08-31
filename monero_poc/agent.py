@@ -641,10 +641,10 @@ class HostAgent(cli.BaseCli):
         """
         self.pub_view = crypto.scalarmult_base(view_key)
 
-        version, pub_spend, pub_view = monero.decode_addr(address)
-        self.pub_spend = crypto.decodepoint(pub_spend)
+        addr_info = monero.decode_addr(address)
+        self.pub_spend = crypto.decodepoint(addr_info.spend_key)
 
-        if not crypto.point_eq(self.pub_view, crypto.decodepoint(pub_view)):
+        if not crypto.point_eq(self.pub_view, crypto.decodepoint(addr_info.view_key)):
             raise ValueError(
                 "Computed view public key does not match the one from address"
             )
@@ -878,7 +878,9 @@ class HostAgent(cli.BaseCli):
         priority, mixin, address, amount, payment_id = parts
         try:
             address_b = address.encode("ascii")
-            version, pub_spend_key, pub_view_key = monero.decode_addr(address_b)
+            addr_info = monero.decode_addr(address_b)
+            if addr_info.is_integrated:
+                payment_id = binascii.hexlify(addr_info.payment_id)
 
         except Exception as e:
             print("Address invalid: %s " % address)
