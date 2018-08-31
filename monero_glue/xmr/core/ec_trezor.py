@@ -385,6 +385,10 @@ def sc_muladd_into(r, aa, bb, cc):
     return r
 
 
+def sc_inv(x):
+    return sc_inv_into(new_scalar(), x)
+
+
 def sc_inv_into(r, x):
     """
     Modular inversion mod curve order L

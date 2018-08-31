@@ -243,6 +243,20 @@ class CryptoTest(aiounittest.AsyncTestCase):
         self.assertTrue(crypto.point_eq(A8p, A8))
         self.assertTrue(crypto.point_eq(A4, crypto.scalarmult(A, crypto.sc_init(4))))
         self.assertTrue(crypto.point_eq(A3, crypto.scalarmult(A, crypto.sc_init(3))))
+
+    def test_sc_inversion(self):
+        res = crypto.new_scalar()
+        inp = crypto.decodeint(
+            unhexlify(
+                b"3482fb9735ef879fcae5ec7721b5d3646e155c4fb58d6cc11c732c9c9b76620a"
+            )
+        )
+
+        crypto.sc_inv_into(res, inp)
+        self.assertEqual(
+            binascii.hexlify(crypto.encodeint(res)),
+            b"bcf365a551e6358f3f281a6241d4a25eded60230b60a1d48c67b51a85e33d70e",
+        )
         
 
 if __name__ == "__main__":
