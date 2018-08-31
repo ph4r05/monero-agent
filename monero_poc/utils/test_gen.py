@@ -1,6 +1,6 @@
-import fileinput
 import re
 import io
+import os
 import argparse
 import logging
 import coloredlogs
@@ -38,11 +38,19 @@ class TestGen(object):
             logger.debug("Processing: %s" % inp)
             data = file.read()
             unsigned_tx = await wallet.load_unsigned_tx(self.cur_keys.view_key_private, data)
-            new_unsigned = await self.process_unsigned(unsigned_tx)
+            new_unsigned = await self.rekey_unsigned(unsigned_tx)
 
-            inp = new_unsigned.txes[0].sources[0]
             new_bin = await wallet.dump_unsigned_tx(self.dest_keys.view_key_private, new_unsigned)
-            sys.stdout.buffer.write(new_bin)
+
+            if self.args.output:
+                nbase = 'output.bin' if is_stdin else os.path.basename(inp)
+                ndest = os.path.join(self.args.output, nbase)
+                with open(ndest, 'wb') as fh:
+                    fh.write(new_bin)
+                logger.info('Result written to: %s' % ndest)
+
+            else:
+                sys.stdout.buffer.write(new_bin)
 
         except ArchiveException as ae:
             logger.error(ae)
@@ -52,7 +60,7 @@ class TestGen(object):
             if not is_stdin:
                 file.close()
 
-    async def process_unsigned(self, unsigned_txs):
+    async def rekey_unsigned(self, unsigned_txs):
         for tx in unsigned_txs.txes:
             tx.use_bulletproofs = False
             logger.debug(
@@ -98,7 +106,7 @@ class TestGen(object):
 
         # Self-check
         new_subs = {}
-        self.precompute(new_keys, new_subs, 1, 10)
+        self.precompute_subaddr(new_keys, new_subs, 1, 10)
         secs = monero.generate_key_image_helper(
             new_keys,
             new_subs,
@@ -109,7 +117,7 @@ class TestGen(object):
         )
         return inp
 
-    def precompute(self, keys, subs, major_cnt=10, minor_cnt=200):
+    def precompute_subaddr(self, keys, subs, major_cnt=10, minor_cnt=200):
         for i in range(major_cnt):
             monero.compute_subaddresses(keys, i, list(range(0, minor_cnt)), subs)
 
@@ -128,7 +136,7 @@ class TestGen(object):
     async def work(self):
         self.cur_keys = self.parse_keys(self.args.current)
         self.dest_keys = self.parse_keys(self.args.dest, "destination")
-        self.precompute(self.cur_keys, self.cur_subs)
+        self.precompute_subaddr(self.cur_keys, self.cur_subs)
 
         files = self.args.files if self.args.files and len(self.args.files) else [b"-"]
         for idx, line in enumerate(files):
@@ -144,9 +152,17 @@ class TestGen(object):
             required=True,
             help="Destination address to transform to",
         )
+
         parser.add_argument(
             "--current", type=None, required=True, help="Current destination address"
         )
+
+        parser.add_argument(
+            "--output",
+            default=None,
+            help="Output directory to write results to",
+        )
+
         parser.add_argument(
             "files",
             metavar="FILE",
