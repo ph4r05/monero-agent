@@ -692,13 +692,37 @@ class HostAgent(cli.BaseCli):
         ret_code = 1
         out_acc, err_acc = [], []
         out_cur, err_cur = [""], [""]
+        logline_pattern = re.compile(r'^([^\s]+)\s+([^\s]+)\s+\[(.+?)\]\s+([^\s]+?)\s+')
         passwd_set = False
+
+        def log_parse(line):
+            m = logline_pattern.match(line)
+            if m is None:
+                return None
+            sev = m.group(4).lower()
+            sevnum = None
+            if sev == 'error':
+                sevnum = logging.ERROR
+            elif sev == 'warn' or sev == 'warning':
+                sevnum = logging.WARNING
+            elif sev == 'info':
+                sevnum = logging.INFO
+            elif sev == 'debug':
+                sevnum = logging.DEBUG
+            return m.group(1), m.group(2), m.group(3), m.group(4), sevnum
 
         def process_line(line, is_err=False):
             dst = err_acc if is_err else out_acc
             dst.extend(line)
-            if self.args.debug_rpc:
+            line_parsed = log_parse(line)
+            line_printed = False
+            if line_parsed and line_parsed[4] and line_parsed[4] >= logging.ERROR:
+                logger.error('RPC_%s: %s' % ('ERR' if is_err else 'OUT', line))
+                line_printed = True
+
+            if not line_printed and self.args.debug_rpc:
                 logger.debug('RPC_%s: %s' % ('ERR' if is_err else 'OUT', line))
+
             line_low = line.lower()
             if 'starting wallet' in line_low:
                 self.rpc_ready = True
