@@ -4,9 +4,11 @@ from hashlib import sha256
 
 import six
 from ecdsa import SECP256k1, SigningKey, VerifyingKey
-from ecdsa.ellipticcurve import Point as _ECDSA_Point
+from ecdsa.ellipticcurve import Point as _ECDSA_Point, INFINITY
 from ecdsa.numbertheory import square_root_mod_prime
 from monero_glue.misc import b58 as base58
+from monero_glue.xmr import crypto
+from monero_glue.xmr.core import ec_py
 
 from .network import BitcoinMainNet
 from .utils import (
@@ -343,6 +345,62 @@ class PublicKey(Key):
         )
 
     __hash__ = Key.__hash__
+
+
+class Ed25519PrivateKey(PrivateKey):
+    def __init__(self, secret_exponent=None, key=None, hex_key=None, *args, **kwargs):
+        self._hex_key = hex_key
+        self._key = None
+        if secret_exponent:
+            self._key = crypto.decodeint(bytes(ec_py.EdScalar(secret_exponent)))
+        elif hex_key:
+            self._key = crypto.decodeint(hex_key)
+        else:
+            self._key = key
+
+    def get_key(self):
+        if self._hex_key:
+            return ensure_bytes(hexlify(self._hex_key))
+        return ensure_bytes(hexlify(crypto.encodeint(self._key)))
+
+    def get_public_key(self):
+        return Ed25519PublicKey(crypto.scalarmult_base(self._key))
+
+    def get_extended_key(self):
+        return ensure_bytes(hexlify(crypto.encodepoint(crypto.scalarmult_base(self._key))))
+
+    def export_to_wif(self, compressed=None):
+        return super().export_to_wif(compressed)
+
+    @classmethod
+    def from_hex_key(cls, key, network=BitcoinMainNet):
+        return cls(hex_key=key)
+
+    def __eq__(self, other):
+        return crypto.sc_eq(self._key, other._key)
+
+    def __sub__(self, other):
+        return self.__class__(key=crypto.sc_sub(self._key, other._key))
+
+
+class Ed25519PublicKey(PublicKey):
+    def __init__(self, key=None, *args, **kwargs):
+        self._key = key
+
+    def get_key(self, compressed=None):
+        return ensure_bytes(hexlify(crypto.encodepoint(self._key)))
+
+    @classmethod
+    def from_hex_key(cls, key, network=BitcoinMainNet):
+        return cls(crypto.decodepoint(key))
+
+    def to_point(self):
+        return self
+
+    def __eq__(self, other):
+        if other == INFINITY:
+            return crypto.point_eq(self._key, crypto.identity())
+        return crypto.point_eq(self._key, other._key)
 
 
 class KeyParseError(Exception):

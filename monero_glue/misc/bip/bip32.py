@@ -1,8 +1,6 @@
 import hmac
-import time
 from binascii import hexlify, unhexlify
 from hashlib import sha256, sha512
-from os import urandom
 
 import six
 from ecdsa import SECP256k1
@@ -16,6 +14,8 @@ from .keys import (
     PrivateKey,
     PublicKey,
     PublicPair,
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
     incompatible_network_exception_factory,
 )
 from .network import *
@@ -63,13 +63,15 @@ class Wallet(object):
         public_key=None,
         network="bitcoin_testnet",
         seed_secret=None,
+        use_ed25519=False,
+        use_slip0010=False,
     ):
         """Construct a new BIP32 compliant wallet.
         You probably don't want to use this init methd. Instead use one
         of the 'from_master_secret' or 'deserialize' cosntructors.
         """
 
-        if not (private_exponent or private_key) and not (public_pair or public_key):
+        if not (private_exponent or private_key) and (not use_ed25519 and not (public_pair or public_key)):
             raise InsufficientKeyDataError(
                 "You must supply one of private_exponent or public_pair"
             )
@@ -78,6 +80,11 @@ class Wallet(object):
         self.private_key = None
         self.public_key = None
         self.seed_secret = seed_secret
+        self.use_ed25519 = use_ed25519
+        self.use_slip0010 = use_slip0010
+        if use_slip0010:
+            raise NotImplementedError()
+
         if private_key:
             if not isinstance(private_key, PrivateKey):
                 raise InvalidPrivateKeyError(
@@ -87,7 +94,11 @@ class Wallet(object):
         elif private_exponent:
             self.private_key = PrivateKey(private_exponent, network=network)
 
-        if public_key:
+        if use_ed25519 and public_key:
+            self.public_key = public_key
+        elif use_ed25519:
+            self.public_key = self.private_key.get_public_key()
+        elif public_key:
             if not isinstance(public_key, PublicKey):
                 raise InvalidPublicKeyError(
                     "public_key must be of type " "bitmerchant.wallet.keys.PublicKey"
@@ -98,7 +109,7 @@ class Wallet(object):
         else:
             self.public_key = self.private_key.get_public_key()
 
-        if self.private_key and self.private_key.get_public_key() != self.public_key:
+        if not self.use_ed25519 and self.private_key and self.private_key.get_public_key() != self.public_key:
             raise KeyMismatchError("Provided private and public values do not match")
 
         def h(val, hex_len):
@@ -381,6 +392,9 @@ class Wallet(object):
             data = b"00" + self.private_key.get_key()
         else:
             data = self.get_public_key_hex()
+            if self.use_ed25519:
+                raise InvalidPathError('Ed25519 public derivation is not implemented')
+
         data += child_number_hex
 
         # Compute a 64 Byte I that is the HMAC-SHA512, using self.chain_code
@@ -390,14 +404,22 @@ class Wallet(object):
         ).digest()
         # Split I into its 32 Byte components.
         I_L, I_R = I[:32], I[32:]
-
-        if long_or_int(hexlify(I_L), 16) >= SECP256k1.order:
+        if not self.use_ed25519 and long_or_int(hexlify(I_L), 16) >= SECP256k1.order:
             raise InvalidPrivateKeyError("The derived key is too large.")
 
         c_i = hexlify(I_R)
         private_exponent = None
-        public_pair = None
-        if self.private_key:
+        private_key = None
+        public_key = None
+
+        if self.use_ed25519 and not self.private_key:
+            raise InvalidPathError('Ed25519 public derivation is not implemented')
+
+        if self.use_ed25519:
+            private_key = Ed25519PrivateKey.from_hex_key(I_L)
+            public_key = private_key.get_public_key()
+
+        elif not self.use_ed25519 and self.private_key:
             # Use private information for derivation
             # I_L is added to the current key's secret exponent (mod n), where
             # n is the order of the ECDSA curve in use.
@@ -406,7 +428,10 @@ class Wallet(object):
                 + long_or_int(self.private_key.get_key(), 16)
             ) % SECP256k1.order
             # I_R is the child's chain code
-        else:
+            private_key = PrivateKey(private_exponent)
+            public_key = private_key.get_public_key()
+
+        elif not self.use_ed25519:
             # Only use public information for this derivation
             g = SECP256k1.generator
             I_L_long = long_or_int(hexlify(I_L), 16)
@@ -414,19 +439,24 @@ class Wallet(object):
                 _ECDSA_Public_key(g, g * I_L_long).point + self.public_key.to_point()
             )
             # I_R is the child's chain code
-            public_pair = PublicPair(point.x(), point.y())
+            private_key = PrivateKey(private_exponent)
+            public_key = PublicKey.from_public_pair(PublicPair(point.x(), point.y()))
+
+        if public_key.to_point() == INFINITY:
+            raise InfinityPointException("The point at infinity is invalid.")
 
         child = self.__class__(
             chain_code=c_i,
             depth=self.depth + 1,  # we have to go deeper...
             parent_fingerprint=self.fingerprint,
             child_number=child_number_hex,
-            private_exponent=private_exponent,
-            public_pair=public_pair,
+            private_key=private_key,
+            public_key=public_key,
             network=self.network,
+            use_slip0010=self.use_slip0010,
+            use_ed25519=self.use_ed25519,
         )
-        if child.public_key.to_point() == INFINITY:
-            raise InfinityPointException("The point at infinity is invalid.")
+
         if not as_private:
             return child.public_copy()
         return child
@@ -634,7 +664,7 @@ class Wallet(object):
         )
 
     @classmethod
-    def from_master_secret(cls, seed, network="monero", use_ed25519=False):
+    def from_master_secret(cls, seed, network="monero", use_ed25519=False, use_slip0010=False):
         """Generate a new PrivateKey from a secret key.
         :param seed: The key to use to generate this wallet. It may be a long
             string. Do not use a phrase from a book or song, as that will
@@ -642,6 +672,7 @@ class Wallet(object):
             argument and let me generate a new random key for you.
         :param network:
         :param use_ed25519:
+        :param use_slip0010:
         See https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#Serialization_format  # nopep8
         See https://github.com/satoshilabs/slips/blob/master/slip-0010.md  # nopep8
         """
@@ -662,6 +693,8 @@ class Wallet(object):
             chain_code=long_or_int(hexlify(I_R), 16),
             network=network,
             seed_secret=seed,
+            use_ed25519=use_ed25519,
+            use_slip0010=use_slip0010
         )
 
     @classmethod

@@ -44,7 +44,7 @@ class SeedDerivation(object):
         self.pre_hash = binascii.unhexlify(data.private_key.get_key())
 
         if slip0010:
-            self.monero_master = self.pre_hash
+            self.monero_master = crypto.encodeint(crypto.decodeint(self.pre_hash))
 
         else:
             # Ledger way = words -> bip39 pbkdf -> master seed -> bip32 normal with
