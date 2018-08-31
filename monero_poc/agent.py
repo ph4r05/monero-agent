@@ -414,7 +414,7 @@ class HostAgent(cli.BaseCli):
             self.trezor_proxy = TokenProxy()
 
         ntype = self.agent.network_type if self.agent else self.network_type
-        self.agent = agent_lite.Agent(self.trezor_proxy, network_type=ntype)
+        self.agent = agent_lite.Agent(self.trezor_proxy, network_type=ntype, slip0010=self.args.slip0010)
 
     async def open_account(self):
         """
@@ -1283,6 +1283,15 @@ class HostAgent(cli.BaseCli):
             action="store_const",
             const=True,
             help="Testnet",
+        )
+
+        parser.add_argument(
+            "--slip0010",
+            dest="slip0010",
+            default=False,
+            action="store_const",
+            const=True,
+            help="SLIP0010 wallet derivation",
         )
 
         parser.add_argument(
