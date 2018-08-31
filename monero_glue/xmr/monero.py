@@ -230,8 +230,8 @@ def generate_key_image_helper(
     :param creds:
     :param subaddresses:
     :param out_key: real output (from input RCT) destination key
-    :param tx_public_key: real output (from input RCT) public key
-    :param additional_tx_public_keys:
+    :param tx_public_key: R, transaction public key
+    :param additional_tx_public_keys: Additional Rs, for subaddress destinations
     :param real_output_index: index of the real output in the RCT
     :return:
     """
