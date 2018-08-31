@@ -713,7 +713,7 @@ class HostAgent(cli.BaseCli):
 
         def process_line(line, is_err=False):
             dst = err_acc if is_err else out_acc
-            dst.extend(line)
+            dst.append(line)
             line_parsed = log_parse(line)
             line_printed = False
             if line_parsed and line_parsed[4] and line_parsed[4] >= logging.ERROR:
@@ -780,16 +780,16 @@ class HostAgent(cli.BaseCli):
                 time.sleep(0.01)
 
             ret_code = p.commands[0].returncode
-            add_output(p.stdout.readlines())
-            add_output(p.stderr.readlines(), True)
+            add_output([p.stdout.read(-1, False)])
+            add_output([p.stderr.read(-1, False)], True)
             self.rpc_running = False
             self.update_prompt()
 
             if not self.terminating:
                 logger.error("Wallet RPC ended prematurely with code: %s" % ret_code)
                 logger.info("Command: %s" % cmd)
-                logger.info("Std out: %s" % "".join(out_acc))
-                logger.info("Error out: %s" % "".join(err_acc))
+                logger.info("Std out: %s" % "\n".join(out_acc))
+                logger.info("Error out: %s" % "\n".join(err_acc))
 
         except Exception as e:
             logger.error("Exception in wallet RPC command: %s" % e)
