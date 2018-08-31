@@ -252,10 +252,11 @@ def pbkdf2(inp, salt, length=32, count=1000, prf=None):
 # Basic point enc/dec
 #
 
+
 def _offset(x, offset=0):
     if offset == 0:
         return x
-    return x[offset : ]
+    return x[offset:]
 
 
 def decodeint(x, offset=0):
