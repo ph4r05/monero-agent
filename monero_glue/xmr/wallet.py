@@ -5,6 +5,7 @@
 import binascii
 import json
 import re
+import datetime
 
 from monero_glue.xmr import common, crypto, monero
 from monero_glue.xmr.enc import chacha
@@ -303,3 +304,49 @@ async def load_exported_outputs(priv_key, data):
     return OutputsDump(
         m_spend_public_key=spend_pub, m_view_public_key=view_pub, tds=exps
     )
+
+
+class Wallet(object):
+    def __init__(self, daemon_rpc=None):
+        self.daemon_rpc = daemon_rpc
+
+    async def parse_block(self, bindata):
+        reader = xmrserialize.MemoryReaderWriter(bytearray(bindata))
+        ar = xmrserialize.Archive(reader, False)
+        return await ar.message(None, xmrtypes.Block)
+
+    async def get_blockchain_height_by_date(self, year, month, day):
+        dt = datetime.datetime(year=year, month=month, day=day)
+        timestamp = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
+
+        height_min = 0
+        height_max = int((await self.daemon_rpc.get_info())["height"]) - 1
+        while True:
+            height_mid = (height_min + height_max) // 2
+            heights = [height_min, height_mid, height_max]
+            blocks = await self.daemon_rpc.get_blocks_by_height(heights)
+
+            blk_min = await self.parse_block(blocks["blocks"][0]["block"])
+            blk_mid = await self.parse_block(blocks["blocks"][1]["block"])
+            blk_max = await self.parse_block(blocks["blocks"][2]["block"])
+
+            t_min = int(blk_min.timestamp)
+            t_mid = int(blk_mid.timestamp)
+            t_max = int(blk_max.timestamp)
+
+            if not (t_min <= t_mid and t_mid <= t_max):
+                return min(heights)
+
+            if timestamp > t_max:
+                raise ValueError("Specified date is in the future")
+
+            if timestamp <= t_min + 2 * 24 * 60 * 60:
+                return height_min
+
+            if timestamp <= t_mid:
+                height_max = height_mid
+            else:
+                height_min = height_mid
+
+            if height_max - height_min <= 2 * 24 * 30:
+                return height_min

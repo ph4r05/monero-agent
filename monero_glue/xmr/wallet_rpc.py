@@ -2,14 +2,8 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-#
-# Note pickling is used for message serialization.
-# This is just for the prototyping & fast PoC, pickling wont be used in the production.
-# Instead, protobuf messages will be defined and parsed to avoid malicious pickling.
-#
 
 import logging
-import os
 
 import requests
 from requests.auth import HTTPDigestAuth
