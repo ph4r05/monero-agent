@@ -27,7 +27,7 @@ class DaemonRpc(object):
     Daemon RPC helper
     """
 
-    def __init__(self, port=None, creds=None):
+    def __init__(self, port=28081, creds=None):
         self.port = port
         self.creds = creds
         self.url = None

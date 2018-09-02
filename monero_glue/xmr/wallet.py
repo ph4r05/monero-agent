@@ -315,12 +315,15 @@ class Wallet(object):
         ar = xmrserialize.Archive(reader, False)
         return await ar.message(None, xmrtypes.Block)
 
+    async def get_height(self):
+        return int((await self.daemon_rpc.get_info())["height"])
+
     async def get_blockchain_height_by_date(self, year, month, day):
         dt = datetime.datetime(year=year, month=month, day=day)
         timestamp = dt.replace(tzinfo=datetime.timezone.utc).timestamp()
 
         height_min = 0
-        height_max = int((await self.daemon_rpc.get_info())["height"]) - 1
+        height_max = await self.get_height() - 1
         while True:
             height_mid = (height_min + height_max) // 2
             heights = [height_min, height_mid, height_max]
