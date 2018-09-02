@@ -11,6 +11,7 @@
 import argparse
 import asyncio
 import binascii
+import datetime
 import json
 import logging
 import os
@@ -21,7 +22,7 @@ import time
 
 from monero_glue.agent import agent_lite, agent_misc
 from monero_glue.messages import DebugMoneroDiagRequest, GetEntropy, Entropy
-from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc
+from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc, daemon_rpc
 from monero_glue.xmr.enc import chacha_poly, chacha
 from monero_poc.utils import misc, trace_logger
 from monero_poc.utils import cli
@@ -78,10 +79,13 @@ class HostAgent(cli.BaseCli):
         self.agent = None  # type: agent_lite.Agent
         self.token_debug = False
         self.token_path = None
+        self.fresh_wallet = False
 
         self.wallet_proxy = wallet_rpc.WalletRpc(
             self, self.rpc_bind_port, self.rpc_passwd
         )
+        self.daemon_rpc = daemon_rpc.DaemonRpc()
+        self.wallet_obj = wallet.Wallet(self.daemon_rpc)
 
     def looper(self, loop):
         """
@@ -138,7 +142,7 @@ class HostAgent(cli.BaseCli):
         if not self.rpc_running:
             flags.append("R!")
         if not self.rpc_ready:
-            flags.append('Loading')
+            flags.append('Loading' if not self.fresh_wallet else 'Syncing')
 
         flags_str = "|".join(flags)
         flags_suffix = "|" + flags_str if len(flags_str) > 0 else ""
@@ -537,6 +541,61 @@ class HostAgent(cli.BaseCli):
         addr = monero.encode_addr(net_ver, spend_pub, view_pub)
         return addr, match
 
+    async def wallet_restore_param(self):
+        self.poutput("Creating a new wallet file, please enter the blockchain height to start a restore of the wallet.")
+        self.poutput("  - Restore height should be a little less than your first incoming transaction to the wallet.")
+        self.poutput("  - If the wallet was never used before, enter \"-\"")
+        self.poutput("  - If you are not sure enter \"0\" to start from the beginning (may take few minutes)")
+        self.poutput("  - You may enter also a date in the format YYYY-MM-DD\n")
+
+        height = 0
+        sure_stage = False
+
+        while True:
+            if sure_stage:
+                if self.ask_proceed_quit("The height: %s. Is it correct? (y/n) " % height) == self.PROCEED_YES:
+                    break
+
+            height = misc.py_raw_input("Restore height: ").strip().lower()
+            if height == '-':
+                height = await self.wallet_obj.get_height()
+                sure_stage = True
+                continue
+
+            elif len(height) == 0:
+                height = 0
+                sure_stage = True
+                continue
+
+            m = re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})$', height)
+            if m:
+                year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                try:
+                    height = await self.wallet_obj.get_blockchain_height_by_date(year, month, day)
+                    sure_stage = True
+                    continue
+
+                except Exception as e:
+                    logger.warning('Could not resolve date to the height: %s' % e)
+                    self.trace_logger.log(e)
+                    r = self.ask_proceed_quit("Could not resolve date to height. Do you want to try again? (y/n) ")
+                    if r == self.PROCEED_YES:
+                        continue
+                    else:
+                        return 0
+
+            else:
+                try:
+                    height = int(height)
+                    sure_stage = True
+                    continue
+
+                except Exception as e:
+                    self.poutput("Invalid format")
+                    sure_stage = False
+                    continue
+        return height
+
     async def ensure_watch_only(self):
         """
         Ensures watch only wallet for monero exists
@@ -560,13 +619,18 @@ class HostAgent(cli.BaseCli):
                 sys.exit(2)
             return
 
+        self.fresh_wallet = True
         account_keys = xmrtypes.AccountKeys()
         key_data = wallet.WalletKeyData()
+
+        restore_height = await self.wallet_restore_param()
+        self.poutput('Wallet restore height: %s' % restore_height)
 
         wallet_data = wallet.WalletKeyFile()
         wallet_data.key_data = key_data
         wallet_data.watch_only = 1
         wallet_data.testnet = self.network_type == monero.NetworkTypes.TESTNET
+        wallet_data.refresh_height = restore_height
 
         key_data.m_creation_timestamp = int(time.time())
         key_data.m_keys = account_keys
@@ -832,6 +896,7 @@ class HostAgent(cli.BaseCli):
         :return:
         """
         if self.args.wallet_rpc_addr:  # using existing RPC?
+            self.daemon_rpc.set_addr(self.args.rpc_addr)
             self.wallet_proxy.set_addr(self.args.wallet_rpc_addr)
             self.wallet_proxy.set_creds(self.args.wallet_rpc_creds)
             self.rpc_running = True
