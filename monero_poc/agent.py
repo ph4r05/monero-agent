@@ -295,7 +295,7 @@ class HostAgent(cli.BaseCli):
         self.wait_coro(self.connect(path))
 
     def do_reconnect(self, line):
-        self.wait_coro(self.connect())
+        self.wait_coro(self.connect(self.token_path))
 
     def do_enumerate(self, line):
         from monero_glue.trezor import manager as tmanager
@@ -402,6 +402,23 @@ class HostAgent(cli.BaseCli):
         if self.args.monero_bin:
             self.monero_bin = self.args.monero_bin
 
+    async def choose_trezor(self):
+        from monero_glue.trezor import manager as tmanager
+        r = tmanager.Trezor.enumerate()
+        noptions = len(r)
+
+        if noptions == 0:
+            self.perror("No TREZOR device found")
+            raise EnvironmentError("No usable device")
+
+        elif noptions == 1:
+            self.poutput("Detected TREZOR: %s" % r[0])
+            return str(r[0])
+
+        choices = [(i, str(r[i])) for i in range(noptions)]
+        res = self.select(choices, "Please select from connected devices: ")
+        return str(r[res])
+
     async def connect(self, path=None):
         """
         Connects to the trezor
@@ -410,8 +427,13 @@ class HostAgent(cli.BaseCli):
         if self.args.trezor or self.args.trezor_path or path:
             from monero_glue.trezor import manager as tmanager
 
+            t_path = path if path else self.args.trezor_path
+            if t_path is None or len(t_path) == 0:
+                self.token_path = await self.choose_trezor()
+                t_path = self.token_path
+
             self.trezor_proxy = tmanager.Trezor(
-                path=path if path else self.args.trezor_path, debug=self.token_debug
+                path=t_path, debug=self.token_debug
             )
 
         else:
