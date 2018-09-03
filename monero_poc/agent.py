@@ -1424,7 +1424,7 @@ class HostAgent(cli.BaseCli):
         )
 
         args_src = sys.argv
-        self.args, unknown = parser.parse_known_args(args=args_src[1:])
+        self.args = parser.parse_args(args=args_src[1:])
 
         if self.args.rpc_addr:
             if not re.match(r"^\[?([.0-9a-f:]+)\]?(:[0-9]+)?$", self.args.rpc_addr):
