@@ -135,15 +135,17 @@ class Agent(object):
     Glue agent, running on host
     """
 
-    def __init__(self, trezor, address_n=None, network_type=None, slip0010=False, **kwargs):
+    def __init__(
+        self, trezor, address_n=None, network_type=None, slip0010=False, **kwargs
+    ):
         self.trezor = trezor
         self.ct = None  # type: TData
         self.address_n = address_n if address_n else DEFAULT_MONERO_BIP44
         self.network_type = network_type
         if slip0010 and 0 in address_n:
-            raise ValueError('SLIP0010 cannto contain public derivation')
+            raise ValueError("SLIP0010 cannto contain public derivation")
         if slip0010 and address_n is None:
-            self.address_n = DEFAULT_MONERO_BIP44[ : -2]
+            self.address_n = DEFAULT_MONERO_BIP44[:-2]
 
     def is_simple(self, rv):
         """
