@@ -209,6 +209,10 @@ class HostAgent(cli.BaseCli):
         if pres:
             print("OK %s" % pres)
 
+    def do_check_trezor(self, line):
+        self.check_address()
+        self.poutput('OK')
+
     def do_get_watch_only(self, line):
         pres = self.token_cmd(self.agent.get_watch_only())
         print("View key:  %s" % binascii.hexlify(pres.watch_key).decode("utf8"))
