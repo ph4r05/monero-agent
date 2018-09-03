@@ -265,6 +265,19 @@ class HostAgent(cli.BaseCli):
         res = misc.parse_transfer_cmd(parts)
         return self.transfer_cmd(res)
 
+    def do_sweep_dust(self, line):
+        if not self.check_rpc():
+            return
+
+        res = self.wallet_proxy.sweep_dust({'do_not_relay': True})
+        if "result" not in res:
+            logger.error("Sweep dust error: %s" % res)
+            raise ValueError("Could not transfer")
+
+        result = res["result"]
+        unsigned = binascii.unhexlify(result["unsigned_txset"])
+        self.wait_coro(self.sign_unsigned(unsigned))
+
     def do_sign(self, line):
         if not self.check_rpc():
             return

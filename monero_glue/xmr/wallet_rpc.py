@@ -83,3 +83,9 @@ class WalletRpc(object):
 
     def refresh(self, params=None):
         return self.request("refresh", params)
+
+    def sweep_dust(self, params=None):
+        return self.request("sweep_dust", params)
+
+    def sweep_all(self, params=None):
+        return self.request("sweep_all", params)
