@@ -1,3 +1,4 @@
+from monero_glue.compat.collections import namedtuple
 from monero_glue.xmr import crypto
 from monero_glue.xmr.sub.xmr_net import (
     NetworkTypes,
@@ -8,18 +9,23 @@ from monero_glue.xmr.sub.xmr_net import (
 )
 
 
+PubAddress = namedtuple("PubAddress", ("spend_public_key", "view_public_key"))
+
+
 class AddrInfo(object):
-    def __init__(self, ver=None, data=None):
+    def __init__(self, ver=None, data=None, payment_id=None):
         self.view_key = None
         self.spend_key = None
         self.net_type = None
         self.is_sub_address = None
         self.is_integrated = None
-        self.payment_id = None
+        self.payment_id = payment_id
+        self.addr = None
+        self.base_addr = None
         if ver is not None and data is not None:
-            self.set_addr(ver, data)
+            self.set_addr(ver, data, self.payment_id)
 
-    def set_addr(self, ver, data):
+    def set_addr(self, ver, data, payment_id=None):
         self.net_type = get_addr_type(ver)
         self.is_sub_address = is_subaddress(ver)
         self.is_integrated = is_integrated(ver)
@@ -27,6 +33,14 @@ class AddrInfo(object):
         self.view_key = data[32:64]
         if self.is_integrated:
             self.payment_id = data[64:]
+        else:
+            self.payment_id = payment_id
+
+        addr = build_address(self.spend_key, self.view_key)
+        self.base_addr = public_addr_encode(addr, self.is_sub_address, self.net_type)
+        self.addr = public_addr_encode(
+            addr, self.is_sub_address, self.net_type, self.payment_id
+        )
         return self
 
 
@@ -39,15 +53,18 @@ def addr_to_hash(addr):
     return bytes(addr.spend_public_key + addr.view_public_key)
 
 
-def encode_addr(version, spend_pub, view_pub):
+def encode_addr(version, spend_pub, view_pub, payment_id=None):
     """
     Encodes public keys as versions
     :param version:
     :param spend_pub:
     :param view_pub:
+    :param payment_id:
     :return:
     """
     buf = spend_pub + view_pub
+    if payment_id:
+        buf += bytes(payment_id)
     return crypto.xmr_base58_addr_encode_check(ord(version), bytes(buf))
 
 
@@ -62,17 +79,44 @@ def decode_addr(addr):
     return AddrInfo(version, d)
 
 
-def public_addr_encode(pub_addr, is_sub=False, net=NetworkTypes.MAINNET):
+def build_address(spend_key, view_key):
+    """
+    Builds address compatible object from byte encoded keys
+    :param spend_key:
+    :param view_key:
+    :return:
+    """
+    return PubAddress(spend_key, view_key)
+
+
+def build_address_encode(spend_key, view_key):
+    """
+    Builds address compatible object from object keys
+    :param spend_key:
+    :param view_key:
+    :return:
+    """
+    return PubAddress(crypto.encodepoint(spend_key), crypto.encodepoint(view_key))
+
+
+def public_addr_encode(
+    pub_addr, is_sub=False, net=NetworkTypes.MAINNET, payment_id=None
+):
     """
     Encodes public address to Monero address
     :param pub_addr:
     :type pub_addr: apps.monero.xmr.serialize_messages.addr.AccountPublicAddress
     :param is_sub:
     :param net:
+    :param payment_id: for integrated address
     :return:
     """
-    net_ver = net_version(net, is_sub)
-    return encode_addr(net_ver, pub_addr.spend_public_key, pub_addr.view_public_key)
+    if payment_id and len(payment_id) != 8:
+        raise ValueError("Payment ID has to have exactly 8B for an integrated address")
+    net_ver = net_version(net, is_sub, payment_id is not None)
+    return encode_addr(
+        net_ver, pub_addr.spend_public_key, pub_addr.view_public_key, payment_id
+    )
 
 
 def classify_subaddresses(tx_dests, change_addr):
