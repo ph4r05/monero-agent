@@ -23,11 +23,16 @@ class StageNet(object):
     PUBLIC_SUBADDRESS_BASE58_PREFIX = 36
 
 
-def net_version(network_type=NetworkTypes.MAINNET, is_subaddr=False):
+def net_version(
+    network_type=NetworkTypes.MAINNET, is_subaddr=False, is_integrated=False
+):
     """
     Network version bytes used for address construction
     :return:
     """
+    if is_integrated and is_subaddr:
+        raise ValueError("Subaddress cannot be integrated")
+
     c_net = None
     if network_type is None or network_type == NetworkTypes.MAINNET:
         c_net = MainNet
@@ -38,9 +43,10 @@ def net_version(network_type=NetworkTypes.MAINNET, is_subaddr=False):
     else:
         raise ValueError("Unknown network type: %s" % network_type)
 
-    prefix = (
-        c_net.PUBLIC_ADDRESS_BASE58_PREFIX
-        if not is_subaddr
-        else c_net.PUBLIC_SUBADDRESS_BASE58_PREFIX
-    )
+    prefix = c_net.PUBLIC_ADDRESS_BASE58_PREFIX
+    if is_subaddr:
+        prefix = c_net.PUBLIC_SUBADDRESS_BASE58_PREFIX
+    elif is_integrated:
+        prefix = c_net.PUBLIC_INTEGRATED_ADDRESS_BASE58_PREFIX
+
     return bytes([prefix])
