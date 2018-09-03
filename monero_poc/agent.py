@@ -26,6 +26,7 @@ from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc, daemon_r
 from monero_glue.xmr.enc import chacha_poly, chacha
 from monero_poc.utils import misc, trace_logger
 from monero_poc.utils import cli
+from monero_poc.utils.misc import TrezorAddressMismatchError
 from monero_poc.utils.trezor_server_proxy import TokenProxy
 from monero_serialize import xmrtypes, xmrserialize, xmrboost
 
@@ -158,8 +159,9 @@ class HostAgent(cli.BaseCli):
             return res
 
         except Exception as e:
-            print("Trezor not connected (e: %s)" % e)
+            print("Trezor error (e: %s)" % e)
             self.trace_logger.log(e)
+            raise e
 
     #
     # Handlers
@@ -184,6 +186,12 @@ class HostAgent(cli.BaseCli):
                 self.poutput(try_debug)
             return False
         return True
+
+    def check_address(self):
+        pres = self.token_cmd(self.agent.get_address())
+        if self.address != pres.address:
+            self.perror("Connected TREZOR address does not match wallet address")
+            raise TrezorAddressMismatchError()
 
     def do_quit(self, line):
         self.terminating = True
@@ -223,6 +231,7 @@ class HostAgent(cli.BaseCli):
     def do_height(self, line):
         if not self.check_rpc():
             return
+
         res = self.wallet_proxy.height()
         print("Height: %s" % res["result"]["height"])
 
@@ -244,6 +253,7 @@ class HostAgent(cli.BaseCli):
         if not self.check_rpc():
             return
 
+        self.check_address()
         self.wait_coro(self.key_image_sync(line))
 
     def do_refresh(self, line):
@@ -257,6 +267,7 @@ class HostAgent(cli.BaseCli):
         if not self.check_rpc():
             return
 
+        self.check_address()
         if len(line) == 0:
             print(
                 "Usage: transfer [<priority>] [<ring_size>] <address> <amount> [<payment_id>]"
@@ -283,6 +294,7 @@ class HostAgent(cli.BaseCli):
         if not self.check_rpc():
             return
 
+        self.check_address()
         self.wait_coro(self.sign_wrap(line))
 
     def do_init(self, line):

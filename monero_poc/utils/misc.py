@@ -22,9 +22,25 @@ from shlex import quote
 import shellescape
 from sarge import Capture, Feeder, run
 
+from monero_glue.hwtoken.misc import TrezorError
 from monero_glue.xmr import crypto
 
 logger = logging.getLogger(__name__)
+
+
+class TrezorCallError(TrezorError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class TrezorNotConfiguredError(TrezorError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class TrezorAddressMismatchError(TrezorError):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class CliPrompt(object):
