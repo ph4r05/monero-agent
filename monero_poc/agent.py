@@ -175,13 +175,15 @@ class HostAgent(cli.BaseCli):
             self.perror('Monero RPC wallet is not running.')
             if try_debug:
                 self.poutput(try_debug)
-            return
+            return False
 
         elif not self.rpc_ready:
             self.perror('Monero RPC wallet is not yet ready, please wait a moment')
             self.poutput('RPC wallet is not available during the blockchain scanning, it may take a while')
             if try_debug:
                 self.poutput(try_debug)
+            return False
+        return True
 
     def do_quit(self, line):
         self.terminating = True
@@ -208,7 +210,9 @@ class HostAgent(cli.BaseCli):
         print("Address:   %s" % pres.address.decode("utf8"))
 
     def do_balance(self, line):
-        self.check_rpc()
+        if not self.check_rpc():
+            return
+
         res = self.wallet_proxy.balance()
         print("Balance: %.5f" % wallet.conv_disp_amount(res["result"]["balance"]))
         print(
@@ -222,26 +226,36 @@ class HostAgent(cli.BaseCli):
         print("Height: %s" % res["result"]["height"])
 
     def do_get_transfers(self, line):
-        self.check_rpc()
+        if not self.check_rpc():
+            return
+
         res = self.wallet_proxy.get_transfers({"pool": True, "in": True, "out": True})
         print(json.dumps(res, indent=2))
 
     def do_rescan_bc(self, line):
-        self.check_rpc()
+        if not self.check_rpc():
+            return
+
         res = self.wallet_proxy.rescan_bc()
         print(json.dumps(res, indent=2))
 
     def do_key_image_sync(self, line):
-        self.check_rpc()
+        if not self.check_rpc():
+            return
+
         self.wait_coro(self.key_image_sync(line))
 
     def do_refresh(self, line):
-        self.check_rpc()
+        if not self.check_rpc():
+            return
+
         res = self.wallet_proxy.refresh()
         print(json.dumps(res, indent=2))
 
     def do_transfer(self, line):
-        self.check_rpc()
+        if not self.check_rpc():
+            return
+
         if len(line) == 0:
             print(
                 "Usage: transfer [<priority>] [<ring_size>] <address> <amount> [<payment_id>]"
@@ -252,7 +266,9 @@ class HostAgent(cli.BaseCli):
         return self.transfer_cmd(res)
 
     def do_sign(self, line):
-        self.check_rpc()
+        if not self.check_rpc():
+            return
+
         self.wait_coro(self.sign_wrap(line))
 
     def do_init(self, line):
