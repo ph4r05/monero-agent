@@ -55,6 +55,7 @@ class HostAgent(cli.BaseCli):
         self.pub_view = None
         self.pub_spend = None
         self.network_type = None
+        self.account_idx = 0  # major sub-address index
         self.wallet_salt = None
         self.wallet_password = b""
         self.wallet_file = None
@@ -289,6 +290,39 @@ class HostAgent(cli.BaseCli):
         result = res["result"]
         unsigned = binascii.unhexlify(result["unsigned_txset"])
         self.wait_coro(self.sign_unsigned(unsigned))
+
+    def do_sweep_all(self, line):
+        if not self.check_rpc():
+            return
+
+        if len(line) == 0:
+            self.poutput('sweep_all [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> [<payment_id>]')
+            return
+
+        params = misc.parse_sweep_all(line)
+        self.sweep_cmd(params, is_all=True)
+
+    def do_sweep_below(self, line):
+        if not self.check_rpc():
+            return
+
+        if len(line) == 0:
+            self.poutput('sweep_below <amount_threshold> [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> [<payment_id>]')
+            return
+
+        params = misc.parse_sweep_below(line)
+        self.sweep_cmd(params, is_below=True)
+
+    def do_sweep_single(self, line):
+        if not self.check_rpc():
+            return
+
+        if len(line) == 0:
+            self.poutput('sweep_single [<priority>] [<ring_size>] <key_image> <address> [<payment_id>]')
+            return
+
+        params = misc.parse_sweep_below(line)
+        self.sweep_cmd(params, is_single=True)
 
     def do_sign(self, line):
         if not self.check_rpc():
@@ -998,30 +1032,63 @@ class HostAgent(cli.BaseCli):
     # Sign op
     #
 
+    def handle_address_input(self, address, payment_id=None):
+        try:
+            address = address.encode("ascii")  # make bytes
+        except:
+            pass
+
+        if payment_id and (len(payment_id) != 16 and len(payment_id) != 64):
+            self.perror("Payment ID can be either 8B or 32B long")
+            raise ValueError("Invalid payment ID")
+
+        try:
+            addr_info = monero.decode_addr(address)
+
+            if addr_info.is_integrated and payment_id:
+                raise ValueError('Address is integrated (contains payment id), redundant payment_id provided')
+
+            if payment_id:
+                payment_id = binascii.unhexlify(payment_id)
+
+        except Exception as e:
+            self.perror("Address invalid: %s, error: %s " % (address, e))
+            raise
+
+        return addr_info, payment_id
+
     def transfer_cmd(self, parts):
         """
         Transfer logic
         :param parts:
         :return:
         """
-        priority, mixin, address, amount, payment_id = parts
-        try:
-            address_b = address.encode("ascii")
-            addr_info = monero.decode_addr(address_b)
-            if addr_info.is_integrated:
-                payment_id = binascii.hexlify(addr_info.payment_id)
+        priority, mixin, payment_id = parts.priority, parts.mixin, parts.payment_id
 
-        except Exception as e:
-            print("Address invalid: %s " % address)
-            return
+        addr_amnt = parts.address_amounts
+        addr_infos = []
+        destinations = []
+        new_payment_id = None
 
-        print("Sending %s monero to %s" % (amount, address))
+        for idx, cur in enumerate(addr_amnt):
+            addr_info, tmp_payment_id = self.handle_address_input(cur[0], payment_id)
+            addr_infos.append(addr_info)
+            destinations.append({
+                'amount': misc.amount_to_uint64(cur[1]),
+                'address': addr_info.addr.decode('ascii'),
+            })
+
+            if tmp_payment_id:
+                new_payment_id = tmp_payment_id
+
+            print("Sending %s monero to %s" % (cur[1], cur[0]))
+
         print(
             "Priority: %s, mixin: %s, payment_id: %s"
             % (
                 priority if priority else "default",
                 mixin if mixin else "default",
-                payment_id,
+                binascii.hexlify(new_payment_id).decode('ascii') if new_payment_id else "-",
             )
         )
 
@@ -1030,31 +1097,81 @@ class HostAgent(cli.BaseCli):
             return
 
         params = {
-            "destinations": [
-                {
-                    "amount": int((10 ** monero.DISPLAY_DECIMAL_POINT) * amount),
-                    "address": address,
-                }
-            ],
-            "account_index": 0,
-            "subaddr_indices": [],
+            "destinations": destinations,
+            "account_index": self.account_idx,
+            "subaddr_indices": parts.indices,
             "unlock_time": 0,
             "get_tx_keys": True,
             "do_not_relay": True,
             "get_tx_hex": False,
             "get_tx_metadata": False,
         }
+
         if priority is not None:
             params["priority"] = priority
 
         if mixin is not None:
             params["mixin"] = mixin
 
-        if payment_id is not None:
-            params["payment_id"] = payment_id
+        if new_payment_id is not None:
+            params["payment_id"] = binascii.hexlify(new_payment_id).decode('ascii')
 
         # Call RPC to prepare unsigned transaction
         self.transfer_params(params)
+
+    def sweep_params(self, parts, is_all=False, is_below=False, is_single=False):
+        params = {
+            'do_not_relay': True
+        }
+
+        if parts.priority is not None:
+            params["priority"] = parts.priority
+
+        if parts.mixin is not None:
+            params["ring_size"] = parts.mixin
+
+        if parts.payment_id is not None:
+            params["payment_id"] = parts.payment_id
+
+        if parts.amount_threshold is not None:
+            params["below_amount"] = misc.amount_to_uint64(parts.amount_threshold)
+
+        if parts.key_image is not None:
+            params["key_image"] = parts.key_image
+
+        if not is_single:
+            params['account_index'] = self.account_idx
+            params['subaddr_indices'] = parts.indices
+            params['address'] = parts.address
+
+        return params
+
+    def sweep_cmd(self, parts, is_all=False, is_below=False, is_single=False):
+        params = self.sweep_params(parts, is_all, is_below, is_single)
+        if is_single:
+            res = self.wallet_proxy.sweep_single(params)
+        else:
+            res = self.wallet_proxy.sweep_all(params)
+
+        if "result" not in res:
+            logger.error("Sweep error: %s" % res)
+            raise ValueError("Could not transfer")
+        result = res["result"]
+
+        amounts = common.defvalkey(result, 'amount_list', [common.defvalkey(result, 'amount')])
+        fees = common.defvalkey(result, 'fee_list', [common.defvalkey(result, 'fee')])
+        for idx in range(len(amounts)):
+            st = "Amount: %s" % wallet.conv_disp_amount(amounts[idx])
+            if idx < len(fees):
+                st += ", Fee: %s" % wallet.conv_disp_amount(fees[idx])
+            self.poutput(st)
+
+        ask_res = self.ask_proceed_quit("Do you confirm (y/n) ? ")
+        if ask_res != self.PROCEED_YES:
+            return
+
+        unsigned = binascii.unhexlify(result["unsigned_txset"])
+        self.wait_coro(self.sign_unsigned(unsigned))
 
     def transfer_params(self, params):
         res = self.wallet_proxy.transfer(params)

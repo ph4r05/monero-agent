@@ -24,8 +24,12 @@ from sarge import Capture, Feeder, run
 
 from monero_glue.hwtoken.misc import TrezorError
 from monero_glue.xmr import crypto
+from monero_glue.xmr.monero import DISPLAY_DECIMAL_POINT
 
 logger = logging.getLogger(__name__)
+
+
+PRIORITIES = ["default", "unimportant", "normal", "elevated", "priority"]
 
 
 class TrezorCallError(TrezorError):
@@ -125,49 +129,170 @@ def gen_simple_passwd(n):
     )
 
 
+def amount_to_uint64(amount):
+    return int((10 ** DISPLAY_DECIMAL_POINT) * amount)
+
+
+class TransferArgs(object):
+    def __init__(self):
+        self.indices = []
+        self.priority = None
+        self.mixin = None
+        self.address_amounts = []
+        self.address = None
+        self.amount = None
+        self.payment_id = None
+        self.amount_threshold = None
+        self.key_image = None
+
+
+def cut_index(parts):
+    if not parts[0].startswith('index='):
+        return [], parts
+
+    return [int(x.strip()) for x in parts[0][6:].split(',')], parts[1:]
+
+
+def cut_priority(parts):
+    idx = None
+    for i, x in enumerate(PRIORITIES):
+        if parts[0] == x:
+            idx = i
+            break
+
+    if idx is not None:
+        return idx, parts[1:]
+    return None, parts
+
+
+def cut_mixin(parts):
+    try:
+        return int(parts[0]), parts[1:]
+    except Exception as e:
+        return None, parts
+
+
+def cut_addr(parts):
+    return parts[0], parts[1:]
+
+
+def cut_amount(parts):
+    try:
+        return float(parts[0]), parts[1:]
+    except Exception as e:
+        raise ValueError('Format error, Amount not valid') from e
+
+
+def cut_addr_amount(parts):
+    try:
+        return parts[0], float(parts[1]), parts[2:]
+    except Exception as e:
+        return None, None, parts
+
+
+def cut_key_image(parts):
+    ki = parts[0]
+    if len(ki) != 64:
+        raise ValueError('Format error, Key Image have to be exactly 32B long')
+    try:
+        return binascii.unhexlify(ki), parts[1:]
+    except Exception as e:
+        raise ValueError('Format error, Key Image is not properly hex-coded') from e
+
+
+def cut_payment_id(parts):
+    if len(parts) == 0:
+        return None, parts
+    payment_id = parts[0]
+    if len(payment_id) != 16 and len(payment_id) != 64:
+        raise ValueError('Payment ID allowed only 8 and 32 B')
+    return payment_id, parts[1:]
+
+
 def parse_transfer_cmd(parts):
     """
     Parses transfer command format
+    transfer [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> <amount> [<payment_id>]
     :param parts:
     :return:
     """
+    if len(parts) < 2:
+        raise ValueError('Format error, too few arguments')
 
-    priority = None
-    mixin = None
-    address = None
-    amount = None
-    payment_id = None
+    parts = list(parts)  # copy
+    res = TransferArgs()
+    res.indices, parts = cut_index(parts)
+    res.priority, parts = cut_priority(parts)
+    res.mixin, parts = cut_mixin(parts)
+    res.address_amounts = []
 
-    ln_parts = len(parts)
-    if ln_parts < 2:
-        raise ValueError("Invalid format")
+    while True:
+        addr, amount, parts = cut_addr_amount(parts)
+        if addr is None:
+            break
 
-    addr_idx = 0
-    p1_num = re.match(r"^[0-9]+$", parts[0])
-    p2_num = re.match(r"^[0-9]+$", parts[1])
-    if p1_num and p2_num:
-        addr_idx = 2
-        priority = int(parts[0])
-        mixin = int(parts[1])
+        res.address_amounts.append((addr, amount))
 
-    elif p1_num and not p2_num:
-        addr_idx = 1
-        mixin = int(parts[0])
+    if len(res.address_amounts) == 0:
+        raise ValueError('Format error')
 
-    else:
-        addr_idx = 0
+    res.payment_id, parts = cut_payment_id(parts)
+    return res
 
-    if ln_parts == 2:
-        address = parts[0]
-        amount = float(parts[1])
 
-    address = parts[addr_idx]
-    amount = float(parts[addr_idx + 1])
+def parse_sweep_all(line):
+    """
+    sweep_all [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> [<payment_id>]
+    :param line:
+    :return:
+    """
+    parts = [x for x in line.split(" ") if len(x.strip()) > 0]
+    res = TransferArgs()
+    res.indices, parts = cut_index(parts)
+    res.priority, parts = cut_priority(parts)
+    res.mixin, parts = cut_mixin(parts)
+    res.address, parts = cut_addr(parts)
+    res.payment_id, parts = cut_payment_id(parts)
+    return res
 
-    if ln_parts == addr_idx + 3:
-        payment_id = parts[addr_idx + 2]
 
-    return priority, mixin, address, amount, payment_id
+def parse_sweep_below(line):
+    """
+    sweep_below <amount_threshold> [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> [<payment_id>]
+    :param line:
+    :return:
+    """
+    parts = [x for x in line.split(" ") if len(x.strip()) > 0]
+    if len(parts) < 2:
+        raise ValueError('Invalid format')
+
+    res = TransferArgs()
+    res.amount_threshold, parts = cut_amount(parts)
+    res.indices, parts = cut_index(parts)
+    res.priority, parts = cut_priority(parts)
+    res.mixin, parts = cut_mixin(parts)
+    res.address, parts = cut_addr(parts)
+    res.payment_id, parts = cut_payment_id(parts)
+    return res
+
+
+def parse_sweep_single(line):
+    """
+    sweep_single [<priority>] [<ring_size>] <key_image> <address> [<payment_id>]
+    :param line:
+    :return:
+    """
+    parts = [x for x in line.split(" ") if len(x.strip()) > 0]
+    if len(parts) < 2:
+        raise ValueError('Invalid format')
+
+    res = TransferArgs()
+    res.priority, parts = cut_priority(parts)
+    res.mixin, parts = cut_mixin(parts)
+    res.key_image, parts = cut_key_image(parts)
+    res.address, parts = cut_addr(parts)
+    res.payment_id, parts = cut_payment_id(parts)
+    return res
 
 
 class SargeLogFilter(logging.Filter):
@@ -238,19 +363,6 @@ def escape_shell(inp):
         pass
 
     quote(inp)
-
-
-def add_readlines(lns, buff):
-    """
-    Cmd output processing helper
-    :param lns:
-    :param buff:
-    :return:
-    """
-    if lns is None or len(lns) == 0:
-        return buff
-    buff += [x.decode("utf8") for x in lns]
-    return buff
 
 
 def wallet_enc_key(salt, password):
