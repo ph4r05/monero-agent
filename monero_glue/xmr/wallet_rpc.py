@@ -89,3 +89,6 @@ class WalletRpc(object):
 
     def sweep_all(self, params=None):
         return self.request("sweep_all", params)
+
+    def sweep_single(self, params=None):
+        return self.request("sweep_single", params)
