@@ -221,7 +221,8 @@ class HostAgent(cli.BaseCli):
         )
 
     def do_height(self, line):
-        self.check_rpc()
+        if not self.check_rpc():
+            return
         res = self.wallet_proxy.height()
         print("Height: %s" % res["result"]["height"])
 
