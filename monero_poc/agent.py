@@ -454,7 +454,7 @@ class HostAgent(cli.BaseCli):
         Connects to the trezor
         :return:
         """
-        if self.args.trezor or self.args.trezor_path or path:
+        if not self.args.poc or (self.args.trezor_path or path):
             from monero_glue.trezor import manager as tmanager
 
             t_path = path if path else self.args.trezor_path
@@ -1414,7 +1414,7 @@ class HostAgent(cli.BaseCli):
         parser.add_argument(
             "--trezor",
             dest="trezor",
-            default=False,
+            default=True,
             action="store_const",
             const=True,
             help="Use Trezor connector",
@@ -1422,6 +1422,15 @@ class HostAgent(cli.BaseCli):
 
         parser.add_argument(
             "--trezor-path", dest="trezor_path", default=None, help="Trezor path"
+        )
+
+        parser.add_argument(
+            "--poc",
+            dest="poc",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Use PoC Trezor emulation",
         )
 
         args_src = sys.argv
