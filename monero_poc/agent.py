@@ -849,7 +849,7 @@ class HostAgent(cli.BaseCli):
 
             dst_cur = err_cur if is_err else out_cur
             for x in buffers:
-                clines = [v.strip() for v in x.split('\n')]
+                clines = [v.strip('\r') for v in x.split('\n')]
                 lines[-1] += clines[0]
                 lines.extend(clines[1:])
 
