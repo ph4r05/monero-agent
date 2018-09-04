@@ -35,13 +35,22 @@ class AddrInfo(object):
             self.payment_id = data[64:]
         else:
             self.payment_id = payment_id
+        self.recompute_addr()
+        return self
 
+    def recompute_addr(self):
         addr = build_address(self.spend_key, self.view_key)
         self.base_addr = public_addr_encode(addr, self.is_sub_address, self.net_type)
         self.addr = public_addr_encode(
             addr, self.is_sub_address, self.net_type, self.payment_id
         )
         return self
+
+    def recompute_sub(self, spend_key, view_key, major=0, minor=0):
+        self.spend_key = spend_key
+        self.view_key = view_key
+        self.is_sub_address = major != 0 and minor != 0
+        self.recompute_addr()
 
 
 def addr_to_hash(addr):
