@@ -854,8 +854,10 @@ class HostAgent(cli.BaseCli):
         if self.args.debug_rpc:
             logger.debug('RPC credentials: trezor:%s' % self.rpc_passwd)
 
-        cmd = "%s %s" % (rpc_cmd, " ".join(args))
+        def preexec_function():
+            os.setpgrp()
 
+        cmd = "%s %s" % (rpc_cmd, " ".join(args))
         feeder = misc.Feeder()
         p = misc.run(
             cmd,
@@ -866,6 +868,7 @@ class HostAgent(cli.BaseCli):
             cwd=os.getcwd(),
             env=None,
             shell=True,
+            preexec_fn=preexec_function
         )
 
         ret_code = 1
