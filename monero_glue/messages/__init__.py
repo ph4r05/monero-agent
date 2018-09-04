@@ -94,10 +94,6 @@ from .MoneroKeyImageSyncFinalRequest import MoneroKeyImageSyncFinalRequest
 from .MoneroKeyImageSyncRequest import MoneroKeyImageSyncRequest
 from .MoneroKeyImageSyncStepAck import MoneroKeyImageSyncStepAck
 from .MoneroKeyImageSyncStepRequest import MoneroKeyImageSyncStepRequest
-from .MoneroLiteAck import MoneroLiteAck
-from .MoneroLiteInitAck import MoneroLiteInitAck
-from .MoneroLiteInitRequest import MoneroLiteInitRequest
-from .MoneroLiteRequest import MoneroLiteRequest
 from .MoneroMultisigKLRki import MoneroMultisigKLRki
 from .MoneroOutputEntry import MoneroOutputEntry
 from .MoneroRctKey import MoneroRctKey
