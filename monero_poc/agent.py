@@ -24,6 +24,7 @@ from monero_glue.agent import agent_lite, agent_misc
 from monero_glue.messages import DebugMoneroDiagRequest, GetEntropy, Entropy
 from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc, daemon_rpc
 from monero_glue.xmr.enc import chacha_poly, chacha
+from monero_glue.xmr.sub import addr as xmr_addr
 from monero_poc.utils import misc, trace_logger
 from monero_poc.utils import cli
 from monero_poc.utils.misc import TrezorAddressMismatchError
@@ -51,6 +52,8 @@ class HostAgent(cli.BaseCli):
 
         self.network_type = None
         self.address = None
+        self.address_info = None  # type: xmr_addr.AddrInfo
+        self.address_base_info = None  # type: xmr_addr.AddrInfo
         self.priv_view = None
         self.pub_view = None
         self.pub_spend = None
@@ -200,6 +203,9 @@ class HostAgent(cli.BaseCli):
 
     do_q = do_quit
     do_Q = do_quit
+
+    # def do_account(self, line):
+    #     self.set_account(int(line))
 
     def do_address(self, line):
         print(self.address.decode("ascii"))
@@ -459,7 +465,7 @@ class HostAgent(cli.BaseCli):
             res = await self.agent.get_watch_only()  # type: messages.MoneroWatchKey
 
             self.priv_view = crypto.decodeint(res.watch_key)
-            self.address = res.address
+            self.set_address(res.address)
             await self.open_with_keys(self.priv_view, self.address)
 
         except Exception as e:
@@ -767,12 +773,12 @@ class HostAgent(cli.BaseCli):
         """
         priv_view = self.args.view_key.encode("ascii")
         self.priv_view = crypto.b16_to_scalar(priv_view)
-        self.address = self.args.address.encode("ascii")
         self.set_network_type(
             monero.NetworkTypes.TESTNET
             if self.args.testnet
             else monero.NetworkTypes.MAINNET
         )
+        self.set_address(self.args.address.encode("ascii"))
         self.wallet_file = self.args.watch_wallet
         self.monero_bin = self.args.monero_bin
         await self.open_with_keys(self.priv_view, self.address)
@@ -803,10 +809,10 @@ class HostAgent(cli.BaseCli):
             plain = chacha_poly.decrypt_pack(wallet_enc_key, binascii.unhexlify(js["view_key_enc"]))
             self.priv_view = crypto.decodeint(plain)
 
-        self.address = js["address"].encode("utf8")
         self.wallet_file = js["wallet_file"]
         self.monero_bin = js["monero_bin"]
         self.set_network_type(js["network_type"])
+        self.set_address(js["address"].encode("utf8"))
         self.rpc_addr = js["rpc_addr"]
 
         await self.open_with_keys(self.priv_view, self.address)
@@ -827,6 +833,24 @@ class HostAgent(cli.BaseCli):
             raise ValueError(
                 "Computed view public key does not match the one from address"
             )
+
+    def set_address(self, address):
+        self.address = address
+        self.address_info = monero.decode_addr(self.address)
+        self.address_base_info = monero.decode_addr(self.address)
+        self.recompute_address()
+
+    def recompute_address(self):
+        D, C = monero.generate_sub_address_keys(
+            self.priv_view, crypto.decodepoint(self.address_base_info.spend_key), self.account_idx, 0)
+
+        self.address_info.recompute_sub(crypto.encodepoint(D), crypto.encodepoint(C), self.account_idx)
+        self.address = self.address_info.addr
+        self.update_prompt()
+
+    def set_account(self, new_accound_idx):
+        self.account_idx = new_accound_idx
+        self.recompute_address()
 
     def wallet_rpc_main(self, *args, **kwargs):
         """
