@@ -1118,9 +1118,10 @@ class HostAgent(cli.BaseCli):
 
         for idx, cur in enumerate(addr_amnt):
             addr_info, tmp_payment_id = self.handle_address_input(cur[0], payment_id)
-            aux_data.destinations.append((addr_info, cur[1]))
+            amount_atomic = misc.amount_to_uint64(cur[1])
+            aux_data.destinations.append((addr_info, amount_atomic))
             destinations.append({
-                'amount': misc.amount_to_uint64(cur[1]),
+                'amount': amount_atomic,
                 'address': addr_info.addr.decode('ascii'),
             })
 
