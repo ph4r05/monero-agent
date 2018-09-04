@@ -630,12 +630,12 @@ class Agent(object):
         """
         return self.ct
 
-    async def get_address(self):
+    async def get_address(self, account=0):
         """
         Get address from the device
         :return:
         """
-        msg = MoneroGetAddress(address_n=self.address_n, network_type=self.network_type)
+        msg = MoneroGetAddress(address_n=self.address_n, network_type=self.network_type, account=account)
         res = await self.trezor.call(msg)
         return res
 
