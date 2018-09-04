@@ -1194,13 +1194,20 @@ class HostAgent(cli.BaseCli):
         self.wait_coro(self.sign_unsigned(unsigned))
 
     def transfer_params(self, params):
-        res = self.wallet_proxy.transfer(params)
+        res = self.wallet_proxy.transfer_split(params)
         if "result" not in res:
             logger.error("Transfer error: %s" % res)
             raise ValueError("Could not transfer")
 
         result = res["result"]
-        print("Fee: %s" % wallet.conv_disp_amount(result["fee"]))
+
+        amounts = common.defvalkey(result, 'amount_list', [common.defvalkey(result, 'amount')])
+        fees = common.defvalkey(result, 'fee_list', [common.defvalkey(result, 'fee')])
+        for idx in range(len(amounts)):
+            st = "Amount: %s" % wallet.conv_disp_amount(amounts[idx])
+            if idx < len(fees):
+                st += ", Fee: %s" % wallet.conv_disp_amount(fees[idx])
+            self.poutput(st)
 
         ask_res = self.ask_proceed_quit("Do you confirm (y/n) ? ")
         if ask_res != self.PROCEED_YES:

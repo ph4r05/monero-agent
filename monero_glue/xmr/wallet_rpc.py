@@ -66,6 +66,9 @@ class WalletRpc(object):
     def transfer(self, params):
         return self.request("transfer", params)
 
+    def transfer_split(self, params):
+        return self.request("transfer_split", params)
+
     def submit_transfer(self, params):
         return self.request("submit_transfer", params)
 
