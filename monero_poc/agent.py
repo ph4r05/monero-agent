@@ -189,7 +189,7 @@ class HostAgent(cli.BaseCli):
         return True
 
     def check_address(self):
-        pres = self.token_cmd(self.agent.get_address())
+        pres = self.token_cmd(self.agent.get_address(account=self.account_idx))
         if self.address != pres.address:
             self.perror("Connected TREZOR address does not match wallet address")
             raise TrezorAddressMismatchError()
@@ -232,7 +232,7 @@ class HostAgent(cli.BaseCli):
         print("Address:   %s" % pres.address.decode("utf8"))
 
     def do_get_address(self, line):
-        pres = self.token_cmd(self.agent.get_address())
+        pres = self.token_cmd(self.agent.get_address(account=self.account_idx))
         print("Address:   %s" % pres.address.decode("utf8"))
 
     def do_balance(self, line):
