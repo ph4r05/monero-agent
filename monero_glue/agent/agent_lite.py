@@ -264,6 +264,7 @@ class Agent(object):
         if aux_data is None or aux_data.destinations is None:
             return []
 
+        integrated_indices = []
         integrated_pairs = []
         for idx, cur in enumerate(aux_data.destinations):
             ainfo = cur[0]
@@ -274,10 +275,10 @@ class Agent(object):
         for idx, dst in enumerate(outputs):
             for ipair in integrated_pairs:
                 if xmr_addr.addr_eq(ipair[0], dst.addr) and dst.amount == ipair[1]:
-                    integrated_pairs.append(idx)
+                    integrated_indices.append(idx)
 
-        logger.debug('Integrated pairs: %s' % len(integrated_pairs))
-        return integrated_pairs
+        logger.debug('Integrated indices: %s' % len(integrated_indices))
+        return integrated_indices
 
     async def sign_transaction_data(
         self, tx, multisig=False, exp_tx_prefix_hash=None, use_tx_keys=None, aux_data=None
@@ -324,8 +325,8 @@ class Agent(object):
         tsx_data.is_multisig = multisig
         tsx_data.exp_tx_prefix_hash = common.defval(exp_tx_prefix_hash, b"")
         tsx_data.use_tx_keys = common.defval(use_tx_keys, [])
+        tsx_data.integrated_indices = self._get_integrated_idx(tsx_data.outputs, aux_data)
         self.ct.tx.unlock_time = tx.unlock_time
-        self._get_integrated_idx(tsx_data.outputs, aux_data)
 
         # Rsig
         num_outputs = len(tsx_data.outputs)
