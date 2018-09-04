@@ -39,6 +39,7 @@ from monero_glue.messages import (
 from monero_glue.protocol_base.base import TError
 from monero_glue.xmr import common, crypto, key_image, monero, ring_ct
 from monero_glue.xmr.enc import chacha_poly
+from monero_glue.xmr.sub import addr as xmr_addr
 from monero_serialize import xmrserialize, xmrtypes
 
 logger = logging.getLogger(__name__)
@@ -128,6 +129,11 @@ class TData(object):
         self.enc_salt2 = None
         self.enc_keys = None  # encrypted tx keys
         self.rv = None
+
+
+class SignAuxData(object):
+    def __init__(self):
+        self.destinations = None  # type: list[tuple[xmr_addr.AddrInfo, int]]
 
 
 class Agent(object):
@@ -254,8 +260,27 @@ class Agent(object):
     def _num_inputs(self):
         return len(self.ct.tx_data.sources)
 
+    def _get_integrated_idx(self, outputs, aux_data=None):
+        if aux_data is None or aux_data.destinations is None:
+            return []
+
+        integrated_pairs = []
+        for idx, cur in enumerate(aux_data.destinations):
+            ainfo = cur[0]
+            if ainfo.is_integrated:
+                caddr = xmr_addr.build_address(ainfo.spend_key, ainfo.view_key)
+                integrated_pairs.append((caddr, cur[1]))
+
+        for idx, dst in enumerate(outputs):
+            for ipair in integrated_pairs:
+                if xmr_addr.addr_eq(ipair[0], dst.addr) and dst.amount == ipair[1]:
+                    integrated_pairs.append(idx)
+
+        logger.debug('Integrated pairs: %s' % len(integrated_pairs))
+        return integrated_pairs
+
     async def sign_transaction_data(
-        self, tx, multisig=False, exp_tx_prefix_hash=None, use_tx_keys=None
+        self, tx, multisig=False, exp_tx_prefix_hash=None, use_tx_keys=None, aux_data=None
     ):
         """
         Uses Trezor to sign the transaction
@@ -264,6 +289,7 @@ class Agent(object):
         :param multisig:
         :param exp_tx_prefix_hash:
         :param use_tx_keys:
+        :param aux_data:
         :return:
         """
         self.ct = TData()
@@ -299,6 +325,7 @@ class Agent(object):
         tsx_data.exp_tx_prefix_hash = common.defval(exp_tx_prefix_hash, b"")
         tsx_data.use_tx_keys = common.defval(use_tx_keys, [])
         self.ct.tx.unlock_time = tx.unlock_time
+        self._get_integrated_idx(tsx_data.outputs, aux_data)
 
         # Rsig
         num_outputs = len(tsx_data.outputs)
