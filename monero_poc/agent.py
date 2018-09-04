@@ -21,6 +21,7 @@ import threading
 import time
 
 from monero_glue.agent import agent_lite, agent_misc
+from monero_glue.agent.agent_lite import SignAuxData
 from monero_glue.messages import DebugMoneroDiagRequest, GetEntropy, Entropy
 from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc, daemon_rpc
 from monero_glue.xmr.enc import chacha_poly, chacha
@@ -1109,14 +1110,15 @@ class HostAgent(cli.BaseCli):
         """
         priority, mixin, payment_id = parts.priority, parts.mixin, parts.payment_id
 
+        aux_data = SignAuxData()
+        aux_data.destinations = []
         addr_amnt = parts.address_amounts
-        addr_infos = []
         destinations = []
         new_payment_id = None
 
         for idx, cur in enumerate(addr_amnt):
             addr_info, tmp_payment_id = self.handle_address_input(cur[0], payment_id)
-            addr_infos.append(addr_info)
+            aux_data.destinations.append((addr_info, cur[1]))
             destinations.append({
                 'amount': misc.amount_to_uint64(cur[1]),
                 'address': addr_info.addr.decode('ascii'),
@@ -1161,7 +1163,7 @@ class HostAgent(cli.BaseCli):
             params["payment_id"] = binascii.hexlify(new_payment_id).decode('ascii')
 
         # Call RPC to prepare unsigned transaction
-        self.transfer_params(params)
+        self.transfer_params(params, aux_data)
 
     def sweep_params(self, parts, is_all=False, is_below=False, is_single=False):
         params = {
@@ -1217,7 +1219,7 @@ class HostAgent(cli.BaseCli):
         unsigned = binascii.unhexlify(result["unsigned_txset"])
         self.wait_coro(self.sign_unsigned(unsigned))
 
-    def transfer_params(self, params):
+    def transfer_params(self, params, aux_data=None):
         res = self.wallet_proxy.transfer_split(params)
         if "result" not in res:
             logger.error("Transfer error: %s" % res)
@@ -1246,15 +1248,15 @@ class HostAgent(cli.BaseCli):
             return
 
         unsigned = binascii.unhexlify(result["unsigned_txset"])
-        self.wait_coro(self.sign_unsigned(unsigned))
+        self.wait_coro(self.sign_unsigned(unsigned, aux_data))
 
-    async def sign_unsigned(self, unsigned_txset):
+    async def sign_unsigned(self, unsigned_txset, aux_data=None):
         """
         Signs unsigned txset with the Trezor
         :param unsigned_txset:
         :return:
         """
-        res = await self.sign_wrap(fdata=unsigned_txset)
+        res = await self.sign_wrap(fdata=unsigned_txset, aux_data=aux_data)
         if isinstance(res, int):
             logger.error("Error")
             return
@@ -1277,11 +1279,12 @@ class HostAgent(cli.BaseCli):
             logger.debug("Res: %s" % res)
             print("Transaction submit failed: %s" % e)
 
-    async def sign_wrap(self, file=None, fdata=None):
+    async def sign_wrap(self, file=None, fdata=None, aux_data=None):
         """
         Sign wrapper
         :param file:
         :param fdata:
+        :param aux_data:
         :return:
         """
         if not self.priv_view:
@@ -1289,7 +1292,7 @@ class HostAgent(cli.BaseCli):
             return -3
 
         try:
-            return await self.sign(file, fdata)
+            return await self.sign(file, fdata, aux_data=aux_data)
 
         except agent_misc.TrezorReturnedError as e:
             self.trace_logger.log(e)
@@ -1300,11 +1303,12 @@ class HostAgent(cli.BaseCli):
             logger.error("Trezor server is not running")
             return 2
 
-    async def sign(self, file=None, fdata=None):
+    async def sign(self, file=None, fdata=None, aux_data=None):
         """
         Performs TX signature
         :param file:
         :param fdata:
+        :param aux_data:
         :return:
         """
         try:
@@ -1332,7 +1336,7 @@ class HostAgent(cli.BaseCli):
             for tx in msg.txes:
                 for idx in range(len(tx.selected_transfers)):
                     max_ki_size = max(max_ki_size, tx.selected_transfers[idx])
-            key_images = [b'\x01' + b'\x00'*31] * (max_ki_size + 1)
+            key_images = [crypto.identity(True)] * (max_ki_size + 1)
 
         txes = []
         pendings = []
@@ -1340,7 +1344,7 @@ class HostAgent(cli.BaseCli):
             print("Signing transaction with Trezor")
             print("Please check the Trezor and confirm / reject the transaction\n")
 
-            res = await self.agent.sign_transaction_data(tx)
+            res = await self.agent.sign_transaction_data(tx, aux_data=aux_data)
             cdata = self.agent.last_transaction_data()
             await self.store_cdata(cdata, res, tx, msg.transfers)
 
