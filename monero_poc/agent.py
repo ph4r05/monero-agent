@@ -213,6 +213,19 @@ class HostAgent(cli.BaseCli):
         self.check_address()
         self.poutput('OK')
 
+    def do_state(self, line):
+        if not self.rpc_running:
+            self.perror('RPC wallet is not running')
+        else:
+            self.poutput('RPC wallet: running')
+
+        if self.rpc_ready:
+            self.poutput('RPC wallet: ready')
+        elif self.fresh_wallet:
+            self.poutput('RPC wallet: synchronising')
+        else:
+            self.poutput('RPC wallet: starting')
+
     def do_get_watch_only(self, line):
         pres = self.token_cmd(self.agent.get_watch_only())
         print("View key:  %s" % binascii.hexlify(pres.watch_key).decode("utf8"))
