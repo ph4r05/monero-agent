@@ -519,12 +519,39 @@ class HostAgent(cli.BaseCli):
         res = self.select(choices, "Please select from connected devices: ")
         return str(r[res])
 
+    def monkey_patch_trezorlib(self):
+        logger.info('Monkey-patching trezorlib with the current messages versions fromt trezor-common')
+        try:
+            import trezorlib
+            from monero_glue import protobuf
+            from monero_glue import messages
+            from trezorlib import protobuf as tprotobuf
+
+            tprotobuf.UVarintType = protobuf.UVarintType
+            tprotobuf.SVarintType = protobuf.SVarintType
+            tprotobuf.BoolType = protobuf.BoolType
+            tprotobuf.BytesType = protobuf.BytesType
+            tprotobuf.UnicodeType = protobuf.UnicodeType
+            tprotobuf.MessageType = protobuf.MessageType
+            trezorlib.messages = messages
+
+            from trezorlib import mapping
+            trezorlib.mapping.map_type_to_class = {}
+            trezorlib.mapping.map_class_to_type = {}
+            trezorlib.mapping.build_map()
+
+        except Exception as e:
+            logger.error('Monkey patching error: %s' % e)
+
     async def connect(self, path=None):
         """
         Connects to the trezor
         :return:
         """
         if not self.args.poc or (self.args.trezor_path or path):
+            if self.args.patch_client:
+                self.monkey_patch_trezorlib()
+
             from monero_glue.trezor import manager as tmanager
 
             t_path = path if path else self.args.trezor_path
@@ -1616,6 +1643,15 @@ class HostAgent(cli.BaseCli):
             action="store_const",
             const=True,
             help="Use PoC Trezor emulation",
+        )
+
+        parser.add_argument(
+            "--patch-client",
+            dest="patch_client",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Monkey pathing of Trezor client",
         )
 
         args_src = sys.argv
