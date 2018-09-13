@@ -148,7 +148,7 @@ def pbkdf2(inp, salt, length=32, count=1000, prf=None):
 def _offset(x, offset=0):
     if offset == 0:
         return x
-    return x[offset:]
+    return memoryview(x)[offset:]
 
 
 def decodepoint(x, offset=0):
