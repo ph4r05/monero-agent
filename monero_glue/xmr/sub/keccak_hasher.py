@@ -59,6 +59,17 @@ class KeccakXmrArchive(object):
     def release(self):
         self.ar = None
 
+    async def buffer(self, buf):
+        return await self.kwriter.awrite(buf)
+
+    async def uvarint(self, i):
+        ar = self._ar(None)
+        await ar.uvarint(i)
+
+    async def uint(self, i, width):
+        ar = self._ar(None)
+        await ar.uint(i, elem_type=None, width=width)
+
     async def field(self, elem=None, elem_type=None, params=None, xser=None):
         ar = self._ar(xser)
         return await ar.field(elem, elem_type, params)
