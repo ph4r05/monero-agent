@@ -94,7 +94,7 @@ class TTransactionBuilder(object):
     def state_load(self, t):
         from monero_glue.protocol.tsx_sign_state import TState
 
-        self._log_trace("Restore: %s" % str(t.state), True)
+        self._mem_trace("Restore: %s" % str(t.state), True)
 
         for attr in t.__dict__:
             if attr.startswith("_"):
@@ -148,14 +148,13 @@ class TTransactionBuilder(object):
                 setattr(t, attr, cval)
         return t
 
-    def _log_trace(self, x=None, collect=False):
+    def _mem_trace(self, x=None, collect=False):
         log.debug(
             __name__,
             "Log trace: %s, ... F: %s A: %s",
             x,
             gc.mem_free(),
             gc.mem_alloc(),
-            # micropython.stack_use(),
         )
         if collect:
             gc.collect()
@@ -215,11 +214,11 @@ class TTransactionBuilder(object):
 
         change_addr = self.change_address()
         if change_addr is None:
-            self._log_trace("No change")
+            self._mem_trace("No change")
             return
 
         if change_idx is None and self.output_change.amount == 0 and len(outputs) == 2:
-            self._log_trace("Sweep tsx")
+            self._mem_trace("Sweep tsx")
             return  # sweep dummy tsx
 
         found = False
@@ -395,45 +394,39 @@ class TTransactionBuilder(object):
         """
         return self._build_key(self.key_enc, b"cout", idx)
 
-    async def gen_hmac_vini(self, src_entr, vini, idx):
+    async def gen_hmac_vini(self, src_entr, vini_bin, idx):
         """
         Computes hmac (TxSourceEntry[i] || tx.vin[i])
         :param src_entr:
-        :param vini:
+        :param vini_bin:
         :param idx:
         :return:
         """
         from .. import protobuf
         from monero_glue.xmr.sub.keccak_hasher import get_keccak_writer
-        from monero_serialize import xmrserialize
-        from monero_serialize.xmrtypes import TxinToKey
 
         kwriter = get_keccak_writer()
-        ar = xmrserialize.Archive(kwriter, True)
         await protobuf.dump_message(kwriter, src_entr)
-        await ar.message(vini, TxinToKey)
+        await kwriter.awrite(vini_bin)
 
         hmac_key_vini = self.hmac_key_txin(idx)
         hmac_vini = crypto.compute_hmac(hmac_key_vini, kwriter.get_digest())
         return hmac_vini
 
-    async def gen_hmac_vouti(self, dst_entr, tx_out, idx):
+    async def gen_hmac_vouti(self, dst_entr, tx_out_bin, idx):
         """
         Generates HMAC for (TxDestinationEntry[i] || tx.vout[i])
         :param dst_entr:
-        :param tx_out:
+        :param tx_out_bin:
         :param idx:
         :return:
         """
         from .. import protobuf
         from monero_glue.xmr.sub.keccak_hasher import get_keccak_writer
-        from monero_serialize import xmrserialize
-        from monero_serialize.xmrtypes import TxOut
 
         kwriter = get_keccak_writer()
         await protobuf.dump_message(kwriter, dst_entr)
-        ar = xmrserialize.Archive(kwriter, True)
-        await ar.message(tx_out, TxOut)
+        await kwriter.awrite(tx_out_bin)
 
         hmac_key_vouti = self.hmac_key_txout(idx)
         hmac_vouti = crypto.compute_hmac(hmac_key_vouti, kwriter.get_digest())
@@ -461,25 +454,24 @@ class TTransactionBuilder(object):
 
         tx_fields = TransactionPrefix.f_specs()
         self.tx_prefix_hasher.keep()
-        await self.tx_prefix_hasher.message_field(self.tx, tx_fields[0])
-        await self.tx_prefix_hasher.message_field(self.tx, tx_fields[1])
-        await self.tx_prefix_hasher.container_size(self.num_inputs(), tx_fields[2][1])
+        await self.tx_prefix_hasher.uvarint(self.tx.version)
+        await self.tx_prefix_hasher.uvarint(self.tx.unlock_time)
+        await self.tx_prefix_hasher.container_size(self.num_inputs())  # ContainerType
         self.tx_prefix_hasher.release()
-        self._log_trace(10, True)
+        self._mem_trace(10, True)
 
-    async def init_transaction(self, tsx_data, tsx_ctr):
+    async def init_transaction(self, tsx_data):
         """
         Initializes a new transaction.
         :param tsx_data:
         :type tsx_data: TsxData
-        :param tsx_ctr:
         :return:
         """
         from monero_glue.xmr.sub.addr import classify_subaddresses
 
         self.gen_r()
         self.state.init_tsx()
-        self._log_trace(1)
+        self._mem_trace(1)
 
         # Ask for confirmation
         confirmation = await self.trezor.iface.confirm_transaction(tsx_data, self.creds)
@@ -490,7 +482,7 @@ class TTransactionBuilder(object):
             return Failure(code=FailureType.ActionCancelled, message="rejected")
 
         gc.collect()
-        self._log_trace(3)
+        self._mem_trace(3)
 
         # Basic transaction parameters
         self.input_count = tsx_data.num_inputs
@@ -534,13 +526,13 @@ class TTransactionBuilder(object):
         self.need_additional_txkeys = num_subaddresses > 0 and (
             num_stdaddresses > 0 or num_subaddresses > 1
         )
-        self._log_trace(4, True)
+        self._mem_trace(4, True)
 
         # Extra processing, payment id
         self.tx.version = 2
         self.tx.unlock_time = tsx_data.unlock_time
         await self.process_payment_id(tsx_data)
-        await self.compute_sec_keys(tsx_data, tsx_ctr)
+        await self.compute_sec_keys(tsx_data)
         gc.collect()
 
         # Iterative tx_prefix_hash hash computation
@@ -554,7 +546,7 @@ class TTransactionBuilder(object):
         # Sub address precomputation
         if tsx_data.account is not None and tsx_data.minor_indices:
             self.precompute_subaddr(tsx_data.account, tsx_data.minor_indices)
-        self._log_trace(5, True)
+        self._mem_trace(5, True)
 
         # HMAC outputs - pinning
         hmacs = []
@@ -563,7 +555,7 @@ class TTransactionBuilder(object):
             hmacs.append(c_hmac)
             gc.collect()
 
-        self._log_trace(6)
+        self._mem_trace(6)
 
         from monero_glue.messages.MoneroTransactionInitAck import (
             MoneroTransactionInitAck
@@ -619,19 +611,17 @@ class TTransactionBuilder(object):
 
         self.tx.extra = tsx_helper.add_extra_nonce_to_tx_extra(b"", extra_nonce)
 
-    async def compute_sec_keys(self, tsx_data, tsx_ctr):
+    async def compute_sec_keys(self, tsx_data):
         """
-        Generate master key H(TsxData || r || c_tsx)
+        Generate master key H(TsxData || r)
         :return:
         """
         from .. import protobuf
         from monero_glue.xmr.sub.keccak_hasher import get_keccak_writer
-        from monero_serialize import xmrserialize
 
         writer = get_keccak_writer()
         await protobuf.dump_message(writer, tsx_data)
         await writer.awrite(crypto.encodeint(self.r))
-        await xmrserialize.dump_uvarint(writer, tsx_ctr)
 
         self.key_master = crypto.keccak_2hash(
             writer.get_digest() + crypto.encodeint(crypto.random_scalar())
@@ -701,6 +691,7 @@ class TTransactionBuilder(object):
             src_entr.real_output_in_tx_index,
         )
         xi, ki, di = secs
+        self._mem_trace(1, True)
 
         # Construct tx.vin
         ki_real = src_entr.multisig_kLRki.ki if self.multi_sig else ki
@@ -713,11 +704,15 @@ class TTransactionBuilder(object):
         if src_entr.rct:
             vini.amount = 0
 
+        # Serialize with variant code for TxinToKey
+        vini_bin = await misc.dump_msg(vini, preallocate=68, prefix=b"\x02")
+        self._mem_trace(2, True)
+
         if self.in_memory():
             self.tx.vin.append(vini)
 
         # HMAC(T_in,i || vin_i)
-        hmac_vini = await self.gen_hmac_vini(src_entr, vini, self.inp_idx)
+        hmac_vini = await self.gen_hmac_vini(src_entr, vini_bin, self.inp_idx)
 
         # PseudoOuts commitment, alphas stored to state
         pseudo_out = None
@@ -753,7 +748,7 @@ class TTransactionBuilder(object):
             await self.tsx_inputs_done()
 
         return MoneroTransactionSetInputAck(
-            vini=await misc.dump_msg(vini, preallocate=64),
+            vini=vini_bin,
             vini_hmac=hmac_vini,
             pseudo_out=pseudo_out,
             pseudo_out_hmac=pseudo_out_hmac,
@@ -839,17 +834,18 @@ class TTransactionBuilder(object):
         # Incremental hashing
         if self.in_memory():
             for idx in range(self.num_inputs()):
-                await self.hash_vini_pseudo_out(self.tx.vin[idx], idx)
-                self._log_trace("i: %s" % idx, True)
+                vini_bin = await misc.dump_msg(self.tx.vin[idx], preallocate=65, prefix=b"\x02")
+                await self.hash_vini_pseudo_out(vini_bin, idx)
+                self._mem_trace("i: %s" % idx, True)
 
-    async def input_vini(self, src_entr, vini, hmac, pseudo_out, pseudo_out_hmac):
+    async def input_vini(self, src_entr, vini_bin, hmac, pseudo_out, pseudo_out_hmac):
         """
         Set tx.vin[i] for incremental tx prefix hash computation.
         After sorting by key images on host.
         Hashes pseudo_out to the final_message.
 
         :param src_entr:
-        :param vini: tx.vin[i]
+        :param vini_bin: tx.vin[i]
         :param hmac: HMAC of tx.vin[i]
         :param pseudo_out: pseudo_out for the current entry
         :param pseudo_out_hmac: hmac of pseudo_out
@@ -873,30 +869,26 @@ class TTransactionBuilder(object):
 
         # HMAC(T_in,i || vin_i)
         hmac_vini = await self.gen_hmac_vini(
-            src_entr, vini, self.source_permutation[self.inp_idx]
+            src_entr, vini_bin, self.source_permutation[self.inp_idx]
         )
         if not common.ct_equal(hmac_vini, hmac):
             raise ValueError("HMAC is not correct")
 
-        await self.hash_vini_pseudo_out(vini, self.inp_idx, pseudo_out, pseudo_out_hmac)
+        await self.hash_vini_pseudo_out(vini_bin, self.inp_idx, pseudo_out, pseudo_out_hmac)
         return MoneroTransactionInputViniAck()
 
     async def hash_vini_pseudo_out(
-        self, vini, inp_idx, pseudo_out=None, pseudo_out_hmac=None
+        self, vini_bin, inp_idx, pseudo_out=None, pseudo_out_hmac=None
     ):
         """
         Incremental hasing of tx.vin[i] and pseudo output
-        :param vini:
+        :param vini_bin:
         :param inp_idx:
         :param pseudo_out:
         :param pseudo_out_hmac:
         :return:
         """
-        # Serialize particular input type
-        from monero_serialize import xmrserialize
-        from monero_serialize.xmrtypes import TxInV
-
-        await self.tx_prefix_hasher.field(vini, TxInV, xser=xmrserialize)
+        await self.tx_prefix_hasher.buffer(vini_bin)
 
         # Pseudo_out incremental hashing - applicable only in simple rct
         if not self.use_simple_rct or self.use_bulletproof:
@@ -920,7 +912,7 @@ class TTransactionBuilder(object):
         :param rsig_data:
         :return:
         """
-        self._log_trace(0)
+        self._mem_trace(0)
         self.state.input_all_done()
         await self.trezor.iface.transaction_step(self.STEP_ALL_IN)
 
@@ -1079,21 +1071,21 @@ class TTransactionBuilder(object):
         # Pedersen commitment on the value, mask from the commitment, range signature.
         C, rsig = None, None
 
-        self._log_trace("pre-rproof", collect=True)
+        self._mem_trace("pre-rproof", collect=True)
         if not self.rsig_offload and self.use_bulletproof:
             rsig = await ring_ct.prove_range_bp_batch(
                 self.output_amounts, self.output_masks
             )
-            self._log_trace("post-bp", collect=True)
+            self._mem_trace("post-bp", collect=True)
 
             # Incremental hashing
             await self.full_message_hasher.rsig_val(rsig, True, raw=False)
-            self._log_trace("post-bp-hash", collect=True)
+            self._mem_trace("post-bp-hash", collect=True)
 
             rsig = await misc.dump_msg_gc(
                 rsig, preallocate=ring_ct.bp_size(batch_size) + 8, del_msg=True
             )
-            self._log_trace("post-bp-ser, size: %s" % len(rsig), collect=True)
+            self._mem_trace("post-bp-ser, size: %s" % len(rsig), collect=True)
 
         elif not self.rsig_offload and not self.use_bulletproof:
             rsig_buff = bytearray(32 * (64 + 64 + 64 + 1))
@@ -1123,7 +1115,7 @@ class TTransactionBuilder(object):
             await self.full_message_hasher.rsig_val(bp_obj, True, raw=False)
             res = await ring_ct.verify_bp(bp_obj, self.output_amounts, masks)
             self.assrt(res, "BP verification fail")
-            self._log_trace("BP verified", collect=True)
+            self._mem_trace("BP verified", collect=True)
             del (bp_obj, ring_ct)
 
         elif self.rsig_offload and not self.use_bulletproof:
@@ -1133,7 +1125,7 @@ class TTransactionBuilder(object):
         else:
             raise misc.TrezorError("Unexpected rsig state")
 
-        self._log_trace("rproof", collect=True)
+        self._mem_trace("rproof", collect=True)
         self.output_amounts = []
         if not self.rsig_offload:
             self.output_masks = []
@@ -1215,22 +1207,20 @@ class TTransactionBuilder(object):
         return derivation
 
     async def _set_out1_tx_out(self, dst_entr, tx_out_key):
-        from monero_serialize.xmrtypes import TxoutToKey
-        from monero_serialize.xmrtypes import TxOut
-
-        tk = TxoutToKey(key=crypto.encodepoint(tx_out_key))
-        tx_out = TxOut(amount=0, target=tk)
-        self._log_trace(8)
+        # Manual serialization of TxOut(0, TxoutToKey(key))
+        tx_out_bin = bytearray(34)
+        tx_out_bin[0] = 0  # amount varint
+        tx_out_bin[1] = 2  # variant code TxoutToKey
+        crypto.encodepoint_into(tx_out_bin, tx_out_key, 2)
+        self._mem_trace(8)
 
         # Tx header prefix hashing
-        await self.tx_prefix_hasher.field(tx_out, TxOut)
-        self._log_trace(9, True)
+        await self.tx_prefix_hasher.buffer(tx_out_bin)
+        self._mem_trace(9, True)
 
         # Hmac dest_entr.
-        hmac_vouti = await self.gen_hmac_vouti(dst_entr, tx_out, self.out_idx)
-        self._log_trace(10, True)
-
-        tx_out_bin = await misc.dump_msg(tx_out, preallocate=34)
+        hmac_vouti = await self.gen_hmac_vouti(dst_entr, tx_out_bin, self.out_idx)
+        self._mem_trace(10, True)
         return tx_out_bin, hmac_vouti
 
     async def set_out1(self, dst_entr, dst_entr_hmac, rsig_data=None):
@@ -1243,20 +1233,20 @@ class TTransactionBuilder(object):
         :param rsig_data
         :return:
         """
-        self._log_trace(0, True)
+        self._mem_trace(0, True)
         mods = utils.unimport_begin()
 
         await self.trezor.iface.transaction_step(
             self.STEP_OUT, self.out_idx + 1, self.num_dests()
         )
-        self._log_trace(1)
+        self._mem_trace(1)
 
         if self.state.is_input_vins() and self.inp_idx + 1 != self.num_inputs():
             raise ValueError("Invalid number of inputs")
 
         self.state.set_output()
         self.out_idx += 1
-        self._log_trace(2, True)
+        self._mem_trace(2, True)
 
         if dst_entr.amount <= 0 and self.tx.version <= 1:
             raise ValueError("Destination with wrong amount: %s" % dst_entr.amount)
@@ -1266,21 +1256,21 @@ class TTransactionBuilder(object):
         if not common.ct_equal(dst_entr_hmac, dst_entr_hmac_computed):
             raise ValueError("HMAC invalid")
         del (dst_entr_hmac, dst_entr_hmac_computed)
-        self._log_trace(3, True)
+        self._mem_trace(3, True)
 
         # First output - tx prefix hasher - size of the container
         if self.out_idx == 0:
             await self._set_out1_prefix()
-        self._log_trace(4, True)
+        self._mem_trace(4, True)
 
         self.summary_outs_money += dst_entr.amount
         utils.unimport_end(mods)
-        self._log_trace(5, True)
+        self._mem_trace(5, True)
 
         # Range proof first, memory intensive
         rsig, mask = await self._range_proof(self.out_idx, dst_entr.amount, rsig_data)
         utils.unimport_end(mods)
-        self._log_trace(6, True)
+        self._mem_trace(6, True)
 
         # Amount key, tx out key
         additional_txkey_priv = await self._set_out1_additional_keys(dst_entr)
@@ -1290,11 +1280,11 @@ class TTransactionBuilder(object):
             derivation, self.out_idx, crypto.decodepoint(dst_entr.addr.spend_public_key)
         )
         del (derivation, additional_txkey_priv)
-        self._log_trace(7, True)
+        self._mem_trace(7, True)
 
         # Tx header prefix hashing, hmac dst_entr
         tx_out_bin, hmac_vouti = await self._set_out1_tx_out(dst_entr, tx_out_key)
-        self._log_trace(11, True)
+        self._mem_trace(11, True)
 
         # Out_pk, ecdh_info
         out_pk, ecdh_info = await self._set_out1_ecdh(
@@ -1304,18 +1294,18 @@ class TTransactionBuilder(object):
             mask=mask,
             amount_key=amount_key,
         )
-        self._log_trace(12, True)
+        self._mem_trace(12, True)
 
         # Incremental hashing of the ECDH info.
         # RctSigBase allows to hash only one of the (ecdh, out_pk) as they are serialized
         # as whole vectors. Hashing ECDH info saves state space.
         await self.full_message_hasher.set_ecdh(ecdh_info)
-        self._log_trace(13, True)
+        self._mem_trace(13, True)
 
         # Output_pk is stored to the state as it is used during the signature and hashed to the
         # RctSigBase later.
         self.output_pk.append(out_pk)
-        self._log_trace(14, True)
+        self._mem_trace(14, True)
 
         from monero_glue.messages.MoneroTransactionSetOutputAck import (
             MoneroTransactionSetOutputAck
@@ -1361,10 +1351,10 @@ class TTransactionBuilder(object):
 
         :return: tx.extra, tx_prefix_hash
         """
-        self._log_trace(0)
+        self._mem_trace(0)
         self.state.set_output_done()
         await self.trezor.iface.transaction_step(self.STEP_ALL_OUT)
-        self._log_trace(1)
+        self._mem_trace(1)
 
         if self.out_idx + 1 != self.num_dests():
             raise ValueError("Invalid out num")
@@ -1383,7 +1373,7 @@ class TTransactionBuilder(object):
                     self.summary_outs_money,
                 )
             )
-        self._log_trace(2)
+        self._mem_trace(2)
 
         # Set public key to the extra
         # Not needed to remove - extra is clean
@@ -1391,7 +1381,7 @@ class TTransactionBuilder(object):
         self.additional_tx_public_keys = None
 
         gc.collect()
-        self._log_trace(3)
+        self._mem_trace(3)
 
         if self.summary_outs_money > self.summary_inputs_money:
             raise ValueError(
@@ -1404,7 +1394,7 @@ class TTransactionBuilder(object):
         extra_b = self.tx.extra
         self.tx = None
         gc.collect()
-        self._log_trace(4)
+        self._mem_trace(4)
 
         # Txprefix match check for multisig
         if not common.is_empty(self.exp_tx_prefix_hash) and not common.ct_equal(
@@ -1414,7 +1404,7 @@ class TTransactionBuilder(object):
             raise misc.TrezorTxPrefixHashNotMatchingError("Tx prefix invalid")
 
         gc.collect()
-        self._log_trace(5)
+        self._mem_trace(5)
 
         from monero_glue.messages.MoneroRingCtSig import MoneroRingCtSig
         from monero_glue.messages.MoneroTransactionAllOutSetAck import (
@@ -1474,7 +1464,7 @@ class TTransactionBuilder(object):
     async def sign_input(
         self,
         src_entr,
-        vini,
+        vini_bin,
         hmac_vini,
         pseudo_out,
         pseudo_out_hmac,
@@ -1485,7 +1475,7 @@ class TTransactionBuilder(object):
         Generates a signature for one input.
 
         :param src_entr: Source entry
-        :param vini: tx.vin[i] for the transaction. Contains key image, offsets, amount (usually zero)
+        :param vini_bin: tx.vin[i] for the transaction. Contains key image, offsets, amount (usually zero)
         :param hmac_vini: HMAC for the tx.vin[i] as returned from Trezor
         :param pseudo_out: pedersen commitment for the current input, uses alpha as the mask.
         Only in memory offloaded scenario. Tuple containing HMAC, as returned from the Trezor.
@@ -1513,12 +1503,12 @@ class TTransactionBuilder(object):
         inv_idx = self.source_permutation[self.inp_idx]
 
         # Check HMAC of all inputs
-        hmac_vini_comp = await self.gen_hmac_vini(src_entr, vini, inv_idx)
+        hmac_vini_comp = await self.gen_hmac_vini(src_entr, vini_bin, inv_idx)
         if not common.ct_equal(hmac_vini_comp, hmac_vini):
             raise ValueError("HMAC is not correct")
 
         gc.collect()
-        self._log_trace(1)
+        self._mem_trace(1)
 
         if self.use_simple_rct and not self.in_memory():
             pseudo_out_hmac_comp = crypto.compute_hmac(
@@ -1528,7 +1518,7 @@ class TTransactionBuilder(object):
                 raise ValueError("HMAC is not correct")
 
             gc.collect()
-            self._log_trace(2)
+            self._mem_trace(2)
 
             from monero_glue.xmr.enc import chacha_poly
 
@@ -1558,7 +1548,7 @@ class TTransactionBuilder(object):
             input_secret = self.input_secrets[self.inp_idx]
 
         gc.collect()
-        self._log_trace(3)
+        self._mem_trace(3)
 
         # Basic setup, sanity check
         index = src_entr.real_output
@@ -1582,7 +1572,7 @@ class TTransactionBuilder(object):
         )
 
         gc.collect()
-        self._log_trace(4)
+        self._mem_trace(4)
 
         # RCT signature
         gc.collect()
@@ -1635,7 +1625,7 @@ class TTransactionBuilder(object):
                 )
 
         gc.collect()
-        self._log_trace(5)
+        self._mem_trace(5)
 
         # Encode
         from monero_glue.xmr.sub.recode import recode_msg
@@ -1644,7 +1634,7 @@ class TTransactionBuilder(object):
         cout = None
 
         gc.collect()
-        self._log_trace(6)
+        self._mem_trace(6)
 
         # Multisig values returned encrypted, keys returned after finished successfully.
         if self.multi_sig:
@@ -1658,7 +1648,7 @@ class TTransactionBuilder(object):
             await self.trezor.iface.transaction_signed()
 
         gc.collect()
-        self._log_trace()
+        self._mem_trace()
 
         from monero_glue.messages.MoneroTransactionSignInputAck import (
             MoneroTransactionSignInputAck

@@ -365,7 +365,8 @@ class Agent(object):
             )  # type: MoneroTransactionSetInputAck
             self.handle_error(t_res)
 
-            vini = await tmisc.parse_msg(t_res.vini, xmrtypes.TxinToKey())
+            vini_p = await tmisc.parse_msg(t_res.vini, xmrtypes.TxInV())
+            vini = vini_p.txin_to_key
             self.ct.tx.vin.append(vini)
             self.ct.tx_in_hmacs.append(t_res.vini_hmac)
             self.ct.pseudo_outs.append((t_res.pseudo_out, t_res.pseudo_out_hmac))
@@ -412,7 +413,7 @@ class Agent(object):
             for idx in range(len(self.ct.tx.vin)):
                 msg = MoneroTransactionInputViniRequest(
                     src_entr=tmisc.translate_monero_src_entry_pb(tx.sources[idx]),
-                    vini=await tmisc.dump_msg(self.ct.tx.vin[idx]),
+                    vini=await tmisc.dump_msg(self.ct.tx.vin[idx], prefix=b"\x02"),
                     vini_hmac=self.ct.tx_in_hmacs[idx],
                     pseudo_out=self.ct.pseudo_outs[idx][0] if not in_memory else None,
                     pseudo_out_hmac=self.ct.pseudo_outs[idx][1]
@@ -502,7 +503,7 @@ class Agent(object):
         for idx, src in enumerate(tx.sources):
             msg = MoneroTransactionSignInputRequest(
                 src_entr=tmisc.translate_monero_src_entry_pb(src),
-                vini=await tmisc.dump_msg(self.ct.tx.vin[idx]),
+                vini=await tmisc.dump_msg(self.ct.tx.vin[idx], prefix=b"\x02"),
                 vini_hmac=self.ct.tx_in_hmacs[idx],
                 pseudo_out=self.ct.pseudo_outs[idx][0] if not in_memory else None,
                 pseudo_out_hmac=self.ct.pseudo_outs[idx][1] if not in_memory else None,

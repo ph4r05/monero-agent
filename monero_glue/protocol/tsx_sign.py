@@ -18,7 +18,6 @@ class TsxSigner(object):
         from apps.monero.controller import iface
 
         self.ctx = None
-        self.tsx_ctr = 0
         self.err_ctr = 0
         self.tsx_obj = None  # type: TTransactionBuilder
         self.creds = None  # type: apps.monero.xmr.sub.creds.AccountCreds
@@ -146,9 +145,8 @@ class TsxSigner(object):
         :param tsx_data:
         :return:
         """
-        self.tsx_ctr += 1
         try:
-            return await self.tsx_obj.init_transaction(tsx_data, self.tsx_ctr)
+            return await self.tsx_obj.init_transaction(tsx_data)
         except Exception as e:
             await self.tsx_exc_handler(e)
             raise
@@ -191,11 +189,8 @@ class TsxSigner(object):
         :return:
         """
         try:
-            vini = await misc.parse_vini(msg.vini)
-            del msg.vini
-
             return await self.tsx_obj.input_vini(
-                msg.src_entr, vini, msg.vini_hmac, msg.pseudo_out, msg.pseudo_out_hmac
+                msg.src_entr, msg.vini, msg.vini_hmac, msg.pseudo_out, msg.pseudo_out_hmac
             )
         except Exception as e:
             await self.tsx_exc_handler(e)
@@ -273,12 +268,9 @@ class TsxSigner(object):
         :return:
         """
         try:
-            vini = await misc.parse_vini(msg.vini)
-            del msg.vini
-
             return await self.tsx_obj.sign_input(
                 msg.src_entr,
-                vini,
+                msg.vini,
                 msg.vini_hmac,
                 msg.pseudo_out,
                 msg.pseudo_out_hmac,
