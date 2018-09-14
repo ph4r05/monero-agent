@@ -1,3 +1,4 @@
+import random
 import re
 import io
 import os
@@ -65,7 +66,6 @@ class TestGen(object):
 
         self.add_additionals = False
         self.dest_sub_major = 0
-        self.dest_sub_minor = 0
 
     async def process(self, idx, inp):
         is_stdin = False
@@ -81,7 +81,7 @@ class TestGen(object):
             unsigned_tx = await wallet.load_unsigned_tx(self.cur_keys.view_key_private, data)
 
             if self.args.desc:
-                await self.describe(inp, unsigned_tx)
+                await self.describe(inp, unsigned_tx, self.cur_keys, self.cur_subs)
 
             if self.dest_keys is None:
                 return
@@ -92,7 +92,16 @@ class TestGen(object):
 
             if self.args.output:
                 nbase = 'output.bin' if is_stdin else os.path.basename(inp)
+                nbase_fname, nbase_ext = os.path.splitext(nbase)
+                if self.args.suffix:
+                    nbase_fname += self.args.suffix
+
+                nbase = nbase_fname + nbase_ext
                 ndest = os.path.join(self.args.output, nbase)
+
+                if self.args.desc:
+                    await self.describe(ndest, new_unsigned, self.dest_keys, self.dest_subs)
+
                 with open(ndest, 'wb') as fh:
                     fh.write(new_bin)
                 logger.info('Result written to: %s' % ndest)
@@ -126,7 +135,7 @@ class TestGen(object):
         sub_idx = subaddr_recv_info[0]
         return sub_idx
 
-    async def describe(self, inp, unsigned_txs):
+    async def describe(self, inp, unsigned_txs, keys, key_subs):
         print('Inp: %s, #txs: %s' % (inp, len(unsigned_txs.txes)))
         for txid, tx in enumerate(unsigned_txs.txes):
             srcs = tx.sources
@@ -166,7 +175,7 @@ class TestGen(object):
             accounts = set()
             subs = set()
             for inp in srcs:
-                res = await self.analyze_input(self.cur_keys, self.cur_subs, inp)
+                res = await self.analyze_input(keys, key_subs, inp)
                 accounts.add(res[0])
                 if res != (0, 0):
                     subs.add(res)
@@ -190,12 +199,15 @@ class TestGen(object):
         for tx in unsigned_txs.txes:
             tx.use_bulletproofs = False
             logger.debug(
-                "Transaction with %s inputs, %s oputpus, %s mix ring"
+                "Transaction with %s inputs, %s outputs, %s mix ring"
                 % (len(tx.sources), len(tx.splitted_dsts), len(tx.sources[0].outputs))
             )
 
             for inp in tx.sources:
                 self.rekey_input(inp, self.cur_keys, self.cur_subs, self.dest_keys, self.dest_subs)
+
+            tx.subaddr_account = self.dest_sub_major
+            tx.subaddr_indices = self.args.minors
 
         return unsigned_txs
 
@@ -220,13 +232,14 @@ class TestGen(object):
         xi, ki, di = secs
 
         need_additional = additional_keys and len(additional_keys) > 0
-        is_dst_sub = self.dest_sub_major != 0 and self.dest_sub_minor != 0
+        is_dst_sub = self.dest_sub_major != 0 and (self.args.minors[0] != 0 or len(self.args.minors) > 1)
 
         if is_dst_sub and self.add_additionals:
             need_additional = True
 
         if is_dst_sub:
-            m = monero.get_subaddress_secret_key(new_keys.view_key_private, major=self.dest_sub_major, minor=self.dest_sub_minor)
+            rand_minor = random.choice(self.args.minors)
+            m = monero.get_subaddress_secret_key(new_keys.view_key_private, major=self.dest_sub_major, minor=rand_minor)
             M = crypto.scalarmult_base(m)
             d = crypto.sc_add(m, new_keys.spend_key_private)
             D = crypto.point_add(new_keys.spend_key_public, M)
@@ -282,8 +295,6 @@ class TestGen(object):
 
         logger.debug('New pub: %s' % binascii.hexlify(real_out_key.dest))
 
-        # TODO: update unsigned tx data for account, subindices
-
         # Self-check
         secs = monero.generate_key_image_helper(
             new_keys,
@@ -319,7 +330,6 @@ class TestGen(object):
         self.cur_keys = self.parse_keys(self.args.current)
         self.dest_keys = self.parse_keys(self.args.dest, "destination")
         self.dest_sub_major = self.args.major
-        self.dest_sub_minor = self.args.minor
         self.add_additionals = self.args.add_extra
         self.precompute_subaddr(self.cur_keys, self.cur_subs)
         self.precompute_subaddr(self.dest_keys, self.dest_subs)
@@ -357,13 +367,6 @@ class TestGen(object):
         )
 
         parser.add_argument(
-            "--minor",
-            default=0,
-            type=int,
-            help="Destination minor address index",
-        )
-
-        parser.add_argument(
             "--minors",
             default=[0],
             type=int,
@@ -378,6 +381,13 @@ class TestGen(object):
             action="store_const",
             const=True,
             help="Generate test file descriptors",
+        )
+
+        parser.add_argument(
+            "--suffix",
+            dest="suffix",
+            default="",
+            help="Generated tsx files suffix",
         )
 
         parser.add_argument('--add-extra', dest='add_extra', action='store_const', const=True, default=False,
