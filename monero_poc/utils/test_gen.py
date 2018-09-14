@@ -136,7 +136,7 @@ class TestGen(object):
         return sub_idx
 
     async def describe(self, inp, unsigned_txs, keys, key_subs):
-        print('Inp: %s, #txs: %s' % (inp, len(unsigned_txs.txes)))
+        print('\nInp: %s, #txs: %s' % (inp, len(unsigned_txs.txes)))
         for txid, tx in enumerate(unsigned_txs.txes):
             srcs = tx.sources
             dsts = tx.splitted_dsts
@@ -159,7 +159,7 @@ class TestGen(object):
 
             num_stdaddresses, num_subaddresses, single_dest_subaddress = addr.classify_subaddresses(out_txs2, change_addr)
 
-            print('  tx: %s, #inp: %02d, #inp_add: %02d, #out: %02d, acc: %s, subs: %s, '
+            print('  tx: %s, #inp: %2d, #inp_add: %2d, #out: %2d, acc: %s, subs: %s, '
                   'xmr_in: %10.6f, xmr_out: %10.6f, fee: %10.6f, change: %10.6f, out_clean: %10.6f'
                   % (txid, len(srcs), n_inp_additional, len(dsts),
                      account, subs,
@@ -169,7 +169,7 @@ class TestGen(object):
                      wallet.conv_disp_amount(change.amount) if change else 0,
                      wallet.conv_disp_amount((amnt_out - change.amount) if change else amnt_out),
                      ))
-            print('  Out: num_std: %02d, num_sub: %02d, single_dest_sub: %s'
+            print('  Out: num_std: %2d, num_sub: %2d, single_dest_sub: %s'
                   % (num_stdaddresses, num_subaddresses, 1 if single_dest_subaddress else 0))
 
             accounts = set()
