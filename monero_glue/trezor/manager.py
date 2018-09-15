@@ -4,12 +4,16 @@
 
 
 import os
+import logging
 
 from monero_glue.hwtoken import token
 from monero_glue.protocol_base.messages import MessageConverter
 
 from trezorlib.client import TrezorClient, TrezorClientDebugLink
 from trezorlib.transport import enumerate_devices, get_transport
+
+
+logger = logging.getLogger(__name__)
 
 
 class TrezorSession(object):
@@ -54,7 +58,7 @@ class Trezor(token.TokenLite):
                 self.debuglink = self.wirelink.find_debug()
                 self.client.set_debuglink(self.debuglink)
             except Exception as e:
-                pass
+                logger.warning(e)
 
     def _to_tlib(self, msg):
         return self.msg_conv.to_trezorlib(msg)
