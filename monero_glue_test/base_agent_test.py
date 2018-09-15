@@ -85,7 +85,9 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
         )
 
     def get_trezor_tsx_tests(self):
-        return [('tsx_t_uns_%02d.txt' % i) for i in range(1, 17)]
+        return [('tsx_t_uns_%02d.txt' % i) for i in range(1, 18)] \
+               + [('tsx_t_uns_%02d_sub.txt' % i) for i in [8, 12]] \
+               + [('tsx_t_uns_%02d_sub_add.txt' % i) for i in [8, 12]]
 
     def get_data_file(self, fl):
         return pkg_resources.resource_string(
@@ -265,7 +267,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
         for idx, creds in enumerate(all_creds):
             wallet_subs = {}
             for account in range(0, 5):
-                monero.compute_subaddresses(creds, account, range(5), wallet_subs)
+                monero.compute_subaddresses(creds, account, range(25), wallet_subs)
 
             derivation = monero.generate_key_derivation(
                 crypto.decodepoint(tx_pub), creds.view_key_private
