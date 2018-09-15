@@ -11,7 +11,7 @@ import sys
 import binascii
 
 from monero_serialize.helpers import ArchiveException
-from monero_serialize.xmrtypes import TxExtraPubKey, TxExtraNonce, TxExtraAdditionalPubKeys
+from monero_serialize.xmrtypes import TxExtraPubKey, TxExtraNonce, TxExtraAdditionalPubKeys, TxDestinationEntry
 
 from monero_glue.hwtoken import misc
 from monero_glue.xmr import wallet, crypto, monero
@@ -230,6 +230,20 @@ class TestGen(object):
         tx.splitted_dsts[change_idx].addr.m_spend_public_key = change_addr.spend_public_key
         tx.splitted_dsts[change_idx].addr.m_view_public_key = change_addr.view_public_key
 
+    async def amplify_outs(self, tx):
+        lst = tx.splitted_dsts[-1]
+        orig_amount = lst.amount
+        partial = orig_amount // (self.args.outs + 1)
+        amnt_sum = partial
+        lst.amount = partial
+
+        for i in range(1, self.args.outs + 1):
+            is_lst = i >= self.args.outs
+            new_amnt = orig_amount - amnt_sum if is_lst else partial
+            amnt_sum += partial
+            new_tx = TxDestinationEntry(amount=new_amnt, is_subaddress=lst.is_subaddress, addr=lst.addr)
+            tx.splitted_dsts.append(new_tx)
+
     async def rekey_unsigned(self, unsigned_txs):
         for tx in unsigned_txs.txes:
             tx.use_bulletproofs = False
@@ -246,6 +260,9 @@ class TestGen(object):
 
             tx.subaddr_account = self.dest_sub_major
             tx.subaddr_indices = self.args.minors
+
+            if self.args.outs is not None:
+                await self.amplify_outs(tx)
 
         return unsigned_txs
 
@@ -427,6 +444,14 @@ class TestGen(object):
             dest="suffix",
             default="",
             help="Generated tsx files suffix",
+        )
+
+        parser.add_argument(
+            "--outs",
+            dest="outs",
+            default=None,
+            type=int,
+            help="Amplify the last output to outs - increases tx outputs",
         )
 
         parser.add_argument('--add-extra', dest='add_extra', action='store_const', const=True, default=False,
