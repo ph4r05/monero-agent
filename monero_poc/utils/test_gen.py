@@ -135,6 +135,19 @@ class TestGen(object):
         sub_idx = subaddr_recv_info[0]
         return sub_idx
 
+    async def reformat_out(self, out):
+        res = misc.StdObj(amount=out.amount,
+                          addr=addr.build_address(out.addr.m_spend_public_key,
+                                                  out.addr.m_view_public_key),
+                          is_subaddress=out.is_subaddress)
+        return res
+
+    async def reformat_outs(self, dsts):
+        out_txs2 = []
+        for o in dsts:
+            out_txs2.append(await self.reformat_out(o))
+        return out_txs2
+
     async def describe(self, inp, unsigned_txs, keys, key_subs):
         print('\nInp: %s, #txs: %s' % (inp, len(unsigned_txs.txes)))
         for txid, tx in enumerate(unsigned_txs.txes):
@@ -150,12 +163,7 @@ class TestGen(object):
             n_inp_additional = sum([1 for x in srcs if len(x.real_out_additional_tx_keys) > 0])
 
             change_addr = addr.build_address(change.addr.m_spend_public_key, change.addr.m_view_public_key) if change else None
-            out_txs2 = []
-            for o in dsts:
-                out_txs2.append(misc.StdObj(amount=o.amount,
-                                            addr=addr.build_address(o.addr.m_spend_public_key,
-                                                                    o.addr.m_view_public_key),
-                                            is_subaddress=o.is_subaddress))
+            out_txs2 = await self.reformat_outs(dsts)
 
             num_stdaddresses, num_subaddresses, single_dest_subaddress = addr.classify_subaddresses(out_txs2, change_addr)
 
@@ -195,6 +203,33 @@ class TestGen(object):
                     extras_val.append(str(c))
             print('  Extras: %s' % ', '.join(extras_val))
 
+    async def primary_change_address(self, key, account):
+        D, C = monero.generate_sub_address_keys(
+            key.view_key_private,
+            crypto.scalarmult_base(key.spend_key_private),
+            account,
+            0,
+        )
+        return misc.StdObj(
+            view_public_key=crypto.encodepoint(C),
+            spend_public_key=crypto.encodepoint(D),
+        )
+
+    async def adjust_change(self, tx):
+        logger.debug('Change addr adjust')
+        out_txs2 = await self.reformat_outs(tx.splitted_dsts)
+        change_dts = await self.reformat_out(tx.change_dts) if tx.change_dts else None
+        change_idx = addr.get_change_addr_idx(out_txs2, change_dts)
+        if change_idx is None:
+            return
+
+        change_addr = await self.primary_change_address(self.dest_keys, self.dest_sub_major)
+        tx.change_dts.addr.m_spend_public_key = change_addr.spend_public_key
+        tx.change_dts.addr.m_view_public_key = change_addr.view_public_key
+
+        tx.splitted_dsts[change_idx].addr.m_spend_public_key = change_addr.spend_public_key
+        tx.splitted_dsts[change_idx].addr.m_view_public_key = change_addr.view_public_key
+
     async def rekey_unsigned(self, unsigned_txs):
         for tx in unsigned_txs.txes:
             tx.use_bulletproofs = False
@@ -205,6 +240,9 @@ class TestGen(object):
 
             for inp in tx.sources:
                 self.rekey_input(inp, self.cur_keys, self.cur_subs, self.dest_keys, self.dest_subs)
+
+            if tx.change_dts and tx.subaddr_account != self.dest_sub_major:
+                await self.adjust_change(tx)
 
             tx.subaddr_account = self.dest_sub_major
             tx.subaddr_indices = self.args.minors
@@ -231,8 +269,9 @@ class TestGen(object):
         )
         xi, ki, di = secs
 
-        need_additional = additional_keys and len(additional_keys) > 0
+        need_additional = additional_keys is not None and len(additional_keys) > 0
         is_dst_sub = self.dest_sub_major != 0 and (self.args.minors[0] != 0 or len(self.args.minors) > 1)
+        logger.debug('Is dst sub: %s, need additional: %s' % (is_dst_sub, need_additional))
 
         if is_dst_sub and self.add_additionals:
             need_additional = True
@@ -259,7 +298,7 @@ class TestGen(object):
             r = crypto.random_scalar()
             tx_key = crypto.scalarmult(D, r)
             new_deriv = crypto.generate_key_derivation(C, r)
-            new_out_pr = crypto.derive_secret_key(new_deriv, inp.real_output_in_tx_index, new_keys.spend_key_private)
+            new_out_pr = crypto.derive_secret_key(new_deriv, inp.real_output_in_tx_index, d)
             new_out = crypto.scalarmult_base(new_out_pr)
             real_out_key.dest = crypto.encodepoint(new_out)
 
