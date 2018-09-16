@@ -33,6 +33,7 @@ class LogAnalyzer(object):
         line = line.strip()
         m = re.match(r'^(\d+)\s([^\s]+?)\s([^\s]+?)\s(.*)$', line)
         if m is None:
+            print(line)
             return
 
         ctime_r = time.time()
