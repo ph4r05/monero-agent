@@ -269,14 +269,14 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
             for account in range(0, 5):
                 monero.compute_subaddresses(creds, account, range(25), wallet_subs)
 
-            derivation = monero.generate_key_derivation(
+            derivation = crypto.generate_key_derivation(
                 crypto.decodepoint(tx_pub), creds.view_key_private
             )
             additional_derivations = []
             if additional_pub_keys and additional_pub_keys.data:
                 for x in additional_pub_keys.data:
                     additional_derivations.append(
-                        monero.generate_key_derivation(
+                        crypto.generate_key_derivation(
                             crypto.decodepoint(x), creds.view_key_private
                         )
                     )

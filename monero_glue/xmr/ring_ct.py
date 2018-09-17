@@ -101,6 +101,104 @@ def bp_comm_to_v(C):
     return crypto.point_mulinv8(C)
 
 
+def prove_range_chunked(amount, last_mask=None):
+    a = crypto.sc_init(0)
+    si = crypto.sc_init(0)
+    c = crypto.sc_init(0)
+    ee = crypto.sc_init(0)
+    tmp_ai = crypto.sc_init(0)
+    tmp_alpha = crypto.sc_init(0)
+
+    C_acc = crypto.identity()
+    C_h = crypto.gen_H()
+    C_tmp = crypto.identity()
+    L = crypto.identity()
+    Zero = crypto.identity()
+    kck = crypto.get_keccak()
+
+    ai = bytearray(32 * 64)
+    alphai = bytearray(32 * 64)
+    buff = bytearray(32)
+
+    Cis = bytearray(32 * 64)
+    s0s = bytearray(32 * 64)
+    s1s = bytearray(32 * 64)
+    ee_bin = bytearray(32)
+
+    for ii in range(64):
+        crypto.random_scalar_into(tmp_ai)
+        if last_mask is not None and ii == 63:
+            crypto.sc_sub_into(tmp_ai, last_mask, a)
+
+        crypto.sc_add_into(a, a, tmp_ai)
+        crypto.random_scalar_into(tmp_alpha)
+
+        crypto.scalarmult_base_into(L, tmp_alpha)
+        crypto.scalarmult_base_into(C_tmp, tmp_ai)
+
+        # C_tmp += &Zero if BB(ii) == 0 else &C_h
+        crypto.point_add_into(C_tmp, C_tmp, Zero if ((amount >> ii) & 1) == 0 else C_h)
+        crypto.point_add_into(C_acc, C_acc, C_tmp)
+
+        # Set Ci[ii] to sigs
+        crypto.encodepoint_into(Cis, C_tmp, ii << 5)
+        crypto.encodeint_into(ai, tmp_ai, ii << 5)
+        crypto.encodeint_into(alphai, tmp_alpha, ii << 5)
+
+        if ((amount >> ii) & 1) == 0:
+            crypto.random_scalar_into(si)
+            crypto.encodepoint_into(buff, L)
+            crypto.hash_to_scalar_into(c, buff)
+
+            crypto.point_sub_into(C_tmp, C_tmp, C_h)
+            crypto.add_keys2_into(L, si, c, C_tmp)
+
+            crypto.encodeint_into(s1s, si, ii << 5)
+
+        crypto.encodepoint_into(buff, L)
+        kck.update(buff)
+
+        crypto.point_double_into(C_h, C_h)
+
+    # Compute ee
+    tmp_ee = kck.digest()
+    crypto.decodeint_into(ee, tmp_ee)
+    del (tmp_ee, kck)
+
+    C_h = crypto.gen_H()
+    gc.collect()
+
+    # Second pass, s0, s1
+    for ii in range(64):
+        crypto.decodeint_into(tmp_alpha, alphai, ii << 5)
+        crypto.decodeint_into(tmp_ai, ai, ii << 5)
+
+        if ((amount >> ii) & 1) == 0:
+            crypto.sc_mulsub_into(si, tmp_ai, ee, tmp_alpha)
+            crypto.encodeint_into(s0s, si, ii << 5)
+
+        else:
+            crypto.random_scalar_into(si)
+            crypto.encodeint_into(s0s, si, ii << 5)
+
+            crypto.decodepoint_into(C_tmp, Cis, ii << 5)
+            crypto.add_keys2_into(L, si, ee, C_tmp)
+            crypto.encodepoint_into(buff, L)
+            crypto.hash_to_scalar_into(c, buff)
+
+            crypto.sc_mulsub_into(si, tmp_ai, c, tmp_alpha)
+            crypto.encodeint_into(s1s, si, ii << 5)
+
+        crypto.point_double_into(C_h, C_h)
+
+    crypto.encodeint_into(ee_bin, ee)
+
+    del (ai, alphai, buff, tmp_ai, tmp_alpha, si, c, ee, C_tmp, C_h, L, Zero)
+    gc.collect()
+
+    return C_acc, a, [s0s, s1s, ee_bin, Cis]
+
+
 def prove_range(
     amount,
     last_mask=None,
@@ -369,6 +467,19 @@ def ecdh_encode(unmasked, receiver_pk=None, derivation=None):
     rv.mask = crypto.sc_add(unmasked.mask, sharedSec1)
     rv.amount = crypto.sc_add(unmasked.amount, sharedSec2)
     return rv
+
+
+def ecdh_encode_into(dst, unmasked, derivation=None):
+    """
+    Elliptic Curve Diffie-Helman: encodes and decodes the amount b and mask a
+    where C= aG + bH
+    """
+    sec1 = crypto.hash_to_scalar(derivation)
+    sec2 = crypto.hash_to_scalar(crypto.encodeint(sec1))
+
+    dst.mask = crypto.sc_add(unmasked.mask, sec1)
+    dst.amount = crypto.sc_add(unmasked.amount, sec2)
+    return dst
 
 
 def ecdh_decode(masked, receiver_sk=None, derivation=None):

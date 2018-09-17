@@ -51,14 +51,6 @@ class StdObj(object):
 
 
 def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None):
-    """
-
-    :param spend_key_private:
-    :param tx_prefix_hash:
-    :param salt:
-    :param rand_mult:
-    :return:
-    """
     if not salt:
         salt = crypto.random_bytes(32)
 
@@ -145,6 +137,50 @@ async def dump_msg_gc(msg, preallocate=None, msg_type=None, del_msg=False):
 
     gc.collect()
     return b
+
+
+def dump_rsig_bp(rsig):
+    from monero_glue.compat.utils import memcpy
+
+    if len(rsig.L) > 127:
+        raise ValueError("Too large")
+
+    # Manual serialization as the generic purpose misc.dump_msg_gc
+    # is more memory intensive which is not desired in the range proof section.
+
+    # BP: V, A, S, T1, T2, taux, mu, L, R, a, b, t
+    # Commitment vector V is not serialized
+    # Vector size under 127 thus varint occupies 1 B
+    buff_size = 32 * (9 + 2 * (len(rsig.L))) + 2
+    buff = bytearray(buff_size)
+
+    memcpy(buff, 0, rsig.A, 0, 32)
+    memcpy(buff, 32, rsig.S, 0, 32)
+    memcpy(buff, 32 * 2, rsig.T1, 0, 32)
+    memcpy(buff, 32 * 3, rsig.T2, 0, 32)
+    memcpy(buff, 32 * 4, rsig.taux, 0, 32)
+    memcpy(buff, 32 * 5, rsig.mu, 0, 32)
+
+    buff[32 * 6] = len(rsig.L)
+    offset = 32 * 6 + 1
+
+    for x in rsig.L:
+        memcpy(buff, offset, x, 0, 32)
+        offset += 32
+
+    buff[offset] = len(rsig.R)
+    offset += 1
+
+    for x in rsig.R:
+        memcpy(buff, offset, x, 0, 32)
+        offset += 32
+
+    memcpy(buff, offset, rsig.a, 0, 32)
+    offset += 32
+    memcpy(buff, offset, rsig.b, 0, 32)
+    offset += 32
+    memcpy(buff, offset, rsig.t, 0, 32)
+    return buff
 
 
 def dst_entry_to_stdobj(dst):

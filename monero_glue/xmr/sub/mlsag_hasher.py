@@ -108,7 +108,11 @@ class PreMlsagHasher(object):
             raise ValueError("State error")
 
         if raw:
-            self.rsig_hasher.update(p)
+            if isinstance(p, list):
+                for x in p:
+                    self.rsig_hasher.update(x)
+            else:
+                self.rsig_hasher.update(p)
             return
 
         if bulletproof:

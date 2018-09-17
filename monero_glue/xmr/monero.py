@@ -47,12 +47,6 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
     """
     Builds subaddress secret key from the subaddress index
     Hs(SubAddr || a || index_major || index_minor)
-
-    :param secret_key:
-    :param index:
-    :param major:
-    :param minor:
-    :return:
     """
     if index:
         major = index.major
@@ -67,11 +61,6 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
 def get_subaddress_spend_public_key(view_private, spend_public, major, minor):
     """
     Generates subaddress spend public key D_{major, minor}
-    :param view_private:
-    :param spend_public:
-    :param major:
-    :param minor:
-    :return:
     """
     if major == 0 and minor == 0:
         return spend_public
@@ -82,24 +71,9 @@ def get_subaddress_spend_public_key(view_private, spend_public, major, minor):
     return D
 
 
-def generate_key_derivation(pub_key, priv_key):
-    """
-    Generates derivation priv_key * pub_key.
-    Simple ECDH.
-    :param pub_key:
-    :param priv_key:
-    :return:
-    """
-    return crypto.generate_key_derivation(pub_key, priv_key)
-
-
 def derive_subaddress_public_key(out_key, derivation, output_index):
     """
     out_key - H_s(derivation || varint(output_index))G
-    :param out_key:
-    :param derivation:
-    :param output_index:
-    :return:
     """
     crypto.check_ed25519point(out_key)
     scalar = crypto.derivation_to_scalar(derivation, output_index)
@@ -111,9 +85,6 @@ def derive_subaddress_public_key(out_key, derivation, output_index):
 def generate_key_image(public_key, secret_key):
     """
     Key image: secret_key * H_p(pub_key)
-    :param public_key: encoded point
-    :param secret_key:
-    :return:
     """
     point = crypto.hash_to_ec(public_key)
     point2 = crypto.scalarmult(point, secret_key)
@@ -126,13 +97,6 @@ def is_out_to_acc_precomp(
     """
     Searches subaddresses for the computed subaddress_spendkey.
     If found, returns (major, minor), derivation.
-
-    :param subaddresses:
-    :param out_key:
-    :param derivation:
-    :param additional_derivations:
-    :param output_index:
-    :return:
     """
     subaddress_spendkey = crypto.encodepoint(
         derive_subaddress_public_key(out_key, derivation, output_index)
@@ -235,12 +199,12 @@ def generate_key_image_helper(
     :param real_output_index: index of the real output in the RCT
     :return:
     """
-    recv_derivation = generate_key_derivation(tx_public_key, creds.view_key_private)
+    recv_derivation = crypto.generate_key_derivation(tx_public_key, creds.view_key_private)
 
     additional_recv_derivations = []
     for add_pub_key in additional_tx_public_keys:
         additional_recv_derivations.append(
-            generate_key_derivation(add_pub_key, creds.view_key_private)
+            crypto.generate_key_derivation(add_pub_key, creds.view_key_private)
         )
 
     subaddr_recv_info = is_out_to_acc_precomp(
@@ -296,15 +260,6 @@ def scan_output(creds, tx, i, tx_scan_info, tx_money_got_in_outs, outs, multisig
     """
     Wallet2::scan_output()
     Computes spending key, key image, decodes ECDH info, amount, checks masks.
-
-    :param creds:
-    :param tx:
-    :param i:
-    :param tx_scan_info:
-    :param tx_money_got_in_outs:
-    :param outs:
-    :param multisig:
-    :return:
     """
     if multisig:
         tx_scan_info.in_ephemeral = 0
@@ -333,11 +288,6 @@ def scan_output(creds, tx, i, tx_scan_info, tx_money_got_in_outs, outs, multisig
 def ecdh_decode_rv(rv, derivation, i):
     """
     Decodes ECDH info from transaction.
-
-    :param rv:
-    :param derivation:
-    :param i:
-    :return:
     """
     scalar = crypto.derivation_to_scalar(derivation, i)
     if rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.SimpleBulletproof]:
@@ -353,11 +303,6 @@ def ecdh_decode_rv(rv, derivation, i):
 def ecdh_decode_simple(rv, sk, i):
     """
     Decodes ECDH from the transaction, checks mask (decoding validity).
-
-    :param rv:
-    :param sk:
-    :param i:
-    :return:
     """
     if i >= len(rv.ecdhInfo):
         raise ValueError("Bad index")
@@ -377,8 +322,6 @@ def ecdh_decode_simple(rv, sk, i):
 async def get_transaction_prefix_hash(tx):
     """
     Computes transaction prefix in one step
-    :param tx:
-    :return:
     """
     writer = get_keccak_writer()
     ar1 = xmrserialize.Archive(writer, True)
@@ -391,9 +334,6 @@ def expand_transaction(tx):
     Expands transaction - recomputes fields not serialized.
     Recomputes only II, does not have access to the blockchain to get public keys for inputs
     for mix ring reconstruction.
-
-    :param tx:
-    :return:
     """
     rv = tx.rct_signatures
     if rv.type in [xmrtypes.RctType.Full]:

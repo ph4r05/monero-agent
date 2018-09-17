@@ -152,11 +152,11 @@ def _offset(x, offset=0):
 
 
 def decodepoint(x, offset=0):
-    return tcry.ge25519_unpack_vartime_r(tcry.KEY_BUFF(*_offset(x, offset)))
+    return tcry.ge25519_unpack_vartime_r(tcry.KEY_BUFF(*_offset(x, offset)[:32]))
 
 
 def decodepoint_into(r, x, offset=0):
-    tcry.ge25519_unpack_vartime(r, tcry.KEY_BUFF(*_offset(x, offset)))
+    tcry.ge25519_unpack_vartime(r, tcry.KEY_BUFF(*_offset(x, offset)[:32]))
     return r
 
 
@@ -179,7 +179,8 @@ def decodeint_noreduce(x, offset=0):
 
 
 def decodeint_into(r, x, offset=0):
-    tcry.expand256_modm(r, tcry.KEY_BUFF(*_offset(x, offset)))
+    bb = _offset(x, offset)[:32]
+    tcry.expand256_modm(r, tcry.KEY_BUFF(*bb), 32)
     return r
 
 
@@ -479,6 +480,11 @@ def point_eq(P, Q):
 
 def point_double(P):
     return tcry.ge25519_double_r(P)
+
+
+def point_double_into(r, P):
+    tcry.ge25519_double(r, P)
+    return r
 
 
 def point_norm(P):

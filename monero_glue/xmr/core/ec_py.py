@@ -617,6 +617,10 @@ def point_double(P):
     return EdPoint(P + P)
 
 
+def point_double_into(r, P):
+    return r.init(P + P)
+
+
 def point_norm(P):
     return P
 

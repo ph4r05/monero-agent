@@ -160,28 +160,16 @@ class TTransactionBuilder(object):
             gc.collect()
 
     def assrt(self, condition, msg=None):
-        """
-        Asserts condition
-        :param condition:
-        :param msg:
-        :return:
-        """
         if condition:
             return
         raise ValueError("Assertion error%s" % (" : %s" % msg if msg else ""))
 
     def is_terminal(self):
-        """
-        Returns true if the state is terminal
-        :return:
-        """
         return self.state.is_terminal()
 
     def gen_r(self, use_r=None):
         """
         Generates a new transaction key pair.
-        :param use_r:
-        :return:
         """
         self.r = crypto.random_scalar() if use_r is None else use_r
         self.r_pub = crypto.scalarmult_base(self.r)
@@ -189,7 +177,6 @@ class TTransactionBuilder(object):
     def get_primary_change_address(self):
         """
         Computes primary change address for the current account index
-        :return:
         """
         D, C = monero.generate_sub_address_keys(
             self.creds.view_key_private,
@@ -205,8 +192,6 @@ class TTransactionBuilder(object):
     def check_change(self, outputs):
         """
         Checks if the change address is among tx outputs and it is equal to our address.
-        :param outputs:
-        :return:
         """
         from monero_glue.xmr.sub.addr import addr_eq, get_change_addr_idx
 
@@ -239,50 +224,31 @@ class TTransactionBuilder(object):
     def in_memory(self):
         """
         Returns true if the input transaction can be processed whole in-memory
-        :return:
         """
         return self.input_count <= 1
 
     def many_inputs(self):
         """
         Returns true if number of inputs > 10 (secret spending key offloaded)
-        :return:
         """
         return self.input_count >= 10
 
     def many_outputs(self):
         """
         Returns true if number of outputs > 10 (increases number of roundtrips of the protocol)
-        :return:
         """
         return self.output_count >= 10
 
     def num_inputs(self):
-        """
-        Number of inputs
-        :return:
-        """
         return self.input_count
 
     def num_dests(self):
-        """
-        Number of destinations
-        :return:
-        """
         return self.output_count
 
     def get_fee(self):
-        """
-        Txn fee
-        :return:
-        """
         return self.fee if self.fee > 0 else 0
 
     def change_address(self):
-        """
-        Returns change address if change dst is set
-        :return:
-        """
         return self.output_change.addr if self.output_change else None
 
     def get_rct_type(self):
@@ -300,7 +266,6 @@ class TTransactionBuilder(object):
     def init_rct_sig(self):
         """
         Initializes RCTsig structure (fee, tx prefix hash, type)
-        :return:
         """
         rv = misc.StdObj(
             txnFee=self.get_fee(), message=self.tx_prefix_hash, type=self.get_rct_type()
@@ -320,9 +285,13 @@ class TTransactionBuilder(object):
             offset += len(discriminator)
 
         if index is not None:
-            from monero_serialize.core.int_serialize import dump_uvarint_b_into
-
-            dump_uvarint_b_into(index, key_buff, offset)
+            # dump_uvarint_b_into, saving import
+            shifted = True
+            while shifted:
+                shifted = index >> 7
+                key_buff[offset] = (index & 0x7F) | (0x80 if shifted else 0x00)
+                offset += 1
+                index = shifted
 
         return crypto.keccak_2hash(key_buff)
 
@@ -480,7 +449,7 @@ class TTransactionBuilder(object):
         class_res = classify_subaddresses(tsx_data.outputs, self.change_address())
         num_stdaddresses, num_subaddresses, single_dest_subaddress = class_res
 
-        # if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=s*D
+        # if this is a single-destination transfer to a subaddress, we set the tx pubkey to R=r*D
         if num_stdaddresses == 0 and num_subaddresses == 1:
             self.r_pub = crypto.scalarmult(
                 crypto.decodepoint(single_dest_subaddress.spend_public_key), self.r
@@ -559,19 +528,26 @@ class TTransactionBuilder(object):
                 tsx_data.payment_id, view_key_pub, self.r
             )
 
-            extra_nonce = tsx_helper.set_encrypted_payment_id_to_tx_extra_nonce(
-                payment_id_encr
-            )
+            extra_nonce = payment_id_encr
+            extra_prefix = 1
 
         elif len(tsx_data.payment_id) == 32:
-            extra_nonce = tsx_helper.set_payment_id_to_tx_extra_nonce(
-                tsx_data.payment_id
-            )
+            extra_nonce = tsx_data.payment_id
+            extra_prefix = 0
 
         else:
             raise ValueError("Payment ID size invalid")
 
-        self.tx.extra = tsx_helper.add_extra_nonce_to_tx_extra(b"", extra_nonce)
+        lextra = len(extra_nonce)
+        if lextra >= 255:
+            raise ValueError("Nonce could be 255 bytes max")
+
+        extra_buff = bytearray(3 + lextra)
+        extra_buff[0] = 2
+        extra_buff[1] = lextra + 1
+        extra_buff[2] = extra_prefix
+        utils.memcpy(extra_buff, 3, extra_nonce, 0, lextra)
+        self.tx.extra = extra_buff
 
     async def compute_sec_keys(self, tsx_data):
         """
@@ -596,9 +572,6 @@ class TTransactionBuilder(object):
         Precomputes subaddresses for account (major) and list of indices (minors)
         Subaddresses have to be stored in encoded form - unique representation.
         Single point can have multiple extended coordinates representation - would not match during subaddress search.
-        :param account:
-        :param indices:
-        :return:
         """
         monero.compute_subaddresses(self.creds, account, indices, self.subaddresses)
 
@@ -610,9 +583,6 @@ class TTransactionBuilder(object):
         If number of inputs is small, in-memory mode is used = alpha, pseudo_outs are kept in the Trezor.
         Otherwise pseudo_outs are offloaded with HMAC, alpha is offloaded encrypted under Chacha20Poly1305()
         with key derived for exactly this purpose.
-
-        :param src_entr:
-        :return:
         """
         from monero_glue.messages.MoneroTransactionSetInputAck import (
             MoneroTransactionSetInputAck
@@ -658,16 +628,15 @@ class TTransactionBuilder(object):
         # Construct tx.vin
         ki_real = src_entr.multisig_kLRki.ki if self.multi_sig else ki
         vini = TxinToKey(amount=src_entr.amount, k_image=crypto.encodepoint(ki_real))
-        vini.key_offsets = [x.idx for x in src_entr.outputs]
         vini.key_offsets = tsx_helper.absolute_output_offsets_to_relative(
-            vini.key_offsets
+            [x.idx for x in src_entr.outputs]
         )
 
         if src_entr.rct:
             vini.amount = 0
 
         # Serialize with variant code for TxinToKey
-        vini_bin = await misc.dump_msg(vini, preallocate=68, prefix=b"\x02")
+        vini_bin = await misc.dump_msg(vini, preallocate=64, prefix=b"\x02")
         self._mem_trace(2, True)
 
         if self.in_memory():
@@ -790,7 +759,7 @@ class TTransactionBuilder(object):
             for idx in range(self.num_inputs()):
                 vini_bin = await misc.dump_msg(self.tx.vin[idx], preallocate=65, prefix=b"\x02")
                 await self.hash_vini_pseudo_out(vini_bin, idx)
-                self._mem_trace("i: %s" % idx, True)
+                self._mem_trace("i: %s" % idx if __debug__ else None, True)
 
     async def input_vini(self, src_entr, vini_bin, hmac, pseudo_out, pseudo_out_hmac):
         """
@@ -954,7 +923,7 @@ class TTransactionBuilder(object):
 
         for i in range(batch_size):
             C = crypto.decodepoint(rsig.V[i])
-            C = crypto.point_mul8(C)
+            crypto.point_mul8_into(C, C)
             self._check_out_commitment(self.output_amounts[i], masks[i], C)
 
     def _return_rsig_data(self, rsig):
@@ -962,7 +931,10 @@ class TTransactionBuilder(object):
             return None
         from monero_glue.messages import MoneroTransactionRsigData
 
-        return MoneroTransactionRsigData(rsig=rsig)
+        if isinstance(rsig, list):
+            return MoneroTransactionRsigData(rsig_parts=rsig)
+        else:
+            return MoneroTransactionRsigData(rsig=rsig)
 
     async def _range_proof(self, idx, amount, rsig_data=None):
         """
@@ -1018,22 +990,14 @@ class TTransactionBuilder(object):
             await self.full_message_hasher.rsig_val(rsig, True, raw=False)
             self._mem_trace("post-bp-hash" if __debug__ else None, collect=True)
 
-            rsig = await misc.dump_msg_gc(
-                rsig, preallocate=ring_ct.bp_size(batch_size) + 8, del_msg=True
-            )
+            rsig = misc.dump_rsig_bp(rsig)
             self._mem_trace(
                 "post-bp-ser, size: %s" % len(rsig) if __debug__ else None, collect=True
             )
 
         elif not self.rsig_offload and not self.use_bulletproof:
-            rsig_buff = bytearray(32 * (64 + 64 + 64 + 1))
-            rsig_mv = memoryview(rsig_buff)
-
-            C, mask, rsig = ring_ct.prove_range(
-                amount, mask, backend_impl=True, byte_enc=True, rsig=rsig_mv
-            )
-            rsig = memoryview(rsig)
-            del (rsig_buff, rsig_mv, ring_ct)
+            C, mask, rsig = ring_ct.prove_range_chunked(amount, mask)
+            del (ring_ct)
 
             # Incremental hashing
             await self.full_message_hasher.rsig_val(rsig, False, raw=True)
@@ -1084,9 +1048,9 @@ class TTransactionBuilder(object):
         from monero_glue.xmr.sub.recode import recode_ecdh
         from monero_serialize.xmrtypes import EcdhTuple
 
-        ecdh_info = EcdhTuple(mask=mask, amount=crypto.sc_init(amount))
-        ecdh_info = ring_ct.ecdh_encode(
-            ecdh_info, derivation=crypto.encodeint(amount_key)
+        ecdh_info = misc.StdObj(mask=mask, amount=crypto.sc_init(amount))
+        ring_ct.ecdh_encode_into(
+            ecdh_info, ecdh_info, derivation=crypto.encodeint(amount_key)
         )
         recode_ecdh(ecdh_info, encode=True)
 
@@ -1127,7 +1091,7 @@ class TTransactionBuilder(object):
         change_addr = self.change_address()
         if change_addr and addr_eq(dst_entr.addr, change_addr):
             # sending change to yourself; derivation = a*R
-            derivation = monero.generate_key_derivation(
+            derivation = crypto.generate_key_derivation(
                 self.r_pub, self.creds.view_key_private
             )
 
@@ -1138,7 +1102,7 @@ class TTransactionBuilder(object):
                 if dst_entr.is_subaddress and self.need_additional_txkeys
                 else self.r
             )
-            derivation = monero.generate_key_derivation(
+            derivation = crypto.generate_key_derivation(
                 crypto.decodepoint(dst_entr.addr.view_public_key), deriv_priv
             )
         return derivation
