@@ -610,15 +610,19 @@ class Agent(object):
             await tmisc.parse_msg(t_res.ecdh_info, xmrtypes.EcdhTuple())
         )
 
-        has_rsig = (
-            t_res.rsig_data and t_res.rsig_data.rsig and len(t_res.rsig_data.rsig) > 0
-        )
-        rsig_data = t_res.rsig_data
+        rsig_buff = None
+        if t_res.rsig_data:
+            tsig_data = t_res.rsig_data
 
-        if has_rsig and not self._is_req_bulletproof():
-            rsig = await tmisc.parse_msg(rsig_data.rsig, xmrtypes.RangeSig())
-        elif has_rsig:
-            rsig = await tmisc.parse_msg(rsig_data.rsig, xmrtypes.Bulletproof())
+            if tsig_data.rsig and len(tsig_data.rsig) > 0:
+                rsig_buff = tsig_data.rsig
+            elif tsig_data.rsig_parts and len(tsig_data.rsig_parts) > 0:
+                rsig_buff = b''.join(tsig_data.rsig_parts)
+
+        if rsig_buff and not self._is_req_bulletproof():
+            rsig = await tmisc.parse_msg(rsig_buff, xmrtypes.RangeSig())
+        elif rsig_buff:
+            rsig = await tmisc.parse_msg(rsig_buff, xmrtypes.Bulletproof())
         else:
             return
 
