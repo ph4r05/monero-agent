@@ -67,7 +67,7 @@ def prove_range_mem(amount, last_mask=None):
 
     C = crypto.identity()
     alpha = key_zero_vector(n)
-    c_H = crypto.gen_H()
+    c_H = crypto.xmr_H()
     kck = crypto.get_keccak()  # ee computation
 
     # First pass, generates: ai, alpha, Ci, ee, s1
@@ -109,7 +109,7 @@ def prove_range_mem(amount, last_mask=None):
     gc.collect()
 
     # Second phase computes: s0, s1
-    c_H = crypto.gen_H()
+    c_H = crypto.xmr_H()
 
     for jj in range(n):
         if not bb[jj]:
@@ -285,7 +285,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
             crypto.encodepoint_into(mvbuff[buff_off : buff_off + 32], tmp3)
             buff_off += 32
 
-            tmp3 = crypto.hash_to_ec(crypto.encodepoint(pubs[i]))
+            tmp3 = crypto.hash_to_point(crypto.encodepoint(pubs[i]))
             tmp2 = crypto.scalarmult(tmp3, k)
             crypto.encodepoint_into(mvbuff[buff_off : buff_off + 32], tmp2)
             buff_off += 32
@@ -297,7 +297,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
             crypto.encodepoint_into(mvbuff[buff_off : buff_off + 32], tmp2)
             buff_off += 32
 
-            tmp3 = crypto.hash_to_ec(crypto.encodepoint(tmp3))
+            tmp3 = crypto.hash_to_point(crypto.encodepoint(tmp3))
             tmp2 = crypto.ge_double_scalarmult_precomp_vartime(
                 sig[i][1], tmp3, sig[i][0], image_pre
             )
@@ -341,7 +341,7 @@ def check_ring_singature(prefix_hash, image, pubs, sig):
         crypto.encodepoint_into(mvbuff[buff_off : buff_off + 32], tmp2)
         buff_off += 32
 
-        tmp3 = crypto.hash_to_ec(crypto.encodepoint(pubs[i]))
+        tmp3 = crypto.hash_to_point(crypto.encodepoint(pubs[i]))
         tmp2 = crypto.ge_double_scalarmult_precomp_vartime(
             sig[i][1], tmp3, sig[i][0], image_pre
         )

@@ -52,7 +52,7 @@ def hash_key_vector(v):
     :param v:
     :return:
     """
-    return [crypto.hash_to_ec(vi) for vi in v]
+    return [crypto.hash_to_point(vi) for vi in v]
 
 
 def scalar_mult_base_vector(v):
@@ -72,7 +72,7 @@ def key_image_vector(x):
     :return:
     """
     return [
-        crypto.scalarmult(crypto.hash_to_ec(crypto.scalarmult_base(xx)), xx) for xx in x
+        crypto.scalarmult(crypto.hash_to_point(crypto.scalarmult_base(xx)), xx) for xx in x
     ]
 
 
@@ -401,7 +401,7 @@ def gen_mlsag_rows(message, rv, pk, xx, kLRki, index, dsRows, rows, cols):
             hasher.update(crypto.encodepoint(kLRki.R))
 
         else:
-            Hi = crypto.hash_to_ec(
+            Hi = crypto.hash_to_point(
                 crypto.encodepoint(pk[index][i])
             )  # originally hashToPoint()
             alpha[i] = crypto.random_scalar()
@@ -456,7 +456,7 @@ def gen_mlsag_ext(message, pk, xx, kLRki, mscout, index, dsRows):
 
         for j in range(dsRows):
             L = crypto.add_keys2(rv.ss[i][j], c_old, pk[i][j])
-            Hi = crypto.hash_to_ec(
+            Hi = crypto.hash_to_point(
                 crypto.encodepoint(pk[i][j])
             )  # originally hashToPoint()
             R = crypto.add_keys3(rv.ss[i][j], Hi, c_old, Ip[j])
@@ -545,7 +545,7 @@ def ver_mlsag_ext(message, pk, rv, dsRows):
         hasher = hasher_message(message)
         for j in range(dsRows):
             L = crypto.add_keys2(rv.ss[i][j], c_old, pk[i][j])
-            Hi = crypto.hash_to_ec(
+            Hi = crypto.hash_to_point(
                 crypto.encodepoint(pk[i][j])
             )  # originally hashToPoint()
             R = crypto.add_keys3(rv.ss[i][j], Hi, c_old, Ip[j])

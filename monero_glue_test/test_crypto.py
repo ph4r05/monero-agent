@@ -117,7 +117,7 @@ class CryptoTest(aiounittest.AsyncTestCase):
         data = unhexlify(
             b"42f6835bf83114a1f5f6076fe79bdfa0bd67c74b88f127d54572d3910dd09201"
         )
-        res = crypto.hash_to_ec(data)
+        res = crypto.hash_to_point(data)
         res_p = crypto.encodepoint(res)
         self.assertEqual(
             res_p,
@@ -159,17 +159,17 @@ class CryptoTest(aiounittest.AsyncTestCase):
         H = unhexlify(
             b"8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94"
         )
-        self.assertEqual(crypto.encodepoint(crypto.gen_H()), H)
+        self.assertEqual(crypto.encodepoint(crypto.xmr_H()), H)
 
     def test_h_pow(self):
         hp = crypto.gen_Hpow(10)
-        self.assertEqual(crypto.encodepoint(hp[0]), crypto.encodepoint(crypto.gen_H()))
+        self.assertEqual(crypto.encodepoint(hp[0]), crypto.encodepoint(crypto.xmr_H()))
         for i in range(1, 10):
             crypto.check_ed25519point(hp[i])
             self.assertEqual(
                 crypto.encodepoint(hp[i]),
                 crypto.encodepoint(
-                    crypto.scalarmult(crypto.gen_H(), crypto.sc_init(2 ** i))
+                    crypto.scalarmult(crypto.xmr_H(), crypto.sc_init(2 ** i))
                 ),
             )
 

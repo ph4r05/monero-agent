@@ -110,7 +110,7 @@ def prove_range_chunked(amount, last_mask=None):
     tmp_alpha = crypto.sc_init(0)
 
     C_acc = crypto.identity()
-    C_h = crypto.gen_H()
+    C_h = crypto.xmr_H()
     C_tmp = crypto.identity()
     L = crypto.identity()
     Zero = crypto.identity()
@@ -165,7 +165,7 @@ def prove_range_chunked(amount, last_mask=None):
     crypto.decodeint_into(ee, tmp_ee)
     del (tmp_ee, kck)
 
-    C_h = crypto.gen_H()
+    C_h = crypto.xmr_H()
     gc.collect()
 
     # Second pass, s0, s1
@@ -336,7 +336,7 @@ def prove_range_mem(amount, last_mask=None):
     C = crypto.identity()
     alpha = mlsag2.key_zero_vector(n)
     s1 = mlsag2.key_zero_vector(n)
-    c_H = crypto.gen_H()
+    c_H = crypto.xmr_H()
     kck = crypto.get_keccak()  # ee computation
 
     # First pass, generates: ai, alpha, Ci, ee, s1
@@ -374,7 +374,7 @@ def prove_range_mem(amount, last_mask=None):
     del kck
 
     # Second phase computes: s0, s1
-    c_H = crypto.gen_H()
+    c_H = crypto.xmr_H()
     s0 = mlsag2.key_zero_vector(n)
 
     for jj in range(n):
@@ -411,7 +411,7 @@ def ver_range(C=None, rsig=None, use_asnl=False, use_bulletproof=False, decode=T
     n = ATOMS
     CiH = [None] * n
     C_tmp = crypto.identity()
-    c_H = crypto.gen_H()
+    c_H = crypto.xmr_H()
 
     if decode and not use_bulletproof:
         rsig = monero.recode_rangesig(rsig, encode=False, copy=True)
@@ -524,7 +524,7 @@ def decode_rct(rv, sk, i):
     mask = decodedTuple.mask
     amount = decodedTuple.amount
     C = rv.outPk[i].mask
-    H = crypto.gen_H()
+    H = crypto.xmr_H()
     Ctmp = crypto.point_add(crypto.scalarmult_base(mask), crypto.scalarmult(H, amount))
     if not crypto.point_eq(crypto.point_sub(C, Ctmp), crypto.identity()):
         logger.warning("warning, amount decoded incorrectly, will be unable to spend")
@@ -581,7 +581,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
             crypto.encodepoint_into(mvbuff[buff_off : buff_off + 32], tmp3)
             buff_off += 32
 
-            tmp3 = crypto.hash_to_ec(crypto.encodepoint(pubs[i]))
+            tmp3 = crypto.hash_to_point(crypto.encodepoint(pubs[i]))
             tmp2 = crypto.scalarmult(tmp3, k)
             crypto.encodepoint_into(mvbuff[buff_off : buff_off + 32], tmp2)
             buff_off += 32
@@ -593,7 +593,7 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
             crypto.encodepoint_into(mvbuff[buff_off : buff_off + 32], tmp2)
             buff_off += 32
 
-            tmp3 = crypto.hash_to_ec(crypto.encodepoint(tmp3))
+            tmp3 = crypto.hash_to_point(crypto.encodepoint(tmp3))
             tmp2 = crypto.ge_double_scalarmult_precomp_vartime(
                 sig[i][1], tmp3, sig[i][0], image_pre
             )
@@ -635,7 +635,7 @@ def check_ring_singature(prefix_hash, image, pubs, sig):
         crypto.encodepoint_into(mvbuff[buff_off : buff_off + 32], tmp2)
         buff_off += 32
 
-        tmp3 = crypto.hash_to_ec(crypto.encodepoint(pubs[i]))
+        tmp3 = crypto.hash_to_point(crypto.encodepoint(pubs[i]))
         tmp2 = crypto.ge_double_scalarmult_precomp_vartime(
             sig[i][1], tmp3, sig[i][0], image_pre
         )

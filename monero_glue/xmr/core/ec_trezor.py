@@ -660,7 +660,7 @@ def hash_to_scalar_into(r, data, length=None):
     return r
 
 
-def hash_to_ec(buf):
+def hash_to_point(buf):
     """
     H_p(buf)
 
@@ -672,7 +672,7 @@ def hash_to_ec(buf):
     return tcry.xmr_hash_to_ec_r(buf)
 
 
-def hash_to_ec_into(r, buf):
+def hash_to_point_into(r, buf):
     """
     H_p(buf)
 
@@ -691,7 +691,7 @@ def hash_to_ec_into(r, buf):
 #
 
 
-def gen_H():
+def xmr_H():
     """
     Returns point H
     8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94
@@ -701,7 +701,7 @@ def gen_H():
 
 
 def scalarmult_h(i):
-    return scalarmult(gen_H(), sc_init(i) if isinstance(i, int) else i)
+    return scalarmult(xmr_H(), sc_init(i) if isinstance(i, int) else i)
 
 
 def add_keys2(a, b, B):

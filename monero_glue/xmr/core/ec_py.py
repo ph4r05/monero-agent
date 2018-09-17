@@ -808,7 +808,7 @@ def hash_to_scalar_into(r, data, length=None):
     return r.init(hash_to_scalar(data, length))
 
 
-def hash_to_ec(buf):
+def hash_to_point(buf):
     """
     H_p(buf)
 
@@ -878,8 +878,8 @@ def hash_to_ec(buf):
     return P8
 
 
-def hash_to_ec_into(r, buf):
-    return r.init(hash_to_ec(buf))
+def hash_to_point_into(r, buf):
+    return r.init(hash_to_point(buf))
 
 
 #
@@ -901,7 +901,7 @@ def compute_H():
     return scalarmult(decodepoint(h), 8)
 
 
-def gen_H():
+def xmr_H():
     return EdPoint(XMR_H_PT)
 
 

@@ -48,7 +48,7 @@ def gen_Hpow(size):
     Returns powers of point H
     :return:
     """
-    HPow2 = gen_H()
+    HPow2 = xmr_H()
     H2 = [None] * size
     for i in range(0, size):
         H2[i] = HPow2

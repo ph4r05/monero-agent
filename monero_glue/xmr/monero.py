@@ -86,7 +86,7 @@ def generate_key_image(public_key, secret_key):
     """
     Key image: secret_key * H_p(pub_key)
     """
-    point = crypto.hash_to_ec(public_key)
+    point = crypto.hash_to_point(public_key)
     point2 = crypto.scalarmult(point, secret_key)
     return point2
 
@@ -312,7 +312,7 @@ def ecdh_decode_simple(rv, sk, i):
     ecdh_info = rv.ecdhInfo[i]
     ecdh_info = recode_ecdh(ecdh_info, False)
     ecdh_info = ring_ct.ecdh_decode(ecdh_info, derivation=crypto.encodeint(sk))
-    c_tmp = crypto.add_keys2(ecdh_info.mask, ecdh_info.amount, crypto.gen_H())
+    c_tmp = crypto.add_keys2(ecdh_info.mask, ecdh_info.amount, crypto.xmr_H())
     if not crypto.point_eq(c_tmp, crypto.decodepoint(rv.outPk[i].mask)):
         raise ValueError("Amount decoded incorrectly")
 
