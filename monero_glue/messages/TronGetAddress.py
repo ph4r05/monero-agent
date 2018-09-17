@@ -9,8 +9,8 @@ if __debug__:
         List = None  # type: ignore
 
 
-class TezosGetAddress(p.MessageType):
-    MESSAGE_WIRE_TYPE = 150
+class TronGetAddress(p.MessageType):
+    MESSAGE_WIRE_TYPE = 250
     FIELDS = {
         1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
         2: ('show_display', p.BoolType, 0),

@@ -23,7 +23,8 @@ class MoneroTransactionRsigData(p.MessageType):
         8: ('mask', p.BytesType, 0),
         9: ('amount', p.BytesType, 0),
         10: ('rsig', p.BytesType, 0),
-        11: ('outputs', MoneroTransactionDestinationEntry, p.FLAG_REPEATED),
+        11: ('rsig_parts', p.BytesType, p.FLAG_REPEATED),
+        12: ('outputs', MoneroTransactionDestinationEntry, p.FLAG_REPEATED),
     }
 
     def __init__(
@@ -38,6 +39,7 @@ class MoneroTransactionRsigData(p.MessageType):
         mask: bytes = None,
         amount: bytes = None,
         rsig: bytes = None,
+        rsig_parts: List[bytes] = None,
         outputs: List[MoneroTransactionDestinationEntry] = None,
     ) -> None:
         self.version = version
@@ -50,4 +52,5 @@ class MoneroTransactionRsigData(p.MessageType):
         self.mask = mask
         self.amount = amount
         self.rsig = rsig
+        self.rsig_parts = rsig_parts if rsig_parts is not None else []
         self.outputs = outputs if outputs is not None else []
