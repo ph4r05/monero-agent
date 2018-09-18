@@ -415,9 +415,7 @@ def ver_range(C=None, rsig=None, use_bulletproof=False, decode=True):
         bp = bulletproof.BulletProofBuilder()
         return bp.verify(rsig)
 
-    return mlsag2.ver_borromean(
-        rsig.Ci, CiH, rsig.asig.s0, rsig.asig.s1, rsig.asig.ee
-    )
+    return mlsag2.ver_borromean(rsig.Ci, CiH, rsig.asig.s0, rsig.asig.s1, rsig.asig.ee)
 
 
 # Ring-ct MG sigs

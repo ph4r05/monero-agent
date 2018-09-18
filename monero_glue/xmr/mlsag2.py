@@ -72,7 +72,8 @@ def key_image_vector(x):
     :return:
     """
     return [
-        crypto.scalarmult(crypto.hash_to_point(crypto.scalarmult_base(xx)), xx) for xx in x
+        crypto.scalarmult(crypto.hash_to_point(crypto.scalarmult_base(xx)), xx)
+        for xx in x
     ]
 
 

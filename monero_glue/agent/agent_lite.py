@@ -277,11 +277,16 @@ class Agent(object):
                 if xmr_addr.addr_eq(ipair[0], dst.addr) and dst.amount == ipair[1]:
                     integrated_indices.append(idx)
 
-        logger.debug('Integrated indices: %s' % len(integrated_indices))
+        logger.debug("Integrated indices: %s" % len(integrated_indices))
         return integrated_indices
 
     async def sign_transaction_data(
-        self, tx, multisig=False, exp_tx_prefix_hash=None, use_tx_keys=None, aux_data=None
+        self,
+        tx,
+        multisig=False,
+        exp_tx_prefix_hash=None,
+        use_tx_keys=None,
+        aux_data=None,
     ):
         """
         Uses Trezor to sign the transaction
@@ -325,7 +330,9 @@ class Agent(object):
         tsx_data.is_multisig = multisig
         tsx_data.exp_tx_prefix_hash = common.defval(exp_tx_prefix_hash, b"")
         tsx_data.use_tx_keys = common.defval(use_tx_keys, [])
-        tsx_data.integrated_indices = self._get_integrated_idx(tsx_data.outputs, aux_data)
+        tsx_data.integrated_indices = self._get_integrated_idx(
+            tsx_data.outputs, aux_data
+        )
         self.ct.tx.unlock_time = tx.unlock_time
 
         # Rsig
@@ -617,7 +624,7 @@ class Agent(object):
             if tsig_data.rsig and len(tsig_data.rsig) > 0:
                 rsig_buff = tsig_data.rsig
             elif tsig_data.rsig_parts and len(tsig_data.rsig_parts) > 0:
-                rsig_buff = b''.join(tsig_data.rsig_parts)
+                rsig_buff = b"".join(tsig_data.rsig_parts)
 
         if rsig_buff and not self._is_req_bulletproof():
             rsig = await tmisc.parse_msg(rsig_buff, xmrtypes.RangeSig())
@@ -668,7 +675,9 @@ class Agent(object):
         Get address from the device
         :return:
         """
-        msg = MoneroGetAddress(address_n=self.address_n, network_type=self.network_type, account=account)
+        msg = MoneroGetAddress(
+            address_n=self.address_n, network_type=self.network_type, account=account
+        )
         res = await self.trezor.call(msg)
         return res
 

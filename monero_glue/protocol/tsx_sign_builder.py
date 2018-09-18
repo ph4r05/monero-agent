@@ -150,11 +150,7 @@ class TTransactionBuilder(object):
 
     def _mem_trace(self, x=None, collect=False):
         log.debug(
-            __name__,
-            "Log trace: %s, ... F: %s A: %s",
-            x,
-            gc.mem_free(),
-            gc.mem_alloc(),
+            __name__, "Log trace: %s, ... F: %s A: %s", x, gc.mem_free(), gc.mem_alloc()
         )
         if collect:
             gc.collect()
@@ -757,7 +753,9 @@ class TTransactionBuilder(object):
         # Incremental hashing
         if self.in_memory():
             for idx in range(self.num_inputs()):
-                vini_bin = await misc.dump_msg(self.tx.vin[idx], preallocate=65, prefix=b"\x02")
+                vini_bin = await misc.dump_msg(
+                    self.tx.vin[idx], preallocate=65, prefix=b"\x02"
+                )
                 await self.hash_vini_pseudo_out(vini_bin, idx)
                 self._mem_trace("i: %s" % idx if __debug__ else None, True)
 
@@ -797,7 +795,9 @@ class TTransactionBuilder(object):
         if not common.ct_equal(hmac_vini, hmac):
             raise ValueError("HMAC is not correct")
 
-        await self.hash_vini_pseudo_out(vini_bin, self.inp_idx, pseudo_out, pseudo_out_hmac)
+        await self.hash_vini_pseudo_out(
+            vini_bin, self.inp_idx, pseudo_out, pseudo_out_hmac
+        )
         return MoneroTransactionInputViniAck()
 
     async def hash_vini_pseudo_out(

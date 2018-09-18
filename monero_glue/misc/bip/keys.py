@@ -4,23 +4,16 @@ from hashlib import sha256
 
 import six
 from ecdsa import SECP256k1, SigningKey, VerifyingKey
-from ecdsa.ellipticcurve import Point as _ECDSA_Point, INFINITY
+from ecdsa.ellipticcurve import INFINITY
+from ecdsa.ellipticcurve import Point as _ECDSA_Point
 from ecdsa.numbertheory import square_root_mod_prime
 from monero_glue.misc import b58 as base58
 from monero_glue.xmr import crypto
 from monero_glue.xmr.core import ec_py
 
 from .network import BitcoinMainNet
-from .utils import (
-    chr_py2,
-    ensure_bytes,
-    ensure_str,
-    hash160,
-    is_hex_string,
-    long_or_int,
-    long_to_hex,
-    memoize,
-)
+from .utils import (chr_py2, ensure_bytes, ensure_str, hash160, is_hex_string,
+                    long_or_int, long_to_hex, memoize)
 
 PublicPair = namedtuple("PublicPair", ["x", "y"])
 

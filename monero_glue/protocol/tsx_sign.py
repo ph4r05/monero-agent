@@ -190,7 +190,11 @@ class TsxSigner(object):
         """
         try:
             return await self.tsx_obj.input_vini(
-                msg.src_entr, msg.vini, msg.vini_hmac, msg.pseudo_out, msg.pseudo_out_hmac
+                msg.src_entr,
+                msg.vini,
+                msg.vini_hmac,
+                msg.pseudo_out,
+                msg.pseudo_out_hmac,
             )
         except Exception as e:
             await self.tsx_exc_handler(e)

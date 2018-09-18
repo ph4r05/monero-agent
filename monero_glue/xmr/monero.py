@@ -199,7 +199,9 @@ def generate_key_image_helper(
     :param real_output_index: index of the real output in the RCT
     :return:
     """
-    recv_derivation = crypto.generate_key_derivation(tx_public_key, creds.view_key_private)
+    recv_derivation = crypto.generate_key_derivation(
+        tx_public_key, creds.view_key_private
+    )
 
     additional_recv_derivations = []
     for add_pub_key in additional_tx_public_keys:
