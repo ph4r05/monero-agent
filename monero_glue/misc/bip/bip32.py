@@ -10,11 +10,25 @@ from monero_glue.misc import b58 as base58
 from monero_glue.misc.bip import bip39
 from monero_glue.xmr import crypto
 
-from .keys import (Ed25519PrivateKey, Ed25519PublicKey, PrivateKey, PublicKey,
-                   PublicPair, incompatible_network_exception_factory)
+from .keys import (
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
+    PrivateKey,
+    PublicKey,
+    PublicPair,
+    incompatible_network_exception_factory,
+)
 from .network import *
-from .utils import (chr_py2, ensure_bytes, ensure_str, hash160, is_hex_string,
-                    long_or_int, long_to_hex, memoize)
+from .utils import (
+    chr_py2,
+    ensure_bytes,
+    ensure_str,
+    hash160,
+    is_hex_string,
+    long_or_int,
+    long_to_hex,
+    memoize,
+)
 
 
 class Wallet(object):

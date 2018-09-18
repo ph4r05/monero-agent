@@ -12,8 +12,16 @@ from monero_glue.xmr import crypto
 from monero_glue.xmr.core import ec_py
 
 from .network import BitcoinMainNet
-from .utils import (chr_py2, ensure_bytes, ensure_str, hash160, is_hex_string,
-                    long_or_int, long_to_hex, memoize)
+from .utils import (
+    chr_py2,
+    ensure_bytes,
+    ensure_str,
+    hash160,
+    is_hex_string,
+    long_or_int,
+    long_to_hex,
+    memoize,
+)
 
 PublicPair = namedtuple("PublicPair", ["x", "y"])
 
