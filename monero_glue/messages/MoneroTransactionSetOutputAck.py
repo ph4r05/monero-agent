@@ -6,7 +6,7 @@ from .MoneroTransactionRsigData import MoneroTransactionRsigData
 
 
 class MoneroTransactionSetOutputAck(p.MessageType):
-    MESSAGE_WIRE_TYPE = 506
+    MESSAGE_WIRE_TYPE = 512
     FIELDS = {
         1: ('tx_out', p.BytesType, 0),
         2: ('vouti_hmac', p.BytesType, 0),

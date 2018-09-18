@@ -12,7 +12,7 @@ if __debug__:
 
 
 class MoneroKeyImageSyncStepAck(p.MessageType):
-    MESSAGE_WIRE_TYPE = 521
+    MESSAGE_WIRE_TYPE = 533
     FIELDS = {
         1: ('kis', MoneroExportedKeyImage, p.FLAG_REPEATED),
     }

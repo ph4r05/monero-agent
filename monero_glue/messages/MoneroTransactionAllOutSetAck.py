@@ -7,7 +7,7 @@ from .MoneroTransactionRsigData import MoneroTransactionRsigData
 
 
 class MoneroTransactionAllOutSetAck(p.MessageType):
-    MESSAGE_WIRE_TYPE = 507
+    MESSAGE_WIRE_TYPE = 514
     FIELDS = {
         1: ('extra', p.BytesType, 0),
         2: ('tx_prefix_hash', p.BytesType, 0),

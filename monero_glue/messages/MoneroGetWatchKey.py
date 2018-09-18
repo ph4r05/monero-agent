@@ -10,7 +10,7 @@ if __debug__:
 
 
 class MoneroGetWatchKey(p.MessageType):
-    MESSAGE_WIRE_TYPE = 532
+    MESSAGE_WIRE_TYPE = 542
     FIELDS = {
         1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
         2: ('network_type', p.UVarintType, 0),

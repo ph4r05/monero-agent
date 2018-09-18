@@ -10,7 +10,7 @@ if __debug__:
 
 
 class MoneroGetAddress(p.MessageType):
-    MESSAGE_WIRE_TYPE = 530
+    MESSAGE_WIRE_TYPE = 540
     FIELDS = {
         1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
         2: ('show_display', p.BoolType, 0),

@@ -4,4 +4,4 @@ from .. import protobuf as p
 
 
 class MoneroTransactionInputViniAck(p.MessageType):
-    MESSAGE_WIRE_TYPE = 505
+    MESSAGE_WIRE_TYPE = 508

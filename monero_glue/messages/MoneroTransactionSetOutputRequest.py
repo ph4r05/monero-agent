@@ -7,6 +7,7 @@ from .MoneroTransactionRsigData import MoneroTransactionRsigData
 
 
 class MoneroTransactionSetOutputRequest(p.MessageType):
+    MESSAGE_WIRE_TYPE = 511
     FIELDS = {
         1: ('dst_entr', MoneroTransactionDestinationEntry, 0),
         2: ('dst_entr_hmac', p.BytesType, 0),

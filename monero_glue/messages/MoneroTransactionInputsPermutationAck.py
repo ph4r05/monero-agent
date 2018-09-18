@@ -4,4 +4,4 @@ from .. import protobuf as p
 
 
 class MoneroTransactionInputsPermutationAck(p.MessageType):
-    MESSAGE_WIRE_TYPE = 504
+    MESSAGE_WIRE_TYPE = 506

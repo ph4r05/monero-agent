@@ -6,6 +6,7 @@ from .MoneroTransactionSourceEntry import MoneroTransactionSourceEntry
 
 
 class MoneroTransactionInputViniRequest(p.MessageType):
+    MESSAGE_WIRE_TYPE = 507
     FIELDS = {
         1: ('src_entr', MoneroTransactionSourceEntry, 0),
         2: ('vini', p.BytesType, 0),

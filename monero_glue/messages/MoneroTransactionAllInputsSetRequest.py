@@ -6,6 +6,7 @@ from .MoneroTransactionRsigData import MoneroTransactionRsigData
 
 
 class MoneroTransactionAllInputsSetRequest(p.MessageType):
+    MESSAGE_WIRE_TYPE = 509
     FIELDS = {
         1: ('rsig_data', MoneroTransactionRsigData, 0),
     }

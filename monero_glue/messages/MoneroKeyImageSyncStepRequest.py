@@ -12,6 +12,7 @@ if __debug__:
 
 
 class MoneroKeyImageSyncStepRequest(p.MessageType):
+    MESSAGE_WIRE_TYPE = 532
     FIELDS = {
         1: ('tdis', MoneroTransferDetails, p.FLAG_REPEATED),
     }

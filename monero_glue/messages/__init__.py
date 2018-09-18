@@ -88,13 +88,8 @@ from .MoneroKeyImageExportInitAck import MoneroKeyImageExportInitAck
 from .MoneroKeyImageExportInitRequest import MoneroKeyImageExportInitRequest
 from .MoneroKeyImageSyncFinalAck import MoneroKeyImageSyncFinalAck
 from .MoneroKeyImageSyncFinalRequest import MoneroKeyImageSyncFinalRequest
-from .MoneroKeyImageSyncRequest import MoneroKeyImageSyncRequest
 from .MoneroKeyImageSyncStepAck import MoneroKeyImageSyncStepAck
 from .MoneroKeyImageSyncStepRequest import MoneroKeyImageSyncStepRequest
-from .MoneroLiteAck import MoneroLiteAck
-from .MoneroLiteInitAck import MoneroLiteInitAck
-from .MoneroLiteInitRequest import MoneroLiteInitRequest
-from .MoneroLiteRequest import MoneroLiteRequest
 from .MoneroMultisigKLRki import MoneroMultisigKLRki
 from .MoneroOutputEntry import MoneroOutputEntry
 from .MoneroRctKey import MoneroRctKey
@@ -116,8 +111,6 @@ from .MoneroTransactionInputsPermutationAck import MoneroTransactionInputsPermut
 from .MoneroTransactionInputsPermutationRequest import MoneroTransactionInputsPermutationRequest
 from .MoneroTransactionMlsagDoneAck import MoneroTransactionMlsagDoneAck
 from .MoneroTransactionMlsagDoneRequest import MoneroTransactionMlsagDoneRequest
-from .MoneroTransactionRangeSigAck import MoneroTransactionRangeSigAck
-from .MoneroTransactionRangeSigRequest import MoneroTransactionRangeSigRequest
 from .MoneroTransactionRsigData import MoneroTransactionRsigData
 from .MoneroTransactionSetInputAck import MoneroTransactionSetInputAck
 from .MoneroTransactionSetInputRequest import MoneroTransactionSetInputRequest
@@ -125,7 +118,6 @@ from .MoneroTransactionSetOutputAck import MoneroTransactionSetOutputAck
 from .MoneroTransactionSetOutputRequest import MoneroTransactionSetOutputRequest
 from .MoneroTransactionSignInputAck import MoneroTransactionSignInputAck
 from .MoneroTransactionSignInputRequest import MoneroTransactionSignInputRequest
-from .MoneroTransactionSignRequest import MoneroTransactionSignRequest
 from .MoneroTransactionSourceEntry import MoneroTransactionSourceEntry
 from .MoneroTransferDetails import MoneroTransferDetails
 from .MoneroWatchKey import MoneroWatchKey

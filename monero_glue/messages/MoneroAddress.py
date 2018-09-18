@@ -4,7 +4,7 @@ from .. import protobuf as p
 
 
 class MoneroAddress(p.MessageType):
-    MESSAGE_WIRE_TYPE = 531
+    MESSAGE_WIRE_TYPE = 541
     FIELDS = {
         1: ('address', p.BytesType, 0),
     }

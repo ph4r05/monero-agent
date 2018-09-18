@@ -10,6 +10,7 @@ if __debug__:
 
 
 class MoneroTransactionInputsPermutationRequest(p.MessageType):
+    MESSAGE_WIRE_TYPE = 505
     FIELDS = {
         1: ('perm', p.UVarintType, p.FLAG_REPEATED),
     }

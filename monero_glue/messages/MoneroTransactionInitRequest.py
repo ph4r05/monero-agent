@@ -12,6 +12,7 @@ if __debug__:
 
 
 class MoneroTransactionInitRequest(p.MessageType):
+    MESSAGE_WIRE_TYPE = 501
     FIELDS = {
         1: ('version', p.UVarintType, 0),
         2: ('address_n', p.UVarintType, p.FLAG_REPEATED),

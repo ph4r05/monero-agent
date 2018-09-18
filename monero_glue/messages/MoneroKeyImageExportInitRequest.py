@@ -12,6 +12,7 @@ if __debug__:
 
 
 class MoneroKeyImageExportInitRequest(p.MessageType):
+    MESSAGE_WIRE_TYPE = 530
     FIELDS = {
         1: ('num', p.UVarintType, 0),
         2: ('hash', p.BytesType, 0),
