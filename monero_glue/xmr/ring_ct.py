@@ -7,7 +7,7 @@ import logging
 
 from monero_glue.compat import gc
 from monero_glue.compat.utils import memcpy
-from monero_glue.xmr import asnl, bulletproof, common, crypto, mlsag2, monero
+from monero_glue.xmr import bulletproof, crypto, mlsag2, monero
 from monero_serialize import xmrtypes
 
 logger = logging.getLogger(__name__)
@@ -202,7 +202,6 @@ def prove_range_chunked(amount, last_mask=None):
 def prove_range(
     amount,
     last_mask=None,
-    use_asnl=False,
     mem_opt=True,
     backend_impl=False,
     decode=False,
@@ -216,7 +215,6 @@ def prove_range(
 
     :param amount:
     :param last_mask:
-    :param use_asnl: ASNL range proof, insecure
     :param mem_opt: memory optimized
     :param backend_impl: backend implementation, if available
     :param decode: decodes output
@@ -224,11 +222,6 @@ def prove_range(
     :param rsig: buffer for rsig
     :return:
     """
-    if use_asnl and mem_opt:
-        raise ValueError("ASNL not in memory optimized variant")
-    if backend_impl and use_asnl:
-        raise ValueError("ASNL not supported in backend")
-
     if backend_impl and crypto.get_backend().has_rangeproof_borromean():
         if byte_enc and decode:
             raise ValueError("Conflicting options byte_enc, decode")
@@ -243,8 +236,8 @@ def prove_range(
         return C, a, R
 
     ret = None
-    if use_asnl and not mem_opt:
-        ret = prove_range_orig(amount, last_mask=last_mask, use_asnl=True)
+    if not mem_opt:
+        ret = prove_range_orig(amount, last_mask=last_mask)
     else:
         ret = prove_range_mem(amount, last_mask=last_mask)
 
@@ -259,7 +252,7 @@ def prove_range(
     return C, a, R
 
 
-def prove_range_orig(amount, last_mask=None, use_asnl=False):
+def prove_range_orig(amount, last_mask=None):
     """
     Gives C, and mask such that \sumCi = C
     c.f. http:#eprint.iacr.org/2015/1098 section 5.1
@@ -269,7 +262,6 @@ def prove_range_orig(amount, last_mask=None, use_asnl=False):
     mask is a such that C = aG + bH, and b = amount
     :param amount:
     :param last_mask: ai[ATOMS-1] will be computed as \sum_{i=0}^{ATOMS-2} a_i - last_mask
-    :param use_asnl: use ASNL, used before Borromean, insecure
     :return: sumCi, mask, RangeSig.
         sumCi is Pedersen commitment on the amount value. sumCi = aG + amount*H
         mask is "a" from the Pedersent commitment above.
@@ -296,11 +288,7 @@ def prove_range_orig(amount, last_mask=None, use_asnl=False):
         CiH[i] = crypto.point_sub(Ci[i], H2[i])
 
     A = xmrtypes.BoroSig()
-
-    if use_asnl:
-        A.s0, A.s1, A.ee = asnl.gen_asnl(ai, Ci, CiH, bb)
-    else:
-        A.s0, A.s1, A.ee = mlsag2.gen_borromean(ai, Ci, CiH, bb)
+    A.s0, A.s1, A.ee = mlsag2.gen_borromean(ai, Ci, CiH, bb)
 
     R = xmrtypes.RangeSig()
     R.asig = A
@@ -322,7 +310,6 @@ def prove_range_mem(amount, last_mask=None):
     mask is a such that C = aG + bH, and b = amount
     :param amount:
     :param last_mask: ai[ATOMS-1] will be computed as \sum_{i=0}^{ATOMS-2} a_i - last_mask
-    :param use_asnl: use ASNL, used before Borromean
     :return: sumCi, mask, RangeSig.
         sumCi is Pedersen commitment on the amount value. sumCi = aG + amount*H
         mask is "a" from the Pedersent commitment above.
@@ -398,12 +385,11 @@ def prove_range_mem(amount, last_mask=None):
     return C, a, R
 
 
-def ver_range(C=None, rsig=None, use_asnl=False, use_bulletproof=False, decode=True):
+def ver_range(C=None, rsig=None, use_bulletproof=False, decode=True):
     """
     Verifies that \sum Ci = C and that each Ci is a commitment to 0 or 2^i
     :param C:
     :param rsig:
-    :param use_asnl: use ASNL, used before Borromean, insecure!
     :param use_bulletproof: bulletproof
     :param decode: decodes encoded range proof
     :return:
@@ -428,12 +414,10 @@ def ver_range(C=None, rsig=None, use_asnl=False, use_bulletproof=False, decode=T
     if use_bulletproof:
         bp = bulletproof.BulletProofBuilder()
         return bp.verify(rsig)
-    if use_asnl:
-        return asnl.ver_asnl(rsig.Ci, CiH, rsig.asig.s0, rsig.asig.s1, rsig.asig.ee)
-    else:
-        return mlsag2.ver_borromean(
-            rsig.Ci, CiH, rsig.asig.s0, rsig.asig.s1, rsig.asig.ee
-        )
+
+    return mlsag2.ver_borromean(
+        rsig.Ci, CiH, rsig.asig.s0, rsig.asig.s1, rsig.asig.ee
+    )
 
 
 # Ring-ct MG sigs
@@ -461,11 +445,11 @@ def ecdh_encode(unmasked, receiver_pk=None, derivation=None):
         rv.senderPk = crypto.scalarmult_base(esk)
         derivation = crypto.encodepoint(crypto.scalarmult(receiver_pk, esk))
 
-    sharedSec1 = crypto.hash_to_scalar(derivation)
-    sharedSec2 = crypto.hash_to_scalar(crypto.encodeint(sharedSec1))
+    sec1 = crypto.hash_to_scalar(derivation)
+    sec2 = crypto.hash_to_scalar(crypto.encodeint(sec1))
 
-    rv.mask = crypto.sc_add(unmasked.mask, sharedSec1)
-    rv.amount = crypto.sc_add(unmasked.amount, sharedSec2)
+    rv.mask = crypto.sc_add(unmasked.mask, sec1)
+    rv.amount = crypto.sc_add(unmasked.amount, sec2)
     return rv
 
 
@@ -486,10 +470,6 @@ def ecdh_decode(masked, receiver_sk=None, derivation=None):
     """
     Elliptic Curve Diffie-Helman: encodes and decodes the amount b and mask a
     where C= aG + bH
-    :param masked:
-    :param receiver_sk:
-    :param derivation:
-    :return:
     """
     rv = xmrtypes.EcdhTuple()
 
@@ -540,14 +520,6 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
     """
     Generates ring signature with key image.
     void crypto_ops::generate_ring_signature()
-
-    :param prefix_hash:
-    :param image:
-    :param pubs:
-    :param sec:
-    :param sec_idx:
-    :param test:
-    :return:
     """
     if test:
         t = crypto.scalarmult_base(sec)
@@ -611,11 +583,6 @@ def generate_ring_signature(prefix_hash, image, pubs, sec, sec_idx, test=False):
 def check_ring_singature(prefix_hash, image, pubs, sig):
     """
     Checks ring signature generated with generate_ring_signature
-    :param prefix_hash:
-    :param image:
-    :param pubs:
-    :param sig:
-    :return:
     """
     image_unp = crypto.ge_frombytes_vartime(image)
     image_pre = crypto.ge_dsm_precomp(image_unp)
@@ -661,15 +628,6 @@ def export_key_image(
 ):
     """
     Generates key image for the TXO + signature for the key image
-    :param creds:
-    :param subaddresses:
-    :param pkey:
-    :param tx_pub_key:
-    :param additional_tx_pub_keys:
-    :param out_idx:
-    :param test:
-    :param verify:
-    :return:
     """
     r = monero.generate_key_image_helper(
         creds, subaddresses, pkey, tx_pub_key, additional_tx_pub_keys, out_idx

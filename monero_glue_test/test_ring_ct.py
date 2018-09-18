@@ -90,25 +90,6 @@ class RingCtTest(aiounittest.AsyncTestCase):
         res = ring_ct.ver_range(proof[0], rsig)
         self.assertTrue(res)
 
-    def test_range_proof_old(self):
-        proof = ring_ct.prove_range(0, use_asnl=True, mem_opt=False, decode=True)
-        res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True, decode=False)
-        self.assertTrue(res)
-
-    def test_range_proof2_old(self):
-        proof = ring_ct.prove_range(
-            123456789, use_asnl=True, mem_opt=False, decode=True
-        )
-        res = ring_ct.ver_range(proof[0], proof[2], use_asnl=True, decode=False)
-        self.assertTrue(res)
-        res = ring_ct.ver_range(
-            crypto.point_add(proof[0], crypto.scalarmult_base(crypto.sc_init(4))),
-            proof[2],
-            use_asnl=True,
-            decode=False,
-        )
-        self.assertFalse(res)
-
     def test_key_image_signature(self):
         ki = binascii.unhexlify(
             b"a248206cea806a7d60ea936cdc35efdf44a189b1026c4e658f42216aec155383"
