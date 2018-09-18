@@ -10,9 +10,8 @@ from monero_glue.messages import (
     Failure,
     FailureType,
     MoneroGetWatchKey,
-    MoneroKeyImageSyncRequest,
-    MoneroTransactionSignRequest,
     MoneroWatchKey,
+    MessageType,
 )
 from monero_glue.protocol.key_image_sync import KeyImageSync
 from monero_glue.protocol.tsx_sign import TsxSigner
@@ -110,7 +109,7 @@ class TokenLite(object):
             address=self.creds.address,
         )
 
-    async def tsx_sign(self, msg: MoneroTransactionSignRequest):
+    async def tsx_sign(self, msg):
         try:
             await self.test_pb_msg(msg)
 
@@ -130,19 +129,19 @@ class TokenLite(object):
             self.tsx_obj = None
             return Failure(message=exc2str(e))
 
-    async def key_image_sync(self, msg: MoneroKeyImageSyncRequest):
-        try:
-            if msg.init:
+    async def key_image_sync(self, msg):
+        try:  # TODO
+            if msg.MESSAGE_WIRE_TYPE == MessageType.MoneroKeyImageExportInitRequest:
                 self.ki_sync = KeyImageSync(
                     ctx=self, iface=self.iface, creds=self.creds
                 )
-                return await self.ki_sync.init(self, msg.init)
+                return await self.ki_sync.init(self, msg)
 
-            elif msg.step:
-                return await self.ki_sync.sync(self, msg.step)
+            elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroKeyImageSyncStepRequest:
+                return await self.ki_sync.sync(self, msg)
 
-            elif msg.final_msg:
-                res = await self.ki_sync.final(self, msg.final_msg)
+            elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroKeyImageSyncFinalRequest:
+                res = await self.ki_sync.final(self, msg)
                 self.ki_sync = None
                 return res
 

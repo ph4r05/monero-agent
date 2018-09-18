@@ -12,7 +12,6 @@ from monero_glue.messages import (
     MoneroGetAddress,
     MoneroGetWatchKey,
     MoneroKeyImageSyncFinalRequest,
-    MoneroKeyImageSyncRequest,
     MoneroKeyImageSyncStepRequest,
     MoneroTransactionAllInputsSetAck,
     MoneroTransactionAllInputsSetRequest,
@@ -34,7 +33,6 @@ from monero_glue.messages import (
     MoneroTransactionSetOutputRequest,
     MoneroTransactionSignInputAck,
     MoneroTransactionSignInputRequest,
-    MoneroTransactionSignRequest,
 )
 from monero_glue.protocol_base.base import TError
 from monero_glue.xmr import common, crypto, key_image, monero, ring_ct
@@ -353,9 +351,7 @@ class Agent(object):
             tsx_data=tsx_data,
         )
 
-        t_res = await self.trezor.tsx_sign(
-            MoneroTransactionSignRequest(init=init_msg)
-        )  # type: MoneroTransactionInitAck
+        t_res = await self.trezor.tsx_sign(init_msg)  # type: MoneroTransactionInitAck
         self.handle_error(t_res)
 
         in_memory = t_res.in_memory
@@ -368,7 +364,7 @@ class Agent(object):
             msg = MoneroTransactionSetInputRequest(src_entr=src_bin)
 
             t_res = await self.trezor.tsx_sign(
-                MoneroTransactionSignRequest(set_input=msg)
+                msg
             )  # type: MoneroTransactionSetInputAck
             self.handle_error(t_res)
 
@@ -409,9 +405,7 @@ class Agent(object):
             msg = MoneroTransactionInputsPermutationRequest(
                 perm=self.ct.source_permutation
             )
-            t_res = await self.trezor.tsx_sign(
-                MoneroTransactionSignRequest(input_permutation=msg)
-            )
+            t_res = await self.trezor.tsx_sign(msg)
             self.handle_error(t_res)
 
         # Set vin_i back - tx prefix hashing
@@ -427,16 +421,12 @@ class Agent(object):
                     if not in_memory
                     else None,
                 )
-                t_res = await self.trezor.tsx_sign(
-                    MoneroTransactionSignRequest(input_vini=msg)
-                )
+                t_res = await self.trezor.tsx_sign(msg)
                 self.handle_error(t_res)
 
         # All inputs set
         t_res = await self.trezor.tsx_sign(
-            MoneroTransactionSignRequest(
-                all_in_set=MoneroTransactionAllInputsSetRequest()
-            )
+            MoneroTransactionAllInputsSetRequest()
         )  # type: MoneroTransactionAllInputsSetAck
         self.handle_error(t_res)
         await self._on_all_input_set(t_res)
@@ -446,16 +436,14 @@ class Agent(object):
             msg = await self._step_set_outputs(idx, dst)
 
             t_res = await self.trezor.tsx_sign(
-                MoneroTransactionSignRequest(set_output=msg)
+                msg
             )  # type: MoneroTransactionSetOutputAck
             self.handle_error(t_res)
 
             await self._on_set_outputs_ack(t_res)
 
         t_res = await self.trezor.tsx_sign(
-            MoneroTransactionSignRequest(
-                all_out_set=MoneroTransactionAllOutSetRequest()
-            )
+            MoneroTransactionAllOutSetRequest()
         )  # type: MoneroTransactionAllOutSetAck
         self.handle_error(t_res)
 
@@ -495,7 +483,7 @@ class Agent(object):
 
         # MLSAG message check
         t_res = await self.trezor.tsx_sign(
-            MoneroTransactionSignRequest(mlsag_done=MoneroTransactionMlsagDoneRequest())
+            MoneroTransactionMlsagDoneRequest()
         )  # type: MoneroTransactionMlsagDoneAck
         self.handle_error(t_res)
 
@@ -518,7 +506,7 @@ class Agent(object):
                 spend_enc=self.ct.spend_encs[idx],
             )
             t_res = await self.trezor.tsx_sign(
-                MoneroTransactionSignRequest(sign_input=msg)
+                msg
             )  # type: MoneroTransactionSignInputAck
             self.handle_error(t_res)
 
@@ -530,7 +518,7 @@ class Agent(object):
         self.ct.tx.rct_signatures = rv
 
         t_res = await self.trezor.tsx_sign(
-            MoneroTransactionSignRequest(final_msg=MoneroTransactionFinalRequest())
+            MoneroTransactionFinalRequest()
         )  # type: MoneroTransactionFinalAck
         self.handle_error(t_res)
 
@@ -706,9 +694,7 @@ class Agent(object):
         ki_export_init = await key_image.generate_commitment(outputs)
         ki_export_init.address_n = self.address_n
         ki_export_init.network_type = self.network_type
-        t_res = await self.trezor.key_image_sync(
-            MoneroKeyImageSyncRequest(init=ki_export_init)
-        )
+        t_res = await self.trezor.key_image_sync(ki_export_init)
         self.handle_error(t_res)
 
         sub_res = []
@@ -716,15 +702,13 @@ class Agent(object):
         batches = common.chunk(iter, 10)
         for rr in batches:  # type: list[key_image.MoneroTransferDetails]
             t_res = await self.trezor.key_image_sync(
-                MoneroKeyImageSyncRequest(step=MoneroKeyImageSyncStepRequest(tdis=rr))
+                MoneroKeyImageSyncStepRequest(tdis=rr)
             )
             self.handle_error(t_res)
 
             sub_res += t_res.kis
 
-        t_res = await self.trezor.key_image_sync(
-            MoneroKeyImageSyncRequest(final_msg=MoneroKeyImageSyncFinalRequest())
-        )
+        t_res = await self.trezor.key_image_sync(MoneroKeyImageSyncFinalRequest())
         self.handle_error(t_res)
 
         # Decrypting phase

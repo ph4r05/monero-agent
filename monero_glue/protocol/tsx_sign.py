@@ -6,6 +6,7 @@
 from monero_glue.compat import gc, log
 
 from apps.monero.controller import misc
+from monero_glue.messages import MessageType
 
 
 class TsxSigner(object):
@@ -92,11 +93,15 @@ class TsxSigner(object):
 
         self._log_trace("wake_up()", True)
 
-        if msg.init:
+        if msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionInitRequest:
             self._log_trace("init")
-            await self.setup(msg.init)
+            await self.setup(msg)
 
-        await self.restore(state if not msg.init else None)
+        await self.restore(
+            state
+            if msg.MESSAGE_WIRE_TYPE != MessageType.MoneroTransactionInitRequest
+            else None
+        )
         self._log_trace("wake_up() end", True)
 
     async def sign(self, msg):
@@ -106,36 +111,39 @@ class TsxSigner(object):
         :return:
         """
         self._log_trace("sign()", True)
-        if msg.init:
+        if msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionInitRequest:
             self._log_trace("sign_init")
-            return await self.tsx_init(msg.init.tsx_data)
-        elif msg.set_input:
+            return await self.tsx_init(msg.tsx_data)
+        elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionSetInputRequest:
             self._log_trace("sign_inp")
-            return await self.tsx_set_input(msg.set_input)
-        elif msg.input_permutation:
+            return await self.tsx_set_input(msg)
+        elif (
+            msg.MESSAGE_WIRE_TYPE
+            == MessageType.MoneroTransactionInputsPermutationRequest
+        ):
             self._log_trace("sign_perm")
-            return await self.tsx_inputs_permutation(msg.input_permutation)
-        elif msg.input_vini:
+            return await self.tsx_inputs_permutation(msg)
+        elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionInputViniRequest:
             self._log_trace("sign_vin")
-            return await self.tsx_input_vini(msg.input_vini)
-        elif msg.all_in_set:
+            return await self.tsx_input_vini(msg)
+        elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionAllInputsSetRequest:
             self._log_trace("all_in_set")
-            return await self.tsx_all_in_set(msg.all_in_set)
-        elif msg.set_output:
+            return await self.tsx_all_in_set(msg)
+        elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionSetOutputRequest:
             self._log_trace("sign_out")
-            return await self.tsx_set_output1(msg.set_output)
-        elif msg.all_out_set:
+            return await self.tsx_set_output1(msg)
+        elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionAllOutSetRequest:
             self._log_trace("sign_out_set")
-            return await self.tsx_all_out1_set(msg.all_out_set)
-        elif msg.mlsag_done:
+            return await self.tsx_all_out1_set(msg)
+        elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionMlsagDoneRequest:
             self._log_trace("sign_done")
             return await self.tsx_mlsag_done()
-        elif msg.sign_input:
+        elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionSignInputRequest:
             self._log_trace("sign_sinp")
-            return await self.tsx_sign_input(msg.sign_input)
-        elif msg.final_msg:
+            return await self.tsx_sign_input(msg)
+        elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionFinalRequest:
             self._log_trace("sign_final")
-            return await self.tsx_sign_final(msg.final_msg)
+            return await self.tsx_sign_final(msg)
         else:
             raise ValueError("Unknown message")
 
