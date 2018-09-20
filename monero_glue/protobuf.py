@@ -113,7 +113,10 @@ class UnicodeType:
 
 class MessageType:
     WIRE_TYPE = 2
-    FIELDS = {}
+
+    @classmethod
+    def get_fields(cls):
+        return {}
 
     def __init__(self, **kwargs):
         for kw in kwargs:
@@ -154,7 +157,7 @@ FLAG_REPEATED = const(1)
 
 
 async def load_message(reader, msg_type):
-    fields = msg_type.FIELDS
+    fields = msg_type.get_fields()
     msg = msg_type()
 
     while True:
@@ -196,7 +199,7 @@ async def load_message(reader, msg_type):
         elif ftype is UnicodeType:
             fvalue = bytearray(ivalue)
             await reader.areadinto(fvalue)
-            fvalue = str(fvalue, "utf8")
+            fvalue = bytes(fvalue).decode()
         elif issubclass(ftype, MessageType):
             fvalue = await load_message(LimitedReader(reader, ivalue), ftype)
         else:
@@ -209,8 +212,8 @@ async def load_message(reader, msg_type):
         setattr(msg, fname, fvalue)
 
     # fill missing fields
-    for tag in msg.FIELDS:
-        field = msg.FIELDS[tag]
+    for tag in fields:
+        field = fields[tag]
         if not hasattr(msg, field[0]):
             setattr(msg, field[0], None)
 
@@ -220,7 +223,7 @@ async def load_message(reader, msg_type):
 async def dump_message(writer, msg):
     repvalue = [0]
     mtype = msg.__class__
-    fields = mtype.FIELDS
+    fields = mtype.get_fields()
 
     for ftag in fields:
         fname, ftype, fflags = fields[ftag]
@@ -252,7 +255,7 @@ async def dump_message(writer, msg):
                 await writer.awrite(svalue)
 
             elif ftype is UnicodeType:
-                bvalue = bytes(svalue, "utf8")
+                bvalue = svalue.encode()
                 await dump_uvarint(writer, len(bvalue))
                 await writer.awrite(bvalue)
 
