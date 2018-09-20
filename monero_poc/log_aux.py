@@ -36,12 +36,18 @@ class LogAnalyzer(object):
 
     def print_line(self, line):
         print(line)
+        if self.args.tee_aux:
+            self.tee_line(line)
 
-    def process(self, line):
-        line = line.strip()
+    def tee_line(self, line):
         if self.tee_file:
             self.tee_file.write(line)
             self.tee_file.write('\n')
+
+    def process(self, line):
+        line = line.strip()
+        if not self.args.tee_aux:
+            self.tee_line(line)
 
         m = re.match(r'^(\d+)\s([^\s]+?)\s([^\s]+?)\s(.*)$', line)
         if m is None:
@@ -65,7 +71,7 @@ class LogAnalyzer(object):
                 ctime = self.time_prev + (ctime + (4294967296 - self.time_prev_o))
             else:
                 ctime = self.time_prev + (ctime - self.time_prev_o)
-            line = re.sub(r'^\d+', '%08d' % ctime, line)
+            line = re.sub(r'^\d+', '%011d' % ctime, line)
 
         self.time_prev = ctime
         self.time_prev_o = ctime_o
@@ -157,14 +163,16 @@ class LogAnalyzer(object):
                             help='Baud rate')
         parser.add_argument("--retry", dest="retry", default=True, action="store_const", const=True,
                             help="Retry reconnect")
-        parser.add_argument("--norm-time", dest="norm_time", default=True, action="store_const", const=True,
+        parser.add_argument("--norm-time", dest="norm_time", default=False, action="store_const", const=True,
                             help="Normalize time")
-        parser.add_argument("--no-time", dest="no_time", default=True, action="store_const", const=True,
+        parser.add_argument("--no-time", dest="no_time", default=False, action="store_const", const=True,
                             help="Do not show time")
-        parser.add_argument("--no-aug", dest="no_aug", default=True, action="store_const", const=True,
+        parser.add_argument("--no-aug", dest="no_aug", default=False, action="store_const", const=True,
                             help="Do not augment the log output")
         parser.add_argument("--tee", dest="tee", default=None,
                             help="File to copy raw output to")
+        parser.add_argument("--tee-aux", dest="tee_aux", default=False, action="store_const", const=True,
+                            help="Tee augmented lines")
         parser.add_argument('files', metavar='FILE', nargs='*',
                             help='files to read, if empty, stdin is used')
         args = parser.parse_args()
