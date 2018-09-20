@@ -237,7 +237,7 @@ class CountingWriter:
 FLAG_REPEATED = 1
 
 
-def load_message(reader, msg_type):
+async def load_message(reader, msg_type):
     fields = msg_type.get_fields()
     msg = msg_type()
 
@@ -283,7 +283,7 @@ def load_message(reader, msg_type):
             reader.readinto(buf)
             fvalue = buf.decode()
         elif issubclass(ftype, MessageType):
-            fvalue = load_message(LimitedReader(reader, ivalue), ftype)
+            fvalue = await load_message(LimitedReader(reader, ivalue), ftype)
         else:
             raise TypeError  # field type is unknown
 
@@ -296,7 +296,7 @@ def load_message(reader, msg_type):
     return msg
 
 
-def dump_message(writer, msg):
+async def dump_message(writer, msg):
     repvalue = [0]
     mtype = msg.__class__
     fields = mtype.get_fields()
@@ -339,9 +339,9 @@ def dump_message(writer, msg):
 
             elif issubclass(ftype, MessageType):
                 counter = CountingWriter()
-                dump_message(counter, svalue)
+                await dump_message(counter, svalue)
                 dump_uvarint(writer, counter.size)
-                dump_message(writer, svalue)
+                await dump_message(writer, svalue)
 
             else:
                 raise TypeError
