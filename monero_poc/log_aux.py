@@ -1,6 +1,7 @@
 import fileinput
 import re
 import io
+import os
 import argparse
 import logging
 import coloredlogs
@@ -28,9 +29,14 @@ class LogAnalyzer(object):
         self.mem_alloc_ref = None
         self.mem_alloc_max = 0
         self.serial_device = None
+        self.tee_file = None
 
     def process(self, line):
         line = line.strip()
+        if self.tee_file:
+            self.tee_file.write(line)
+            self.tee_file.write('\n')
+
         m = re.match(r'^(\d+)\s([^\s]+?)\s([^\s]+?)\s(.*)$', line)
         if m is None:
             print(line)
@@ -113,7 +119,6 @@ class LogAnalyzer(object):
                 logger.warning('Exc: %s' % e)
                 time.sleep(2)
 
-
     def read_files(self, files):
         for idx, line in enumerate(fileinput.input(files)):
             anz.process(line)
@@ -123,14 +128,27 @@ class LogAnalyzer(object):
         parser.add_argument('--serial', default=None, help='Serial device to read from')
         parser.add_argument('--brate', type=int, default=115200, help='Baud rate')
         parser.add_argument("--retry", dest="retry", default=True, action="store_const", const=True, help="Retry reconnect")
+        parser.add_argument("--tee", dest="tee", default=None, help="File to copy raw output to")
         parser.add_argument('files', metavar='FILE', nargs='*', help='files to read, if empty, stdin is used')
         args = parser.parse_args()
 
-        if args.serial:
-            self.serial_device = args.serial
-            self.read_serial(args.serial, args.brate)
-        else:
-            self.read_files(args.files)
+        if args.tee:
+            if os.path.exists(args.tee):
+                raise ValueError('Tee file already exists')
+            self.tee_file = open(args.tee, 'w+')
+
+        try:
+            if args.serial:
+                self.serial_device = args.serial
+                self.read_serial(args.serial, args.brate)
+            else:
+                self.read_files(args.files)
+
+        except KeyboardInterrupt:
+            logger.info('Terminating')
+
+        if self.tee_file:
+            self.tee_file.close()
 
 
 if __name__ == '__main__':
