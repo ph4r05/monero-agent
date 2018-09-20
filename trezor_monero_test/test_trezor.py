@@ -124,3 +124,4 @@ class TrezorTest(BaseAgentTest):
                         tx.use_bulletproofs = True
 
                 await self.tx_sign_test(self.agent, unsigned_tx, creds, all_creds, fl)
+                await self.agent.get_address()  # resets flow
