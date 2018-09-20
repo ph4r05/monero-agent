@@ -5,12 +5,15 @@ from .. import protobuf as p
 
 class MoneroKeyImageSyncFinalAck(p.MessageType):
     MESSAGE_WIRE_TYPE = 535
-    FIELDS = {
-        1: ('enc_key', p.BytesType, 0),
-    }
 
     def __init__(
         self,
         enc_key: bytes = None,
     ) -> None:
         self.enc_key = enc_key
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('enc_key', p.BytesType, 0),
+        }

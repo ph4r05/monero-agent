@@ -4,12 +4,15 @@ from .. import protobuf as p
 
 
 class TronAccountUpdateContract(p.MessageType):
-    FIELDS = {
-        1: ('account_name', p.UnicodeType, 0),
-    }
 
     def __init__(
         self,
         account_name: str = None,
     ) -> None:
         self.account_name = account_name
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('account_name', p.UnicodeType, 0),
+        }

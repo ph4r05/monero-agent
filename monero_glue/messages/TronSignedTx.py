@@ -5,10 +5,6 @@ from .. import protobuf as p
 
 class TronSignedTx(p.MessageType):
     MESSAGE_WIRE_TYPE = 253
-    FIELDS = {
-        1: ('signature', p.BytesType, 0),
-        2: ('serialized_tx', p.BytesType, 0),
-    }
 
     def __init__(
         self,
@@ -17,3 +13,10 @@ class TronSignedTx(p.MessageType):
     ) -> None:
         self.signature = signature
         self.serialized_tx = serialized_tx
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('signature', p.BytesType, 0),
+            2: ('serialized_tx', p.BytesType, 0),
+        }

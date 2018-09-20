@@ -12,12 +12,15 @@ if __debug__:
 
 
 class TronProposalCreateContract(p.MessageType):
-    FIELDS = {
-        1: ('parameters', TronProposalParameters, p.FLAG_REPEATED),
-    }
 
     def __init__(
         self,
         parameters: List[TronProposalParameters] = None,
     ) -> None:
         self.parameters = parameters if parameters is not None else []
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('parameters', TronProposalParameters, p.FLAG_REPEATED),
+        }

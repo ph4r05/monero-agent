@@ -5,10 +5,6 @@ from .. import protobuf as p
 
 class MoneroWatchKey(p.MessageType):
     MESSAGE_WIRE_TYPE = 543
-    FIELDS = {
-        1: ('watch_key', p.BytesType, 0),
-        2: ('address', p.BytesType, 0),
-    }
 
     def __init__(
         self,
@@ -17,3 +13,10 @@ class MoneroWatchKey(p.MessageType):
     ) -> None:
         self.watch_key = watch_key
         self.address = address
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('watch_key', p.BytesType, 0),
+            2: ('address', p.BytesType, 0),
+        }

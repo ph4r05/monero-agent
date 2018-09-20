@@ -12,20 +12,6 @@ if __debug__:
 
 
 class MoneroTransactionRsigData(p.MessageType):
-    FIELDS = {
-        1: ('version', p.UVarintType, 0),
-        2: ('rsig_type', p.UVarintType, 0),
-        3: ('offload_type', p.UVarintType, 0),
-        4: ('grouping', p.UVarintType, p.FLAG_REPEATED),
-        5: ('step', p.UVarintType, 0),
-        6: ('operation', p.UVarintType, 0),
-        7: ('seed', p.BytesType, 0),
-        8: ('mask', p.BytesType, 0),
-        9: ('amount', p.BytesType, 0),
-        10: ('rsig', p.BytesType, 0),
-        11: ('rsig_parts', p.BytesType, p.FLAG_REPEATED),
-        12: ('outputs', MoneroTransactionDestinationEntry, p.FLAG_REPEATED),
-    }
 
     def __init__(
         self,
@@ -54,3 +40,20 @@ class MoneroTransactionRsigData(p.MessageType):
         self.rsig = rsig
         self.rsig_parts = rsig_parts if rsig_parts is not None else []
         self.outputs = outputs if outputs is not None else []
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('version', p.UVarintType, 0),
+            2: ('rsig_type', p.UVarintType, 0),
+            3: ('offload_type', p.UVarintType, 0),
+            4: ('grouping', p.UVarintType, p.FLAG_REPEATED),
+            5: ('step', p.UVarintType, 0),
+            6: ('operation', p.UVarintType, 0),
+            7: ('seed', p.BytesType, 0),
+            8: ('mask', p.BytesType, 0),
+            9: ('amount', p.BytesType, 0),
+            10: ('rsig', p.BytesType, 0),
+            11: ('rsig_parts', p.BytesType, p.FLAG_REPEATED),
+            12: ('outputs', MoneroTransactionDestinationEntry, p.FLAG_REPEATED),
+        }

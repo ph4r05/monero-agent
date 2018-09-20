@@ -4,10 +4,6 @@ from .. import protobuf as p
 
 
 class TronProposalApproveContract(p.MessageType):
-    FIELDS = {
-        1: ('proposal_id', p.UVarintType, 0),
-        2: ('is_add_approval', p.BoolType, 0),
-    }
 
     def __init__(
         self,
@@ -16,3 +12,10 @@ class TronProposalApproveContract(p.MessageType):
     ) -> None:
         self.proposal_id = proposal_id
         self.is_add_approval = is_add_approval
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('proposal_id', p.UVarintType, 0),
+            2: ('is_add_approval', p.BoolType, 0),
+        }

@@ -4,10 +4,6 @@ from .. import protobuf as p
 
 
 class TronVote(p.MessageType):
-    FIELDS = {
-        1: ('vote_address', p.BytesType, 0),
-        2: ('vote_count', p.UVarintType, 0),
-    }
 
     def __init__(
         self,
@@ -16,3 +12,10 @@ class TronVote(p.MessageType):
     ) -> None:
         self.vote_address = vote_address
         self.vote_count = vote_count
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('vote_address', p.BytesType, 0),
+            2: ('vote_count', p.UVarintType, 0),
+        }

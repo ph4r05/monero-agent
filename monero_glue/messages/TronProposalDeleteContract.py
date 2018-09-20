@@ -4,12 +4,15 @@ from .. import protobuf as p
 
 
 class TronProposalDeleteContract(p.MessageType):
-    FIELDS = {
-        1: ('proposal_id', p.UVarintType, 0),
-    }
 
     def __init__(
         self,
         proposal_id: int = None,
     ) -> None:
         self.proposal_id = proposal_id
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('proposal_id', p.UVarintType, 0),
+        }

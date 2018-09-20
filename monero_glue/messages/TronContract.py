@@ -21,24 +21,6 @@ from .TronWitnessUpdateContract import TronWitnessUpdateContract
 
 
 class TronContract(p.MessageType):
-    FIELDS = {
-        1: ('transfer_contract', TronTransferContract, 0),
-        2: ('transfer_asset_contract', TronTransferAssetContract, 0),
-        4: ('vote_witness_contract', TronVoteWitnessContract, 0),
-        5: ('witness_create_contract', TronWitnessCreateContract, 0),
-        6: ('asset_issue_contract', TronAssetIssueContract, 0),
-        8: ('witness_update_contract', TronWitnessUpdateContract, 0),
-        9: ('participate_asset_issue_contract', TronParticipateAssetIssueContract, 0),
-        10: ('account_update_contract', TronAccountUpdateContract, 0),
-        11: ('freeze_balance_contract', TronFreezeBalanceContract, 0),
-        12: ('unfreeze_balance_contract', TronUnfreezeBalanceContract, 0),
-        13: ('withdraw_balance_contract', TronWithdrawBalanceContract, 0),
-        14: ('unfreeze_asset_contract', TronUnfreezeAssetContract, 0),
-        15: ('update_asset_contract', TronUpdateAssetContract, 0),
-        16: ('proposal_create_contract', TronProposalCreateContract, 0),
-        17: ('proposal_approve_contract', TronProposalApproveContract, 0),
-        18: ('proposal_delete_contract', TronProposalDeleteContract, 0),
-    }
 
     def __init__(
         self,
@@ -75,3 +57,24 @@ class TronContract(p.MessageType):
         self.proposal_create_contract = proposal_create_contract
         self.proposal_approve_contract = proposal_approve_contract
         self.proposal_delete_contract = proposal_delete_contract
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('transfer_contract', TronTransferContract, 0),
+            2: ('transfer_asset_contract', TronTransferAssetContract, 0),
+            4: ('vote_witness_contract', TronVoteWitnessContract, 0),
+            5: ('witness_create_contract', TronWitnessCreateContract, 0),
+            6: ('asset_issue_contract', TronAssetIssueContract, 0),
+            8: ('witness_update_contract', TronWitnessUpdateContract, 0),
+            9: ('participate_asset_issue_contract', TronParticipateAssetIssueContract, 0),
+            10: ('account_update_contract', TronAccountUpdateContract, 0),
+            11: ('freeze_balance_contract', TronFreezeBalanceContract, 0),
+            12: ('unfreeze_balance_contract', TronUnfreezeBalanceContract, 0),
+            13: ('withdraw_balance_contract', TronWithdrawBalanceContract, 0),
+            14: ('unfreeze_asset_contract', TronUnfreezeAssetContract, 0),
+            15: ('update_asset_contract', TronUpdateAssetContract, 0),
+            16: ('proposal_create_contract', TronProposalCreateContract, 0),
+            17: ('proposal_approve_contract', TronProposalApproveContract, 0),
+            18: ('proposal_delete_contract', TronProposalDeleteContract, 0),
+        }

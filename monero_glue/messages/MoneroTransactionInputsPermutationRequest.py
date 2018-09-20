@@ -11,12 +11,15 @@ if __debug__:
 
 class MoneroTransactionInputsPermutationRequest(p.MessageType):
     MESSAGE_WIRE_TYPE = 505
-    FIELDS = {
-        1: ('perm', p.UVarintType, p.FLAG_REPEATED),
-    }
 
     def __init__(
         self,
         perm: List[int] = None,
     ) -> None:
         self.perm = perm if perm is not None else []
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('perm', p.UVarintType, p.FLAG_REPEATED),
+        }

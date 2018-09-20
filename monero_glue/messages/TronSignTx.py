@@ -13,15 +13,6 @@ if __debug__:
 
 class TronSignTx(p.MessageType):
     MESSAGE_WIRE_TYPE = 252
-    FIELDS = {
-        1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
-        2: ('ref_block_bytes', p.BytesType, 0),
-        3: ('ref_block_hash', p.BytesType, 0),
-        4: ('expiration', p.UVarintType, 0),
-        5: ('data', p.UnicodeType, 0),
-        6: ('contract', TronContract, 0),
-        7: ('timestamp', p.UVarintType, 0),
-    }
 
     def __init__(
         self,
@@ -40,3 +31,15 @@ class TronSignTx(p.MessageType):
         self.data = data
         self.contract = contract
         self.timestamp = timestamp
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
+            2: ('ref_block_bytes', p.BytesType, 0),
+            3: ('ref_block_hash', p.BytesType, 0),
+            4: ('expiration', p.UVarintType, 0),
+            5: ('data', p.UnicodeType, 0),
+            6: ('contract', TronContract, 0),
+            7: ('timestamp', p.UVarintType, 0),
+        }

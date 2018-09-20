@@ -11,13 +11,6 @@ if __debug__:
 
 class MoneroGetAddress(p.MessageType):
     MESSAGE_WIRE_TYPE = 540
-    FIELDS = {
-        1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
-        2: ('show_display', p.BoolType, 0),
-        3: ('network_type', p.UVarintType, 0),
-        4: ('account', p.UVarintType, 0),
-        5: ('minor', p.UVarintType, 0),
-    }
 
     def __init__(
         self,
@@ -32,3 +25,13 @@ class MoneroGetAddress(p.MessageType):
         self.network_type = network_type
         self.account = account
         self.minor = minor
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
+            2: ('show_display', p.BoolType, 0),
+            3: ('network_type', p.UVarintType, 0),
+            4: ('account', p.UVarintType, 0),
+            5: ('minor', p.UVarintType, 0),
+        }

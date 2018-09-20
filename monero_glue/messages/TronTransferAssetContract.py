@@ -4,11 +4,6 @@ from .. import protobuf as p
 
 
 class TronTransferAssetContract(p.MessageType):
-    FIELDS = {
-        1: ('asset_name', p.UnicodeType, 0),
-        2: ('to_address', p.BytesType, 0),
-        3: ('amount', p.UVarintType, 0),
-    }
 
     def __init__(
         self,
@@ -19,3 +14,11 @@ class TronTransferAssetContract(p.MessageType):
         self.asset_name = asset_name
         self.to_address = to_address
         self.amount = amount
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('asset_name', p.UnicodeType, 0),
+            2: ('to_address', p.BytesType, 0),
+            3: ('amount', p.UVarintType, 0),
+        }

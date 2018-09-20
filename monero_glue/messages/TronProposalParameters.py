@@ -4,10 +4,6 @@ from .. import protobuf as p
 
 
 class TronProposalParameters(p.MessageType):
-    FIELDS = {
-        1: ('key', p.UVarintType, 0),
-        2: ('value', p.UVarintType, 0),
-    }
 
     def __init__(
         self,
@@ -16,3 +12,10 @@ class TronProposalParameters(p.MessageType):
     ) -> None:
         self.key = key
         self.value = value
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('key', p.UVarintType, 0),
+            2: ('value', p.UVarintType, 0),
+        }

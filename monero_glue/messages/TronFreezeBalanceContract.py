@@ -4,10 +4,6 @@ from .. import protobuf as p
 
 
 class TronFreezeBalanceContract(p.MessageType):
-    FIELDS = {
-        1: ('frozen_balance', p.UVarintType, 0),
-        2: ('frozen_duration', p.UVarintType, 0),
-    }
 
     def __init__(
         self,
@@ -16,3 +12,10 @@ class TronFreezeBalanceContract(p.MessageType):
     ) -> None:
         self.frozen_balance = frozen_balance
         self.frozen_duration = frozen_duration
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('frozen_balance', p.UVarintType, 0),
+            2: ('frozen_duration', p.UVarintType, 0),
+        }

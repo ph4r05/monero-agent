@@ -4,10 +4,6 @@ from .. import protobuf as p
 
 
 class TronUpdateAssetContract(p.MessageType):
-    FIELDS = {
-        1: ('description', p.UnicodeType, 0),
-        2: ('url', p.UnicodeType, 0),
-    }
 
     def __init__(
         self,
@@ -16,3 +12,10 @@ class TronUpdateAssetContract(p.MessageType):
     ) -> None:
         self.description = description
         self.url = url
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('description', p.UnicodeType, 0),
+            2: ('url', p.UnicodeType, 0),
+        }

@@ -4,10 +4,6 @@ from .. import protobuf as p
 
 
 class TronFrozenSupply(p.MessageType):
-    FIELDS = {
-        1: ('frozen_amount', p.UVarintType, 0),
-        2: ('frozen_days', p.UVarintType, 0),
-    }
 
     def __init__(
         self,
@@ -16,3 +12,10 @@ class TronFrozenSupply(p.MessageType):
     ) -> None:
         self.frozen_amount = frozen_amount
         self.frozen_days = frozen_days
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('frozen_amount', p.UVarintType, 0),
+            2: ('frozen_days', p.UVarintType, 0),
+        }

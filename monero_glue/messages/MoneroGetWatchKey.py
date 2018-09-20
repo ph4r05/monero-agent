@@ -11,10 +11,6 @@ if __debug__:
 
 class MoneroGetWatchKey(p.MessageType):
     MESSAGE_WIRE_TYPE = 542
-    FIELDS = {
-        1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
-        2: ('network_type', p.UVarintType, 0),
-    }
 
     def __init__(
         self,
@@ -23,3 +19,10 @@ class MoneroGetWatchKey(p.MessageType):
     ) -> None:
         self.address_n = address_n if address_n is not None else []
         self.network_type = network_type
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
+            2: ('network_type', p.UVarintType, 0),
+        }

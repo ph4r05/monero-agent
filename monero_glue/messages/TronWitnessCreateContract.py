@@ -4,12 +4,15 @@ from .. import protobuf as p
 
 
 class TronWitnessCreateContract(p.MessageType):
-    FIELDS = {
-        1: ('url', p.UnicodeType, 0),
-    }
 
     def __init__(
         self,
         url: str = None,
     ) -> None:
         self.url = url
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('url', p.UnicodeType, 0),
+        }

@@ -7,10 +7,6 @@ from .MoneroTransactionSourceEntry import MoneroTransactionSourceEntry
 
 class MoneroTransactionSetInputRequest(p.MessageType):
     MESSAGE_WIRE_TYPE = 503
-    FIELDS = {
-        1: ('version', p.UVarintType, 0),
-        2: ('src_entr', MoneroTransactionSourceEntry, 0),
-    }
 
     def __init__(
         self,
@@ -19,3 +15,10 @@ class MoneroTransactionSetInputRequest(p.MessageType):
     ) -> None:
         self.version = version
         self.src_entr = src_entr
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('version', p.UVarintType, 0),
+            2: ('src_entr', MoneroTransactionSourceEntry, 0),
+        }

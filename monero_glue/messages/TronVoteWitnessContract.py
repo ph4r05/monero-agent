@@ -12,12 +12,15 @@ if __debug__:
 
 
 class TronVoteWitnessContract(p.MessageType):
-    FIELDS = {
-        1: ('votes', TronVote, p.FLAG_REPEATED),
-    }
 
     def __init__(
         self,
         votes: List[TronVote] = None,
     ) -> None:
         self.votes = votes if votes is not None else []
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('votes', TronVote, p.FLAG_REPEATED),
+        }

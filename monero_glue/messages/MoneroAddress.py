@@ -5,12 +5,15 @@ from .. import protobuf as p
 
 class MoneroAddress(p.MessageType):
     MESSAGE_WIRE_TYPE = 541
-    FIELDS = {
-        1: ('address', p.BytesType, 0),
-    }
 
     def __init__(
         self,
         address: bytes = None,
     ) -> None:
         self.address = address
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            1: ('address', p.BytesType, 0),
+        }

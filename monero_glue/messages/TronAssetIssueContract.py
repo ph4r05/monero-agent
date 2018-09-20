@@ -12,18 +12,6 @@ if __debug__:
 
 
 class TronAssetIssueContract(p.MessageType):
-    FIELDS = {
-        2: ('name', p.UnicodeType, 0),
-        3: ('abbr', p.UnicodeType, 0),
-        4: ('total_supply', p.UVarintType, 0),
-        5: ('frozen_supply', TronFrozenSupply, p.FLAG_REPEATED),
-        6: ('trx_num', p.UVarintType, 0),
-        7: ('num', p.UVarintType, 0),
-        8: ('start_time', p.UVarintType, 0),
-        9: ('end_time', p.UVarintType, 0),
-        10: ('description', p.UnicodeType, 0),
-        11: ('url', p.UnicodeType, 0),
-    }
 
     def __init__(
         self,
@@ -48,3 +36,18 @@ class TronAssetIssueContract(p.MessageType):
         self.end_time = end_time
         self.description = description
         self.url = url
+
+    @classmethod
+    def get_fields(cls):
+        return {
+            2: ('name', p.UnicodeType, 0),
+            3: ('abbr', p.UnicodeType, 0),
+            4: ('total_supply', p.UVarintType, 0),
+            5: ('frozen_supply', TronFrozenSupply, p.FLAG_REPEATED),
+            6: ('trx_num', p.UVarintType, 0),
+            7: ('num', p.UVarintType, 0),
+            8: ('start_time', p.UVarintType, 0),
+            9: ('end_time', p.UVarintType, 0),
+            10: ('description', p.UnicodeType, 0),
+            11: ('url', p.UnicodeType, 0),
+        }
