@@ -109,10 +109,10 @@ the code fallbacks to python backend. This behaviour can be changed by setting `
 TCRY is also 20 times faster (unit tests).
 
 ```bash
-$> EC_BACKEND=0 ./venv/bin/python3 -m unittest discover
-.....................................................
+$> EC_BACKEND_FORCE=1 EC_BACKEND=0  ./venv/bin/python -m unittest monero_glue_test/test_*.py
+...s................................................................
 ----------------------------------------------------------------------
-Ran 53 tests in 142.363s
+Ran 68 tests in 416.823s
 
 OK
 ```
@@ -120,11 +120,10 @@ OK
 TCRY backend:
 
 ```bash
-$> LIBTREZOR_CRYPTO_PATH="$HOME/libtrezor-crypto/libtrezor-crypto.so" EC_BACKEND_FORCE=1 EC_BACKEND=1 \
-    ./venv/bin/python3 -m unittest discover
-.....................................................
+$>  EC_BACKEND_FORCE=1 EC_BACKEND=1  ./venv/bin/python -m unittest monero_glue_test/test_*.py
+....................................................................
 ----------------------------------------------------------------------
-Ran 53 tests in 7.252s
+Ran 68 tests in 84.057s
 
 OK
 ```
