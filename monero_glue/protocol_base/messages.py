@@ -33,8 +33,9 @@ def bytes_fix(msg, pkg=protobuf):
     :return:
     """
     if isinstance(msg, pkg.MessageType):
-        for tag in msg.FIELDS:
-            field = msg.FIELDS[tag]
+        fields = msg.get_fields()
+        for tag in fields:
+            field = fields[tag]
             field_name = field[0]
             if hasattr(msg, field_name):
                 cval = getattr(msg, field_name, None)
@@ -84,8 +85,9 @@ class MessageConverter(object):
             tlib_msg = getattr(dst_package, msg_name)
 
             nmsg = tlib_msg()
-            for tag in msg.FIELDS:
-                field = msg.FIELDS[tag]
+            fields = msg.get_fields()
+            for tag in fields:
+                field = fields[tag]
                 field_name = field[0]
                 if hasattr(msg, field_name):
                     cval = getattr(msg, field_name, None)

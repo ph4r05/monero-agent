@@ -1,50 +1,64 @@
+# This file is part of the Trezor project.
+#
+# Copyright (C) 2012-2018 SatoshiLabs and contributors
+#
+# This library is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License version 3
+# as published by the Free Software Foundation.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the License along with this library.
+# If not, see <https://www.gnu.org/licenses/lgpl-3.0.html>.
+
 '''
 Extremely minimal streaming codec for a subset of protobuf.  Supports uint32,
 bytes, string, embedded message and repeated fields.
 
-For de-serializing (loading) protobuf types, object with `AsyncReader`
+For de-sererializing (loading) protobuf types, object with `Reader`
 interface is required:
 
->>> class AsyncReader:
->>>     async def areadinto(self, buffer):
+>>> class Reader:
+>>>     def readinto(self, buffer):
 >>>         """
 >>>         Reads `len(buffer)` bytes into `buffer`, or raises `EOFError`.
 >>>         """
 
-For serializing (dumping) protobuf types, object with `AsyncWriter` interface is
+For serializing (dumping) protobuf types, object with `Writer` interface is
 required:
 
->>> class AsyncWriter:
->>>     async def awrite(self, buffer):
+>>> class Writer:
+>>>     def write(self, buffer):
 >>>         """
 >>>         Writes all bytes from `buffer`, or raises `EOFError`.
 >>>         """
 '''
 
-# from micropython import const
-
-
-def const(x):
-    return x
-
+import binascii
+from io import BytesIO
+from typing import Any, Optional
 
 _UVARINT_BUFFER = bytearray(1)
 
 
-async def load_uvarint(reader):
+def load_uvarint(reader):
     buffer = _UVARINT_BUFFER
     result = 0
     shift = 0
     byte = 0x80
     while byte & 0x80:
-        await reader.areadinto(buffer)
+        if reader.readinto(buffer) == 0:
+            raise EOFError
         byte = buffer[0]
         result += (byte & 0x7F) << shift
         shift += 7
     return result
 
 
-async def dump_uvarint(writer, n):
+def dump_uvarint(writer, n):
     if n < 0:
         raise ValueError("Cannot dump signed value, convert it to unsigned first.")
     buffer = _UVARINT_BUFFER
@@ -52,7 +66,7 @@ async def dump_uvarint(writer, n):
     while shifted:
         shifted = n >> 7
         buffer[0] = (n & 0x7F) | (0x80 if shifted else 0x00)
-        await writer.awrite(buffer)
+        writer.write(buffer)
         n = shifted
 
 
@@ -121,12 +135,79 @@ class MessageType:
     def __init__(self, **kwargs):
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
+        self._fill_missing()
 
     def __eq__(self, rhs):
         return self.__class__ is rhs.__class__ and self.__dict__ == rhs.__dict__
 
     def __repr__(self):
-        return "<%s>" % self.__class__.__name__
+        d = {}
+        for key, value in self.__dict__.items():
+            if value is None or value == []:
+                continue
+            d[key] = value
+        return "<%s: %s>" % (self.__class__.__name__, d)
+
+    def __iter__(self):
+        return self.__dict__.__iter__()
+
+    def __getattr__(self, attr):
+        if attr.startswith("_add_"):
+            return self._additem(attr[5:])
+
+        if attr.startswith("_extend_"):
+            return self._extenditem(attr[8:])
+
+        raise AttributeError(attr)
+
+    def _extenditem(self, attr):
+        def f(param):
+            try:
+                l = getattr(self, attr)
+            except AttributeError:
+                l = []
+                setattr(self, attr, l)
+
+            l += param
+
+        return f
+
+    def _additem(self, attr):
+        # Add new item for repeated field type
+        for v in self.get_fields().values():
+            if v[0] != attr:
+                continue
+            if not (v[2] & FLAG_REPEATED):
+                raise AttributeError
+
+            try:
+                l = getattr(self, v[0])
+            except AttributeError:
+                l = []
+                setattr(self, v[0], l)
+
+            item = v[1]()
+            l.append(item)
+            return lambda: item
+
+        raise AttributeError
+
+    def _fill_missing(self):
+        # fill missing fields
+        for fname, ftype, fflags in self.get_fields().values():
+            if not hasattr(self, fname):
+                if fflags & FLAG_REPEATED:
+                    setattr(self, fname, [])
+                else:
+                    setattr(self, fname, None)
+
+    def CopyFrom(self, obj):
+        self.__dict__ = obj.__dict__.copy()
+
+    def ByteSize(self):
+        data = BytesIO()
+        dump_message(data, self)
+        return len(data.getvalue())
 
 
 class LimitedReader:
@@ -134,11 +215,11 @@ class LimitedReader:
         self.reader = reader
         self.limit = limit
 
-    async def areadinto(self, buf):
+    def readinto(self, buf):
         if self.limit < len(buf):
             raise EOFError
         else:
-            nread = await self.reader.areadinto(buf)
+            nread = self.reader.readinto(buf)
             self.limit -= nread
             return nread
 
@@ -147,22 +228,22 @@ class CountingWriter:
     def __init__(self):
         self.size = 0
 
-    async def awrite(self, buf):
+    def write(self, buf):
         nwritten = len(buf)
         self.size += nwritten
         return nwritten
 
 
-FLAG_REPEATED = const(1)
+FLAG_REPEATED = 1
 
 
-async def load_message(reader, msg_type):
+def load_message(reader, msg_type):
     fields = msg_type.get_fields()
     msg = msg_type()
 
     while True:
         try:
-            fkey = await load_uvarint(reader)
+            fkey = load_uvarint(reader)
         except EOFError:
             break  # no more fields to load
 
@@ -173,10 +254,10 @@ async def load_message(reader, msg_type):
 
         if field is None:  # unknown field, skip it
             if wtype == 0:
-                await load_uvarint(reader)
+                load_uvarint(reader)
             elif wtype == 2:
-                ivalue = await load_uvarint(reader)
-                await reader.areadinto(bytearray(ivalue))
+                ivalue = load_uvarint(reader)
+                reader.readinto(bytearray(ivalue))
             else:
                 raise ValueError
             continue
@@ -185,7 +266,7 @@ async def load_message(reader, msg_type):
         if wtype != ftype.WIRE_TYPE:
             raise TypeError  # parsed wire type differs from the schema
 
-        ivalue = await load_uvarint(reader)
+        ivalue = load_uvarint(reader)
 
         if ftype is UVarintType:
             fvalue = ivalue
@@ -194,33 +275,28 @@ async def load_message(reader, msg_type):
         elif ftype is BoolType:
             fvalue = bool(ivalue)
         elif ftype is BytesType:
-            fvalue = bytearray(ivalue)
-            await reader.areadinto(fvalue)
+            buf = bytearray(ivalue)
+            reader.readinto(buf)
+            fvalue = bytes(buf)
         elif ftype is UnicodeType:
-            fvalue = bytearray(ivalue)
-            await reader.areadinto(fvalue)
-            fvalue = bytes(fvalue).decode()
+            buf = bytearray(ivalue)
+            reader.readinto(buf)
+            fvalue = buf.decode()
         elif issubclass(ftype, MessageType):
-            fvalue = await load_message(LimitedReader(reader, ivalue), ftype)
+            fvalue = load_message(LimitedReader(reader, ivalue), ftype)
         else:
             raise TypeError  # field type is unknown
 
         if fflags & FLAG_REPEATED:
-            pvalue = getattr(msg, fname, [])
+            pvalue = getattr(msg, fname)
             pvalue.append(fvalue)
             fvalue = pvalue
         setattr(msg, fname, fvalue)
 
-    # fill missing fields
-    for tag in fields:
-        field = fields[tag]
-        if not hasattr(msg, field[0]):
-            setattr(msg, field[0], None)
-
     return msg
 
 
-async def dump_message(writer, msg):
+def dump_message(writer, msg):
     repvalue = [0]
     mtype = msg.__class__
     fields = mtype.get_fields()
@@ -239,31 +315,136 @@ async def dump_message(writer, msg):
             fvalue = repvalue
 
         for svalue in fvalue:
-            await dump_uvarint(writer, fkey)
+            dump_uvarint(writer, fkey)
 
             if ftype is UVarintType:
-                await dump_uvarint(writer, svalue)
+                dump_uvarint(writer, svalue)
 
             elif ftype is SVarintType:
-                await dump_uvarint(writer, sint_to_uint(svalue))
+                dump_uvarint(writer, sint_to_uint(svalue))
 
             elif ftype is BoolType:
-                await dump_uvarint(writer, int(svalue))
+                dump_uvarint(writer, int(svalue))
 
             elif ftype is BytesType:
-                await dump_uvarint(writer, len(svalue))
-                await writer.awrite(svalue)
+                dump_uvarint(writer, len(svalue))
+                writer.write(svalue)
 
             elif ftype is UnicodeType:
-                bvalue = svalue.encode()
-                await dump_uvarint(writer, len(bvalue))
-                await writer.awrite(bvalue)
+                if not isinstance(svalue, bytes):
+                    svalue = svalue.encode()
+
+                dump_uvarint(writer, len(svalue))
+                writer.write(svalue)
 
             elif issubclass(ftype, MessageType):
                 counter = CountingWriter()
-                await dump_message(counter, svalue)
-                await dump_uvarint(writer, counter.size)
-                await dump_message(writer, svalue)
+                dump_message(counter, svalue)
+                dump_uvarint(writer, counter.size)
+                dump_message(writer, svalue)
 
             else:
                 raise TypeError
+
+
+def format_message(
+    pb: MessageType,
+    indent: int = 0,
+    sep: str = " " * 4,
+    truncate_after: Optional[int] = 256,
+    truncate_to: Optional[int] = 64,
+) -> str:
+    def mostly_printable(bytes):
+        if not bytes:
+            return True
+        printable = sum(1 for byte in bytes if 0x20 <= byte <= 0x7e)
+        return printable / len(bytes) > 0.8
+
+    def pformat_value(value: Any, indent: int) -> str:
+        level = sep * indent
+        leadin = sep * (indent + 1)
+        if isinstance(value, MessageType):
+            return format_message(value, indent, sep)
+        if isinstance(value, list):
+            # short list of simple values
+            if not value or not isinstance(value[0], MessageType):
+                return repr(value)
+
+            # long list, one line per entry
+            lines = ["[", level + "]"]
+            lines[1:1] = [leadin + pformat_value(x, indent + 1) + "," for x in value]
+            return "\n".join(lines)
+        if isinstance(value, dict):
+            lines = ["{"]
+            for key, val in sorted(value.items()):
+                if val is None or val == []:
+                    continue
+                lines.append(leadin + key + ": " + pformat_value(val, indent + 1) + ",")
+            lines.append(level + "}")
+            return "\n".join(lines)
+        if isinstance(value, (bytes, bytearray)):
+            length = len(value)
+            suffix = ""
+            if truncate_after and length > truncate_after:
+                suffix = "..."
+                value = value[: truncate_to or 0]
+            if mostly_printable(value):
+                output = repr(value)
+            else:
+                output = "0x" + binascii.hexlify(value).decode()
+            return "{} bytes {}{}".format(length, output, suffix)
+
+        return repr(value)
+
+    return "{name} ({size} bytes) {content}".format(
+        name=pb.__class__.__name__,
+        size=pb.ByteSize(),
+        content=pformat_value(pb.__dict__, indent),
+    )
+
+
+def value_to_proto(ftype, value):
+    if issubclass(ftype, MessageType):
+        raise TypeError("value_to_proto only converts simple values")
+
+    if ftype in (UVarintType, SVarintType):
+        return int(value)
+
+    if ftype is BoolType:
+        return bool(value)
+
+    if ftype is UnicodeType:
+        return str(value)
+
+    if ftype is BytesType:
+        if isinstance(value, str):
+            return binascii.unhexlify(value)
+        elif isinstance(value, bytes):
+            return value
+        else:
+            raise TypeError("can't convert {} value to bytes".format(type(value)))
+
+
+def dict_to_proto(message_type, d):
+    params = {}
+    for fname, ftype, fflags in message_type.get_fields().values():
+        repeated = fflags & FLAG_REPEATED
+        value = d.get(fname)
+        if value is None:
+            continue
+
+        if not repeated:
+            value = [value]
+
+        if issubclass(ftype, MessageType):
+            function = dict_to_proto
+        else:
+            function = value_to_proto
+
+        newvalue = [function(ftype, v) for v in value]
+
+        if not repeated:
+            newvalue = newvalue[0]
+
+        params[fname] = newvalue
+    return message_type(**params)
