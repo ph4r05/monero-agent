@@ -381,11 +381,14 @@ class HostAgent(cli.BaseCli):
         self.token_debug = is_deb
 
     def do_switch(self, line):
+        line = line.strip()
         path = "bridge:web01"
         if line == "udp":
             path = "udp:127.0.0.1:21324"
         elif ':' in line:
             path = line
+        elif len(line) == 0:
+            path = self.choose_trezor()
 
         if 'bridge' in path:
             self.token_debug = False
@@ -502,7 +505,7 @@ class HostAgent(cli.BaseCli):
         if self.args.monero_bin:
             self.monero_bin = self.args.monero_bin
 
-    async def choose_trezor(self):
+    def choose_trezor(self):
         from monero_glue.trezor import manager as tmanager
         r = tmanager.Trezor.enumerate()
         noptions = len(r)
@@ -556,7 +559,7 @@ class HostAgent(cli.BaseCli):
 
             t_path = path if path else self.args.trezor_path
             if t_path is None or len(t_path) == 0:
-                self.token_path = await self.choose_trezor()
+                self.token_path = self.choose_trezor()
                 t_path = self.token_path
 
             self.trezor_proxy = tmanager.Trezor(
