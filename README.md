@@ -134,7 +134,7 @@ library. Please refer to the readme of the [py-trezor-crypto] for installation d
 To install python bindings with agent run:
 
 ```bash
-pip install monero_agent[tcry]
+pip install 'monero_agent[tcry]'
 ```
 
 Libsodium, pkg-config, gcc, python-dev are required for the installation.
