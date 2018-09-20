@@ -2,11 +2,15 @@ import os
 import glob
 import subprocess
 import sys
+import logging
 
 from setuptools import setup, Command, find_packages
 from setuptools.command.build_py import build_py
 from setuptools.command.develop import develop
 from distutils.errors import DistutilsError
+
+
+logger = logging.getLogger(__name__)
 
 
 version = "1.6.0"
@@ -28,6 +32,7 @@ dev_extras = [
     "pympler",
     "pypandoc",
     "pandoc",
+    "pip",
     "pycparser",
     "ctypeslib2",
     "cryptography",  # chacha20poly1305
@@ -49,7 +54,10 @@ poc_extras = [
     "sarge>=0.1.5",
 ]
 
-tcry_extras = ["py_trezor_crypto_ph4==0.1.0"]
+# trezor-crypto backend, secure and fast
+tcry_extras = [
+    "py_trezor_crypto_ph4==0.1.1",
+]
 
 docs_extras = [
     "Sphinx>=1.0",  # autodoc_member_order = 'bysource', autodoc_default_flags
@@ -57,11 +65,60 @@ docs_extras = [
     "sphinxcontrib-programoutput",
 ]
 
-trezor_extras = ["trezor"]
+# trezor dependencies, trezorlib
+trezorlib_git = 'https://github.com/trezor/python-trezor.git'
+trezorlib_commit = '20e0acbc98b95936d8ac63f7f653624aae29d1c0'
+trezor_extras = [
+    "trezor",
+]
 
 
 CWD = os.path.dirname(os.path.realpath(__file__))
 TREZOR_COMMON = os.path.join(CWD, 'vendor', 'trezor-common')
+
+
+class InstallTrezorlib(Command):
+    description = 'installs trezorlib with the exact needed version'
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        import shutil
+        import tempfile
+        import subprocess
+        tmpd = tempfile.mkdtemp()
+
+        try:
+            subprocess.call(["git", "clone", trezorlib_git, "."], cwd=tmpd)
+            subprocess.call(["git", "checkout", trezorlib_commit], cwd=tmpd)
+            subprocess.call(["git", "submodule", "init"], cwd=tmpd)
+            subprocess.call(["git", "submodule", "update", "--recursive"], cwd=tmpd)
+
+            # Not nice, but due to virtualenv we dont know which pip is being used
+            try:
+                from pip._internal import main as pip_main
+                pip_main(["install", "-U", tmpd])
+
+            except Exception as e:
+                logger.warning('Programatical pip installation failed: %s' % e)
+
+                pip_path = os.getenv('PIP_PATH', None)
+                pip = os.path.join(pip_path, 'pip') if pip_path else 'pip'
+                subprocess.call([pip, "install", "-U", tmpd])
+
+        except Exception as e:
+            msg = 'Error installing "trezor" package. Try the manual way: ' \
+                  'git clone %s /tmp/trezorlib && cd /tmp/trezorlib && git checkout %s && ' \
+                  'git submodule init && git submodule update --recursive && ' \
+                  'cd - && pip install -U /tmp/trezorlib' % (trezorlib_git, trezorlib_commit)
+            raise DistutilsError(msg) from e
+        finally:
+            shutil.rmtree(tmpd)
 
 
 class PrebuildCommand(Command):
@@ -152,6 +209,7 @@ setup(
     },
     cmdclass={
         'prebuild': PrebuildCommand,
+        'install_trezorlib': InstallTrezorlib,
     },
     entry_points={
         'console_scripts': [

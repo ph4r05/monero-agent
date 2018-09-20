@@ -38,6 +38,7 @@ install:
   - export LD_LIBRARY_PATH=$HOME/libsodium/lib:$LD_LIBRARY_PATH
   - pip install .[poc,dev]
   - pip install .[tcry]
+  - python setup.py install_trezorlib
 
 script:
   - PYTHONPATH=.:$PYTHONPATH exec ./test-travis.sh
