@@ -102,15 +102,15 @@ class HashWrapper(object):
 
 
 class AHashWriter:
-    def __init__(self, hasher, sub_writer=None):
+    def __init__(self, hasher):
         self.hasher = hasher
-        self.sub_writer = sub_writer
+
+    def write(self, buf):
+        self.hasher.update(buf)
+        return len(buf)
 
     async def awrite(self, buf):
-        self.hasher.update(buf)
-        if self.sub_writer:
-            await self.sub_writer.awrite(buf)
-        return len(buf)
+        return self.write(buf)
 
     def get_digest(self, *args) -> bytes:
         return self.hasher.digest(*args)
@@ -119,13 +119,12 @@ class AHashWriter:
         return self.hasher.ctx
 
 
-def get_keccak_writer(sub_writer=None, ctx=None):
+def get_keccak_writer(ctx=None):
     """
     Creates new fresh async Keccak writer
-    :param sub_writer:
     :param ctx:
     :return:
     """
     return AHashWriter(
-        HashWrapper(crypto.get_keccak() if ctx is None else ctx), sub_writer=sub_writer
+        HashWrapper(crypto.get_keccak() if ctx is None else ctx)
     )
