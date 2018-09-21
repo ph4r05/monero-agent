@@ -9,24 +9,20 @@ coloredlogs.CHROOT_FILES = []
 coloredlogs.install(level=logging.INFO, use_chroot=False)
 
 
+def remove_ctl(line):
+    return re.sub(r'\x1b\[\d+m', '', line.rstrip('\n'))
+
+
 class CtlRemover(object):
     def __init__(self):
-        self.max_line_len = 0
-        self.time_prev = 0
-        self.time_ref = 0
-        self.time_ref_r = 0
-        self.mem_alloc_prev = 0
-        self.mem_alloc_ref = None
-        self.mem_alloc_max = 0
-        self.serial_device = None
-        self.tee_file = None
+        pass
 
     def process(self, line):
-        print(re.sub(r'\x1b\[\d+m', '', line.rstrip('\n')))
+        return remove_ctl(line)
 
     def read_files(self, files):
         for idx, line in enumerate(fileinput.input(files)):
-            anz.process(line)
+            print(anz.process(line))
 
     def main(self):
         parser = argparse.ArgumentParser(description='Removes shell controll sequences (e.g., colouring)')
