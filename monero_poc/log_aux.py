@@ -173,15 +173,21 @@ class LogAnalyzer(object):
                             help="File to copy raw output to")
         parser.add_argument("--tee-aux", dest="tee_aux", default=False, action="store_const", const=True,
                             help="Tee augmented lines")
+        parser.add_argument("--tee-append", dest="tee_append", default=False, action="store_const", const=True,
+                            help="Append to the tee file")
         parser.add_argument('files', metavar='FILE', nargs='*',
                             help='files to read, if empty, stdin is used')
         args = parser.parse_args()
 
         self.args = args
         if args.tee:
-            if os.path.exists(args.tee):
+            ex = os.path.exists(args.tee)
+            if ex and not args.tee_append:
                 raise ValueError('Tee file already exists')
-            self.tee_file = open(args.tee, 'w+')
+
+            self.tee_file = open(args.tee, 'w+' if not ex else 'a+')
+            if ex:
+                self.tee_file.write(('='*80) + (' Time: %s' % time.time()))
 
         try:
             if args.serial:
