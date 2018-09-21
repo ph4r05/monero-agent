@@ -7,16 +7,28 @@ import logging
 import coloredlogs
 import time
 
+from monero_poc.tools.mem_cmp import MemReader
+
+
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
 coloredlogs.install(level=logging.INFO, use_chroot=False)
 
 
 TICKS_PER_SECOND = 1000000.
+MAX_TICKS = 1073741824  # 2**30
 
 
 def tic2sec(tic):
     return tic/TICKS_PER_SECOND
+
+
+def remove_ctl(line):
+    return re.sub(r'\x1b\[\d+m', '', line.rstrip('\n'))
+
+
+def avg(iterable):
+    return sum(iterable) / float(len(iterable))
 
 
 class LogAnalyzer(object):
@@ -33,6 +45,9 @@ class LogAnalyzer(object):
         self.serial_device = None
         self.tee_file = None
         self.initial_ticks = None
+        self.mem_reader = None
+        self.mem_diffs_sec = []
+        self.mem_diffs_all = []
 
     def print_line(self, line):
         print(line)
@@ -46,6 +61,8 @@ class LogAnalyzer(object):
 
     def process(self, line):
         line = line.strip()
+        if self.args.no_ctl:
+            line = remove_ctl(line)
         if not self.args.tee_aux:
             self.tee_line(line)
 
@@ -68,7 +85,7 @@ class LogAnalyzer(object):
                 self.initial_ticks = ctime
                 ctime = 0
             elif ctime < self.time_prev_o:
-                ctime = self.time_prev + (ctime + (4294967296 - self.time_prev_o))
+                ctime = self.time_prev + (ctime + (1073741824 - self.time_prev_o))
             else:
                 ctime = self.time_prev + (ctime - self.time_prev_o)
             line = re.sub(r'^\d+', '%011d' % ctime, line)
@@ -88,24 +105,42 @@ class LogAnalyzer(object):
         mem_free = None
         mem_alloc = None
 
-        mmem = re.match(r'.+?F:\s*(\d+)\sA:\s*(\d+)', line)
+        mmem = re.match(r'.+?F:\s*(\d+)\s*,?\s*A:\s*(\d+)', line)
         if mmem:
             mem_free = int(mmem.group(1))
             mem_alloc = int(mmem.group(2))
 
-        mmem = re.match(r'.+?Free:\s*(\d+)\sAllocated:\s*(\d+)', line)
+        mmem = re.match(r'.+?Free:\s*(\d+)\s*,?\s*Allocated:\s*(\d+)', line)
         if mmem:
             mem_free = int(mmem.group(1))
             mem_alloc = int(mmem.group(2))
 
         memstr = ''
+        is_sec = '====' in line or '####' in line
+
         if mem_alloc:
             self.mem_alloc_prev = mem_alloc
             self.mem_alloc_max = max(self.mem_alloc_max, mem_alloc)
             if self.mem_alloc_ref is None:
                 self.mem_alloc_ref = mem_alloc
 
-            memstr = 'Alloc diff: %5d, refdi: %5d' % (mem_alloc - self.mem_alloc_ref, mem_alloc - c_prev_alloc)
+            memstr = 'Alloc diff: %6d, refdi: %6d' % (mem_alloc - self.mem_alloc_ref, mem_alloc - c_prev_alloc)
+
+            if self.mem_reader:
+                memb = self.mem_reader.next(is_sec)
+                if memb:
+                    memsuf = ' skipped: %3d' % memb[2] if is_sec and memb[2] > 0 else ''
+                    memstr += ' | Alloc cmp diff: %5d %s' % (mem_alloc - memb[0], memsuf)
+                    if self.args.full_mem:
+                        memline = self.mem_reader.full_line()
+                        if self.args.no_ctl:
+                            memline = remove_ctl(memline)
+                        memstr += ' | ' + memline
+
+                    if is_sec:
+                        self.mem_diffs_sec.append(mem_alloc - memb[0])
+                    else:
+                        self.mem_diffs_all.append(mem_alloc - memb[0])
 
         if self.args.no_aug:
             self.print_line(line)
@@ -114,12 +149,12 @@ class LogAnalyzer(object):
         ldiff = self.max_line_len - len(line)
         self.print_line('%s%s |  AbsTime: %7.3f,   Diff %5.3f  | %s' % (line, ' '*ldiff, abs_time, diff_time, memstr))
 
-        if '====' in line or '####' in line:
+        if is_sec:
             abs_r = ''
             if self.serial_device:
                 abs_time_r = ctime_r - self.time_ref_r
                 abs_r = 'r: %7.2f, ticks p.s.: %7.3f' % (abs_time_r, (ctime - self.time_ref) / float(abs_time_r))
-            self.print_line(' ++ TOTAL: %7.2f, %s mem max: %s' % (abs_time, abs_r, self.mem_alloc_max - self.mem_alloc_ref))
+            self.print_line(' ++ TOTAL: %7.2f, %s mem max: %s' % (abs_time, abs_r, self.mem_alloc_max - self.mem_alloc_ref if self.mem_alloc_ref is not None else '?'))
 
             self.time_ref = ctime
             self.time_ref_r = ctime_r
@@ -155,6 +190,9 @@ class LogAnalyzer(object):
         for idx, line in enumerate(fileinput.input(files)):
             anz.process(line)
 
+        if self.mem_diffs_sec:
+            print('Mem diff avg, sec: %8.3f, all: %8.3f' % (avg(self.mem_diffs_sec), avg(self.mem_diffs_all)))
+
     def main(self):
         parser = argparse.ArgumentParser(description='Trezor log reader and parser')
         parser.add_argument('--serial', default=None,
@@ -175,6 +213,12 @@ class LogAnalyzer(object):
                             help="Tee augmented lines")
         parser.add_argument("--tee-append", dest="tee_append", default=False, action="store_const", const=True,
                             help="Append to the tee file")
+        parser.add_argument("--no-ctl", dest="no_ctl", default=False, action="store_const", const=True,
+                            help="Removes shell controll sequences")
+        parser.add_argument("--mem-file", dest="mem_file", default=None,
+                            help="Memory log to compare to")
+        parser.add_argument("--full-mem", dest="full_mem", default=False, action="store_const", const=True,
+                            help="Prints full corresponding memory line")
         parser.add_argument('files', metavar='FILE', nargs='*',
                             help='files to read, if empty, stdin is used')
         args = parser.parse_args()
@@ -188,6 +232,10 @@ class LogAnalyzer(object):
             self.tee_file = open(args.tee, 'w+' if not ex else 'a+')
             if ex:
                 self.tee_file.write(('='*80) + (' Time: %s' % time.time()))
+
+        if args.mem_file:
+            with open(args.mem_file, 'r') as fh:
+                self.mem_reader = MemReader(fh.readlines())
 
         try:
             if args.serial:
