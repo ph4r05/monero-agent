@@ -108,10 +108,17 @@ class TrezorTest(BaseAgentTest):
         creds = self.get_trezor_creds(0)
         all_creds = [self.get_trezor_creds(0), self.get_trezor_creds(1), self.get_trezor_creds(2)]
 
-        # if as_bulletproof:
-        #     files = files[0:1]
+        last_test_ok = True
+        last_test_name = None
 
         for fl in files:
+            if not last_test_ok:
+                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! FAIL: %s' % last_test_name)
+
+            print('Testing[bp=%s]: %s' % (as_bulletproof, fl))
+            last_test_ok = False
+            last_test_name = fl
+
             with self.subTest(msg=fl):
                 unsigned_tx_c = self.get_data_file(fl)
                 unsigned_tx = await wallet.load_unsigned_tx(
@@ -125,3 +132,5 @@ class TrezorTest(BaseAgentTest):
 
                 await self.tx_sign_test(self.agent, unsigned_tx, creds, all_creds, fl)
                 await self.agent.get_address()  # resets flow
+                last_test_ok = True
+                print('OK')
