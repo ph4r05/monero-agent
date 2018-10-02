@@ -6,6 +6,8 @@ import argparse
 import logging
 import coloredlogs
 import time
+import json
+import math
 
 from monero_poc.tools.mem_cmp import MemReader
 
@@ -29,6 +31,34 @@ def remove_ctl(line):
 
 def avg(iterable):
     return sum(iterable) / float(len(iterable))
+
+
+def bins(iterable, nbins=1, key=lambda x: x, ceil_bin=False):
+    vals = [key(x) for x in iterable]
+    min_v = min(vals)
+    max_v = max(vals)
+    bin_size = ((1 + max_v - min_v) / float(nbins))
+    bin_size = math.ceil(bin_size) if ceil_bin else bin_size
+    bins = [[] for _ in range(nbins)]
+    for c in iterable:
+        cv = key(c)
+        cbin = int((cv - min_v) / bin_size)
+        bins[cbin].append(c)
+    return bins
+
+
+def count_elements(seq) -> dict:
+    hist = {}
+    for i in seq:
+        hist[i] = hist.get(i, 0) + 1
+    return hist
+
+
+def ascii_histogram(seq) -> None:
+    """A horizontal frequency-table/histogram plot."""
+    counted = count_elements(seq)
+    for k in sorted(counted):
+        print('{0:5d} {1}'.format(k, '+' * counted[k]))
 
 
 class LogAnalyzer(object):
@@ -193,6 +223,19 @@ class LogAnalyzer(object):
         if self.mem_diffs_sec:
             print('Mem diff avg, sec: %8.3f, all: %8.3f' % (avg(self.mem_diffs_sec), avg(self.mem_diffs_all)))
 
+            if self.args.mem_json:
+                print('JSON sec difs: ')
+                print(json.dumps(self.mem_diffs_sec))
+                print('JSON all difs: ')
+                print(json.dumps(self.mem_diffs_all))
+
+            if self.args.mem_bin:
+                print('Binned memory differences:')
+                for bi in bins(self.mem_diffs_all, 100):
+                    if len(bi) == 0:
+                        continue
+                    print('[%5d, %5d] (avg = %5d): %5d' % (min(bi), max(bi), avg(bi), len(bi)))
+
     def main(self):
         parser = argparse.ArgumentParser(description='Trezor log reader and parser')
         parser.add_argument('--serial', default=None,
@@ -219,6 +262,10 @@ class LogAnalyzer(object):
                             help="Memory log to compare to")
         parser.add_argument("--full-mem", dest="full_mem", default=False, action="store_const", const=True,
                             help="Prints full corresponding memory line")
+        parser.add_argument("--mem-json", dest="mem_json", default=False, action="store_const", const=True,
+                            help="Dumps mem differences in json")
+        parser.add_argument("--mem-bin", dest="mem_bin", default=False, action="store_const", const=True,
+                            help="Dumps mem differences binned")
         parser.add_argument('files', metavar='FILE', nargs='*',
                             help='files to read, if empty, stdin is used')
         args = parser.parse_args()
