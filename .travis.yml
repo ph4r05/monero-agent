@@ -24,8 +24,8 @@ addons:
 
 cache:
   directories:
-  - $HOME/libsodium
-  - $HOME/libtrezor-crypto
+    - $HOME/libsodium
+    - $HOME/libtrezor-crypto
 
 python:
   - "3.5"
@@ -41,5 +41,5 @@ install:
   - python setup.py install_trezorlib
 
 script:
-  - PYTHONPATH=.:$PYTHONPATH exec ./test-travis.sh
+  - PYTHONPATH=.:$PYTHONPATH ./test-travis.sh
 
