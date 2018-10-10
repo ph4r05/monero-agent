@@ -20,6 +20,8 @@ import sys
 import threading
 import time
 
+from trezorlib import debuglink, device
+
 from monero_glue.agent import agent_lite, agent_misc
 from monero_glue.agent.agent_lite import SignAuxData
 from monero_glue.messages import DebugMoneroDiagRequest, GetEntropy, Entropy
@@ -360,8 +362,10 @@ class HostAgent(cli.BaseCli):
         mnemonic24 = "permit universe parent weapon amused modify essay borrow tobacco budget walnut lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple"
 
         mnemonic = mnemonic12 if len(line) == 0 or int(line) == 0 else mnemonic24
-        self.trezor_proxy.client.wipe_device()
-        self.trezor_proxy.client.load_device_by_mnemonic(
+        print(self.trezor_proxy.client)
+        device.wipe(self.trezor_proxy.client)
+        debuglink.load_device_by_mnemonic(
+            client=self.trezor_proxy.client,
             mnemonic=mnemonic,
             pin="",
             passphrase_protection=False,

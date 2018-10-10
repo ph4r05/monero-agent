@@ -7,8 +7,9 @@ import os
 import argparse
 
 
-from trezorlib import coins, tx_api
-from trezorlib.client import TrezorClient, TrezorClientDebugLink
+from trezorlib import coins, tx_api, ui, debuglink, device
+from trezorlib.client import TrezorClient
+from trezorlib.debuglink import TrezorClientDebugLink
 from trezorlib.transport import get_transport
 
 
@@ -50,15 +51,12 @@ mnemonic = mnemonic24 if args.mnemonic == 1 else mnemonic12
 
 
 wirelink = get_transport(path)
-client = TrezorClientDebugLink(wirelink) if debug_mode else TrezorClient(wirelink)
-if debug_mode:
-    debuglink = wirelink.find_debug()
-    client.set_debuglink(debuglink)
-
+client = TrezorClientDebugLink(wirelink) if debug_mode else TrezorClient(wirelink, ui=ui.ClickUI)
 client.transport.session_begin()
 
-client.wipe_device()
-client.load_device_by_mnemonic(
+device.wipe(client)
+debuglink.load_device_by_mnemonic(
+    client=client,
     mnemonic=mnemonic,
     pin="",
     passphrase_protection=False,

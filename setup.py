@@ -67,7 +67,7 @@ docs_extras = [
 
 # trezor dependencies, trezorlib
 trezorlib_git = 'https://github.com/trezor/python-trezor.git'
-trezorlib_commit = '20e0acbc98b95936d8ac63f7f653624aae29d1c0'
+trezorlib_commit = 'a1ba9db7447d3abb24be7494d3227cba2e423508'
 trezor_extras = [
     "trezor",
 ]

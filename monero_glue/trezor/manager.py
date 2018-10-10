@@ -6,10 +6,13 @@
 import os
 import logging
 
+from trezorlib import ui
+from trezorlib.debuglink import TrezorClientDebugLink
+
 from monero_glue.hwtoken import token
 from monero_glue.protocol_base.messages import MessageConverter
 
-from trezorlib.client import TrezorClient, TrezorClientDebugLink
+from trezorlib.client import TrezorClient
 from trezorlib.transport import enumerate_devices, get_transport
 
 
@@ -50,15 +53,15 @@ class Trezor(token.TokenLite):
         self.client = (
             TrezorClientDebugLink(self.wirelink)
             if self.debug
-            else TrezorClient(self.wirelink)
+            else TrezorClient(self.wirelink, ui=ui.ClickUI)
         )
 
-        if self.debug:
-            try:
-                self.debuglink = self.wirelink.find_debug()
-                self.client.set_debuglink(self.debuglink)
-            except Exception as e:
-                logger.warning(e)
+        # if self.debug:
+        #     try:
+        #         self.debuglink = self.wirelink.find_debug()
+        #         self.client.set_debuglink(self.debuglink)
+        #     except Exception as e:
+        #         logger.warning(e)
 
     def _to_tlib(self, msg):
         return self.msg_conv.to_trezorlib(msg)

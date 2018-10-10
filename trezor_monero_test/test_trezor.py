@@ -9,6 +9,7 @@ import zlib
 
 import pkg_resources
 from monero_serialize import xmrboost, xmrserialize, xmrtypes
+from trezorlib import debuglink, device
 
 from monero_glue.agent import agent_lite
 from monero_glue.hwtoken import token
@@ -41,8 +42,9 @@ class TrezorTest(BaseAgentTest):
         client = self.trezor_proxy.client
         client.transport.session_begin()
         if is_debug:
-            client.wipe_device()
-            client.load_device_by_mnemonic(
+            device.wipe(client)
+            debuglink.load_device_by_mnemonic(
+                client=client,
                 mnemonic=self.get_trezor_mnemonics()[0],
                 pin="",
                 passphrase_protection=False,

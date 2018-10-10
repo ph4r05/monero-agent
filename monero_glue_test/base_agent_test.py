@@ -85,6 +85,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
         )
 
     def get_trezor_tsx_tests(self):
+        # return [('tsx_t_uns_%02d.txt' % i) for i in [1,4,8,14,16,17]]
         return [('tsx_t_uns_%02d.txt' % i) for i in range(1, 18)] \
                + [('tsx_t_uns_%02d_sub.txt' % i) for i in [8, 12]] \
                + [('tsx_t_uns_%02d_sub_add.txt' % i) for i in [8, 12]]
