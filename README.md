@@ -3,12 +3,24 @@
 [![Build Status](https://travis-ci.org/ph4r05/monero-agent.svg?branch=master)](https://travis-ci.org/ph4r05/monero-agent)
 
 Pure-python Monero Wallet implementation in Python3.
-Supports RingCT signature on the given Transaction Construction Data.
+
+Implements transaction signing protocol designed for Trezor hardware wallet as described in [monero-trezor-doc].
+
+The main purpose of this repo is to provide host side (agent) for the transaction signing with the Trezor hardware wallet.
+The repo also contains the initial implementation for the Trezor side. The Trezor protocol side underwent heavy refactoring
+and is about to be merged to the [trezor-core] repository.
+
+The repo provides integration tests for Trezor wallet transaction signing.
+
+- PR adding Monero support to the Trezor hardware wallet (client side of the signing protocol): https://github.com/trezor/trezor-core/pull/293
+- PR adding Trezor hardware support to official Monero codebase: https://github.com/monero-project/monero/pull/4241
 
 ## Work in progress
 
-This work is still in progress. The project is initial implementation version.
-It may contain bugs and the EC crypto operations are not constant-time as it serves mainly as PoC at the moment.
+This work is still in progress.
+
+The pure python EC crypto operations are not constant-time as it serves mainly as PoC at the moment.
+The code supports also [trezor-crypto] crypto backend which is fast and constant-time.
 
 Moreover, the code will probably be subject to a major refactoring and cleaning.
 
@@ -18,7 +30,8 @@ Moreover, the code will probably be subject to a major refactoring and cleaning.
  - Simple RingCT (more than 1 UTXOs)
  - Sub-addresses
  - Key image sync
- - Bulletproofs
+ - Bulletproofs (batch verification, signing, ready for v9 fork)
+ - Ledger protocol implementation, HW wallet side
 
 ## Roadmap
 
@@ -26,7 +39,7 @@ Moreover, the code will probably be subject to a major refactoring and cleaning.
  - Reserver proof
  - Multisig
  - Wallet implementation (funds receiving, UTXO mixing)
- - Ledger protocol implementation
+ - Ledger protocol implementation, host side
 
 ## Protocol
 
@@ -76,10 +89,8 @@ https://github.com/ph4r05/monero-serialize
 Monero uses Ed25519 elliptic curve. The current implementation is not optimized to avoid side-channel leaks (e.g., timing)
 as it serves mainly as PoC.
 
-The project has multiple Ed25519 implementations. One works with the normal coordinates `(x, y)` the other
-works in extended Edwards coordinates `(x, y, z, t)`. The primary representation used is extended Edwards.
-It is possible to switch between these two implementations. Please note a point is not represented
-in an unique way in extended coordinates and point comparisson has to be done via `crypto.point_eq()` method.
+The project uses Ed25519 implementation which
+works in extended Edwards coordinates `(x, y, z, t)`.
 
 The only code directly handling point representation is `crypto.py`. All other objects are using `crypto.py`
 to do the EC computation. Point representation is opaque to the other modules.
@@ -97,7 +108,7 @@ I implemented missing cryptographic algorithms to the [trezor-crypto], branch `l
 Compiled shared library `libtrezor-crypto.so` can be used instead of the Python crypto backend.
 TCRY implements constant-time curve operations, uses [libsodium] to generate random values.
 
-Range proof was reimplemented in C for CPU and memory efficiency.
+Borromean Range proof was reimplemented in C for CPU and memory efficiency.
 
 Travis tests with both crypto backends. In order to test with TCRY install all its dependencies. `libsodium` is the only one
 dependency for the shared lib. For more info take a look at `travis-install-libtrezor-crypto.sh`.
@@ -138,6 +149,10 @@ pip install 'monero_agent[tcry]'
 ```
 
 Libsodium, pkg-config, gcc, python-dev are required for the installation.
+
+## More on using the repo
+
+Please refer to the PoC.md for more usage examples.
 
 ### Memory considerations
 

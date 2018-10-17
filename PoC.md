@@ -7,7 +7,7 @@ There are the following components:
 - Trezor agent, host-based utility implementing host side of the  signing protocol.
 - Agent spawns custom `monero-wallet-rpc`
 
-This code relies on the watch-only features implemented to `monero-wallet-rpc`.
+This code relied on the watch-only features implemented to `monero-wallet-rpc`.
 
 https://github.com/monero-project/monero/pull/3780
 
