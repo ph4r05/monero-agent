@@ -9,6 +9,7 @@ import aiounittest
 import pkg_resources
 from monero_serialize.xmrtypes import RctType
 
+from monero_glue.messages import MoneroRctKeyPublic
 from monero_glue.xmr import crypto, monero, ring_ct, common, mlsag2
 from monero_glue.hwtoken import misc
 from monero_serialize import xmrserialize, xmrtypes
@@ -218,7 +219,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
         monero.recode_msg(tx_obj.rct_signatures.p.MGs, encode=False)
         for idx in range(len(tx_obj.vin)):
             if is_simple:
-                mix_ring = [x[1] for x in con_data.tx_data.sources[idx].outputs]
+                mix_ring = [MoneroRctKeyPublic(dest=x[1].dest, commitment=x[1].mask) for x in con_data.tx_data.sources[idx].outputs]
                 if is_bp:
                     pseudo_out = crypto.decodepoint(bytes(tx_obj.rct_signatures.p.pseudoOuts[idx]))
                 else:
@@ -229,7 +230,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
 
             else:
                 txn_fee_key = crypto.scalarmult_h(tx_obj.rct_signatures.txnFee)
-                mix_ring = [[x[1]] for x in con_data.tx_data.sources[idx].outputs]
+                mix_ring = [[MoneroRctKeyPublic(dest=x[1].dest, commitment=x[1].mask)] for x in con_data.tx_data.sources[idx].outputs]
                 self.assertTrue(mlsag2.ver_rct_mg(
                     tx_obj.rct_signatures.p.MGs[idx], mix_ring, tx_obj.rct_signatures.outPk, txn_fee_key, mlsag_hash
                 ))

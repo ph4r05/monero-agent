@@ -221,7 +221,7 @@ class TTransactionBuilder(object):
         """
         Returns true if the input transaction can be processed whole in-memory
         """
-        return self.input_count <= 1
+        return False
 
     def many_inputs(self):
         """
@@ -419,10 +419,10 @@ class TTransactionBuilder(object):
         self.mixin = tsx_data.mixin
         self.fee = tsx_data.fee
         self.account_idx = tsx_data.account
-        self.multi_sig = tsx_data.is_multisig
+        self.multi_sig = False
         self.state.inp_cnt(self.in_memory())
         self.check_change(tsx_data.outputs)
-        self.exp_tx_prefix_hash = common.defval_empty(tsx_data.exp_tx_prefix_hash, None)
+        self.exp_tx_prefix_hash = None
 
         # Rsig data
         self.rsig_type = tsx_data.rsig_data.rsig_type
@@ -432,7 +432,7 @@ class TTransactionBuilder(object):
         self.use_simple_rct = self.input_count > 1 or self.rsig_type != 0
 
         # Provided tx key, used mostly in multisig.
-        if len(tsx_data.use_tx_keys) > 0:
+        if False:  # len(tsx_data.use_tx_keys) > 0:
             for ckey in tsx_data.use_tx_keys:
                 crypto.check_sc(crypto.decodeint(ckey))
 
@@ -486,20 +486,14 @@ class TTransactionBuilder(object):
         self._mem_trace(6)
 
         from monero_glue.messages.MoneroTransactionInitAck import (
-            MoneroTransactionInitAck
+            MoneroTransactionInitAck,
         )
         from monero_glue.messages.MoneroTransactionRsigData import (
-            MoneroTransactionRsigData
+            MoneroTransactionRsigData,
         )
 
         rsig_data = MoneroTransactionRsigData(offload_type=self.rsig_offload)
-        return MoneroTransactionInitAck(
-            in_memory=self.in_memory(),
-            many_inputs=self.many_inputs(),
-            many_outputs=self.many_outputs(),
-            hmacs=hmacs,
-            rsig_data=rsig_data,
-        )
+        return MoneroTransactionInitAck(hmacs=hmacs, rsig_data=rsig_data)
 
     async def process_payment_id(self, tsx_data):
         """
@@ -581,7 +575,7 @@ class TTransactionBuilder(object):
         with key derived for exactly this purpose.
         """
         from monero_glue.messages.MoneroTransactionSetInputAck import (
-            MoneroTransactionSetInputAck
+            MoneroTransactionSetInputAck,
         )
         from monero_glue.xmr.enc import chacha_poly
         from monero_glue.xmr.sub import tsx_helper
@@ -680,8 +674,8 @@ class TTransactionBuilder(object):
             vini_hmac=hmac_vini,
             pseudo_out=pseudo_out,
             pseudo_out_hmac=pseudo_out_hmac,
-            alpha_enc=alpha_enc,
-            spend_enc=spend_enc,
+            pseudo_out_alpha=alpha_enc,
+            spend_key=spend_enc,
         )
 
     async def tsx_inputs_done(self):
@@ -712,7 +706,7 @@ class TTransactionBuilder(object):
         Set permutation on the inputs - sorted by key image on host.
         """
         from monero_glue.messages.MoneroTransactionInputsPermutationAck import (
-            MoneroTransactionInputsPermutationAck
+            MoneroTransactionInputsPermutationAck,
         )
 
         await self.trezor.iface.transaction_step(self.STEP_PERM)
@@ -773,7 +767,7 @@ class TTransactionBuilder(object):
         :return:
         """
         from monero_glue.messages.MoneroTransactionInputViniAck import (
-            MoneroTransactionInputViniAck
+            MoneroTransactionInputViniAck,
         )
 
         await self.trezor.iface.transaction_step(
@@ -824,7 +818,7 @@ class TTransactionBuilder(object):
 
         await self.full_message_hasher.set_pseudo_out(pseudo_out)
 
-    async def all_in_set(self, rsig_data):
+    async def all_in_set(self):
         """
         If in the applicable offloading mode, generate commitment masks.
         """
@@ -1205,7 +1199,7 @@ class TTransactionBuilder(object):
         self._mem_trace(14, True)
 
         from monero_glue.messages.MoneroTransactionSetOutputAck import (
-            MoneroTransactionSetOutputAck
+            MoneroTransactionSetOutputAck,
         )
 
         out_pk_bin = bytearray(64)
@@ -1308,13 +1302,29 @@ class TTransactionBuilder(object):
 
         from monero_glue.messages.MoneroRingCtSig import MoneroRingCtSig
         from monero_glue.messages.MoneroTransactionAllOutSetAck import (
-            MoneroTransactionAllOutSetAck
+            MoneroTransactionAllOutSetAck,
         )
 
         rv = self.init_rct_sig()
         rv_pb = MoneroRingCtSig(txn_fee=rv.txnFee, message=rv.message, rv_type=rv.type)
+
+        self.state.set_final_message_done()
+        await self.trezor.iface.transaction_step(self.STEP_MLSAG)
+
+        await self.tsx_mlsag_ecdh_info()
+        await self.tsx_mlsag_out_pk()
+        await self.full_message_hasher.rctsig_base_done()
+        self.out_idx = -1
+        self.inp_idx = -1
+
+        self.full_message = await self.full_message_hasher.get_digest()
+        self.full_message_hasher = None
+
         return MoneroTransactionAllOutSetAck(
-            extra=extra_b, tx_prefix_hash=self.tx_prefix_hash, rv=rv_pb
+            extra=extra_b,
+            tx_prefix_hash=self.tx_prefix_hash,
+            rv=rv_pb,
+            full_message_hash=self.full_message,
         )
 
     async def tsx_mlsag_ecdh_info(self):
@@ -1332,28 +1342,6 @@ class TTransactionBuilder(object):
 
         for out in self.output_pk:
             await self.full_message_hasher.set_out_pk(out)
-
-    async def mlsag_done(self):
-        """
-        MLSAG message computed.
-        """
-        from monero_glue.messages.MoneroTransactionMlsagDoneAck import (
-            MoneroTransactionMlsagDoneAck
-        )
-
-        self.state.set_final_message_done()
-        await self.trezor.iface.transaction_step(self.STEP_MLSAG)
-
-        await self.tsx_mlsag_ecdh_info()
-        await self.tsx_mlsag_out_pk()
-        await self.full_message_hasher.rctsig_base_done()
-        self.out_idx = -1
-        self.inp_idx = -1
-
-        self.full_message = await self.full_message_hasher.get_digest()
-        self.full_message_hasher = None
-
-        return MoneroTransactionMlsagDoneAck(full_message_hash=self.full_message)
 
     async def sign_input(
         self,
@@ -1459,7 +1447,9 @@ class TTransactionBuilder(object):
         )
         self.assrt(
             crypto.point_eq(
-                crypto.decodepoint(src_entr.outputs[src_entr.real_output].key.mask),
+                crypto.decodepoint(
+                    src_entr.outputs[src_entr.real_output].key.commitment
+                ),
                 crypto.gen_c(in_sk.mask, src_entr.amount),
             ),
             "a2",
@@ -1545,12 +1535,11 @@ class TTransactionBuilder(object):
         self._mem_trace()
 
         from monero_glue.messages.MoneroTransactionSignInputAck import (
-            MoneroTransactionSignInputAck
+            MoneroTransactionSignInputAck,
         )
 
         return MoneroTransactionSignInputAck(
-            signature=await misc.dump_msg_gc(mgs[0], preallocate=488, del_msg=True),
-            cout=cout,
+            signature=await misc.dump_msg_gc(mgs[0], preallocate=488, del_msg=True)
         )
 
     async def final_msg(self, *args, **kwargs):
@@ -1558,7 +1547,7 @@ class TTransactionBuilder(object):
         Final step after transaction signing.
         """
         from monero_glue.messages.MoneroTransactionFinalAck import (
-            MoneroTransactionFinalAck
+            MoneroTransactionFinalAck,
         )
         from monero_glue.xmr.enc import chacha_poly
 

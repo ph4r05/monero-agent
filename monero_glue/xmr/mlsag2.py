@@ -613,7 +613,7 @@ def prove_rct_mg(
         for j in range(rows):
             M[i][j] = crypto.decodepoint(pubs[i][j].dest)
             M[i][rows] = crypto.point_add(
-                M[i][rows], crypto.decodepoint(pubs[i][j].mask)
+                M[i][rows], crypto.decodepoint(pubs[i][j].commitment)
             )
 
     sk[rows] = crypto.sc_0()
@@ -669,7 +669,7 @@ def prove_rct_mg_simple(message, pubs, in_sk, a, cout, kLRki, mscout, index):
 
     for i in range(cols):
         M[i][0] = crypto.decodepoint(pubs[i].dest)
-        M[i][1] = crypto.point_sub(crypto.decodepoint(pubs[i].mask), cout)
+        M[i][1] = crypto.point_sub(crypto.decodepoint(pubs[i].commitment), cout)
 
     return gen_mlsag_ext(message, M, sk, kLRki, mscout, index, rows)
 
@@ -702,7 +702,7 @@ def ver_rct_mg(mg, pubs, out_pk, txn_fee_key, message):
         for i in range(cols):
             M[i][j] = crypto.decodepoint(pubs[i][j].dest)
             M[i][rows] = crypto.point_add(
-                M[i][rows], crypto.decodepoint(pubs[i][j].mask)
+                M[i][rows], crypto.decodepoint(pubs[i][j].commitment)
             )  # add Ci in last row
 
     for i in range(cols):
@@ -734,6 +734,6 @@ def ver_rct_mg_simple(message, mg, pubs, C):
     M = key_matrix(rows + 1, cols)
     for i in range(cols):
         M[i][0] = crypto.decodepoint(pubs[i].dest)
-        M[i][1] = crypto.point_sub(crypto.decodepoint(pubs[i].mask), C)
+        M[i][1] = crypto.point_sub(crypto.decodepoint(pubs[i].commitment), C)
 
     return ver_mlsag_ext(message, M, mg, rows)

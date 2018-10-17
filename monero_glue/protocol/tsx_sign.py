@@ -135,9 +135,6 @@ class TsxSigner(object):
         elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionAllOutSetRequest:
             self._log_trace("sign_out_set")
             return await self.tsx_all_out1_set(msg)
-        elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionMlsagDoneRequest:
-            self._log_trace("sign_done")
-            return await self.tsx_mlsag_done()
         elif msg.MESSAGE_WIRE_TYPE == MessageType.MoneroTransactionSignInputRequest:
             self._log_trace("sign_sinp")
             return await self.tsx_sign_input(msg)
@@ -216,7 +213,7 @@ class TsxSigner(object):
         :return:
         """
         try:
-            return await self.tsx_obj.all_in_set(msg.rsig_data)
+            return await self.tsx_obj.all_in_set()
         except Exception as e:
             await self.tsx_exc_handler(e)
             raise
@@ -261,18 +258,6 @@ class TsxSigner(object):
             await self.tsx_exc_handler(e)
             raise
 
-    async def tsx_mlsag_done(self, msg=None):
-        """
-        MLSAG message computed.
-
-        :return:
-        """
-        try:
-            return await self.tsx_obj.mlsag_done()
-        except Exception as e:
-            await self.tsx_exc_handler(e)
-            raise
-
     async def tsx_sign_input(self, msg):
         """
         Generates a signature for one input.
@@ -286,8 +271,8 @@ class TsxSigner(object):
                 msg.vini_hmac,
                 msg.pseudo_out,
                 msg.pseudo_out_hmac,
-                msg.alpha_enc,
-                msg.spend_enc,
+                msg.pseudo_out_alpha,
+                msg.spend_key,
             )
         except Exception as e:
             await self.tsx_exc_handler(e)

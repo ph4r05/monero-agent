@@ -24,8 +24,6 @@ from monero_glue.messages import (
     MoneroTransactionInitRequest,
     MoneroTransactionInputsPermutationRequest,
     MoneroTransactionInputViniRequest,
-    MoneroTransactionMlsagDoneAck,
-    MoneroTransactionMlsagDoneRequest,
     MoneroTransactionRsigData,
     MoneroTransactionSetInputAck,
     MoneroTransactionSetInputRequest,
@@ -44,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_MONERO_BIP44 = [
-    0x8000002c,
+    0x8000002C,
     0x80000080,
     0x80000000,
     0,
@@ -325,9 +323,6 @@ class Agent(object):
         )
         tsx_data.account = tx.subaddr_account
         tsx_data.minor_indices = tx.subaddr_indices
-        tsx_data.is_multisig = multisig
-        tsx_data.exp_tx_prefix_hash = common.defval(exp_tx_prefix_hash, b"")
-        tsx_data.use_tx_keys = common.defval(use_tx_keys, [])
         tsx_data.integrated_indices = self._get_integrated_idx(
             tsx_data.outputs, aux_data
         )
@@ -354,7 +349,7 @@ class Agent(object):
         t_res = await self.trezor.tsx_sign(init_msg)  # type: MoneroTransactionInitAck
         self.handle_error(t_res)
 
-        in_memory = t_res.in_memory
+        in_memory = False
         self.ct.tx_out_entr_hmacs = t_res.hmacs
         self.ct.rsig_param = t_res.rsig_data
 
@@ -373,8 +368,8 @@ class Agent(object):
             self.ct.tx.vin.append(vini)
             self.ct.tx_in_hmacs.append(t_res.vini_hmac)
             self.ct.pseudo_outs.append((t_res.pseudo_out, t_res.pseudo_out_hmac))
-            self.ct.alphas.append(t_res.alpha_enc)
-            self.ct.spend_encs.append(t_res.spend_enc)
+            self.ct.alphas.append(t_res.pseudo_out_alpha)
+            self.ct.spend_encs.append(t_res.spend_key)
 
         # Sort key image
         self.ct.source_permutation = list(range(len(tx.sources)))
@@ -481,12 +476,6 @@ class Agent(object):
             else:
                 rv.p.rangeSigs.append(self.ct.tx_out_rsigs[idx])
 
-        # MLSAG message check
-        t_res = await self.trezor.tsx_sign(
-            MoneroTransactionMlsagDoneRequest()
-        )  # type: MoneroTransactionMlsagDoneAck
-        self.handle_error(t_res)
-
         mlsag_hash = t_res.full_message_hash
         mlsag_hash_computed = await monero.get_pre_mlsag_hash(rv)
         if not common.ct_equal(mlsag_hash, mlsag_hash_computed):
@@ -502,8 +491,8 @@ class Agent(object):
                 vini_hmac=self.ct.tx_in_hmacs[idx],
                 pseudo_out=self.ct.pseudo_outs[idx][0] if not in_memory else None,
                 pseudo_out_hmac=self.ct.pseudo_outs[idx][1] if not in_memory else None,
-                alpha_enc=self.ct.alphas[idx],
-                spend_enc=self.ct.spend_encs[idx],
+                pseudo_out_alpha=self.ct.alphas[idx],
+                spend_key=self.ct.spend_encs[idx],
             )
             t_res = await self.trezor.tsx_sign(
                 msg
@@ -512,7 +501,7 @@ class Agent(object):
 
             mg = await tmisc.parse_msg(t_res.signature, xmrtypes.MgSig())
             rv.p.MGs.append(mg)
-            couts.append(t_res.cout)
+            couts.append(None)
 
         self.ct.tx.signatures = []
         self.ct.tx.rct_signatures = rv
@@ -715,9 +704,7 @@ class Agent(object):
         enc_key = bytes(t_res.enc_key)
         final_res = []
         for sub in sub_res:  # type: key_image.MoneroExportedKeyImage
-            plain = chacha_poly.decrypt(
-                enc_key, bytes(sub.iv), bytes(sub.blob), bytes(sub.tag)
-            )
+            plain = chacha_poly.decrypt(enc_key, bytes(sub.iv), bytes(sub.blob))
             ki_bin = plain[:32]
 
             # ki = crypto.decodepoint(ki_bin)

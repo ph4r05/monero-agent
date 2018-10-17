@@ -27,13 +27,12 @@ def encrypt(key, plaintext, associated_data=None):
     return nonce, ciphertext, b""
 
 
-def decrypt(key, iv, ciphertext, tag=None, associated_data=None):
+def decrypt(key, iv, ciphertext, associated_data=None):
     """
     ChaCha20Poly1305 decryption
     :param key:
     :param iv:
     :param ciphertext:
-    :param tag:
     :param associated_data:
     :return:
     """

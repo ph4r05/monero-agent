@@ -8,7 +8,7 @@ from monero_glue.messages import (
     MoneroAccountPublicAddress,
     MoneroMultisigKLRki,
     MoneroOutputEntry,
-    MoneroRctKey,
+    MoneroRctKeyPublic,
     MoneroTransactionData,
     MoneroTransactionDestinationEntry,
     MoneroTransactionSourceEntry,
@@ -82,7 +82,9 @@ def translate_monero_dest_entry_pb(dst_entry: xmrtypes.TxDestinationEntry):
 def translate_monero_src_entry_pb(src_entry: xmrtypes.TxSourceEntry):
     d = MoneroTransactionSourceEntry()
     d.outputs = [
-        MoneroOutputEntry(idx=x[0], key=MoneroRctKey(dest=x[1].dest, mask=x[1].mask))
+        MoneroOutputEntry(
+            idx=x[0], key=MoneroRctKeyPublic(dest=x[1].dest, commitment=x[1].mask)
+        )
         for x in src_entry.outputs
     ]
     d.real_output = src_entry.real_output
