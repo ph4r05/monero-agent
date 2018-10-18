@@ -92,7 +92,7 @@ from .MoneroKeyImageSyncStepAck import MoneroKeyImageSyncStepAck
 from .MoneroKeyImageSyncStepRequest import MoneroKeyImageSyncStepRequest
 from .MoneroMultisigKLRki import MoneroMultisigKLRki
 from .MoneroOutputEntry import MoneroOutputEntry
-from .MoneroRctKey import MoneroRctKey
+from .MoneroRctKeyPublic import MoneroRctKeyPublic
 from .MoneroRingCtSig import MoneroRingCtSig
 from .MoneroSubAddressIndicesList import MoneroSubAddressIndicesList
 from .MoneroTransactionAllInputsSetAck import MoneroTransactionAllInputsSetAck
@@ -109,8 +109,6 @@ from .MoneroTransactionInputViniAck import MoneroTransactionInputViniAck
 from .MoneroTransactionInputViniRequest import MoneroTransactionInputViniRequest
 from .MoneroTransactionInputsPermutationAck import MoneroTransactionInputsPermutationAck
 from .MoneroTransactionInputsPermutationRequest import MoneroTransactionInputsPermutationRequest
-from .MoneroTransactionMlsagDoneAck import MoneroTransactionMlsagDoneAck
-from .MoneroTransactionMlsagDoneRequest import MoneroTransactionMlsagDoneRequest
 from .MoneroTransactionRsigData import MoneroTransactionRsigData
 from .MoneroTransactionSetInputAck import MoneroTransactionSetInputAck
 from .MoneroTransactionSetInputRequest import MoneroTransactionSetInputRequest
