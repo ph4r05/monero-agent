@@ -28,8 +28,7 @@ from monero_glue.misc.bip import bip32
 from monero_glue.protocol_base import messages
 from monero_glue.xmr import crypto, monero, wallet
 from monero_glue.xmr.core import mnemonic
-from monero_poc.utils import cli
-from monero_poc.utils import misc
+from monero_poc.utils import cli, misc
 from monero_serialize import xmrserialize
 
 import coloredlogs

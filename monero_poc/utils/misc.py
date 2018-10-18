@@ -19,12 +19,12 @@ import time
 import traceback
 from shlex import quote
 
-import shellescape
-from sarge import Capture, Feeder, run
-
 from monero_glue.hwtoken.misc import TrezorError
 from monero_glue.xmr import crypto
 from monero_glue.xmr.monero import DISPLAY_DECIMAL_POINT
+
+import shellescape
+from sarge import Capture, Feeder, run
 
 logger = logging.getLogger(__name__)
 
@@ -147,10 +147,10 @@ class TransferArgs(object):
 
 
 def cut_index(parts):
-    if not parts[0].startswith('index='):
+    if not parts[0].startswith("index="):
         return [], parts
 
-    return [int(x.strip()) for x in parts[0][6:].split(',')], parts[1:]
+    return [int(x.strip()) for x in parts[0][6:].split(",")], parts[1:]
 
 
 def cut_priority(parts):
@@ -180,7 +180,7 @@ def cut_amount(parts):
     try:
         return float(parts[0]), parts[1:]
     except Exception as e:
-        raise ValueError('Format error, Amount not valid') from e
+        raise ValueError("Format error, Amount not valid") from e
 
 
 def cut_addr_amount(parts):
@@ -193,11 +193,11 @@ def cut_addr_amount(parts):
 def cut_key_image(parts):
     ki = parts[0]
     if len(ki) != 64:
-        raise ValueError('Format error, Key Image have to be exactly 32B long')
+        raise ValueError("Format error, Key Image have to be exactly 32B long")
     try:
         return binascii.unhexlify(ki), parts[1:]
     except Exception as e:
-        raise ValueError('Format error, Key Image is not properly hex-coded') from e
+        raise ValueError("Format error, Key Image is not properly hex-coded") from e
 
 
 def cut_payment_id(parts):
@@ -205,7 +205,7 @@ def cut_payment_id(parts):
         return None, parts
     payment_id = parts[0]
     if len(payment_id) != 16 and len(payment_id) != 64:
-        raise ValueError('Payment ID allowed only 8 and 32 B')
+        raise ValueError("Payment ID allowed only 8 and 32 B")
     return payment_id, parts[1:]
 
 
@@ -217,7 +217,7 @@ def parse_transfer_cmd(parts):
     :return:
     """
     if len(parts) < 2:
-        raise ValueError('Format error, too few arguments')
+        raise ValueError("Format error, too few arguments")
 
     parts = list(parts)  # copy
     res = TransferArgs()
@@ -234,7 +234,7 @@ def parse_transfer_cmd(parts):
         res.address_amounts.append((addr, amount))
 
     if len(res.address_amounts) == 0:
-        raise ValueError('Format error')
+        raise ValueError("Format error")
 
     res.payment_id, parts = cut_payment_id(parts)
     return res
@@ -264,7 +264,7 @@ def parse_sweep_below(line):
     """
     parts = [x for x in line.split(" ") if len(x.strip()) > 0]
     if len(parts) < 2:
-        raise ValueError('Invalid format')
+        raise ValueError("Invalid format")
 
     res = TransferArgs()
     res.amount_threshold, parts = cut_amount(parts)
@@ -284,7 +284,7 @@ def parse_sweep_single(line):
     """
     parts = [x for x in line.split(" ") if len(x.strip()) > 0]
     if len(parts) < 2:
-        raise ValueError('Invalid format')
+        raise ValueError("Invalid format")
 
     res = TransferArgs()
     res.priority, parts = cut_priority(parts)
@@ -353,7 +353,7 @@ def escape_shell(inp):
     :return:
     """
     try:
-        inp = inp.decode('utf8')
+        inp = inp.decode("utf8")
     except:
         pass
 

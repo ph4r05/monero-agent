@@ -1,6 +1,7 @@
-import re
 import argparse
 import logging
+import re
+
 import coloredlogs
 
 logger = logging.getLogger(__name__)
@@ -43,12 +44,12 @@ class MemReader(object):
             self.cline = i
             line = self.data[i]
 
-            ma = re.match(r'^.*A:\s*(\d+).*', line)
+            ma = re.match(r"^.*A:\s*(\d+).*", line)
             if ma is None:
                 continue
 
             mfree = int(ma.group(1))
-            is_section = '####' in line
+            is_section = "####" in line
 
             return mfree, is_section
 
@@ -67,7 +68,7 @@ class MemCompare(object):
                 file_data.append(fh.readlines())
 
         if len(file_data) != 2:
-            raise ValueError('Exactly 2 files are required')
+            raise ValueError("Exactly 2 files are required")
 
         ma = MemReader(file_data[0])
         mb = MemReader(file_data[1])
@@ -88,21 +89,21 @@ class MemCompare(object):
             # End
             if ar is None or br is None:
                 if ar is None and br is not None:
-                    logger.info('Source A ended before B')
+                    logger.info("Source A ended before B")
                 elif ar is not None and br is None:
-                    logger.info('Source B ended before A')
+                    logger.info("Source B ended before A")
                 break
 
             # Align sections
             if ar[1] and not br[1]:
                 br = mb.next_section()
                 b_off = br[2]
-                logger.info('Skipped %s mem lines from B' % b_off)
+                logger.info("Skipped %s mem lines from B" % b_off)
 
             elif not ar[1] and br[1]:
                 ar = ma.next_section()
                 a_off = ar[2]
-                logger.info('Skipped %s mem lines from A' % a_off)
+                logger.info("Skipped %s mem lines from A" % a_off)
 
             m_a_all.append(ar[0])
             m_b_all.append(br[0])
@@ -124,17 +125,46 @@ class MemCompare(object):
         avg_sec_a = avg(m_a_sec)
         avg_sec_b = avg(m_b_sec)
 
-        print('Diffs sec: %s' % avg(m_diffs_sec))
-        print('Diffs all: %s\n' % avg(m_diffs_all))
+        print("Diffs sec: %s" % avg(m_diffs_sec))
+        print("Diffs all: %s\n" % avg(m_diffs_all))
 
-        print('Avg Sec A: %s  Sec B: %s  diff: %s   ratio:  %s' % (avg_sec_a, avg_sec_b, avg_sec_a - avg_sec_b, avg_sec_a/float(avg_sec_b)))
-        print('Avg All A: %s  All B: %s  diff: %s   ratio:  %s' % (avg_all_a, avg_all_b, avg_all_a - avg_all_b, avg_all_a/float(avg_all_b)))
+        print(
+            "Avg Sec A: %s  Sec B: %s  diff: %s   ratio:  %s"
+            % (
+                avg_sec_a,
+                avg_sec_b,
+                avg_sec_a - avg_sec_b,
+                avg_sec_a / float(avg_sec_b),
+            )
+        )
+        print(
+            "Avg All A: %s  All B: %s  diff: %s   ratio:  %s"
+            % (
+                avg_all_a,
+                avg_all_b,
+                avg_all_a - avg_all_b,
+                avg_all_a / float(avg_all_b),
+            )
+        )
 
     def main(self):
-        parser = argparse.ArgumentParser(description='Compares two log files and used memory')
-        parser.add_argument("--verbose", dest="verbose", default=False, action="store_const", const=True,
-                            help="Append to the tee file")
-        parser.add_argument('files', metavar='FILE', nargs='*', help='files to read, if empty, stdin is used')
+        parser = argparse.ArgumentParser(
+            description="Compares two log files and used memory"
+        )
+        parser.add_argument(
+            "--verbose",
+            dest="verbose",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Append to the tee file",
+        )
+        parser.add_argument(
+            "files",
+            metavar="FILE",
+            nargs="*",
+            help="files to read, if empty, stdin is used",
+        )
         args = parser.parse_args()
         self.args = args
 
@@ -142,9 +172,9 @@ class MemCompare(object):
             self.read_files(args.files)
 
         except KeyboardInterrupt:
-            logger.info('Terminating')
+            logger.info("Terminating")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     anz = MemCompare()
     anz.main()

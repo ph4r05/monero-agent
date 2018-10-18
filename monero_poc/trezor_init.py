@@ -3,15 +3,13 @@
 # Author: Dusan Klinec, ph4r05, 2018
 
 
-import os
 import argparse
+import os
 
-
-from trezorlib import coins, tx_api, ui, debuglink, device
+from trezorlib import coins, debuglink, device, tx_api, ui
 from trezorlib.client import TrezorClient
 from trezorlib.debuglink import TrezorClientDebugLink
 from trezorlib.transport import get_transport
-
 
 parser = argparse.ArgumentParser(description="Trezor initializer")
 
@@ -37,7 +35,10 @@ args = parser.parse_args()
 mnemonic12 = (
     "alcohol woman abuse must during monitor noble actual mixed trade anger aisle"
 )
-mnemonic24 = "permit universe parent weapon amused modify essay borrow tobacco budget walnut " "lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple"
+mnemonic24 = (
+    "permit universe parent weapon amused modify essay borrow tobacco budget walnut "
+    "lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple"
+)
 
 debug_mode = args.debug
 if args.trezor_path:
@@ -51,7 +52,11 @@ mnemonic = mnemonic24 if args.mnemonic == 1 else mnemonic12
 
 
 wirelink = get_transport(path)
-client = TrezorClientDebugLink(wirelink) if debug_mode else TrezorClient(wirelink, ui=ui.ClickUI)
+client = (
+    TrezorClientDebugLink(wirelink)
+    if debug_mode
+    else TrezorClient(wirelink, ui=ui.ClickUI)
+)
 client.transport.session_begin()
 
 device.wipe(client)

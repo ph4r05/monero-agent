@@ -20,19 +20,17 @@ import sys
 import threading
 import time
 
-from trezorlib import debuglink, device
-
 from monero_glue.agent import agent_lite, agent_misc
 from monero_glue.agent.agent_lite import SignAuxData
-from monero_glue.messages import DebugMoneroDiagRequest, GetEntropy, Entropy
-from monero_glue.xmr import common, crypto, monero, wallet, wallet_rpc, daemon_rpc
-from monero_glue.xmr.enc import chacha_poly, chacha
+from monero_glue.messages import DebugMoneroDiagRequest, Entropy, GetEntropy
+from monero_glue.xmr import common, crypto, daemon_rpc, monero, wallet, wallet_rpc
+from monero_glue.xmr.enc import chacha, chacha_poly
 from monero_glue.xmr.sub import addr as xmr_addr
-from monero_poc.utils import misc, trace_logger
-from monero_poc.utils import cli
+from monero_poc.utils import cli, misc, trace_logger
 from monero_poc.utils.misc import TrezorAddressMismatchError
 from monero_poc.utils.trezor_server_proxy import TokenProxy
-from monero_serialize import xmrtypes, xmrserialize, xmrboost
+from monero_serialize import xmrboost, xmrserialize, xmrtypes
+from trezorlib import debuglink, device
 
 import coloredlogs
 from cmd2 import Cmd
@@ -150,7 +148,7 @@ class HostAgent(cli.BaseCli):
         if not self.rpc_running:
             flags.append("R!")
         if not self.rpc_ready:
-            flags.append('Loading' if not self.fresh_wallet else 'Syncing')
+            flags.append("Loading" if not self.fresh_wallet else "Syncing")
 
         flags_str = "|".join(flags)
         flags_suffix = "|" + flags_str if len(flags_str) > 0 else ""
@@ -177,18 +175,22 @@ class HostAgent(cli.BaseCli):
     def check_rpc(self):
         try_debug = None
         if not self.args.debug_rpc:
-            try_debug = 'Consider running with --debug-rpc flag to show RPC wallet ' \
-                        'output for closer inspection and diagnosis'
+            try_debug = (
+                "Consider running with --debug-rpc flag to show RPC wallet "
+                "output for closer inspection and diagnosis"
+            )
 
         if not self.rpc_running:
-            self.perror('Monero RPC wallet is not running.')
+            self.perror("Monero RPC wallet is not running.")
             if try_debug:
                 self.poutput(try_debug)
             return False
 
         elif not self.rpc_ready:
-            self.perror('Monero RPC wallet is not yet ready, please wait a moment')
-            self.poutput('RPC wallet is not available during the blockchain scanning, it may take a while')
+            self.perror("Monero RPC wallet is not yet ready, please wait a moment")
+            self.poutput(
+                "RPC wallet is not available during the blockchain scanning, it may take a while"
+            )
             if try_debug:
                 self.poutput(try_debug)
             return False
@@ -220,20 +222,20 @@ class HostAgent(cli.BaseCli):
 
     def do_check_trezor(self, line):
         self.check_address()
-        self.poutput('OK')
+        self.poutput("OK")
 
     def do_state(self, line):
         if not self.rpc_running:
-            self.perror('RPC wallet is not running')
+            self.perror("RPC wallet is not running")
         else:
-            self.poutput('RPC wallet: running')
+            self.poutput("RPC wallet: running")
 
         if self.rpc_ready:
-            self.poutput('RPC wallet: ready')
+            self.poutput("RPC wallet: ready")
         elif self.fresh_wallet:
-            self.poutput('RPC wallet: synchronising')
+            self.poutput("RPC wallet: synchronising")
         else:
-            self.poutput('RPC wallet: starting')
+            self.poutput("RPC wallet: starting")
 
     def do_get_watch_only(self, line):
         pres = self.token_cmd(self.agent.get_watch_only())
@@ -308,7 +310,7 @@ class HostAgent(cli.BaseCli):
         if not self.check_rpc():
             return
 
-        res = self.wallet_proxy.sweep_dust({'do_not_relay': True})
+        res = self.wallet_proxy.sweep_dust({"do_not_relay": True})
         if "result" not in res:
             logger.error("Sweep dust error: %s" % res)
             raise ValueError("Could not transfer")
@@ -322,7 +324,9 @@ class HostAgent(cli.BaseCli):
             return
 
         if len(line) == 0:
-            self.poutput('sweep_all [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> [<payment_id>]')
+            self.poutput(
+                "sweep_all [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> [<payment_id>]"
+            )
             return
 
         params = misc.parse_sweep_all(line)
@@ -333,7 +337,9 @@ class HostAgent(cli.BaseCli):
             return
 
         if len(line) == 0:
-            self.poutput('sweep_below <amount_threshold> [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> [<payment_id>]')
+            self.poutput(
+                "sweep_below <amount_threshold> [index=<N1>[,<N2>,...]] [<priority>] [<ring_size>] <address> [<payment_id>]"
+            )
             return
 
         params = misc.parse_sweep_below(line)
@@ -344,7 +350,9 @@ class HostAgent(cli.BaseCli):
             return
 
         if len(line) == 0:
-            self.poutput('sweep_single [<priority>] [<ring_size>] <key_image> <address> [<payment_id>]')
+            self.poutput(
+                "sweep_single [<priority>] [<ring_size>] <key_image> <address> [<payment_id>]"
+            )
             return
 
         params = misc.parse_sweep_below(line)
@@ -374,7 +382,7 @@ class HostAgent(cli.BaseCli):
         )
 
     def do_get_entropy(self, line):
-        parts = line.split(' ')
+        parts = line.split(" ")
         size = int(parts[0])
         path = parts[1]
         self.wait_coro(self.get_entropy(size, path))
@@ -389,12 +397,12 @@ class HostAgent(cli.BaseCli):
         path = "bridge:web01"
         if line == "udp":
             path = "udp:127.0.0.1:21324"
-        elif ':' in line:
+        elif ":" in line:
             path = line
         elif len(line) == 0:
             path = self.choose_trezor()
 
-        if 'bridge' in path:
+        if "bridge" in path:
             self.token_debug = False
 
         print("Switching to device: %s" % path)
@@ -406,14 +414,15 @@ class HostAgent(cli.BaseCli):
 
     def do_enumerate(self, line):
         from monero_glue.trezor import manager as tmanager
+
         r = tmanager.Trezor.enumerate()
         for x in r:
             print(x)
 
     def do_diag(self, line):
-        m = re.match(r'^(\d+)(?:(\s+\d+)(\s+\d+)?)?', line.strip())
+        m = re.match(r"^(\d+)(?:(\s+\d+)(\s+\d+)?)?", line.strip())
         if m is None:
-            print('Usage: diag INS [p1 [p2]]')
+            print("Usage: diag INS [p1 [p2]]")
             return
 
         diag_code = int(m.group(1))
@@ -486,16 +495,18 @@ class HostAgent(cli.BaseCli):
         :param path:
         :return:
         """
-        logger.info('Loading entropy of %s B to %s' % (size, path))
-        with open(path, 'wb+') as fh:
+        logger.info("Loading entropy of %s B to %s" % (size, path))
+        with open(path, "wb+") as fh:
             csize = 0
             while csize < size:
-                req = GetEntropy(size=1024*10)
+                req = GetEntropy(size=1024 * 10)
                 res = await self.trezor_proxy.call_in_session(req)  # type: Entropy
                 csize += len(res.entropy)
-                logger.debug(' .. loaded %s / %s (%s %%)' % (csize, size, 100.0*csize / size))
+                logger.debug(
+                    " .. loaded %s / %s (%s %%)" % (csize, size, 100.0 * csize / size)
+                )
                 fh.write(res.entropy)
-        logger.info('Entropy loading done')
+        logger.info("Entropy loading done")
 
     def load_params(self):
         """
@@ -511,6 +522,7 @@ class HostAgent(cli.BaseCli):
 
     def choose_trezor(self):
         from monero_glue.trezor import manager as tmanager
+
         r = tmanager.Trezor.enumerate()
         noptions = len(r)
 
@@ -527,7 +539,9 @@ class HostAgent(cli.BaseCli):
         return str(r[res])
 
     def monkey_patch_trezorlib(self):
-        logger.info('Monkey-patching trezorlib with the current messages versions fromt trezor-common')
+        logger.info(
+            "Monkey-patching trezorlib with the current messages versions fromt trezor-common"
+        )
         try:
             import trezorlib
             from monero_glue import protobuf
@@ -543,12 +557,13 @@ class HostAgent(cli.BaseCli):
             trezorlib.messages = messages
 
             from trezorlib import mapping
+
             trezorlib.mapping.map_type_to_class = {}
             trezorlib.mapping.map_class_to_type = {}
             trezorlib.mapping.build_map()
 
         except Exception as e:
-            logger.error('Monkey patching error: %s' % e)
+            logger.error("Monkey patching error: %s" % e)
 
     async def connect(self, path=None):
         """
@@ -566,15 +581,15 @@ class HostAgent(cli.BaseCli):
                 self.token_path = self.choose_trezor()
                 t_path = self.token_path
 
-            self.trezor_proxy = tmanager.Trezor(
-                path=t_path, debug=self.token_debug
-            )
+            self.trezor_proxy = tmanager.Trezor(path=t_path, debug=self.token_debug)
 
         else:
             self.trezor_proxy = TokenProxy()
 
         ntype = self.agent.network_type if self.agent else self.network_type
-        self.agent = agent_lite.Agent(self.trezor_proxy, network_type=ntype, slip0010=self.args.slip0010)
+        self.agent = agent_lite.Agent(
+            self.trezor_proxy, network_type=ntype, slip0010=self.args.slip0010
+        )
 
     async def open_account(self):
         """
@@ -665,7 +680,9 @@ class HostAgent(cli.BaseCli):
 
         # Wallet view key encryption
         wallet_enc_key = misc.wallet_enc_key(self.wallet_salt, self.wallet_password)
-        ciphertext = chacha_poly.encrypt_pack(wallet_enc_key, crypto.encodeint(self.priv_view))
+        ciphertext = chacha_poly.encrypt_pack(
+            wallet_enc_key, crypto.encodeint(self.priv_view)
+        )
 
         with open(file, "w") as fh:
             data = {
@@ -698,10 +715,16 @@ class HostAgent(cli.BaseCli):
         return addr, match
 
     async def wallet_restore_param(self):
-        self.poutput("Creating a new wallet file, please enter the blockchain height to start a restore of the wallet.")
-        self.poutput("  - Restore height should be a little less than your first incoming transaction to the wallet.")
-        self.poutput("  - If the wallet was never used before, enter \"-\"")
-        self.poutput("  - If you are not sure enter \"0\" to start from the beginning (may take few minutes)")
+        self.poutput(
+            "Creating a new wallet file, please enter the blockchain height to start a restore of the wallet."
+        )
+        self.poutput(
+            "  - Restore height should be a little less than your first incoming transaction to the wallet."
+        )
+        self.poutput('  - If the wallet was never used before, enter "-"')
+        self.poutput(
+            '  - If you are not sure enter "0" to start from the beginning (may take few minutes)'
+        )
         self.poutput("  - You may enter also a date in the format YYYY-MM-DD\n")
 
         height = 0
@@ -709,11 +732,16 @@ class HostAgent(cli.BaseCli):
 
         while True:
             if sure_stage:
-                if self.ask_proceed_quit("The height: %s. Is it correct? (y/n) " % height) == self.PROCEED_YES:
+                if (
+                    self.ask_proceed_quit(
+                        "The height: %s. Is it correct? (y/n) " % height
+                    )
+                    == self.PROCEED_YES
+                ):
                     break
 
             height = misc.py_raw_input("Restore height: ").strip().lower()
-            if height == '-':
+            if height == "-":
                 height = await self.wallet_obj.get_height()
                 sure_stage = True
                 continue
@@ -723,18 +751,22 @@ class HostAgent(cli.BaseCli):
                 sure_stage = True
                 continue
 
-            m = re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})$', height)
+            m = re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})$", height)
             if m:
                 year, month, day = int(m.group(1)), int(m.group(2)), int(m.group(3))
                 try:
-                    height = await self.wallet_obj.get_blockchain_height_by_date(year, month, day)
+                    height = await self.wallet_obj.get_blockchain_height_by_date(
+                        year, month, day
+                    )
                     sure_stage = True
                     continue
 
                 except Exception as e:
-                    logger.warning('Could not resolve date to the height: %s' % e)
+                    logger.warning("Could not resolve date to the height: %s" % e)
                     self.trace_logger.log(e)
-                    r = self.ask_proceed_quit("Could not resolve date to height. Do you want to try again? (y/n) ")
+                    r = self.ask_proceed_quit(
+                        "Could not resolve date to height. Do you want to try again? (y/n) "
+                    )
                     if r == self.PROCEED_YES:
                         continue
                     else:
@@ -780,7 +812,7 @@ class HostAgent(cli.BaseCli):
         key_data = wallet.WalletKeyData()
 
         restore_height = await self.wallet_restore_param()
-        self.poutput('Wallet restore height: %s' % restore_height)
+        self.poutput("Wallet restore height: %s" % restore_height)
 
         wallet_data = wallet.WalletKeyFile()
         wallet_data.key_data = key_data
@@ -841,7 +873,9 @@ class HostAgent(cli.BaseCli):
 
         elif "view_key_enc" in js:
             wallet_enc_key = misc.wallet_enc_key(self.wallet_salt, self.wallet_password)
-            plain = chacha_poly.decrypt_pack(wallet_enc_key, binascii.unhexlify(js["view_key_enc"]))
+            plain = chacha_poly.decrypt_pack(
+                wallet_enc_key, binascii.unhexlify(js["view_key_enc"])
+            )
             self.priv_view = crypto.decodeint(plain)
 
         self.wallet_file = js["wallet_file"]
@@ -877,9 +911,15 @@ class HostAgent(cli.BaseCli):
 
     def recompute_address(self):
         D, C = monero.generate_sub_address_keys(
-            self.priv_view, crypto.decodepoint(self.address_base_info.spend_key), self.account_idx, 0)
+            self.priv_view,
+            crypto.decodepoint(self.address_base_info.spend_key),
+            self.account_idx,
+            0,
+        )
 
-        self.address_info.recompute_sub(crypto.encodepoint(D), crypto.encodepoint(C), self.account_idx)
+        self.address_info.recompute_sub(
+            crypto.encodepoint(D), crypto.encodepoint(C), self.account_idx
+        )
         self.address = self.address_info.addr
         self.update_prompt()
 
@@ -911,7 +951,7 @@ class HostAgent(cli.BaseCli):
         if self.args.testnet or self.network_type == monero.NetworkTypes.TESTNET:
             args.append("--testnet")
         if self.args.debug_rpc:
-            logger.debug('RPC credentials: trezor:%s' % self.rpc_passwd)
+            logger.debug("RPC credentials: trezor:%s" % self.rpc_passwd)
 
         def preexec_function():
             os.setpgrp()
@@ -927,13 +967,13 @@ class HostAgent(cli.BaseCli):
             cwd=os.getcwd(),
             env=None,
             shell=True,
-            preexec_fn=preexec_function
+            preexec_fn=preexec_function,
         )
 
         ret_code = 1
         out_acc, err_acc = [], []
         out_cur, err_cur = [""], [""]
-        logline_pattern = re.compile(r'^([^\s]+)\s+([^\s]+)\s+\[(.+?)\]\s+([^\s]+?)\s+')
+        logline_pattern = re.compile(r"^([^\s]+)\s+([^\s]+)\s+\[(.+?)\]\s+([^\s]+?)\s+")
         passwd_set = False
 
         def log_parse(line):
@@ -942,13 +982,13 @@ class HostAgent(cli.BaseCli):
                 return None
             sev = m.group(4).lower()
             sevnum = None
-            if sev == 'error':
+            if sev == "error":
                 sevnum = logging.ERROR
-            elif sev == 'warn' or sev == 'warning':
+            elif sev == "warn" or sev == "warning":
                 sevnum = logging.WARNING
-            elif sev == 'info':
+            elif sev == "info":
                 sevnum = logging.INFO
-            elif sev == 'debug':
+            elif sev == "debug":
                 sevnum = logging.DEBUG
             return m.group(1), m.group(2), m.group(3), m.group(4), sevnum
 
@@ -958,14 +998,14 @@ class HostAgent(cli.BaseCli):
             line_parsed = log_parse(line)
             line_printed = False
             if line_parsed and line_parsed[4] and line_parsed[4] >= logging.ERROR:
-                logger.error('RPC_%s: %s' % ('ERR' if is_err else 'OUT', line))
+                logger.error("RPC_%s: %s" % ("ERR" if is_err else "OUT", line))
                 line_printed = True
 
             if not line_printed and self.args.debug_rpc:
-                logger.debug('RPC_%s: %s' % ('ERR' if is_err else 'OUT', line))
+                logger.debug("RPC_%s: %s" % ("ERR" if is_err else "OUT", line))
 
             line_low = line.lower()
-            if 'starting wallet' in line_low:
+            if "starting wallet" in line_low:
                 self.rpc_ready = True
                 self.on_rpc_ready()
 
@@ -975,7 +1015,7 @@ class HostAgent(cli.BaseCli):
 
             dst_cur = err_cur if is_err else out_cur
             for x in buffers:
-                clines = [v.strip('\r') for v in x.split('\n')]
+                clines = [v.strip("\r") for v in x.split("\n")]
                 lines[-1] += clines[0]
                 lines.extend(clines[1:])
 
@@ -983,12 +1023,12 @@ class HostAgent(cli.BaseCli):
             nlines = len(lines)
             if nlines > 1:
                 process_line(dst_cur[0])
-                dst_cur[0] = ''
+                dst_cur[0] = ""
 
             for line in lines[1:-1]:
                 process_line(line, is_err)
 
-            dst_cur[0] = lines[-1] or ''
+            dst_cur[0] = lines[-1] or ""
 
         try:
             while len(p.commands) == 0:
@@ -1125,7 +1165,9 @@ class HostAgent(cli.BaseCli):
             addr_info = monero.decode_addr(address)
 
             if addr_info.is_integrated and payment_id:
-                raise ValueError('Address is integrated (contains payment id), redundant payment_id provided')
+                raise ValueError(
+                    "Address is integrated (contains payment id), redundant payment_id provided"
+                )
 
             if payment_id:
                 payment_id = binascii.unhexlify(payment_id)
@@ -1154,10 +1196,9 @@ class HostAgent(cli.BaseCli):
             addr_info, tmp_payment_id = self.handle_address_input(cur[0], payment_id)
             amount_atomic = misc.amount_to_uint64(cur[1])
             aux_data.destinations.append((addr_info, amount_atomic))
-            destinations.append({
-                'amount': amount_atomic,
-                'address': addr_info.addr.decode('ascii'),
-            })
+            destinations.append(
+                {"amount": amount_atomic, "address": addr_info.addr.decode("ascii")}
+            )
 
             if tmp_payment_id:
                 new_payment_id = tmp_payment_id
@@ -1169,7 +1210,9 @@ class HostAgent(cli.BaseCli):
             % (
                 priority if priority else "default",
                 mixin if mixin else "default",
-                binascii.hexlify(new_payment_id).decode('ascii') if new_payment_id else "-",
+                binascii.hexlify(new_payment_id).decode("ascii")
+                if new_payment_id
+                else "-",
             )
         )
 
@@ -1195,15 +1238,13 @@ class HostAgent(cli.BaseCli):
             params["mixin"] = mixin
 
         if new_payment_id is not None:
-            params["payment_id"] = binascii.hexlify(new_payment_id).decode('ascii')
+            params["payment_id"] = binascii.hexlify(new_payment_id).decode("ascii")
 
         # Call RPC to prepare unsigned transaction
         self.transfer_params(params, aux_data)
 
     def sweep_params(self, parts, is_all=False, is_below=False, is_single=False):
-        params = {
-            'do_not_relay': True
-        }
+        params = {"do_not_relay": True}
 
         if parts.priority is not None:
             params["priority"] = parts.priority
@@ -1221,9 +1262,9 @@ class HostAgent(cli.BaseCli):
             params["key_image"] = parts.key_image
 
         if not is_single:
-            params['account_index'] = self.account_idx
-            params['subaddr_indices'] = parts.indices
-            params['address'] = parts.address
+            params["account_index"] = self.account_idx
+            params["subaddr_indices"] = parts.indices
+            params["address"] = parts.address
 
         return params
 
@@ -1239,8 +1280,10 @@ class HostAgent(cli.BaseCli):
             raise ValueError("Could not transfer")
         result = res["result"]
 
-        amounts = common.defvalkey(result, 'amount_list', [common.defvalkey(result, 'amount')])
-        fees = common.defvalkey(result, 'fee_list', [common.defvalkey(result, 'fee')])
+        amounts = common.defvalkey(
+            result, "amount_list", [common.defvalkey(result, "amount")]
+        )
+        fees = common.defvalkey(result, "fee_list", [common.defvalkey(result, "fee")])
         for idx in range(len(amounts)):
             st = "Amount: %s" % wallet.conv_disp_amount(amounts[idx])
             if idx < len(fees):
@@ -1262,8 +1305,10 @@ class HostAgent(cli.BaseCli):
 
         result = res["result"]
 
-        amounts = common.defvalkey(result, 'amount_list', [common.defvalkey(result, 'amount')])
-        fees = common.defvalkey(result, 'fee_list', [common.defvalkey(result, 'fee')])
+        amounts = common.defvalkey(
+            result, "amount_list", [common.defvalkey(result, "amount")]
+        )
+        fees = common.defvalkey(result, "fee_list", [common.defvalkey(result, "fee")])
         for idx in range(len(amounts)):
             st = "Amount: %s" % wallet.conv_disp_amount(amounts[idx])
             if idx < len(fees):
@@ -1367,7 +1412,7 @@ class HostAgent(cli.BaseCli):
         key_images = [td.m_key_image for td in msg.transfers]
         max_ki_size = 0
         if len(key_images) == 0:
-            logger.info('Wallet did not return transfer list :/')
+            logger.info("Wallet did not return transfer list :/")
             for tx in msg.txes:
                 for idx in range(len(tx.selected_transfers)):
                     max_ki_size = max(max_ki_size, tx.selected_transfers[idx])
@@ -1460,7 +1505,7 @@ class HostAgent(cli.BaseCli):
         await ar.root()
         await ar.message(unsigned_data)
 
-        unsigned_key = crypto.keccak_2hash(b'unsigned;' + tx_view_key)
+        unsigned_key = crypto.keccak_2hash(b"unsigned;" + tx_view_key)
         ciphertext = chacha_poly.encrypt_pack(unsigned_key, bytes(writer.get_buffer()))
 
         # Serialize signed transaction
@@ -1469,7 +1514,7 @@ class HostAgent(cli.BaseCli):
         await ar.root()
         await ar.message(signed_tx)
         signed_tx_bytes = writer.get_buffer()
-        signed_tx_hmac_key = crypto.keccak_2hash(b'hmac;' + tx_view_key)
+        signed_tx_hmac_key = crypto.keccak_2hash(b"hmac;" + tx_view_key)
         signed_tx_hmac = crypto.compute_hmac(signed_tx_hmac_key, signed_tx_bytes)
 
         try:

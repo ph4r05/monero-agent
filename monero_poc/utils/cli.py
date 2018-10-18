@@ -5,10 +5,10 @@
 import getpass
 import logging
 
+from monero_poc.utils import misc, trace_logger
+
 from blessed import Terminal
 from cmd2 import Cmd
-
-from monero_poc.utils import misc, trace_logger
 
 logger = logging.getLogger(__name__)
 
