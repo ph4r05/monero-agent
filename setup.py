@@ -13,7 +13,7 @@ from distutils.errors import DistutilsError
 logger = logging.getLogger(__name__)
 
 
-version = "1.6.5"
+version = "1.7.0"
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
