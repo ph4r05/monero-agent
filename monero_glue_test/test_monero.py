@@ -9,6 +9,8 @@ import unittest
 
 import aiounittest
 import pkg_resources
+
+from monero_glue.messages import MoneroRctKeyPublic
 from monero_glue.xmr import crypto, mlsag2, monero, ring_ct
 from monero_serialize import xmrserialize, xmrtypes
 
@@ -424,7 +426,7 @@ class MoneroTest(aiounittest.AsyncTestCase):
                 crypto.scalarmult_h(rv.txnFee - 100),
                 digest,
             )
-            self.assertTrue(r)
+            self.assertFalse(r)
 
     def mixring(self, js):
         mxr = []
@@ -433,7 +435,7 @@ class MoneroTest(aiounittest.AsyncTestCase):
             mxr.append([])
             for j in range(len(mx[i])):
                 dt = binascii.unhexlify(mx[i][j])
-                mxr[i].append(xmrtypes.CtKey(dest=dt[:32], mask=dt[32:]))
+                mxr[i].append(MoneroRctKeyPublic(dest=dt[:32], commitment=dt[32:]))
         return mxr
 
 
