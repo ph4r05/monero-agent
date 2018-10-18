@@ -138,17 +138,17 @@ print("=" * 80)
 # limbs_consts(1, value=crypto.l-1)
 
 lmbs = [
-    0x5cf5d3ed,
-    0x60498c68,
-    0x6f79cd64,
-    0x77be77a7,
+    0x5CF5D3ED,
+    0x60498C68,
+    0x6F79CD64,
+    0x77BE77A7,
     0x40000013,
-    0x3fffffff,
-    0x3fffffff,
-    0x3fffffff,
-    0xfff,
+    0x3FFFFFFF,
+    0x3FFFFFFF,
+    0x3FFFFFFF,
+    0xFFF,
 ]
-limbs = [0x0fffffff, 0x0fffffff, 0x0fffffff, 0x0fffffff, 4, 0, 0, 0, 0x1000]
+limbs = [0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF, 0x0FFFFFFF, 4, 0, 0, 0, 0x1000]
 
 print_limbs(limbs)
 limbs_consts(0, limbs=limbs)

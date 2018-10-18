@@ -30,7 +30,7 @@ py_I_ext = I_ext = (0, 1, 1, 0)
 
 py_fe_m1 = (
     fe_m1
-) = 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffec  # -1
+) = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEC  # -1
 py_fe_sqrtm1 = (
     fe_sqrtm1
 ) = 0x2B8324804FC1DF0B2B4D00993DFBD7A72F431806AD2FE478C4EE1B274A0EA0B0  # sqrt(-1)
@@ -47,22 +47,22 @@ py_fe_ma2 = fe_ma2 = -1 * fe_A * fe_A
 py_fe_fffb1 = (
     fe_fffb1
 ) = (
-    0x018e04102529e4e8df563ac8be04e61c2e6bfb5746d58c72dd58968acde3bdff
+    0x018E04102529E4E8DF563AC8BE04E61C2E6BFB5746D58C72DD58968ACDE3BDFF
 )  # sqrt(-2 * A * (A + 2))
 py_fe_fffb2 = (
     fe_fffb2
 ) = (
-    0x32f9e1f5fba5d3096e2bae483fe9a041ae21fcb9fba908202d219b7c9f83650d
+    0x32F9E1F5FBA5D3096E2BAE483FE9A041AE21FCB9FBA908202D219B7C9F83650D
 )  # sqrt( 2 * A * (A + 2))
 py_fe_fffb3 = (
     fe_fffb3
 ) = (
-    0x18b5eef2eb3df710476ab9bfc0f25d12bfdb00b15a69bdd6a7e48278e8cfd387
+    0x18B5EEF2EB3DF710476AB9BFC0F25D12BFDB00B15A69BDD6A7E48278E8CFD387
 )  # sqrt(-sqrt(-1*a) * A * (A + 2))
 py_fe_fffb4 = (
     fe_fffb4
 ) = (
-    0x1a43f3031067dbf926c0f4887ef7432eee46fc08a13f4a49853d1903b6b39186
+    0x1A43F3031067DBF926C0F4887EF7432EEE46FC08A13F4A49853D1903B6B39186
 )  # sqrt( sqrt(-1*a) * A * (A + 2))
 
 NULL_KEY_ENC = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"

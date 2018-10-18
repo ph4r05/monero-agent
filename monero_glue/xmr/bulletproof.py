@@ -1194,7 +1194,7 @@ class BulletProofBuilder(object):
             flr = i // 2
 
             lw = pow_two(flr)
-            rw = pow_two(flr + 1 if flr != i / 2. else lw)
+            rw = pow_two(flr + 1 if flr != i / 2.0 else lw)
             return sc_mul(d, lw, rw)
 
         return KeyVPrecomp(size, self.twoN, pow_two)

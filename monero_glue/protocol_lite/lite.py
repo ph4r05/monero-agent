@@ -164,18 +164,18 @@ class LiteProtocol(object):
 
     def _fetch_u8(self):
         d = self._fetch(1)[0]
-        return int(d) & 0xff
+        return int(d) & 0xFF
 
     def _fetch_t(self):
         t = self._fetch_u8()
-        if t & 0x1f == 0x1f:
+        if t & 0x1F == 0x1F:
             t = (t << 8) | self._fetch_u8()
         return t
 
     def _fetch_l(self):
         l = self._fetch_u8()
         if l & 0x80 != 0:
-            l &= 0x7f
+            l &= 0x7F
         if l == 1:
             l = self._fetch_u8()
         elif l == 2:
@@ -195,7 +195,7 @@ class LiteProtocol(object):
         self._insert(enc, len(enc))
 
     def _insert_u8(self, x):
-        self.r_msg[self.r_len] = x & 0xff
+        self.r_msg[self.r_len] = x & 0xFF
         self.r_len += 1
 
     def _insert_u16(self, x):
@@ -209,7 +209,7 @@ class LiteProtocol(object):
         self._insert_u8(x)
 
     def _insert_t(self, t):
-        if t & 0xff00:
+        if t & 0xFF00:
             self._insert_u16(t)
         else:
             self._insert_u8(t)
@@ -317,7 +317,7 @@ class LiteProtocol(object):
         abt = bytearray(65)
         memcpy(abt, 0, crypto.encodeint(self.a), 0, 32)
         memcpy(abt, 32, crypto.encodeint(self.b), 0, 32)
-        abt[64] = 0x8c
+        abt[64] = 0x8C
         pre = crypto.keccak_hash(abt)
 
         # gibberish expansion to 200 bytes, different from Ledger as it uses 200B of keccak state

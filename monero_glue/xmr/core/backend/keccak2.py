@@ -168,7 +168,7 @@ class KeccakState(object):
         """
         o = []
         for b in range(0, w, 8):
-            o.append((s >> b) & 0xff)
+            o.append((s >> b) & 0xFF)
         return o
 
     @staticmethod

@@ -125,6 +125,4 @@ def get_keccak_writer(ctx=None):
     :param ctx:
     :return:
     """
-    return AHashWriter(
-        HashWrapper(crypto.get_keccak() if ctx is None else ctx)
-    )
+    return AHashWriter(HashWrapper(crypto.get_keccak() if ctx is None else ctx))

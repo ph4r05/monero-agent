@@ -20,7 +20,7 @@ def hash_bytearray(ba):
     :param ba:
     :return:
     """
-    return functools.reduce(lambda a, d: (a * 256 + d) & 0xffffffffffffffff, ba, 0)
+    return functools.reduce(lambda a, d: (a * 256 + d) & 0xFFFFFFFFFFFFFFFF, ba, 0)
 
 
 class HashWrapper(object):
