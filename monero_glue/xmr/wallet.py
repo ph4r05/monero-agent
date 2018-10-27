@@ -2,14 +2,17 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import binascii
 import json
 import re
 import datetime
+import logging
 
 from monero_glue.xmr import common, crypto, monero
 from monero_glue.xmr.enc import chacha
 from monero_serialize import xmrboost, xmrjson, xmrrpc, xmrserialize, xmrtypes
+
+logger = logging.getLogger(__name__)
+
 
 UNSIGNED_TX_PREFIX = b"Monero unsigned tx set\004"
 SIGNED_TX_PREFIX = b"Monero signed tx set\004"
@@ -228,8 +231,12 @@ async def dump_signed_tx(priv_key, signed_tx):
     """
     writer = xmrserialize.MemoryReaderWriter()
     ar = xmrboost.Archive(writer, True)
-    await ar.root()
-    await ar.message(signed_tx)
+    try:
+        await ar.root()
+        await ar.message(signed_tx)
+    except Exception as e:
+        logger.error('Exception in signed tx serialization: %s, field: %s' % (e, ar.tracker))
+        raise
 
     ciphertext = chacha.encrypt_xmr(
         priv_key, bytes(writer.get_buffer()), authenticated=True
