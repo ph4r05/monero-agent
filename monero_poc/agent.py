@@ -369,14 +369,15 @@ class HostAgent(cli.BaseCli):
         mnemonic12 = "alcohol woman abuse must during monitor noble actual mixed trade anger aisle"
         mnemonic24 = "permit universe parent weapon amused modify essay borrow tobacco budget walnut lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple"
 
+        init_mode = 0 if len(line) == 0 else int(line)
         mnemonic = mnemonic12 if len(line) == 0 or int(line) == 0 else mnemonic24
         print(self.trezor_proxy.client)
         device.wipe(self.trezor_proxy.client)
         debuglink.load_device_by_mnemonic(
             client=self.trezor_proxy.client,
             mnemonic=mnemonic,
-            pin="",
-            passphrase_protection=False,
+            pin="1234" if init_mode >= 2 else "",
+            passphrase_protection=init_mode >= 3,
             label="ph4test",
             language="english",
         )
