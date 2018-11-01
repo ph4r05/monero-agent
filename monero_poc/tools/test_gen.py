@@ -297,6 +297,11 @@ class TestGen(object):
             )
             tx.splitted_dsts.append(new_tx)
 
+    async def add_nonce(self, tx):
+        # TX_EXTRA_NONCE = 2 | extralen+1 | TX_EXTRA_NONCE_ENCRYPTED_PAYMENT_ID = 1 | nonce
+        c_extra = [2, 8+1, 1] + list(binascii.unhexlify(self.args.add_nonce))
+        tx.extra = tx.extra + c_extra if tx.extra else c_extra
+
     async def rekey_unsigned(self, unsigned_txs):
         for tx in unsigned_txs.txes:
             tx.use_bulletproofs = False
@@ -318,6 +323,9 @@ class TestGen(object):
 
             if self.args.outs is not None:
                 await self.amplify_outs(tx)
+
+            if self.args.add_nonce is not None:
+                await self.add_nonce(tx)
 
         return unsigned_txs
 
@@ -524,6 +532,13 @@ class TestGen(object):
             const=True,
             default=False,
             help="Adds additional tx keys",
+        )
+
+        parser.add_argument(
+            "--add-nonce",
+            dest="add_nonce",
+            default=None,
+            help="Adds encrypted nonce",
         )
 
         parser.add_argument(
