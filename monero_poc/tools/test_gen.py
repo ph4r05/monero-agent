@@ -23,7 +23,7 @@ from monero_serialize.xmrtypes import (
     TxExtraAdditionalPubKeys,
     TxExtraNonce,
     TxExtraPubKey,
-)
+    CtKey, TxSourceEntry)
 
 import coloredlogs
 
@@ -175,6 +175,7 @@ class TestGen(object):
             change = tx.change_dts
             account = tx.subaddr_account
             subs = tx.subaddr_indices
+            mixin = len(srcs[0].outputs) - 1
             amnt_in = sum([x.amount for x in srcs])
             amnt_out = sum([x.amount for x in dsts])
             fee = amnt_in - amnt_out
@@ -196,13 +197,14 @@ class TestGen(object):
             )
 
             print(
-                "  tx: %s, #inp: %2d, #inp_add: %2d, #out: %2d, acc: %s, subs: %s, "
+                "  tx: %s, #inp: %2d, #inp_add: %2d, #out: %2d, mixin: %2d, acc: %s, subs: %s, "
                 "xmr_in: %10.6f, xmr_out: %10.6f, fee: %10.6f, change: %10.6f, out_clean: %10.6f"
                 % (
                     txid,
                     len(srcs),
                     n_inp_additional,
                     len(dsts),
+                    mixin,
                     account,
                     subs,
                     wallet.conv_disp_amount(amnt_in),
@@ -248,6 +250,14 @@ class TestGen(object):
                     extras_val.append(str(c))
             print("  Extras: %s" % ", ".join(extras_val))
 
+            # Final verification
+            for idx, inp in enumerate(tx.sources):
+                self.check_input(inp, keys, key_subs)
+                if not crypto.point_eq(
+                        crypto.decodepoint(inp.outputs[inp.real_output][1].mask),
+                        crypto.gen_c(crypto.decodeint(inp.mask), inp.amount),
+                ): raise ValueError("Real source entry's mask does not equal spend key's. Inp: %d" % idx)
+
     async def primary_change_address(self, key, account):
         D, C = monero.generate_sub_address_keys(
             key.view_key_private,
@@ -280,6 +290,54 @@ class TestGen(object):
         tx.splitted_dsts[
             change_idx
         ].addr.m_view_public_key = change_addr.view_public_key
+
+    async def amplify_inputs(self, tx, new_keys=None, new_subs=None):
+        lst = tx.sources[-1]
+        orig_amount = lst.amount
+        partial = orig_amount // (self.args.inputs + 1)
+
+        amnt_sum = partial
+        lst.amount = partial
+        commitment = crypto.encodepoint(crypto.gen_c(crypto.decodeint(lst.mask), partial))
+        lst.outputs[lst.real_output][1].mask = commitment
+
+        for i in range(1, self.args.inputs + 1):
+            is_lst = i >= self.args.inputs
+            new_amnt = orig_amount - amnt_sum if is_lst else partial
+            amnt_sum += partial
+
+            commitment = crypto.encodepoint(crypto.gen_c(crypto.decodeint(lst.mask), new_amnt))
+            new_inp = TxSourceEntry(outputs=list(lst.outputs),
+                                    real_output=lst.real_output,
+                                    real_out_tx_key=lst.real_out_tx_key,
+                                    real_out_additional_tx_keys=lst.real_out_additional_tx_keys,
+                                    real_output_in_tx_index=lst.real_output_in_tx_index,
+                                    amount=new_amnt,
+                                    rct=lst.rct,
+                                    mask=lst.mask,
+                                    multisig_kLRki=lst.multisig_kLRki)
+
+            # Amount changed -> update the commitment
+            orig_key = new_inp.outputs[new_inp.real_output][1]
+            new_inp.outputs[new_inp.real_output] = (0, CtKey(dest=orig_key.dest, mask=commitment))
+
+            # Randomize mixin values
+            for i in range(new_inp.real_output + 1, len(new_inp.outputs)):
+                new_inp.outputs[i] = (0, CtKey(
+                    mask=crypto.encodepoint(self.random_pub()),
+                    dest=crypto.encodepoint(self.random_pub())))
+
+                if new_inp.real_out_additional_tx_keys:
+                    new_inp.real_out_additional_tx_keys[i] = crypto.encodepoint(self.random_pub())
+
+            self.check_input(new_inp, new_keys, new_subs)
+
+            if not crypto.point_eq(
+                    crypto.decodepoint(new_inp.outputs[new_inp.real_output][1].mask),
+                    crypto.gen_c(crypto.decodeint(new_inp.mask), new_inp.amount),
+                ): raise ValueError("Real source entry's mask does not equal spend key's")
+
+            tx.sources.append(new_inp)
 
     async def amplify_outs(self, tx):
         lst = tx.splitted_dsts[-1]
@@ -321,8 +379,11 @@ class TestGen(object):
 
             for inp in tx.sources:
                 self.rekey_input(
-                    inp, self.cur_keys, self.cur_subs, self.dest_keys, self.dest_subs
+                    inp, self.cur_keys, self.cur_subs, self.dest_keys, self.dest_subs, self.args.mixin
                 )
+
+            if self.args.inputs:
+                await self.amplify_inputs(tx, self.dest_keys, self.dest_subs)
 
             if tx.change_dts and tx.subaddr_account != self.dest_sub_major:
                 await self.adjust_change(tx)
@@ -341,7 +402,7 @@ class TestGen(object):
 
         return unsigned_txs
 
-    def rekey_input(self, inp, keys, subs=None, new_keys=None, new_subs=None):
+    def rekey_input(self, inp, keys, subs=None, new_keys=None, new_subs=None, mixin_change=None):
         subs = subs if subs else {}
         real_out_key = inp.outputs[inp.real_output][1]
         out_key = crypto.decodepoint(real_out_key.dest)
@@ -435,6 +496,15 @@ class TestGen(object):
             additional_keys[inp.real_output_in_tx_index] = add_tx
             real_out_key.dest = crypto.encodepoint(new_out)
 
+        # Increasing the size of the mixin
+        if mixin_change and len(inp.outputs) < mixin_change:
+            for i in range(mixin_change - len(inp.outputs)):
+                inp.outputs.append((0, CtKey(
+                    mask=crypto.encodepoint(self.random_pub()),
+                    dest=crypto.encodepoint(self.random_pub()))))
+                if additional_keys:
+                    additional_keys.append(self.random_pub())
+
         inp.real_out_tx_key = crypto.encodepoint(tx_key)
         inp.real_out_additional_tx_keys = [
             crypto.encodepoint(x) for x in additional_keys
@@ -443,6 +513,16 @@ class TestGen(object):
         logger.debug("New pub: %s" % binascii.hexlify(real_out_key.dest))
 
         # Self-check
+        self.check_input(inp, new_keys, new_subs)
+        return inp
+
+    def check_input(self, inp, new_keys, new_subs):
+        real_out_key = inp.outputs[inp.real_output][1]
+        tx_key = crypto.decodepoint(inp.real_out_tx_key)
+        additional_keys = [
+            crypto.decodepoint(x) for x in inp.real_out_additional_tx_keys
+        ]
+
         secs = monero.generate_key_image_helper(
             new_keys,
             new_subs,
@@ -451,7 +531,6 @@ class TestGen(object):
             additional_keys,
             inp.real_output_in_tx_index,
         )
-        return inp
 
     def precompute_subaddr(self, keys, subs, major_cnt=10, minor_cnt=200):
         if keys is None:
@@ -472,6 +551,9 @@ class TestGen(object):
         view_key = crypto.decodeint(keys_bin[32:64])
 
         return AccountCreds.new_wallet(view_key, spend_key)
+
+    def random_pub(self):
+        return crypto.scalarmult_base(crypto.random_scalar())
 
     async def work(self):
         self.cur_keys = self.parse_keys(self.args.current)
@@ -535,6 +617,22 @@ class TestGen(object):
             default=None,
             type=int,
             help="Amplify the last output to outs - increases tx outputs",
+        )
+
+        parser.add_argument(
+            "--inputs",
+            dest="inputs",
+            default=None,
+            type=int,
+            help="Amplify the last input to more inputs - increases tx inputs",
+        )
+
+        parser.add_argument(
+            "--mixin",
+            dest="mixin",
+            default=None,
+            type=int,
+            help="Increases the mixin level to the given value. Does not work for decreasing the mixin",
         )
 
         parser.add_argument(
