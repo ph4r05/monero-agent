@@ -300,6 +300,15 @@ class TestGen(object):
     async def add_nonce(self, tx):
         # TX_EXTRA_NONCE = 2 | extralen+1 | TX_EXTRA_NONCE_ENCRYPTED_PAYMENT_ID = 1 | nonce
         c_extra = [2, 8+1, 1] + list(binascii.unhexlify(self.args.add_nonce))
+        if len(c_extra) != 3+8:
+            raise ValueError("Invalid length")
+        tx.extra = tx.extra + c_extra if tx.extra else c_extra
+
+    async def add_long_nonce(self, tx):
+        # TX_EXTRA_NONCE = 2 | extralen+1 | TX_EXTRA_NONCE_PAYMENT_ID = 0 | nonce
+        c_extra = [2, 32+1, 0] + list(binascii.unhexlify(self.args.add_long_nonce))
+        if len(c_extra) != 3+32:
+            raise ValueError("Invalid length")
         tx.extra = tx.extra + c_extra if tx.extra else c_extra
 
     async def rekey_unsigned(self, unsigned_txs):
@@ -326,6 +335,9 @@ class TestGen(object):
 
             if self.args.add_nonce is not None:
                 await self.add_nonce(tx)
+
+            if self.args.add_long_nonce is not None:
+                await self.add_long_nonce(tx)
 
         return unsigned_txs
 
@@ -539,6 +551,13 @@ class TestGen(object):
             dest="add_nonce",
             default=None,
             help="Adds encrypted nonce",
+        )
+
+        parser.add_argument(
+            "--add-long-nonce",
+            dest="add_long_nonce",
+            default=None,
+            help="Adds long nonce",
         )
 
         parser.add_argument(
