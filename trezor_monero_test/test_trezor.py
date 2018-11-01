@@ -73,14 +73,14 @@ class TrezorTest(BaseAgentTest):
 
     async def test_get_address(self):
         if self.test_only_tsx:
-            self.skipTest()
+            self.skipTest("Get address skipped")
         res = await self.agent.get_address()
         self.assertIsNotNone(res)
         self.assertEqual(res.address, self.creds.address)
 
     async def test_get_watch(self):
         if self.test_only_tsx:
-            self.skipTest()
+            self.skipTest("Get watch skipped")
         res = await self.agent.get_watch_only()
         self.assertIsNotNone(res)
         self.assertEqual(res.watch_key, crypto.encodeint(self.creds.view_key_private))
@@ -88,7 +88,7 @@ class TrezorTest(BaseAgentTest):
 
     async def test_ki_sync(self):
         if self.test_only_tsx:
-            self.skipTest()
+            self.skipTest("KI sync skipped")
         ki_data = self.get_data_file("ki_sync_01.txt")
         ki_loaded = await wallet.load_exported_outputs(
             self.creds.view_key_private, ki_data
@@ -100,13 +100,16 @@ class TrezorTest(BaseAgentTest):
         await self.verify_ki_export(res, ki_loaded)
 
     async def test_transactions(self):
-        await self._int_test_trezor_txs()
+        await self.int_test_trezor_txs()
 
     async def test_transactions_bp(self):
-        await self._int_test_trezor_txs(as_bulletproof=True)
+        await self.int_test_trezor_txs(as_bulletproof=True)
 
-    async def _int_test_trezor_txs(self, as_bulletproof=False):
-        files = self.get_trezor_tsx_tests()
+    def get_testing_files(self):
+        return self.get_trezor_tsx_tests()
+
+    async def int_test_trezor_txs(self, as_bulletproof=False, files=None):
+        files = self.get_testing_files() if not files else files
         creds = self.get_trezor_creds(0)
         all_creds = [self.get_trezor_creds(0), self.get_trezor_creds(1), self.get_trezor_creds(2)]
 

@@ -91,6 +91,17 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
                + [('tsx_t_uns_%02d_sub.txt' % i) for i in [8, 12]] \
                + [('tsx_t_uns_%02d_sub_add.txt' % i) for i in [8, 12]]
 
+    def get_trezor_tsx_tests_heavy(self):
+        return [
+            'tsx_t_uns_08_sub_mix19_inp64_out16.txt',
+            'tsx_t_uns_08_sub_mix19_inp128_out16.txt',
+            'tsx_t_uns_08_sub_mix19_inp256_out16.txt',
+            'tsx_t_uns_08_sub_mix99_inp32_out16.txt',
+            'tsx_t_uns_08_sub_mix99_inp64_out16.txt',
+            'tsx_t_uns_08_sub_mix99_inp128_out16.txt',
+            'tsx_t_uns_08_sub_mix99_inp256_out16.txt',
+        ]
+
     def get_data_file(self, fl):
         return pkg_resources.resource_string(
             __name__, os.path.join("data", fl)
