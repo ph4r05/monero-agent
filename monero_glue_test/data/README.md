@@ -21,6 +21,7 @@ tsx_t_uns_14  - 1 utxo to 1 normal address + payment id
 tsx_t_uns_15  - 16 utxo to 1 normal address + payment id
 tsx_t_uns_16  - 2 utxo to 1 sub address + plain payment id
 tsx_t_uns_17  - 1 utxo to 5 normal
+tsx_t_uns_18  - 4utxo to 1 sub, 2 normal addresses + payment id
 
 
 transform test
