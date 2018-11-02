@@ -11,5 +11,8 @@ class TrezorTestHeavy(TrezorTest):
         super(TrezorTestHeavy, self).__init__(*args, **kwargs)
         self.test_only_tsx = True
 
+    async def test_transactions(self):
+        return None
+
     def get_testing_files(self):
         return self.get_trezor_tsx_tests_heavy()

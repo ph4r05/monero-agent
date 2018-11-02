@@ -93,11 +93,26 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
 
     def get_trezor_tsx_tests_heavy(self):
         return [
+            'tsx_t_uns_08_sub_mix11_inp32_out16.txt',
+            'tsx_t_uns_08_sub_mix11_inp64_out16.txt',
+            'tsx_t_uns_08_sub_mix11_inp128_out16.txt',
+            'tsx_t_uns_08_sub_mix11_inp256_out16.txt',
+
+            'tsx_t_uns_08_sub_mix19_inp32_out16.txt',
             'tsx_t_uns_08_sub_mix19_inp64_out16.txt',
-            'tsx_t_uns_08_sub_mix19_inp128_out16.txt',
-            'tsx_t_uns_08_sub_mix19_inp256_out16.txt',
+
+            'tsx_t_uns_08_sub_mix49_inp32_out16.txt',
+            'tsx_t_uns_08_sub_mix49_inp64_out16.txt',
+
             'tsx_t_uns_08_sub_mix99_inp32_out16.txt',
             'tsx_t_uns_08_sub_mix99_inp64_out16.txt',
+
+            'tsx_t_uns_08_sub_mix19_inp128_out16.txt',
+            'tsx_t_uns_08_sub_mix19_inp256_out16.txt',
+
+            'tsx_t_uns_08_sub_mix49_inp128_out16.txt',
+            'tsx_t_uns_08_sub_mix49_inp256_out16.txt',
+
             'tsx_t_uns_08_sub_mix99_inp128_out16.txt',
             'tsx_t_uns_08_sub_mix99_inp256_out16.txt',
         ]
