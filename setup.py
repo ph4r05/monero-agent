@@ -216,6 +216,9 @@ setup(
             'monero-seed = monero_poc.seed:main',
             'monero-agent = monero_poc.agent:main',
             'monero-trezor-poc = monero_poc.trezor:main',
+            'monero-trezor-init = monero_poc.trezor_init:main',
+            'monero-trezor-log = monero_poc.log_aux:main',
+            'monero-test-gen = monero_poc.tools.test_gen:main',
         ],
     }
 
