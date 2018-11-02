@@ -389,6 +389,10 @@ class LogAnalyzer(object):
             self.tee_file.close()
 
 
-if __name__ == "__main__":
+def main():
     anz = LogAnalyzer()
     anz.main()
+
+
+if __name__ == "__main__":
+    main()
