@@ -31,7 +31,7 @@ from monero_glue.messages import (
     MoneroTransactionSetOutputRequest,
     MoneroTransactionSignInputAck,
     MoneroTransactionSignInputRequest,
-)
+    MoneroOutputEntry)
 from monero_glue.protocol_base.base import TError
 from monero_glue.xmr import common, crypto, key_image, monero, ring_ct
 from monero_glue.xmr.enc import chacha_poly
@@ -276,6 +276,28 @@ class Agent(object):
         logger.debug("Integrated indices: %s" % len(integrated_indices))
         return integrated_indices
 
+    def _strip_sources(self, sources, keep_idx=True):
+        """
+        Stripping unnecessary information from a transfer. Speeds up the input processing stages as
+        mixin keys are needed only in the last step of the protocol - signatures.
+
+        Unfortunately, not applicable yet because HMAC over src_entr would differ.
+        Further analysis of this is required to determine how to HMAC src_entr.
+        Proposal:
+            - Hash whole outputs subpart to a single hash file. src_entry.output_hash.
+            - Exclude src_entry.outputs from the HMAC. output_hash is included in HMAC
+            - Signature step fails if output_hash is not matching.
+
+        :param sources:
+        :param keep_idx:
+        :return:
+        """
+        for idx in range(len(sources.outputs)):
+            if idx == sources.real_output:
+                continue
+            sources.outputs[idx] = MoneroOutputEntry(idx=sources.outputs[idx].idx) if keep_idx else MoneroOutputEntry()
+        return sources
+
     async def sign_transaction_data(
         self,
         tx,
@@ -355,8 +377,8 @@ class Agent(object):
 
         # Set transaction inputs
         for idx, src in enumerate(tx.sources):
-            src_bin = tmisc.translate_monero_src_entry_pb(src)
-            msg = MoneroTransactionSetInputRequest(src_entr=src_bin)
+            src_pb = tmisc.translate_monero_src_entry_pb(src)
+            msg = MoneroTransactionSetInputRequest(src_entr=src_pb)
 
             t_res = await self.trezor.tsx_sign(
                 msg
@@ -407,8 +429,9 @@ class Agent(object):
         # Done only if not in-memory.
         if not in_memory:
             for idx in range(len(self.ct.tx.vin)):
+                src_pb = tmisc.translate_monero_src_entry_pb(tx.sources[idx])
                 msg = MoneroTransactionInputViniRequest(
-                    src_entr=tmisc.translate_monero_src_entry_pb(tx.sources[idx]),
+                    src_entr=src_pb,
                     vini=await tmisc.dump_msg(self.ct.tx.vin[idx], prefix=b"\x02"),
                     vini_hmac=self.ct.tx_in_hmacs[idx],
                     pseudo_out=self.ct.pseudo_outs[idx][0] if not in_memory else None,
