@@ -74,7 +74,7 @@ trezor_extras = [
 
 
 CWD = os.path.dirname(os.path.realpath(__file__))
-TREZOR_COMMON = os.path.join(CWD, 'vendor', 'trezor-common')
+TREZOR_COMMON = os.path.join(CWD, 'monero_vendor', 'trezor-common')
 
 
 class InstallTrezorlib(Command):
