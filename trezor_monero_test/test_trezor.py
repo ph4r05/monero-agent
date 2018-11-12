@@ -40,8 +40,8 @@ class TrezorTest(BaseAgentTest):
         self.agent = agent_lite.Agent(self.trezor_proxy, network_type=monero.NetworkTypes.TESTNET)
 
         client = self.trezor_proxy.client
-        client.transport.session_begin()
         if is_debug:
+            client.open()
             device.wipe(client)
             debuglink.load_device_by_mnemonic(
                 client=client,
@@ -51,7 +51,6 @@ class TrezorTest(BaseAgentTest):
                 label="ph4test",
                 language="english",
             )
-        client.transport.session_end()
 
     def deinit(self):
         try:
