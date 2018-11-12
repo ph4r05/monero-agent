@@ -24,11 +24,11 @@ class TrezorSession(object):
         self.client = client
 
     def __enter__(self):
-        self.client.transport.session_begin()
+        self.client.open()
         return self.client
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.client.transport.session_end()
+        self.client.close()
 
 
 class Trezor(token.TokenLite):
