@@ -148,7 +148,27 @@ def encrypt_payment_id(payment_id, public_key, secret_key):
     derivation_p = crypto.generate_key_derivation(public_key, secret_key)
     derivation = bytearray(33)
     derivation = crypto.encodepoint_into(derivation, derivation_p)
-    derivation[32] = 0x8B
+    derivation[32] = 0x8D  # ENCRYPTED_PAYMENT_ID_TAIL
+    hash = crypto.cn_fast_hash(derivation)
+    pm_copy = bytearray(payment_id)
+    for i in range(8):
+        pm_copy[i] ^= hash[i]
+    return pm_copy
+
+
+def encrypt_payment_id_bugbug(payment_id, public_key, secret_key):
+    """
+    Encrypts payment_id hex.
+    Used in the transaction extra. Only recipient is able to decrypt.
+    :param payment_id:
+    :param public_key:
+    :param secret_key:
+    :return:
+    """
+    derivation_p = crypto.generate_key_derivation(public_key, secret_key)
+    derivation = bytearray(33)
+    derivation = crypto.encodepoint_into(derivation, derivation_p)
+    derivation[32] = 0x8B  # INCORRECT ENCRYPTED_PAYMENT_ID_TAIL
     hash = crypto.cn_fast_hash(derivation)
     pm_copy = bytearray(payment_id)
     for i in range(8):
