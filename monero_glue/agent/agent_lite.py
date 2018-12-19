@@ -11,8 +11,16 @@ from monero_glue.messages import (
     Failure,
     MoneroGetAddress,
     MoneroGetWatchKey,
+    MoneroGetTxKeyRequest,
+    MoneroGetTxKeyAck,
     MoneroKeyImageSyncFinalRequest,
     MoneroKeyImageSyncStepRequest,
+    MoneroLiveRefreshStartRequest,
+    MoneroLiveRefreshStartAck,
+    MoneroLiveRefreshStepRequest,
+    MoneroLiveRefreshStepAck,
+    MoneroLiveRefreshFinalRequest,
+    MoneroLiveRefreshFinalAck,
     MoneroTransactionAllInputsSetAck,
     MoneroTransactionAllInputsSetRequest,
     MoneroTransactionAllOutSetAck,
@@ -736,3 +744,74 @@ class Agent(object):
             final_res.append((ki_bin, (plain[32:64], plain[64:])))
 
         return final_res
+
+    async def _get_tx_key_intern(self, salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv, view_public_key=None, reason=0):
+        msg = MoneroGetTxKeyRequest(address_n=self.address_n, network_type=self.network_type)
+        msg.salt1 = salt1
+        msg.salt2 = salt2
+        msg.tx_enc_keys = tx_enc_keys
+        msg.tx_prefix_hash = tx_prefix_hash
+        msg.reason = reason
+        msg.view_public_key = view_public_key
+        t_res = await self.trezor.get_tx_key(msg)  # type: MoneroGetTxKeyAck
+        self.handle_error(t_res)
+
+        enc_key = self._compute_tx_key_host(view_key_priv, tx_prefix_hash, t_res.salt)
+        decr = chacha_poly.decrypt_pack(enc_key, t_res.tx_keys if reason == 0 else t_res.tx_derivations)
+        if len(decr) % 32 != 0:
+            raise ValueError('Invalid length')
+        return bytearray(decr)
+
+    async def get_tx_key(self, salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv):
+        decr = await self._get_tx_key_intern(salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv)
+        n_keys = len(decr) // 32
+        res = []
+        for i in range(n_keys):
+            res.append(crypto.decodeint(decr[i*32:(i+1)*32]))
+        return res
+
+    async def get_tx_deriv(self, salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv, view_key_pub):
+        decr = await self._get_tx_key_intern(salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv, view_key_pub, 1)
+        n_keys = len(decr) // 32
+        res = []
+        for i in range(n_keys):
+            res.append(crypto.decodepoint(decr[i*32:(i+1)*32]))
+        return res
+
+    @staticmethod
+    def _compute_tx_key_host(view_key_private, tx_prefix_hash, salt):
+        passwd = crypto.keccak_2hash(crypto.encodeint(view_key_private) + tx_prefix_hash)
+        tx_key = crypto.compute_hmac(salt, passwd)
+        return tx_key
+
+    async def live_refresh_start(self):
+        msg = MoneroLiveRefreshStartRequest(address_n=self.address_n, network_type=self.network_type)
+        t_res = await self.trezor.live_refresh(msg)
+        self.handle_error(t_res)
+
+    async def live_refresh_final(self):
+        t_res = await self.trezor.live_refresh(MoneroLiveRefreshFinalRequest())
+        self.handle_error(t_res)
+
+    async def live_refresh(self, view_key_private, out_key, recv_deriv, real_out_idx, major, minor):
+        msg = MoneroLiveRefreshStepRequest(out_key=out_key, recv_deriv=recv_deriv, real_out_idx=real_out_idx, sub_addr_major=major, sub_addr_minor=minor)
+        t_res = await self.trezor.live_refresh(msg)  # type: MoneroLiveRefreshStepAck
+        self.handle_error(t_res)
+
+        enc_key = self._compute_ki_enc_key_host(view_key_private, out_key, t_res.salt)
+        decr = chacha_poly.decrypt_pack(enc_key, t_res.key_image)
+
+        ki_bin = decr[:32]
+        ki = crypto.decodepoint(ki_bin)
+        sig = [[crypto.decodeint(decr[32:64]), crypto.decodeint(decr[64:])]]
+
+        if not ring_ct.check_ring_singature(ki_bin, ki, [crypto.decodepoint(out_key)], sig):
+            raise ValueError("Invalid ring sig on KI")
+
+        return ki
+
+    @staticmethod
+    def _compute_ki_enc_key_host(view_key_private, prefix, salt):
+        passwd = crypto.keccak_2hash(crypto.encodeint(view_key_private) + prefix)
+        enc_key = crypto.compute_hmac(salt, passwd)
+        return enc_key

@@ -98,6 +98,48 @@ class TrezorTest(BaseAgentTest):
         res = await self.agent.import_outputs(ki_loaded.tds)
         await self.verify_ki_export(res, ki_loaded)
 
+    async def test_live_refresh(self):
+        if not os.getenv("TREZOR_TEST_LIVE_REFRESH"):
+            self.skipTest("Live refresh skipped")
+
+        creds = self.get_trezor_creds(0)
+        await self.agent.live_refresh_start()
+        for att in range(5):
+            r = crypto.random_scalar()
+            R = crypto.scalarmult_base(r)
+            D = crypto.scalarmult(R, creds.view_key_private)
+            subaddr = 0, att
+
+            scalar_step1 = crypto.derive_secret_key(
+                D, att, creds.spend_key_private
+            )
+
+            # step 2: add Hs(SubAddr || a || index_major || index_minor)
+            if subaddr == (0, 0):
+                scalar_step2 = scalar_step1
+            else:
+                subaddr_sk = monero.get_subaddress_secret_key(
+                    creds.view_key_private, major=0, minor=att
+                )
+                scalar_step2 = crypto.sc_add(scalar_step1, subaddr_sk)
+
+            pub_ver = crypto.scalarmult_base(scalar_step2)
+            ki = monero.generate_key_image(crypto.encodepoint(pub_ver), scalar_step2)
+
+            ki2 = await self.agent.live_refresh(
+                creds.view_key_private,
+                crypto.encodepoint(pub_ver),
+                crypto.encodepoint(D),
+                att,
+                0,
+                att
+            )
+
+            if not crypto.point_eq(ki, ki2):
+                raise ValueError("Key image inconsistent")
+
+        await self.agent.live_refresh_final()
+
     async def test_transactions(self):
         await self.int_test_trezor_txs()
 

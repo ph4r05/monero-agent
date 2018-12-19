@@ -177,6 +177,9 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
         await self.verify(txes[0], agent.last_transaction_data(), creds=creds)
         await self.receive(txes[0], all_creds, agent.last_transaction_data(), self.get_expected_payment_id(fl))
 
+        if os.getenv('TREZOR_TEST_GET_TX'):
+            await self.get_tx_key_test(agent, agent.last_transaction_data(), creds, all_creds)
+
     async def verify(self, tx, con_data=None, creds=None):
         """
         Transaction verification
@@ -358,3 +361,56 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
 
         # All outputs have to be successfully received
         self.assertEqual(num_outs, num_received)
+
+    def verify_tx_key(self, tx_priv, tx_pub, all_creds_subs):
+        if crypto.point_eq(tx_pub, crypto.scalarmult_base(tx_priv)):
+            return True
+        for cred_idx, subs in enumerate(all_creds_subs):
+            for ckey in subs:
+                if crypto.point_eq(tx_pub, crypto.scalarmult(ckey, tx_priv)):
+                    return True
+        return False
+
+    async def get_tx_key_test(self, agent, con_data, creds, all_creds):
+        salt1 = con_data.enc_salt1
+        salt2 = con_data.enc_salt2
+        res = await agent.get_tx_key(salt1, salt2, con_data.enc_keys, con_data.tx_prefix_hash, creds.view_key_private)
+
+        extras = await monero.parse_extra_fields(list(con_data.tx.extra))
+        tx_pub = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraPubKey, 0)
+        additional_pub_keys = monero.find_tx_extra_field_by_type(
+            extras, xmrtypes.TxExtraAdditionalPubKeys
+        )
+
+        # For verification need to build database creds -> pubkeys
+        all_creds_subs = []
+        for idx, ccred in enumerate(all_creds):
+            subs = {}
+            for accnt in range(10):
+                subs = monero.compute_subaddresses(ccred, accnt, range(20), subs)
+            all_creds_subs.append([crypto.decodepoint(xx) for xx in subs.keys()])
+
+        if not self.verify_tx_key(res[0], crypto.decodepoint(tx_pub.pub_key), all_creds_subs):
+            raise ValueError("Tx pub mismatch")
+
+        if additional_pub_keys and len(additional_pub_keys.data) != len(res) - 1:
+            raise ValueError("Invalid additional keys count")
+
+        if additional_pub_keys:
+            for i, ad in enumerate(additional_pub_keys.data):
+                if not self.verify_tx_key(res[i+1], crypto.decodepoint(ad), all_creds_subs):
+                    raise ValueError("Tx additional %s pub mismatch" % i)
+
+        my_pub = crypto.scalarmult_base(creds.view_key_private)
+        res_der = await agent.get_tx_deriv(salt1, salt2, con_data.enc_keys, con_data.tx_prefix_hash, creds.view_key_private, crypto.encodepoint(my_pub))
+        if len(res) != len(res_der):
+            raise ValueError("Derivation array mismatch")
+        tmp = crypto.scalarmult(my_pub, res[0])
+        if not crypto.point_eq(tmp, res_der[0]):
+            raise ValueError("Derivation 0 mismatch")
+
+        if additional_pub_keys:
+            for i in range(len(additional_pub_keys.data)):
+                tmp = crypto.scalarmult(my_pub, res[i + 1])
+                if not crypto.point_eq(tmp, res_der[i + 1]):
+                    raise ValueError("Tx derivation additional %s mismatch" % i)

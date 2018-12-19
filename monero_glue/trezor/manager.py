@@ -114,3 +114,13 @@ class Trezor(token.TokenLite):
         with self.session():
             res = self.client.call(self._to_tlib(msg))
             return self._from_tlib(res)
+
+    async def get_tx_key(self, msg, *args, **kwargs):
+        with self.session():
+            res = self.client.call(self._to_tlib(msg))
+            return self._from_tlib(res)
+
+    async def live_refresh(self, msg, *args, **kwargs):
+        with self.session():
+            res = self.client.call(self._to_tlib(msg))
+            return self._from_tlib(res)
