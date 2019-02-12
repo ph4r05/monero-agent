@@ -175,157 +175,35 @@ class MoneroTest(aiounittest.AsyncTestCase):
         m = monero.get_subaddress_secret_key(secret_key=a, major=0, minor=1)
         self.assertEqual(
             crypto.encodeint(m),
-            bytes(
-                [
-                    0xb6,
-                    0xff,
-                    0x4d,
-                    0x68,
-                    0x9b,
-                    0x95,
-                    0xe3,
-                    0x31,
-                    0x0e,
-                    0xfb,
-                    0xf6,
-                    0x83,
-                    0x85,
-                    0x0c,
-                    0x07,
-                    0x5b,
-                    0xcd,
-                    0xe4,
-                    0x63,
-                    0x61,
-                    0x92,
-                    0x30,
-                    0x54,
-                    0xe4,
-                    0x2e,
-                    0xf3,
-                    0x00,
-                    0x16,
-                    0xb2,
-                    0x87,
-                    0xff,
-                    0x0c,
-                ]
+            binascii.unhexlify(
+                b"b6ff4d689b95e3310efbf683850c075bcde46361923054e42ef30016b287ff0c"
             ),
         )
 
     def test_public_spend(self):
-        derivation = bytes(
-            [
-                0xe7,
-                0x20,
-                0xa0,
-                0x9f,
-                0x2e,
-                0x3a,
-                0x0b,
-                0xbf,
-                0x4e,
-                0x4b,
-                0xa7,
-                0xad,
-                0x93,
-                0x65,
-                0x3b,
-                0xb2,
-                0x96,
-                0x88,
-                0x55,
-                0x10,
-                0x12,
-                0x1f,
-                0x80,
-                0x6a,
-                0xcb,
-                0x2a,
-                0x5f,
-                0x91,
-                0x68,
-                0xfa,
-                0xfa,
-                0x01,
-            ]
+        derivation = binascii.unhexlify(
+            b"e720a09f2e3a0bbf4e4ba7ad93653bb296885510121f806acb2a5f9168fafa01"
         )
-        base = bytes(
-            [
-                0x7d,
-                0x99,
-                0x6b,
-                0x0f,
-                0x2d,
-                0xb6,
-                0xdb,
-                0xb5,
-                0xf2,
-                0xa0,
-                0x86,
-                0x21,
-                0x1f,
-                0x23,
-                0x99,
-                0xa4,
-                0xa7,
-                0x47,
-                0x9b,
-                0x2c,
-                0x91,
-                0x1a,
-                0xf3,
-                0x07,
-                0xfd,
-                0xc3,
-                0xf7,
-                0xf6,
-                0x1a,
-                0x88,
-                0xcb,
-                0x0e,
-            ]
+        base = binascii.unhexlify(
+            b"7d996b0f2db6dbb5f2a086211f2399a4a7479b2c911af307fdc3f7f61a88cb0e"
         )
-        pkey_ex = bytes(
-            [
-                0x08,
-                0x46,
-                0xca,
-                0xe7,
-                0x40,
-                0x50,
-                0x77,
-                0xb6,
-                0xb7,
-                0x80,
-                0x0f,
-                0x0b,
-                0x93,
-                0x2c,
-                0x10,
-                0xa1,
-                0x86,
-                0x44,
-                0x83,
-                0x70,
-                0xb6,
-                0xdb,
-                0x31,
-                0x8f,
-                0x8c,
-                0x9e,
-                0x13,
-                0xf7,
-                0x81,
-                0xda,
-                0xb5,
-                0x46,
-            ]
+        pkey_ex = binascii.unhexlify(
+            b"0846cae7405077b6b7800f0b932c10a186448370b6db318f8c9e13f781dab546"
         )
         pkey_comp = crypto.derive_public_key(
             crypto.decodepoint(derivation), 0, crypto.decodepoint(base)
         )
         self.assertEqual(pkey_ex, crypto.encodepoint(pkey_comp))
+
+    def _get_bc_ver(self):
+        """
+        Returns version settings for the used data. Testing data are fixed at these versions.
+        :return:
+        """
+        vers = xmrserialize.VersionSetting()
+        vers.set(xmrtypes.TxConstructionData, 2)
+        vers.set(xmrtypes.TransferDetails, 9)
+        return vers
 
     async def test_node_transaction(self):
         tx_j = pkg_resources.resource_string(
@@ -345,7 +223,7 @@ class MoneroTest(aiounittest.AsyncTestCase):
         await ar.message(tx)
 
         reader = xmrserialize.MemoryReaderWriter(bytearray(binascii.unhexlify(tx_u_c)))
-        ar = xmrserialize.Archive(reader, False)
+        ar = xmrserialize.Archive(reader, False, self._get_bc_ver())
         uns = xmrtypes.UnsignedTxSet()
         await ar.message(uns)
 

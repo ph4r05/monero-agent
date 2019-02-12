@@ -158,6 +158,16 @@ class AgentLiteTest(BaseAgentTest):
         await self.tx_sign_test(tagent, unsigned_tx, self.get_creds(),
                                 [self.get_creds(), self.get_creds_01(), self.get_creds_02()], fl)
 
+    def _get_bc_ver(self):
+        """
+        Returns version settings for the used data. Testing data are fixed at these versions.
+        :return:
+        """
+        vers = xmrserialize.VersionSetting()
+        vers.set(xmrtypes.TxConstructionData, 2)
+        vers.set(xmrtypes.TransferDetails, 9)
+        return vers
+
     async def tx_sign_unsigned(self, unsigned_tx, fl=None):
         """
         Tx sign test with given unsigned transaction data
@@ -166,7 +176,7 @@ class AgentLiteTest(BaseAgentTest):
         :return:
         """
         reader = xmrserialize.MemoryReaderWriter(bytearray(unsigned_tx))
-        ar = xmrserialize.Archive(reader, False)
+        ar = xmrserialize.Archive(reader, False, self._get_bc_ver())
         unsig = xmrtypes.UnsignedTxSet()
         await ar.message(unsig)
         await self.tx_sign_unsigned_msg(unsig, fl)
