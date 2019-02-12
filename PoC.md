@@ -658,6 +658,7 @@ Once trezor-common is updated, e.g., new message type is added the following ste
 # 2. Regenerate messages
 cd tools
 ./build_protobuf
+./build_templates
 ```
 
 ### python-trezor
