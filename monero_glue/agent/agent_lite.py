@@ -157,13 +157,16 @@ class Agent(object):
         if slip0010 and address_n is None:
             self.address_n = DEFAULT_MONERO_BIP44[:-2]
 
+        self.hf = 9
+        self.client_version = 0
+
     def is_simple(self, rv):
         """
         True if simpe
         :param rv:
         :return:
         """
-        return rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.FullBulletproof]
+        return rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.Bulletproof, xmrtypes.RctType.Bulletproof2]
 
     def is_bulletproof(self, rv):
         """
@@ -172,8 +175,8 @@ class Agent(object):
         :return:
         """
         return rv.type in [
-            xmrtypes.RctType.FullBulletproof,
-            xmrtypes.RctType.SimpleBulletproof,
+            xmrtypes.RctType.Bulletproof,
+            xmrtypes.RctType.Bulletproof2,
         ]
 
     def is_error(self, response):
@@ -238,7 +241,7 @@ class Agent(object):
         :return:
         """
         writer = xmrserialize.MemoryReaderWriter()
-        ar1 = xmrserialize.Archive(writer, True)
+        ar1 = xmrserialize.Archive(writer, True, xmrtypes.hf_versions(self.hf))
         await ar1.message(tx, msg_type=xmrtypes.Transaction)
         return bytes(writer.get_buffer())
 
@@ -248,7 +251,7 @@ class Agent(object):
     def _is_bulletproof(self):
         if self.ct.rv is None:
             raise ValueError("RV is None")
-        return self.ct.rv.type == 3
+        return self.ct.rv.type in (3, 4)
 
     def _is_simple(self):
         if self.ct.rv is None:
@@ -340,6 +343,7 @@ class Agent(object):
         # Init transaction
         tsx_data = MoneroTransactionData()
         tsx_data.version = 1
+        tsx_data.client_version = self.client_version
         tsx_data.payment_id = payment_id
         tsx_data.unlock_time = tx.unlock_time
         tsx_data.outputs = [
@@ -368,6 +372,9 @@ class Agent(object):
         )
         tsx_data.rsig_data = rsig_data
 
+        if self.hf >= 10:
+            tsx_data.rsig_data.bp_version = 2
+
         self.ct.tsx_data = tsx_data
         init_msg = MoneroTransactionInitRequest(
             version=0,
@@ -379,7 +386,6 @@ class Agent(object):
         t_res = await self.trezor.tsx_sign(init_msg)  # type: MoneroTransactionInitAck
         self.handle_error(t_res)
 
-        in_memory = False
         self.ct.tx_out_entr_hmacs = t_res.hmacs
         self.ct.rsig_param = t_res.rsig_data
 
@@ -426,29 +432,22 @@ class Agent(object):
 
         common.apply_permutation(self.ct.source_permutation, swapper)
 
-        if not in_memory:
-            msg = MoneroTransactionInputsPermutationRequest(
-                perm=self.ct.source_permutation
+        msg = MoneroTransactionInputsPermutationRequest(
+            perm=self.ct.source_permutation
+        )
+        t_res = await self.trezor.tsx_sign(msg)
+        self.handle_error(t_res)
+
+        # Set vin_i back - tx prefix hashing
+        for idx in range(len(self.ct.tx.vin)):
+            src_pb = tmisc.translate_monero_src_entry_pb(tx.sources[idx])
+            msg = MoneroTransactionInputViniRequest(
+                src_entr=src_pb,
+                vini=await tmisc.dump_msg(self.ct.tx.vin[idx], prefix=b"\x02"),
+                vini_hmac=self.ct.tx_in_hmacs[idx],
             )
             t_res = await self.trezor.tsx_sign(msg)
             self.handle_error(t_res)
-
-        # Set vin_i back - tx prefix hashing
-        # Done only if not in-memory.
-        if not in_memory:
-            for idx in range(len(self.ct.tx.vin)):
-                src_pb = tmisc.translate_monero_src_entry_pb(tx.sources[idx])
-                msg = MoneroTransactionInputViniRequest(
-                    src_entr=src_pb,
-                    vini=await tmisc.dump_msg(self.ct.tx.vin[idx], prefix=b"\x02"),
-                    vini_hmac=self.ct.tx_in_hmacs[idx],
-                    pseudo_out=self.ct.pseudo_outs[idx][0] if not in_memory else None,
-                    pseudo_out_hmac=self.ct.pseudo_outs[idx][1]
-                    if not in_memory
-                    else None,
-                )
-                t_res = await self.trezor.tsx_sign(msg)
-                self.handle_error(t_res)
 
         # All inputs set
         t_res = await self.trezor.tsx_sign(
