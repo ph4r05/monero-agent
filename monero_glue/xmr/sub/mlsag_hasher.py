@@ -165,9 +165,13 @@ async def get_pre_mlsag_hash(rv):
     kc_master = HashWrapper(crypto.get_keccak())
     kc_master.update(rv.message)
 
-    is_simple = rv.type in [RctType.Simple, RctType.SimpleBulletproof]
-    inputs = len(rv.pseudoOuts) if is_simple else 0
+    is_simple = rv.type in [RctType.Simple, RctType.Bulletproof, RctType.Bulletproof2]
     outputs = len(rv.ecdhInfo)
+    inputs = 0
+    if rv.type == RctType.Simple:
+        inputs = len(rv.pseudoOuts)
+    elif rv.type in [RctType.Bulletproof, RctType.Bulletproof2]:
+        inputs = len(rv.p.pseudoOuts)
 
     kwriter = get_keccak_writer()
     ar = xmrserialize.Archive(kwriter, True)
@@ -176,7 +180,7 @@ async def get_pre_mlsag_hash(rv):
     kc_master.update(c_hash)
 
     kc = crypto.get_keccak()
-    if rv.type in [RctType.FullBulletproof, RctType.SimpleBulletproof]:
+    if rv.type in [RctType.Bulletproof, RctType.Bulletproof2]:
         for p in rv.p.bulletproofs:
             kc.update(p.A)
             kc.update(p.S)
