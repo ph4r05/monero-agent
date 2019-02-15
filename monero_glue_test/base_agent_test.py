@@ -216,7 +216,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
                 C = crypto.decodepoint(out_pk.mask)
                 rsig = tx_obj.rct_signatures.p.rangeSigs[idx]
                 res = ring_ct.ver_range(C, rsig, use_bulletproof=is_bp)
-                self.assertTrue(res)
+                self.assertTrue(res, "Invalid Range proof")
 
         else:
             for idx, rsig in enumerate(tx_obj.rct_signatures.p.bulletproofs):
@@ -224,7 +224,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
                 outs = tx_obj.rct_signatures.outPk[out_idx : out_idx + rsig_num_outs]
                 rsig.V = [crypto.encodepoint(ring_ct.bp_comm_to_v(crypto.decodepoint(xx.mask))) for xx in outs]
                 res = ring_ct.ver_range(None, rsig, use_bulletproof=is_bp)
-                self.assertTrue(res)
+                self.assertTrue(res, "Invalid Range proof")
 
         # Prefix hash
         prefix_hash = await monero.get_transaction_prefix_hash(tx_obj)
@@ -255,14 +255,14 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
                     pseudo_out = crypto.decodepoint(bytes(tx_obj.rct_signatures.pseudoOuts[idx]))
                 self.assertTrue(mlsag2.ver_rct_mg_simple(
                     mlsag_hash, tx_obj.rct_signatures.p.MGs[idx], mix_ring, pseudo_out
-                ))
+                ), "MG invalid")
 
             else:
                 txn_fee_key = crypto.scalarmult_h(tx_obj.rct_signatures.txnFee)
                 mix_ring = [[MoneroRctKeyPublic(dest=x[1].dest, commitment=x[1].mask)] for x in con_data.tx_data.sources[idx].outputs]
                 self.assertTrue(mlsag2.ver_rct_mg(
                     tx_obj.rct_signatures.p.MGs[idx], mix_ring, tx_obj.rct_signatures.outPk, txn_fee_key, mlsag_hash
-                ))
+                ), "MG invalid")
 
     async def receive(self, tx, all_creds, con_data=None, exp_payment_id=None):
         """
@@ -329,14 +329,14 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
                     crypto.point_eq(
                         crypto.decodepoint(tx_obj.rct_signatures.outPk[ti].mask),
                         crypto.gen_c(tx_scan_info.mask, tx_scan_info.amount),
-                    )
+                    ), "Invalid masks"
                 )
 
                 self.assertTrue(
                     crypto.point_eq(
                         crypto.decodepoint(tx_obj.vout[ti].target.key),
                         crypto.scalarmult_base(tx_scan_info.in_ephemeral),
-                    )
+                    ), "Invalid txin"
                 )
 
                 if exp_payment_id is not None:
