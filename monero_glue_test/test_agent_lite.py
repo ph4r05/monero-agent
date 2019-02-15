@@ -163,10 +163,7 @@ class AgentLiteTest(BaseAgentTest):
         Returns version settings for the used data. Testing data are fixed at these versions.
         :return:
         """
-        vers = xmrserialize.VersionSetting()
-        vers.set(xmrtypes.TxConstructionData, 2)
-        vers.set(xmrtypes.TransferDetails, 9)
-        return vers
+        return xmrtypes.hf_versions(9)
 
     async def tx_sign_unsigned(self, unsigned_tx, fl=None):
         """

@@ -13,6 +13,7 @@ import pkg_resources
 from monero_glue.messages import MoneroRctKeyPublic
 from monero_glue.xmr import crypto, mlsag2, monero, ring_ct
 from monero_serialize import xmrserialize, xmrtypes
+from monero_serialize.core import versioning
 
 
 class MoneroTest(aiounittest.AsyncTestCase):
@@ -101,10 +102,7 @@ class MoneroTest(aiounittest.AsyncTestCase):
         Returns version settings for the used data. Testing data are fixed at these versions.
         :return:
         """
-        vers = xmrserialize.VersionSetting()
-        vers.set(xmrtypes.TxConstructionData, 2)
-        vers.set(xmrtypes.TransferDetails, 9)
-        return vers
+        return xmrtypes.hf_versions(9)
 
     async def test_node_transaction(self):
         tx_j = pkg_resources.resource_string(
@@ -119,7 +117,7 @@ class MoneroTest(aiounittest.AsyncTestCase):
         tx_js = json.loads(tx_j.decode("utf8"))
 
         reader = xmrserialize.MemoryReaderWriter(bytearray(binascii.unhexlify(tx_c)))
-        ar = xmrserialize.Archive(reader, False)
+        ar = xmrserialize.Archive(reader, False, self._get_bc_ver())
         tx = xmrtypes.Transaction()
         await ar.message(tx)
 
