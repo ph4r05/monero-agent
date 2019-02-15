@@ -327,8 +327,13 @@ async def dump_message(writer, msg):
                 dump_uvarint(writer, int(svalue))
 
             elif ftype is BytesType:
-                dump_uvarint(writer, len(svalue))
-                writer.write(svalue)
+                if isinstance(svalue, list):
+                    dump_uvarint(writer, _count_bytes_list(svalue))
+                    for sub_svalue in svalue:
+                        writer.write(sub_svalue)
+                else:
+                    dump_uvarint(writer, len(svalue))
+                    writer.write(svalue)
 
             elif ftype is UnicodeType:
                 if not isinstance(svalue, bytes):
@@ -448,3 +453,11 @@ def dict_to_proto(message_type, d):
 
         params[fname] = newvalue
     return message_type(**params)
+
+
+def _count_bytes_list(svalue):
+    res = 0
+    for x in svalue:
+        res += len(x)
+    return res
+
