@@ -140,9 +140,6 @@ class TrezorTest(BaseAgentTest):
 
         await self.agent.live_refresh_final()
 
-    async def test_transactions(self):
-        await self.int_test_trezor_txs()
-
     async def test_transactions_bp(self):
         await self.int_test_trezor_txs(as_bulletproof=True)
 

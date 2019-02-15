@@ -125,3 +125,10 @@ def xmr_base58_addr_decode_check(buff):
 
     else:
         raise ValueError("Invalid address checksum")
+
+
+def xor8(buff, key):
+    for i in range(8):
+        buff[i] ^= key[i]
+    return buff
+

@@ -114,6 +114,7 @@ class AgentLiteTest(BaseAgentTest):
         await self.verify_ki_export(res, ki_loaded)
 
     async def test_trezor_txs(self):
+        self.skipTest('HP <= 8 not supported anymore')
         await self._int_test_trezor_txs()
 
     async def test_trezor_txs_bp(self):
@@ -154,6 +155,7 @@ class AgentLiteTest(BaseAgentTest):
         :param fl:
         :return:
         """
+        self.skipTest('HP <= 8 not supported anymore')
         tagent = self.init_agent()
         await self.tx_sign_test(tagent, unsigned_tx, self.get_creds(),
                                 [self.get_creds(), self.get_creds_01(), self.get_creds_02()], fl)
@@ -172,6 +174,7 @@ class AgentLiteTest(BaseAgentTest):
         :param fl:
         :return:
         """
+        self.skipTest('HP <= 8 not supported anymore')
         reader = xmrserialize.MemoryReaderWriter(bytearray(unsigned_tx))
         ar = xmrserialize.Archive(reader, False, self._get_bc_ver())
         unsig = xmrtypes.UnsignedTxSet()
@@ -187,6 +190,7 @@ class AgentLiteTest(BaseAgentTest):
         :param fl:
         :return:
         """
+        self.skipTest('HP <= 8 not supported anymore')
         reader = xmrserialize.MemoryReaderWriter(bytearray(unsigned_tx))
         ar = xmrboost.Archive(reader, False)
         unsig = xmrtypes.UnsignedTxSet()
@@ -201,6 +205,7 @@ class AgentLiteTest(BaseAgentTest):
         :param fl:
         :return:
         """
+        self.skipTest('HP <= 8 not supported anymore')
         reader = xmrserialize.MemoryReaderWriter(bytearray(pending_tx))
         ar = xmrboost.Archive(reader, False)
         pending = xmrtypes.PendingTransaction()

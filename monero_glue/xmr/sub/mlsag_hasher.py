@@ -92,7 +92,7 @@ class PreMlsagHasher(object):
 
         from monero_serialize.xmrtypes import ECKey
 
-        await self.rtcsig_hasher.field(mask if mask else out_pk.mask, ECKey)
+        await self.rtcsig_hasher.field(mask if mask else out_pk, ECKey)
 
     async def rctsig_base_done(self):
         if self.state != 5:

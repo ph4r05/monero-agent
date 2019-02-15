@@ -17,3 +17,12 @@ def unimport_begin():
 
 def unimport_end(mods):
     pass
+
+
+def ensure(cond, msg=None):
+    if not cond:
+        if msg is None:
+            raise AssertionError()
+        else:
+            raise AssertionError(msg)
+
