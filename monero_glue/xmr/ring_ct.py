@@ -428,7 +428,7 @@ def ver_range(C=None, rsig=None, use_bulletproof=False, decode=True):
 #   verifies the above sig is created corretly
 
 
-def ecdh_encode(unmasked, receiver_pk=None, derivation=None):
+def ecdh_encode(unmasked, receiver_pk=None, derivation=None, v2=False, dest=None):
     """
     Elliptic Curve Diffie-Helman: encodes and decodes the amount b and mask a
     where C= aG + bH
@@ -437,49 +437,51 @@ def ecdh_encode(unmasked, receiver_pk=None, derivation=None):
     :param derivation:
     :return:
     """
-    rv = xmrtypes.EcdhTuple()
+    rv = xmrtypes.EcdhTuple() if dest is None else dest
     if derivation is None:
         esk = crypto.random_scalar()
         rv.senderPk = crypto.scalarmult_base(esk)
         derivation = crypto.encodepoint(crypto.scalarmult(receiver_pk, esk))
 
-    sec1 = crypto.hash_to_scalar(derivation)
-    sec2 = crypto.hash_to_scalar(crypto.encodeint(sec1))
-
-    rv.mask = crypto.sc_add(unmasked.mask, sec1)
-    rv.amount = crypto.sc_add(unmasked.amount, sec2)
-    return rv
+    return ecdh_encdec(unmasked, None, derivation, v2=v2, enc=True, dest=rv)
 
 
-def ecdh_encode_into(dst, unmasked, derivation=None):
+def ecdh_decode(masked, receiver_sk=None, derivation=None, v2=False, dest=None):
     """
     Elliptic Curve Diffie-Helman: encodes and decodes the amount b and mask a
     where C= aG + bH
     """
-    sec1 = crypto.hash_to_scalar(derivation)
-    sec2 = crypto.hash_to_scalar(crypto.encodeint(sec1))
-
-    dst.mask = crypto.sc_add(unmasked.mask, sec1)
-    dst.amount = crypto.sc_add(unmasked.amount, sec2)
-    return dst
+    return ecdh_encdec(masked, receiver_sk, derivation, v2=v2, enc=False, dest=dest)
 
 
-def ecdh_decode(masked, receiver_sk=None, derivation=None):
+def ecdh_encdec(masked, receiver_sk=None, derivation=None, v2=False, enc=True, dest=None):
     """
     Elliptic Curve Diffie-Helman: encodes and decodes the amount b and mask a
     where C= aG + bH
     """
-    rv = xmrtypes.EcdhTuple()
-
+    rv = xmrtypes.EcdhTuple() if dest is None else dest
     if derivation is None:
         derivation = crypto.scalarmult(masked.senderPk, receiver_sk)
 
-    sharedSec1 = crypto.hash_to_scalar(derivation)
-    sharedSec2 = crypto.hash_to_scalar(crypto.encodeint(sharedSec1))
+    if v2:
+        amnt = masked.amount
+        rv.mask = monero.commitment_mask(derivation)
+        rv.amount = bytearray(32)
+        crypto.encodeint_into(rv.amount, amnt)
+        crypto.xor8(rv.amount, monero.ecdh_hash(derivation))
+        rv.amount = crypto.decodeint(rv.amount)
+        return rv
 
-    rv.mask = crypto.sc_sub(masked.mask, sharedSec1)
-    rv.amount = crypto.sc_sub(masked.amount, sharedSec2)
-    return rv
+    else:
+        amount_key_hash_single = crypto.hash_to_scalar(derivation)
+        amount_key_hash_double = crypto.hash_to_scalar(
+            crypto.encodeint(amount_key_hash_single)
+        )
+
+        sc_fnc = crypto.sc_add if enc else crypto.sc_sub
+        rv.mask = sc_fnc(rv.mask, amount_key_hash_single)
+        rv.amount = sc_fnc(rv.amount, amount_key_hash_double)
+        return rv
 
 
 #

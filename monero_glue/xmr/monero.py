@@ -292,17 +292,17 @@ def ecdh_decode_rv(rv, derivation, i):
     Decodes ECDH info from transaction.
     """
     scalar = crypto.derivation_to_scalar(derivation, i)
-    if rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.SimpleBulletproof]:
+    if rv.type in [xmrtypes.RctType.Full, xmrtypes.RctType.Simple, xmrtypes.RctType.Bulletproof]:
         return ecdh_decode_simple(rv, scalar, i)
 
-    elif rv.type in [xmrtypes.RctType.Full, xmrtypes.RctType.FullBulletproof]:
-        return ecdh_decode_simple(rv, scalar, i)
+    elif rv.type in [xmrtypes.RctType.Bulletproof2]:
+        return ecdh_decode_simple(rv, scalar, i, v2=True)
 
     else:
         raise ValueError("Unknown rv type")
 
 
-def ecdh_decode_simple(rv, sk, i):
+def ecdh_decode_simple(rv, sk, i, v2=False):
     """
     Decodes ECDH from the transaction, checks mask (decoding validity).
     """
@@ -313,7 +313,9 @@ def ecdh_decode_simple(rv, sk, i):
 
     ecdh_info = rv.ecdhInfo[i]
     ecdh_info = recode_ecdh(ecdh_info, False)
-    ecdh_info = ring_ct.ecdh_decode(ecdh_info, derivation=crypto.encodeint(sk))
+
+    ecdh_info = ring_ct.ecdh_decode(ecdh_info, derivation=crypto.encodeint(sk), v2=v2)
+
     c_tmp = crypto.add_keys2(ecdh_info.mask, ecdh_info.amount, crypto.xmr_H())
     if not crypto.point_eq(c_tmp, crypto.decodepoint(rv.outPk[i].mask)):
         raise ValueError("Amount decoded incorrectly")
@@ -466,3 +468,14 @@ def commitment_mask(key, buff=None):
         return crypto.hash_to_scalar_into(buff, data)
     else:
         return crypto.hash_to_scalar(data)
+
+
+def ecdh_hash(shared_sec):
+    """
+    Generates ECDH hash for amount masking for Bulletproof2
+    """
+    data = bytearray(38)
+    data[0:6] = b"amount"
+    data[6:] = shared_sec
+    return crypto.cn_fast_hash(data)
+
