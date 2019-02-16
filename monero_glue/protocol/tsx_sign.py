@@ -221,7 +221,7 @@ class TsxSigner(object):
         :return:
         """
         try:
-            is_offloaded_bp = msg.is_offloaded_bp
+            is_offloaded_bp = bool(msg.is_offloaded_bp)
             dst, dst_hmac, rsig_data = msg.dst_entr, msg.dst_entr_hmac, msg.rsig_data
             del (msg)
 

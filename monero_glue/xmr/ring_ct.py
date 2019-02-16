@@ -479,8 +479,8 @@ def ecdh_encdec(masked, receiver_sk=None, derivation=None, v2=False, enc=True, d
         )
 
         sc_fnc = crypto.sc_add if enc else crypto.sc_sub
-        rv.mask = sc_fnc(rv.mask, amount_key_hash_single)
-        rv.amount = sc_fnc(rv.amount, amount_key_hash_double)
+        rv.mask = sc_fnc(masked.mask, amount_key_hash_single)
+        rv.amount = sc_fnc(masked.amount, amount_key_hash_double)
         return rv
 
 

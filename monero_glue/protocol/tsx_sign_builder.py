@@ -493,16 +493,24 @@ class TTransactionBuilder(object):
     async def process_payment_id(self, tsx_data):
         """
         Payment id -> extra
+
+        Since Monero release 0.13 all 2 output payments have encrypted payment ID
+        to make BC more uniform.
         """
-        if common.is_empty(tsx_data.payment_id):
-            return
+        # encrypted payment id / dummy payment ID
+        view_key_pub_enc = None
 
         from monero_glue.xmr.sub import tsx_helper
 
-        if len(tsx_data.payment_id) == 8:
-            view_key_pub_enc = tsx_helper.get_destination_view_key_pub(
-                tsx_data.outputs, self.change_address()
+        if not tsx_data.payment_id or len(tsx_data.payment_id) == 8:
+            view_key_pub_enc = self.get_destination_view_key_pub(
+                tsx_data, self.change_address()
             )
+
+        if not tsx_data.payment_id:
+            return
+
+        elif len(tsx_data.payment_id) == 8:
             if view_key_pub_enc == crypto.NULL_KEY_ENC:
                 raise ValueError(
                     "Destinations have to have exactly one output to support encrypted payment ids"
@@ -533,6 +541,39 @@ class TTransactionBuilder(object):
         extra_buff[2] = extra_prefix
         utils.memcpy(extra_buff, 3, extra_nonce, 0, lextra)
         self.tx.extra = extra_buff
+
+    def get_destination_view_key_pub(self, tsx_data, change_addr=None):
+        """
+        Returns destination address public view key
+        :param destinations:
+        :type destinations: list[apps.monero.xmr.serialize_messages.tx_construct.TxDestinationEntry]
+        :param change_addr:
+        :return:
+        """
+        from monero_glue.xmr.sub.addr import addr_eq
+        from monero_glue.messages import MoneroAccountPublicAddress
+
+        addr = MoneroAccountPublicAddress(
+            spend_public_key=crypto.NULL_KEY_ENC, view_public_key=crypto.NULL_KEY_ENC
+        )
+        count = 0
+        for dest in tsx_data.outputs:
+            if dest.amount == 0:
+                continue
+            if change_addr and addr_eq(dest.addr, change_addr):
+                continue
+            if addr_eq(dest.addr, addr):
+                continue
+            if count > 0 and tsx_data.payment_id:
+                return crypto.NULL_KEY_ENC
+            addr = dest.addr
+            count += 1
+
+        # Insert dummy payment id for transaction uniformity
+        if not tsx_data.payment_id and count <= 1:
+            tsx_data.payment_id = bytearray(8)
+
+        return addr.view_public_key
 
     async def compute_sec_keys(self, tsx_data):
         """
@@ -852,7 +893,9 @@ class TTransactionBuilder(object):
 
         # If det masks & offloading, return as we are handling offloaded BP.
         if self.is_processing_offloaded:
-            from monero_glue.messages.MessageType import MoneroTransactionSetOutputAck
+            from monero_glue.messages.MoneroTransactionSetOutputAck import (
+                MoneroTransactionSetOutputAck,
+            )
 
             return MoneroTransactionSetOutputAck()
 
@@ -904,8 +947,11 @@ class TTransactionBuilder(object):
 
         # State change according to the det-mask BP offloading.
         if self.is_det_mask() and self.rsig_offload:
+            bidx = self._get_rsig_batch(self.out_idx)
+            last_in_batch = self._is_last_in_batch(self.out_idx, bidx)
+
             utils.ensure(
-                self.is_processing_offloaded != is_offloaded_bp,
+                not last_in_batch or self.is_processing_offloaded != is_offloaded_bp,
                 "Offloaded BP out of order",
             )
             self.is_processing_offloaded = is_offloaded_bp
@@ -914,7 +960,9 @@ class TTransactionBuilder(object):
             self.out_idx += 1
             self.state.set_output()
 
-        utils.ensure(dst_entr.amount >= 0, "Destination with negative amount")
+        utils.ensure(
+            not dst_entr or dst_entr.amount >= 0, "Destination with negative amount"
+        )
         utils.ensure(self.inp_idx + 1 == self.input_count, "Invalid number of inputs")
         utils.ensure(self.out_idx < self.output_count, "Invalid output index")
         utils.ensure(
@@ -1007,7 +1055,6 @@ class TTransactionBuilder(object):
 
         # Batching & validation
         bidx = self._get_rsig_batch(self.out_idx)
-        batch_size = self.rsig_grp[bidx]
         last_in_batch = self._is_last_in_batch(self.out_idx, bidx)
         if self.rsig_offload and provided_rsig and not last_in_batch:
             raise ValueError("Provided rsig too early")
@@ -1021,16 +1068,16 @@ class TTransactionBuilder(object):
             raise ValueError("Rsig expected, not provided")
 
         # Batch not finished, skip range sig generation now
-        mask = self.output_masks[-1]
+        mask = self.output_masks[-1] if not self.is_processing_offloaded else None
+        offload_mask = mask and self.is_det_mask() and self.rsig_offload
 
         # If not last, do not proceed to the BP processing.
         if not last_in_batch:
-            rsig_data_new = None
-
-            if self.is_det_mask() and self.rsig_offload:
-                # Offloading BPs, send the det mask now
-                rsig_data_new = self._return_rsig_data(mask=mask)
-
+            rsig_data_new = (
+                self._return_rsig_data(mask=crypto.encodeint(mask))
+                if offload_mask
+                else None
+            )
             return rsig_data_new, mask
 
         # Rangeproof
@@ -1048,18 +1095,22 @@ class TTransactionBuilder(object):
 
         elif self.is_det_mask() and self.is_processing_offloaded:
             """Bulletproof offloaded to the host, check BP, hash it."""
-            await self._s6_rsig_process_bp(rsig_data, batch_size)
+            await self._s6_rsig_process_bp(rsig_data)
 
         else:
             """Bulletproof calculated on host, verify in Trezor"""
-            await self._s6_rsig_process_bp(rsig_data, batch_size)
+            await self._s6_rsig_process_bp(rsig_data)
 
         self.mem_trace("rproof" if __debug__ else None, collect=True)
 
         # Construct new rsig data to send back to the host.
-        rsig_data_new = self._return_rsig_data(rsig)
+        rsig_data_new = self._return_rsig_data(
+            rsig, crypto.encodeint(mask) if offload_mask else None
+        )
 
-        if self.out_idx + 1 == self.output_count:
+        if (self.out_idx + 1 == self.output_count) and (
+            not self.rsig_offload or self.is_processing_offloaded
+        ):
             # output masks and amounts are not needed anymore
             self.output_amounts = None
             self.output_masks = None
@@ -1092,7 +1143,7 @@ class TTransactionBuilder(object):
         self.output_amounts = []
         return rsig
 
-    async def _s6_rsig_process_bp(self, rsig_data, batch_size):
+    async def _s6_rsig_process_bp(self, rsig_data):
         from monero_glue.xmr import ring_ct
         from monero_serialize.xmrtypes import Bulletproof
 
@@ -1155,7 +1206,7 @@ class TTransactionBuilder(object):
         return buff
 
     def _return_rsig_data(self, rsig=None, mask=None):
-        if rsig is None:
+        if rsig is None and mask is None:
             return None
 
         from monero_glue.messages import MoneroTransactionRsigData
@@ -1167,9 +1218,9 @@ class TTransactionBuilder(object):
 
         if rsig:
             if isinstance(rsig, list):
-                return MoneroTransactionRsigData(rsig_parts=rsig)
+                rsig_data.rsig_parts = rsig
             else:
-                return MoneroTransactionRsigData(rsig=rsig)
+                rsig_data.rsig = rsig
 
         return rsig_data
 
@@ -1250,17 +1301,14 @@ class TTransactionBuilder(object):
                 crypto.encodeint(amount_key_hash_single)
             )
 
+            # Not modifying passed mask, is reused in BP.
             ecdh_info.mask = crypto.sc_add(ecdh_info.mask, amount_key_hash_single)
-            ecdh_info.amount = crypto.sc_add(ecdh_info.amount, amount_key_hash_double)
-            return self._s6_recode_ecdh(ecdh_info)
-
-    def _s6_recode_ecdh(self, ecdh_info):
-        """
-        In-place ecdh_info tuple recoding
-        """
-        ecdh_info.mask = crypto.encodeint(ecdh_info.mask)
-        ecdh_info.amount = crypto.encodeint(ecdh_info.amount)
-        return ecdh_info
+            crypto.sc_add_into(
+                ecdh_info.amount, ecdh_info.amount, amount_key_hash_double
+            )
+            ecdh_info.mask = crypto.encodeint(ecdh_info.mask)
+            ecdh_info.amount = crypto.encodeint(ecdh_info.amount)
+            return ecdh_info
 
     def _s6_set_out_additional_keys(self, dst_entr):
         """
@@ -1428,7 +1476,6 @@ class TTransactionBuilder(object):
         self.state.set_final_message_done()
         await self.trezor.iface.transaction_step(self.STEP_MLSAG)
 
-        await self.tsx_mlsag_ecdh_info()
         await self.tsx_mlsag_out_pk()
         await self.full_message_hasher.rctsig_base_done()
         self.out_idx = -1
@@ -1443,12 +1490,6 @@ class TTransactionBuilder(object):
             rv=rv_pb,
             full_message_hash=self.full_message,
         )
-
-    async def tsx_mlsag_ecdh_info(self):
-        """
-        Sets ecdh info for the incremental hashing mlsag.
-        """
-        pass
 
     async def tsx_mlsag_out_pk(self):
         """
@@ -1519,9 +1560,11 @@ class TTransactionBuilder(object):
             self.mem_trace("Correcting alpha")
             alpha_diff = crypto.sc_sub(self.sumout, self.sumpouts_alphas)
             crypto.sc_add_into(pseudo_out_alpha, pseudo_out_alpha, alpha_diff)
+            crypto.sc_add_into(self.sumpouts_alphas, self.sumpouts_alphas, alpha_diff)
             pseudo_out_c = crypto.gen_c(pseudo_out_alpha, self.input_last_amount)
-            self.input_last_amount = None
-            self.sumpouts_alphas = None
+            utils.ensure(
+                crypto.sc_eq(self.sumpouts_alphas, self.sumout), "Sum eq error"
+            )
 
         else:
             if self.inp_idx + 1 == self.input_count:
@@ -1603,7 +1646,7 @@ class TTransactionBuilder(object):
         from monero_glue.xmr.sub.recode import recode_msg
 
         mgs = recode_msg([mg])
-        del (input_secret_key, pseudo_out_alpha, pseudo_out_c, ring_pubkeys)
+        del (input_secret_key, pseudo_out_alpha, ring_pubkeys)
         gc.collect()
         self._mem_trace(6)
 
@@ -1620,7 +1663,8 @@ class TTransactionBuilder(object):
         )
 
         return MoneroTransactionSignInputAck(
-            signature=await misc.dump_msg_gc(mgs[0], preallocate=488, del_msg=True)
+            signature=await misc.dump_msg_gc(mgs[0], preallocate=488, del_msg=True),
+            pseudo_out=crypto.encodepoint(pseudo_out_c),
         )
 
     async def final_msg(self, *args, **kwargs):
