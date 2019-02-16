@@ -39,7 +39,8 @@ from monero_glue.messages import (
     MoneroTransactionSetOutputRequest,
     MoneroTransactionSignInputAck,
     MoneroTransactionSignInputRequest,
-    MoneroOutputEntry)
+    MoneroOutputEntry,
+)
 from monero_glue.protocol_base.base import TError
 from monero_glue.xmr import common, crypto, key_image, monero, ring_ct
 from monero_glue.xmr.enc import chacha_poly
@@ -157,8 +158,8 @@ class Agent(object):
         if slip0010 and address_n is None:
             self.address_n = DEFAULT_MONERO_BIP44[:-2]
 
-        self.hf = 9
-        self.client_version = 0
+        self.hf = 10
+        self.client_version = 1
 
     def is_simple(self, rv):
         """
@@ -166,7 +167,11 @@ class Agent(object):
         :param rv:
         :return:
         """
-        return rv.type in [xmrtypes.RctType.Simple, xmrtypes.RctType.Bulletproof, xmrtypes.RctType.Bulletproof2]
+        return rv.type in [
+            xmrtypes.RctType.Simple,
+            xmrtypes.RctType.Bulletproof,
+            xmrtypes.RctType.Bulletproof2,
+        ]
 
     def is_bulletproof(self, rv):
         """
@@ -174,10 +179,7 @@ class Agent(object):
         :param rv:
         :return:
         """
-        return rv.type in [
-            xmrtypes.RctType.Bulletproof,
-            xmrtypes.RctType.Bulletproof2,
-        ]
+        return rv.type in [xmrtypes.RctType.Bulletproof, xmrtypes.RctType.Bulletproof2]
 
     def is_error(self, response):
         """
@@ -306,7 +308,11 @@ class Agent(object):
         for idx in range(len(sources.outputs)):
             if idx == sources.real_output:
                 continue
-            sources.outputs[idx] = MoneroOutputEntry(idx=sources.outputs[idx].idx) if keep_idx else MoneroOutputEntry()
+            sources.outputs[idx] = (
+                MoneroOutputEntry(idx=sources.outputs[idx].idx)
+                if keep_idx
+                else MoneroOutputEntry()
+            )
         return sources
 
     async def sign_transaction_data(
@@ -432,9 +438,7 @@ class Agent(object):
 
         common.apply_permutation(self.ct.source_permutation, swapper)
 
-        msg = MoneroTransactionInputsPermutationRequest(
-            perm=self.ct.source_permutation
-        )
+        msg = MoneroTransactionInputsPermutationRequest(perm=self.ct.source_permutation)
         t_res = await self.trezor.tsx_sign(msg)
         self.handle_error(t_res)
 
@@ -465,7 +469,7 @@ class Agent(object):
             )  # type: MoneroTransactionSetOutputAck
             self.handle_error(t_res)
 
-            await self._on_set_outputs_ack(t_res)
+            await self._on_set_outputs_ack(idx, dst, t_res)
 
         t_res = await self.trezor.tsx_sign(
             MoneroTransactionAllOutSetRequest()
@@ -519,8 +523,8 @@ class Agent(object):
                 src_entr=tmisc.translate_monero_src_entry_pb(src),
                 vini=await tmisc.dump_msg(self.ct.tx.vin[idx], prefix=b"\x02"),
                 vini_hmac=self.ct.tx_in_hmacs[idx],
-                pseudo_out=self.ct.pseudo_outs[idx][0] if not in_memory else None,
-                pseudo_out_hmac=self.ct.pseudo_outs[idx][1] if not in_memory else None,
+                pseudo_out=self.ct.pseudo_outs[idx][0],
+                pseudo_out_hmac=self.ct.pseudo_outs[idx][1],
                 pseudo_out_alpha=self.ct.alphas[idx],
                 spend_key=self.ct.spend_encs[idx],
             )
@@ -528,6 +532,13 @@ class Agent(object):
                 msg
             )  # type: MoneroTransactionSignInputAck
             self.handle_error(t_res)
+
+            if self.client_version > 0 and t_res.pseudo_out:
+                self.ct.pseudo_outs[idx] = t_res.pseudo_out, self.ct.pseudo_outs[idx][1]
+                if self.is_bulletproof(rv):
+                    rv.p.pseudoOuts[idx] = t_res.pseudo_out
+                else:
+                    rv.pseudoOuts[idx] = t_res.pseudo_out
 
             mg = await tmisc.parse_msg(t_res.signature, xmrtypes.MgSig())
             rv.p.MGs.append(mg)
@@ -551,8 +562,9 @@ class Agent(object):
         return self.ct.tx
 
     async def _on_all_input_set(self, ack):
-        if not self._is_offloading():
+        if not self._is_offloading() or self.client_version > 0:
             return
+
         if ack.rsig_data is None:
             raise ValueError("Rsig offloading requires rsig param")
 
@@ -562,7 +574,7 @@ class Agent(object):
 
         mask = rsig_data.mask
         if len(mask) != self._num_outputs() * 32:
-            raise ValueError("Invalid number of masks")
+            raise ValueError("Invalid number of masks: %s" % len(mask))
 
         for i in range(len(mask) // 32):
             self.ct.rsig_gamma.append(mask[i * 32 : (i + 1) * 32])
@@ -577,14 +589,24 @@ class Agent(object):
         )
 
         # Range sig offloading to the host
-        if not self._is_offloading():
-            return msg
+        if self.client_version == 0 and self._is_offloading():
+            return await self._v0_offloading(idx, dst, msg)
 
+        return msg
+
+    async def _v0_offloading(self, idx, dst, msg):
+        offload_res = await self._rct_offload(idx, dst)
+        if offload_res:
+            msg.rsig_data = offload_res
+
+        return msg
+
+    async def _rct_offload(self, idx, dst):
         if (
             self.ct.rsig_batches[self.ct.cur_batch_idx]
             > self.ct.cur_output_in_batch_idx
         ):
-            return msg
+            return None
 
         rsig_data = MoneroTransactionRsigData()
         batch_size = self.ct.rsig_batches[self.ct.cur_batch_idx]
@@ -613,16 +635,25 @@ class Agent(object):
             self.ct.tx_out_rsigs.append(bp)
 
             rsig_data.rsig = await tmisc.dump_msg(bp)
-        msg.rsig_data = rsig_data
-        return msg
+        return rsig_data
 
-    async def _on_set_outputs_ack(self, t_res):
+    async def _on_set_outputs_ack(self, idx, dst, t_res):
         self.ct.tx.vout.append(await tmisc.parse_msg(t_res.tx_out, xmrtypes.TxOut()))
         self.ct.tx_out_hmacs.append(t_res.vouti_hmac)
         self.ct.tx_out_pk.append(await tmisc.parse_msg(t_res.out_pk, xmrtypes.CtKey()))
-        self.ct.tx_out_ecdh.append(
-            await tmisc.parse_msg(t_res.ecdh_info, xmrtypes.EcdhTuple())
-        )
+
+        # hf10 encodes only 8B amount
+        if self.hf == 9:
+            self.ct.tx_out_ecdh.append(
+                await tmisc.parse_msg(t_res.ecdh_info, xmrtypes.EcdhTuple())
+            )
+
+        else:
+            cur_ecdh = xmrtypes.EcdhTuple(
+                mask=crypto.NULL_KEY_ENC, amount=bytearray(crypto.NULL_KEY_ENC)
+            )
+            cur_ecdh.amount[0:8] = bytearray(t_res.ecdh_info)
+            self.ct.tx_out_ecdh.append(cur_ecdh)
 
         rsig_buff = None
         if t_res.rsig_data:
@@ -633,13 +664,32 @@ class Agent(object):
             elif tsig_data.rsig_parts and len(tsig_data.rsig_parts) > 0:
                 rsig_buff = b"".join(tsig_data.rsig_parts)
 
-        if rsig_buff and not self._is_req_bulletproof():
-            rsig = await tmisc.parse_msg(rsig_buff, xmrtypes.RangeSig())
-        elif rsig_buff:
-            rsig = await tmisc.parse_msg(rsig_buff, xmrtypes.Bulletproof())
-        else:
-            return
+            if self.client_version >= 1 and tsig_data.mask:
+                logger.info("MASK received")
+                self.ct.rsig_gamma.append(tsig_data.mask)
 
+        # Client1: send generated BP if offloading
+        if self.client_version >= 1 and self._is_offloading():
+            proc = await self._v1_offloading(idx, dst, t_res)
+            if not proc:
+                return  # no state advance
+
+        else:
+            rsig = None
+            if rsig_buff and not self._is_req_bulletproof():
+                rsig = await tmisc.parse_msg(rsig_buff, xmrtypes.RangeSig())
+            elif rsig_buff:
+                rsig = await tmisc.parse_msg(rsig_buff, xmrtypes.Bulletproof())
+            else:
+                return  # no state change
+
+            await self._out_proc_range_proof(rsig)
+
+        # batch state advance
+        self.ct.cur_batch_idx += 1
+        self.ct.cur_output_in_batch_idx = 0
+
+    async def _out_proc_range_proof(self, rsig):
         if self._is_req_bulletproof():
             rsig.V = []
             batch_size = self.ct.rsig_batches[self.ct.cur_batch_idx]
@@ -667,8 +717,22 @@ class Agent(object):
             logger.error("Exception rsig: %s" % e)
             traceback.print_exc()
 
-        self.ct.cur_batch_idx += 1
-        self.ct.cur_output_in_batch_idx = 0
+    async def _v1_offloading(self, idx, dst, t_res):
+        """
+        Client V2 range proof offloading.
+        Performs additional round trip
+        """
+        rsig_data = await self._rct_offload(idx, dst)
+        if not rsig_data:
+            return False
+
+        msg = MoneroTransactionSetOutputRequest(
+            rsig_data=rsig_data, is_offloaded_bp=True
+        )
+
+        t_res = await self.trezor.tsx_sign(msg)  # type: MoneroTransactionSetOutputAck
+        self.handle_error(t_res)
+        return True
 
     def last_transaction_data(self):
         """
@@ -744,8 +808,19 @@ class Agent(object):
 
         return final_res
 
-    async def _get_tx_key_intern(self, salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv, view_public_key=None, reason=0):
-        msg = MoneroGetTxKeyRequest(address_n=self.address_n, network_type=self.network_type)
+    async def _get_tx_key_intern(
+        self,
+        salt1,
+        salt2,
+        tx_enc_keys,
+        tx_prefix_hash,
+        view_key_priv,
+        view_public_key=None,
+        reason=0,
+    ):
+        msg = MoneroGetTxKeyRequest(
+            address_n=self.address_n, network_type=self.network_type
+        )
         msg.salt1 = salt1
         msg.salt2 = salt2
         msg.tx_enc_keys = tx_enc_keys
@@ -756,35 +831,49 @@ class Agent(object):
         self.handle_error(t_res)
 
         enc_key = self._compute_tx_key_host(view_key_priv, tx_prefix_hash, t_res.salt)
-        decr = chacha_poly.decrypt_pack(enc_key, t_res.tx_keys if reason == 0 else t_res.tx_derivations)
+        decr = chacha_poly.decrypt_pack(
+            enc_key, t_res.tx_keys if reason == 0 else t_res.tx_derivations
+        )
         if len(decr) % 32 != 0:
-            raise ValueError('Invalid length')
+            raise ValueError("Invalid length")
         return bytearray(decr)
 
-    async def get_tx_key(self, salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv):
-        decr = await self._get_tx_key_intern(salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv)
+    async def get_tx_key(
+        self, salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv
+    ):
+        decr = await self._get_tx_key_intern(
+            salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv
+        )
         n_keys = len(decr) // 32
         res = []
         for i in range(n_keys):
-            res.append(crypto.decodeint(decr[i*32:(i+1)*32]))
+            res.append(crypto.decodeint(decr[i * 32 : (i + 1) * 32]))
         return res
 
-    async def get_tx_deriv(self, salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv, view_key_pub):
-        decr = await self._get_tx_key_intern(salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv, view_key_pub, 1)
+    async def get_tx_deriv(
+        self, salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv, view_key_pub
+    ):
+        decr = await self._get_tx_key_intern(
+            salt1, salt2, tx_enc_keys, tx_prefix_hash, view_key_priv, view_key_pub, 1
+        )
         n_keys = len(decr) // 32
         res = []
         for i in range(n_keys):
-            res.append(crypto.decodepoint(decr[i*32:(i+1)*32]))
+            res.append(crypto.decodepoint(decr[i * 32 : (i + 1) * 32]))
         return res
 
     @staticmethod
     def _compute_tx_key_host(view_key_private, tx_prefix_hash, salt):
-        passwd = crypto.keccak_2hash(crypto.encodeint(view_key_private) + tx_prefix_hash)
+        passwd = crypto.keccak_2hash(
+            crypto.encodeint(view_key_private) + tx_prefix_hash
+        )
         tx_key = crypto.compute_hmac(salt, passwd)
         return tx_key
 
     async def live_refresh_start(self):
-        msg = MoneroLiveRefreshStartRequest(address_n=self.address_n, network_type=self.network_type)
+        msg = MoneroLiveRefreshStartRequest(
+            address_n=self.address_n, network_type=self.network_type
+        )
         t_res = await self.trezor.live_refresh(msg)
         self.handle_error(t_res)
 
@@ -792,8 +881,16 @@ class Agent(object):
         t_res = await self.trezor.live_refresh(MoneroLiveRefreshFinalRequest())
         self.handle_error(t_res)
 
-    async def live_refresh(self, view_key_private, out_key, recv_deriv, real_out_idx, major, minor):
-        msg = MoneroLiveRefreshStepRequest(out_key=out_key, recv_deriv=recv_deriv, real_out_idx=real_out_idx, sub_addr_major=major, sub_addr_minor=minor)
+    async def live_refresh(
+        self, view_key_private, out_key, recv_deriv, real_out_idx, major, minor
+    ):
+        msg = MoneroLiveRefreshStepRequest(
+            out_key=out_key,
+            recv_deriv=recv_deriv,
+            real_out_idx=real_out_idx,
+            sub_addr_major=major,
+            sub_addr_minor=minor,
+        )
         t_res = await self.trezor.live_refresh(msg)  # type: MoneroLiveRefreshStepAck
         self.handle_error(t_res)
 
@@ -804,7 +901,9 @@ class Agent(object):
         ki = crypto.decodepoint(ki_bin)
         sig = [[crypto.decodeint(decr[32:64]), crypto.decodeint(decr[64:])]]
 
-        if not ring_ct.check_ring_singature(ki_bin, ki, [crypto.decodepoint(out_key)], sig):
+        if not ring_ct.check_ring_singature(
+            ki_bin, ki, [crypto.decodepoint(out_key)], sig
+        ):
             raise ValueError("Invalid ring sig on KI")
 
         return ki
