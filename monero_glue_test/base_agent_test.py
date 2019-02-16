@@ -209,7 +209,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
 
         # Verify range proofs
         out_idx = 0
-        is_bp = tx_obj.rct_signatures.type in [RctType.SimpleBulletproof, RctType.FullBulletproof]
+        is_bp = tx_obj.rct_signatures.type in [RctType.Bulletproof, RctType.Bulletproof2]
         if not is_bp:
             for idx, rsig in enumerate(tx_obj.rct_signatures.p.rangeSigs):
                 out_pk = tx_obj.rct_signatures.outPk[idx]
@@ -339,22 +339,23 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
                     ), "Invalid txin"
                 )
 
+                # payment ID
+                payment_id = None
+                payment_id_type = None
+                extra_nonce = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraNonce)
+                if extra_nonce and monero.has_encrypted_payment_id(extra_nonce.nonce):
+                    payment_id_type = 1
+                    payment_id = monero.get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce.nonce)
+                    payment_id = monero.encrypt_payment_id(payment_id, crypto.decodepoint(tx_pub), creds.view_key_private)
+
+                elif extra_nonce and monero.has_payment_id(extra_nonce.nonce):
+                    payment_id_type = 0
+                    payment_id = monero.get_payment_id_from_tx_extra_nonce(extra_nonce.nonce)
+
                 if exp_payment_id is not None:
-                    payment_id = None
                     # Not checking payment id for change transaction
                     if exp_payment_id[0] == 1 and change_idx is not None and ti == change_idx:
                         continue
-
-                    payment_id_type = None
-                    extra_nonce = monero.find_tx_extra_field_by_type(extras, xmrtypes.TxExtraNonce)
-                    if extra_nonce and monero.has_encrypted_payment_id(extra_nonce.nonce):
-                        payment_id_type = 1
-                        payment_id = monero.get_encrypted_payment_id_from_tx_extra_nonce(extra_nonce.nonce)
-                        payment_id = monero.encrypt_payment_id(payment_id, crypto.decodepoint(tx_pub), creds.view_key_private)
-
-                    elif extra_nonce and monero.has_payment_id(extra_nonce.nonce):
-                        payment_id_type = 0
-                        payment_id = monero.get_payment_id_from_tx_extra_nonce(extra_nonce.nonce)
 
                     self.assertEqual(payment_id_type, exp_payment_id[0])
                     self.assertEqual(payment_id, exp_payment_id[1])
