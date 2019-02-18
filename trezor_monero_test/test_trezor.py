@@ -171,7 +171,7 @@ class TrezorTest(BaseAgentTest):
             if not last_test_ok:
                 print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! FAIL: %s' % last_test_name)
 
-            print('Testing[bp=%s]: %s' % (as_bulletproof, fl))
+            print('Testing[bp=%s,cl=%s,hf=%s]: %s' % (as_bulletproof, client_version, hf, fl))
             last_test_ok = False
             last_test_name = fl
 
