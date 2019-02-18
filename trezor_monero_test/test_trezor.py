@@ -140,13 +140,26 @@ class TrezorTest(BaseAgentTest):
 
         await self.agent.live_refresh_final()
 
-    async def test_transactions_bp(self):
-        await self.int_test_trezor_txs(as_bulletproof=True)
+    async def test_transactions_bp_c0_hf9(self):
+        await self.int_test_trezor_txs(as_bulletproof=True, client_version=0, hf=9)
+
+    async def test_transactions_bp_c1_hf9(self):
+        if not os.getenv('TREZOR_TEST_SIGN_CL1_HF9'):
+            self.skipTest('Tx Sign cl1 hf9 skipped')
+        await self.int_test_trezor_txs(as_bulletproof=True, client_version=1, hf=9)
+
+    async def test_transactions_bp_c1_hf10(self):
+        if not os.getenv('TREZOR_TEST_SIGN_CL1_HF10'):
+            self.skipTest('Tx Sign cl1 hf10 skipped')
+        await self.int_test_trezor_txs(as_bulletproof=True, client_version=1, hf=10)
 
     def get_testing_files(self):
         return self.get_trezor_tsx_tests()
 
-    async def int_test_trezor_txs(self, as_bulletproof=False, files=None):
+    async def int_test_trezor_txs(self, as_bulletproof=False, files=None, client_version=0, hf=9):
+        self.agent.client_version = client_version
+        self.agent.hf = hf
+
         files = self.get_testing_files() if not files else files
         creds = self.get_trezor_creds(0)
         all_creds = [self.get_trezor_creds(0), self.get_trezor_creds(1), self.get_trezor_creds(2)]

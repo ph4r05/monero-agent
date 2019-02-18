@@ -117,12 +117,22 @@ class AgentLiteTest(BaseAgentTest):
         self.skipTest('HP <= 8 not supported anymore')
         await self._int_test_trezor_txs()
 
-    async def test_trezor_txs_bp(self):
+    async def test_trezor_txs_bp_c0_hf9(self):
         if not crypto.get_backend().has_rangeproof_bulletproof():
             self.skipTest('Crypto backend does not support BPs')
-        await self._int_test_trezor_txs(as_bulletproof=True)
+        await self._int_test_trezor_txs(as_bulletproof=True, client_version=0, hf=9)
 
-    async def _int_test_trezor_txs(self, as_bulletproof=False):
+    async def test_trezor_txs_bp_c1_hf9(self):
+        if not crypto.get_backend().has_rangeproof_bulletproof():
+            self.skipTest('Crypto backend does not support BPs')
+        await self._int_test_trezor_txs(as_bulletproof=True, client_version=1, hf=9)
+
+    async def test_trezor_txs_bp_c1_hf10(self):
+        if not crypto.get_backend().has_rangeproof_bulletproof():
+            self.skipTest('Crypto backend does not support BPs')
+        await self._int_test_trezor_txs(as_bulletproof=True, client_version=1, hf=10)
+
+    async def _int_test_trezor_txs(self, as_bulletproof=False, client_version=0, hf=9):
         if os.getenv('SKIP_TREZOR_TSX', False):
             self.skipTest('Skipped by ENV var')
 
@@ -146,6 +156,8 @@ class AgentLiteTest(BaseAgentTest):
                         tx.use_bulletproofs = True
 
                 tagent = self.init_agent(creds=creds)
+                tagent.client_version = client_version
+                tagent.hf = hf
                 await self.tx_sign_test(tagent, unsigned_tx, creds, all_creds, fl)
 
     async def tx_sign_unsigned_msg(self, unsigned_tx, fl=None):
