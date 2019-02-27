@@ -309,13 +309,13 @@ class PackageDump:
         # mods = self.conn.get_mods()
         # print(mods)
 
-        if self.args.sizes:
+        if self.args.sizes and os.path.exists(self.args.sizes):
             self.load_package_sizes(json.load(open(self.args.sizes)))
 
         else:
             self.compute_pkg_sizes()
             csizes = [(to_pkg(k), self.sizes[k]) for k in self.sizes]
-            json.dump(sorted(csizes), open('/tmp/sizes.json', 'w+'), indent=2)
+            json.dump(sorted(csizes), open(self.args.sizes or '/tmp/sizes.json', 'w+'), indent=2)
 
         print(self.sizes)
 
@@ -345,7 +345,6 @@ class PackageDump:
 
         rsizes = [(to_pkg(k), self.self_size[k]) for k in self.self_size]
         json.dump(sorted(rsizes), open('/tmp/rsizes.json', 'w+'), indent=2)
-
 
     def read_config(self):
         for fl in self.args.files:
