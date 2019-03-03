@@ -68,12 +68,15 @@ class KeccakWrapper(object):
         return self.digest().encode("hex")
 
 
-def get_keccak():
+def get_keccak(*args, **kwargs):
     """
     Simple keccak 256
     :return:
     """
-    return KeccakWrapper()
+    k = KeccakWrapper()
+    if len(args) == 1:
+        k.update(args[0])
+    return k
 
 
 def keccak_hash(inp):

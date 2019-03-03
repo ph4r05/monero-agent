@@ -178,12 +178,15 @@ def random_bytes(by):
     return get_random_bytes(by)
 
 
-def get_keccak():
+def get_keccak(*args, **kwargs):
     """
     Simple keccak 256
     :return:
     """
-    return keccak2.Keccak256()
+    k = keccak2.Keccak256()
+    if len(args) == 1:
+        k.update(args[0])
+    return k
 
 
 def keccak_hash(inp):
