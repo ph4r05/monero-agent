@@ -53,7 +53,7 @@ class Trezor(token.TokenLite):
         self.client = (
             TrezorClientDebugLink(self.wirelink)
             if self.debug
-            else TrezorClient(self.wirelink, ui=ui.ClickUI)
+            else TrezorClient(self.wirelink, ui=ui.ClickUI())
         )
 
         # if self.debug:

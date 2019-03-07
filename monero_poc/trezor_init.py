@@ -68,9 +68,9 @@ def main():
     client = (
         TrezorClientDebugLink(wirelink)
         if debug_mode
-        else TrezorClient(wirelink, ui=ui.ClickUI)
+        else TrezorClient(wirelink, ui=ui.ClickUI())
     )
-    client.transport.session_begin()
+    #client.transport.session_begin()
 
     device.wipe(client)
     debuglink.load_device_by_mnemonic(
@@ -82,7 +82,7 @@ def main():
         language=args.language,
     )
 
-    client.transport.session_end()
+    #client.transport.session_end()
     client.close()
 
 
