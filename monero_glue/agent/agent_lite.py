@@ -153,7 +153,7 @@ class Agent(object):
         self.ct = None  # type: TData
         self.address_n = address_n if address_n else DEFAULT_MONERO_BIP44
         self.network_type = network_type
-        if slip0010 and 0 in address_n:
+        if slip0010 and address_n and 0 in address_n:
             raise ValueError("SLIP0010 cannto contain public derivation")
         if slip0010 and address_n is None:
             self.address_n = DEFAULT_MONERO_BIP44[:-2]
