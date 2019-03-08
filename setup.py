@@ -13,7 +13,7 @@ from distutils.errors import DistutilsError
 logger = logging.getLogger(__name__)
 
 
-version = "2.0.1"
+version = "2.0.2"
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
@@ -187,8 +187,7 @@ setup(
     url="https://github.com/ph4r05/monero-agent",
     author="Dusan Klinec",
     author_email="dusan.klinec@gmail.com",
-    license="CLOSED",
-    # license='MIT',
+    license='MIT',
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
