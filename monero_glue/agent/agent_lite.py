@@ -54,8 +54,6 @@ DEFAULT_MONERO_BIP44 = [
     0x8000002C,
     0x80000080,
     0x80000000,
-    0,
-    0,
 ]  # parse_path(monero.DEFAULT_BIP32_PATH)
 
 
@@ -147,16 +145,18 @@ class Agent(object):
     """
 
     def __init__(
-        self, trezor, address_n=None, network_type=None, slip0010=False, **kwargs
+        self, trezor, address_n=None, network_type=None, slip0010=True, **kwargs
     ):
         self.trezor = trezor
         self.ct = None  # type: TData
         self.address_n = address_n if address_n else DEFAULT_MONERO_BIP44
         self.network_type = network_type
-        if slip0010 and address_n and 0 in address_n:
+        if not slip0010:
+            raise ValueError('Non-SLIP0010 not supported anymore')
+        if address_n and 0 in address_n:
             raise ValueError("SLIP0010 cannto contain public derivation")
-        if slip0010 and address_n is None:
-            self.address_n = DEFAULT_MONERO_BIP44[:-2]
+        if address_n is None:
+            self.address_n = DEFAULT_MONERO_BIP44
 
         self.hf = 10
         self.client_version = 1

@@ -36,11 +36,30 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
             'chapter velvet useless topple',
         ]
 
-    def get_trezor_creds(self, idx):
-        sd = SeedDerivation.from_mnemonics(self.get_trezor_mnemonics()[idx])
+    def get_trezor_creds(self, idx, slip0010=True):
+        sd = SeedDerivation.from_mnemonics(self.get_trezor_mnemonics()[idx], slip0010=slip0010)
         return sd.creds(monero.NetworkTypes.TESTNET)
 
-    def get_creds(self):
+    def get_all_trezor_creds(self):
+        return [
+            self.get_trezor_creds(0),
+            self.get_trezor_creds(0, False),
+            self.get_trezor_creds(1),
+            self.get_trezor_creds(1, False),
+            self.get_trezor_creds(2),
+            self.get_trezor_creds(2, False)
+        ]
+
+    def get_all_creds(self):
+        return [
+            self.get_creds_old(),
+            self.get_creds_old2(),
+            self.get_creds(),
+            self.get_creds_01(),
+            self.get_creds_02()
+        ]
+
+    def get_creds_old(self):
         """
         Wallet credentials
         :return:
@@ -51,6 +70,36 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
             ),
             priv_spend_key=crypto.b16_to_scalar(
                 b"f2644a3dd97d43e87887e74d1691d52baa0614206ad1b0c239ff4aa3b501750a"
+            ),
+            network_type=monero.NetworkTypes.TESTNET,
+        )
+
+    def get_creds_old2(self):
+        """
+        Wallet credentials
+        :return:
+        """
+        return monero.AccountCreds.new_wallet(
+            priv_view_key=crypto.b16_to_scalar(
+                b"6b8a47bdc2bd9923b1684abdbbed56a4e834b101011e4c28585ae1d01281030d"
+            ),
+            priv_spend_key=crypto.b16_to_scalar(
+                b"85148a19717a505fe4fc84219a79c4b4fdc35772ecb03b71385dc6572845d809"
+            ),
+            network_type=monero.NetworkTypes.TESTNET,
+        )
+
+    def get_creds(self):
+        """
+        Wallet credentials
+        :return:
+        """
+        return monero.AccountCreds.new_wallet(  # slip0010
+            priv_view_key=crypto.b16_to_scalar(
+                b"a6ccd4ac344a295d1387f8d18c81bdd394f1845de84188e204514ef9370fd403"
+            ),
+            priv_spend_key=crypto.b16_to_scalar(
+                b"14821d0bc5659b24cafbc889dc4fc60785ee08b65d71c525f81eeaba4f3a570f"
             ),
             network_type=monero.NetworkTypes.TESTNET,
         )
@@ -294,6 +343,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
         outs = []
 
         change_idx = get_change_addr_idx(con_data.tsx_data.outputs, con_data.tsx_data.change_dts)
+        received_idxs = []
 
         for idx, creds in enumerate(all_creds):
             wallet_subs = {}
@@ -319,6 +369,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
                 if not tx_scan_info.received:
                     continue
 
+                received_idxs.append(ti)
                 num_received += 1
                 tx_scan_info = monero.scan_output(
                     creds, tx_obj, ti, tx_scan_info, tx_money_got_in_outs, outs, False
@@ -361,7 +412,7 @@ class BaseAgentTest(aiounittest.AsyncTestCase):
                     self.assertEqual(payment_id, exp_payment_id[1])
 
         # All outputs have to be successfully received
-        self.assertEqual(num_outs, num_received)
+        self.assertEqual(num_outs, num_received, 'Received only: %s' % received_idxs)
 
     def verify_tx_key(self, tx_priv, tx_pub, all_creds_subs):
         if crypto.point_eq(tx_pub, crypto.scalarmult_base(tx_priv)):

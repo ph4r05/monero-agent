@@ -162,7 +162,7 @@ class TrezorTest(BaseAgentTest):
 
         files = self.get_testing_files() if not files else files
         creds = self.get_trezor_creds(0)
-        all_creds = [self.get_trezor_creds(0), self.get_trezor_creds(1), self.get_trezor_creds(2)]
+        all_creds = self.get_all_trezor_creds()
 
         last_test_ok = True
         last_test_name = None

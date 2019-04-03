@@ -138,10 +138,10 @@ class AgentLiteTest(BaseAgentTest):
 
         files = self.get_trezor_tsx_tests()
         creds = self.get_trezor_creds(0)
-        all_creds = [self.get_trezor_creds(0), self.get_trezor_creds(1), self.get_trezor_creds(2)]
+        all_creds = self.get_all_trezor_creds()
 
         if not os.getenv('FORCE_ALL_TESTS', False) and not crypto.get_backend().is_fast():
-            files = files[0 : 3]
+            files = files[0:3]
 
         for fl in files:
             with self.subTest(msg=fl):
@@ -169,8 +169,7 @@ class AgentLiteTest(BaseAgentTest):
         """
         self.skipTest('HP <= 8 not supported anymore')
         tagent = self.init_agent()
-        await self.tx_sign_test(tagent, unsigned_tx, self.get_creds(),
-                                [self.get_creds(), self.get_creds_01(), self.get_creds_02()], fl)
+        await self.tx_sign_test(tagent, unsigned_tx, self.get_creds(), self.get_all_creds(), fl)
 
     def _get_bc_ver(self):
         """
@@ -225,8 +224,7 @@ class AgentLiteTest(BaseAgentTest):
         await ar.message(pending)
 
         tagent = self.init_agent()
-        await self.tx_sign_test(tagent, pending.construction_data, self.get_creds(),
-                                [self.get_creds(), self.get_creds_01(), self.get_creds_02()], fl, sign_tx=True)
+        await self.tx_sign_test(tagent, pending.construction_data, self.get_creds(), self.get_all_creds(), fl, sign_tx=True)
 
     def init_trezor(self, creds=None):
         """

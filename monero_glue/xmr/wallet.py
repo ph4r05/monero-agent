@@ -66,6 +66,13 @@ class ExportedOutputs(xmrserialize.ContainerType):
     ELEM_TYPE = xmrtypes.TransferDetails
 
 
+class ExportedOutputsV4(xmrserialize.TupleType):
+    BOOST_VERSION = 0
+    MFIELDS = [
+        xmrserialize.SizeT, ExportedOutputs,
+    ]
+
+
 class OutputsDump(object):
     def __init__(self, **kwargs):
         self.m_spend_public_key = kwargs.get("m_spend_public_key", None)
@@ -175,11 +182,12 @@ async def gen_keys_file(password, wkeyfile):
     return bytes(writer.get_buffer())
 
 
-async def load_unsigned_tx(priv_key, data):
+async def load_unsigned_tx(priv_key, data, hf=9):
     """
     Loads unsigned transaction from the encrypted file
     :param priv_key:
     :param data:
+    :param hf:
     :return:
     """
     magic_len = len(UNSIGNED_TX_PREFIX)
@@ -195,7 +203,7 @@ async def load_unsigned_tx(priv_key, data):
     tx_uns_ser = chacha.decrypt_xmr(priv_key, data, authenticated=True)
 
     reader = xmrserialize.MemoryReaderWriter(bytearray(tx_uns_ser))
-    ar = xmrboost.Archive(reader, False)
+    ar = xmrboost.Archive(reader, False, xmrtypes.hf_versions(hf))
 
     msg = xmrtypes.UnsignedTxSet()
     await ar.root()
@@ -203,15 +211,16 @@ async def load_unsigned_tx(priv_key, data):
     return msg
 
 
-async def dump_unsigned_tx(priv_key, unsigned_tx):
+async def dump_unsigned_tx(priv_key, unsigned_tx, hf=9):
     """
     Dumps unsigned transaction
     :param priv_key:
     :param unsigned_tx:
+    :param hf:
     :return:
     """
     writer = xmrserialize.MemoryReaderWriter()
-    ar = xmrboost.Archive(writer, True)
+    ar = xmrboost.Archive(writer, True, xmrtypes.hf_versions(hf))
     await ar.root()
     await ar.message(unsigned_tx)
 
@@ -293,8 +302,9 @@ async def load_exported_outputs(priv_key, data):
 
     if magic != OUTPUTS_PREFIX[:-1]:
         raise ValueError("Invalid file header")
-    if version != 3:
-        raise ValueError("Exported outputs v3 is supported only")
+    if version not in [3, 4]:
+        raise ValueError("Exported outputs v3, v4 are supported only")
+    msg_to_parse = ExportedOutputsV4 if version == 4 else ExportedOutputs
 
     data_dec = chacha.decrypt_xmr(priv_key, data, authenticated=True)
 
@@ -306,11 +316,34 @@ async def load_exported_outputs(priv_key, data):
     ar = xmrboost.Archive(reader, False)
 
     await ar.root()
-    exps = await ar.container(container_type=ExportedOutputs)
+    if version == 3:
+        exps = await ar.container(container_type=ExportedOutputs)
+    elif version == 4:
+        exps_root = await ar.tuple(elem_type=ExportedOutputsV4)
+        exps = exps_root[1]
+        if exps_root[0] != 0:
+            raise ValueError('Offset has to be 0')
 
     return OutputsDump(
         m_spend_public_key=spend_pub, m_view_public_key=view_pub, tds=exps
     )
+
+
+async def save_exported_outputs(priv_spend, priv_view, transfers):
+    writer = xmrserialize.MemoryReaderWriter()
+    ar = xmrboost.Archive(writer, True)
+
+    await ar.root()
+    await ar.container(transfers, container_type=ExportedOutputs)
+    trans_bin = writer.get_buffer()
+
+    buff_dec = bytearray()
+    buff_dec += crypto.encodepoint(crypto.scalarmult_base(priv_spend))
+    buff_dec += crypto.encodepoint(crypto.scalarmult_base(priv_view))
+    buff_dec += trans_bin
+
+    data_enc = chacha.encrypt_xmr(priv_view, buff_dec, authenticated=True)
+    return bytearray(bytes(OUTPUTS_PREFIX) + data_enc)
 
 
 class Wallet(object):
