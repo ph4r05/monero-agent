@@ -275,13 +275,29 @@ class TestGen(object):
         out_txs2 = await self.reformat_outs(tx.splitted_dsts)
         change_dts = await self.reformat_out(tx.change_dts) if tx.change_dts else None
         change_idx = addr.get_change_addr_idx(out_txs2, change_dts)
+
         if change_idx is None:
+            logger.warning('Change address not found in outputs, dts: %s' % (change_dts, ))
+            for ii in out_txs2:
+                logger.warning('Out: %s' % ii)
+
+            # Find addr that matches and adapt value in change dst
+            for idx, ii in enumerate(out_txs2):
+                if addr.addr_eq(change_dts.addr, ii.addr):
+                    logger.info('Found surrogate change addr: [%s] %s' % (idx, ii))
+                    change_dts.amount = ii.amount
+                    change_idx = idx
+                    break
+
+        if change_idx is None:
+            logger.warning('Could not fix change addr')
             return
 
         logger.debug("Change addr adjust @idx: %s" % change_idx)
         change_addr = await self.primary_change_address(
             self.dest_keys, self.dest_sub_major
         )
+        tx.change_dts.amount = change_dts.amount
         tx.change_dts.addr.m_spend_public_key = change_addr.spend_public_key
         tx.change_dts.addr.m_view_public_key = change_addr.view_public_key
 
