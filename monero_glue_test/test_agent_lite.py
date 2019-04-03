@@ -80,6 +80,7 @@ class AgentLiteTest(BaseAgentTest):
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
+        self.skipTest('Boost test skipped, wallet regeneration needed (SLIP-0010 change)')
         unsigned_tx_c = self.get_data_file("tsx_uns_enc01.txt")
         creds = self.get_creds()
         unsigned_tx = await wallet.load_unsigned_tx(
@@ -92,6 +93,7 @@ class AgentLiteTest(BaseAgentTest):
         Testing tx signature, one input. full RCT, boost serialized
         :return:
         """
+        self.skipTest('Boost test skipped, wallet regeneration needed (SLIP-0010 change)')
         unsigned_tx_c = self.get_data_file("tsx_uns_enc02.txt")
         creds = self.get_creds()
         unsigned_tx = await wallet.load_unsigned_tx(
