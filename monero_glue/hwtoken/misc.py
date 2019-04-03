@@ -49,6 +49,14 @@ class StdObj(object):
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
 
+    def __repr__(self):
+        d = {}
+        for key, value in self.__dict__.items():
+            if value is None or value == []:
+                continue
+            d[key] = value
+        return "<%s: %s>" % (self.__class__.__name__, d)
+
 
 def compute_tx_key(spend_key_private, tx_prefix_hash, salt=None, rand_mult=None):
     if not salt:
