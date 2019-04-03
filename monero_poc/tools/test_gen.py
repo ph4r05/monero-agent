@@ -167,7 +167,7 @@ class TestGen(object):
         return out_txs2
 
     async def describe(self, inp, unsigned_txs, keys, key_subs):
-        print("\nInp: %s, #txs: %s" % (inp, len(unsigned_txs.txes)))
+        print("\nInp: %s, #txs: %s, #transfers: %s" % (inp, len(unsigned_txs.txes), len(unsigned_txs.transfers)))
         for txid, tx in enumerate(unsigned_txs.txes):
             srcs = tx.sources
             dsts = tx.splitted_dsts
@@ -278,6 +278,7 @@ class TestGen(object):
         if change_idx is None:
             return
 
+        logger.debug("Change addr adjust @idx: %s" % change_idx)
         change_addr = await self.primary_change_address(
             self.dest_keys, self.dest_sub_major
         )
@@ -385,7 +386,7 @@ class TestGen(object):
             if self.args.inputs:
                 await self.amplify_inputs(tx, self.dest_keys, self.dest_subs)
 
-            if tx.change_dts and tx.subaddr_account != self.dest_sub_major:
+            if tx.change_dts and (tx.subaddr_account != self.dest_sub_major) or (self.dest_keys != self.cur_keys):
                 await self.adjust_change(tx)
 
             tx.subaddr_account = self.dest_sub_major
