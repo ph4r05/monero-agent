@@ -2,20 +2,13 @@
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
 
-import binascii
 import os
-import unittest
-import zlib
 import time
 
-import pkg_resources
-from monero_serialize import xmrboost, xmrserialize, xmrtypes
 from trezorlib import debuglink, device
 
 from monero_glue.agent import agent_lite
-from monero_glue.hwtoken import token
 from monero_glue.xmr import crypto, monero, wallet
-from monero_glue.xmr.sub.seed import SeedDerivation
 from monero_glue_test.base_agent_test import BaseAgentTest
 from monero_glue.trezor import manager as tmanager
 
@@ -35,7 +28,7 @@ class TrezorTest(BaseAgentTest):
     def reinit_trezor(self):
         self.deinit()
         path = self.get_trezor_path()
-        is_debug = False  #not int(os.getenv('TREZOR_NDEBUG', 0))
+        is_debug = not int(os.getenv('TREZOR_TEST_INTERACTIVE', '1'))
         self.creds = self.get_trezor_creds(0)
         self.trezor_proxy = tmanager.Trezor(path=path, debug=is_debug)
         self.agent = agent_lite.Agent(self.trezor_proxy, network_type=monero.NetworkTypes.TESTNET)
