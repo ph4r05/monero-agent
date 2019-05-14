@@ -6,6 +6,7 @@ import binascii
 import os
 import unittest
 import zlib
+import time
 
 import pkg_resources
 from monero_serialize import xmrboost, xmrserialize, xmrtypes
@@ -34,7 +35,7 @@ class TrezorTest(BaseAgentTest):
     def reinit_trezor(self):
         self.deinit()
         path = self.get_trezor_path()
-        is_debug = not int(os.getenv('TREZOR_NDEBUG', 0))
+        is_debug = False  #not int(os.getenv('TREZOR_NDEBUG', 0))
         self.creds = self.get_trezor_creds(0)
         self.trezor_proxy = tmanager.Trezor(path=path, debug=is_debug)
         self.agent = agent_lite.Agent(self.trezor_proxy, network_type=monero.NetworkTypes.TESTNET)
@@ -67,18 +68,25 @@ class TrezorTest(BaseAgentTest):
         self.deinit()
         super().tearDown()
 
+    def should_test_only_tx(self):
+        env_test = os.getenv('TREZOR_TEST_ONLY_TX')
+        if env_test:
+            return int(env_test)
+        else:
+            return self.test_only_tsx
+
     async def test_ping(self):
         await self.trezor_proxy.ping()
 
     async def test_get_address(self):
-        if self.test_only_tsx:
+        if self.should_test_only_tx():
             self.skipTest("Get address skipped")
         res = await self.agent.get_address()
         self.assertIsNotNone(res)
         self.assertEqual(res.address, self.creds.address)
 
     async def test_get_watch(self):
-        if self.test_only_tsx:
+        if self.should_test_only_tx():
             self.skipTest("Get watch skipped")
         res = await self.agent.get_watch_only()
         self.assertIsNotNone(res)
@@ -86,7 +94,7 @@ class TrezorTest(BaseAgentTest):
         self.assertEqual(res.address, self.creds.address)
 
     async def test_ki_sync(self):
-        if self.test_only_tsx:
+        if self.should_test_only_tx():
             self.skipTest("KI sync skipped")
         ki_data = self.get_data_file("ki_sync_01.txt")
         ki_loaded = await wallet.load_exported_outputs(
@@ -99,12 +107,12 @@ class TrezorTest(BaseAgentTest):
         await self.verify_ki_export(res, ki_loaded)
 
     async def test_live_refresh(self):
-        if not os.getenv("TREZOR_TEST_LIVE_REFRESH"):
+        if self.should_test_only_tx() or not int(os.getenv("TREZOR_TEST_LIVE_REFRESH", '0')):
             self.skipTest("Live refresh skipped")
 
         creds = self.get_trezor_creds(0)
         await self.agent.live_refresh_start()
-        for att in range(5):
+        for att in range(22):
             r = crypto.random_scalar()
             R = crypto.scalarmult_base(r)
             D = crypto.scalarmult(R, creds.view_key_private)
@@ -137,24 +145,34 @@ class TrezorTest(BaseAgentTest):
 
             if not crypto.point_eq(ki, ki2):
                 raise ValueError("Key image inconsistent")
-
+            time.sleep(0.1)
         await self.agent.live_refresh_final()
 
     async def test_transactions_bp_c0_hf9(self):
+        if not int(os.getenv('TREZOR_TEST_SIGN_CL0_HF9', '0')):
+            self.skipTest('Tx Sign cl1 hf9 skipped')
         await self.int_test_trezor_txs(as_bulletproof=True, client_version=0, hf=9)
 
-    async def test_transactions_bp_c1_hf9(self):
-        if not os.getenv('TREZOR_TEST_SIGN_CL1_HF9'):
+    async def xtest_transactions_bp_c1_hf9(self):
+        if not int(os.getenv('TREZOR_TEST_SIGN_CL1_HF9', '0')):
             self.skipTest('Tx Sign cl1 hf9 skipped')
         await self.int_test_trezor_txs(as_bulletproof=True, client_version=1, hf=9)
 
     async def test_transactions_bp_c1_hf10(self):
-        if not os.getenv('TREZOR_TEST_SIGN_CL1_HF10'):
+        if not int(os.getenv('TREZOR_TEST_SIGN_CL1_HF10', '1')):
             self.skipTest('Tx Sign cl1 hf10 skipped')
         await self.int_test_trezor_txs(as_bulletproof=True, client_version=1, hf=10)
 
     def get_testing_files(self):
-        return self.get_trezor_tsx_tests()
+        fl = self.get_trezor_tsx_tests()
+        env_num = os.getenv('TREZOR_TEST_NUM_TX')
+        if env_num:
+            try:
+                env_num = int(env_num)
+                return fl[:env_num]
+            except Exception as e:
+                pass
+        return fl
 
     async def int_test_trezor_txs(self, as_bulletproof=False, files=None, client_version=0, hf=9):
         self.agent.client_version = client_version
