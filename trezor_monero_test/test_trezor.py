@@ -28,7 +28,7 @@ class TrezorTest(BaseAgentTest):
     def reinit_trezor(self):
         self.deinit()
         path = self.get_trezor_path()
-        is_debug = not int(os.getenv('TREZOR_TEST_INTERACTIVE', '1'))
+        is_debug = not int(os.getenv('TREZOR_TEST_INTERACTIVE', '0'))
         self.creds = self.get_trezor_creds(0)
         self.trezor_proxy = tmanager.Trezor(path=path, debug=is_debug)
         self.agent = agent_lite.Agent(self.trezor_proxy, network_type=monero.NetworkTypes.TESTNET)
