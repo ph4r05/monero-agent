@@ -15,14 +15,6 @@ The repo provides integration tests for Trezor wallet transaction signing.
 - PR adding Monero support to the Trezor hardware wallet (client side of the signing protocol): https://github.com/trezor/trezor-core/pull/293
 - PR adding Trezor hardware support to official Monero codebase: https://github.com/monero-project/monero/pull/4241
 
-## Work in progress
-
-This work is still in progress.
-
-The pure python EC crypto operations are not constant-time as it serves mainly as PoC at the moment.
-The code supports also [trezor-crypto] crypto backend which is fast and constant-time.
-
-Moreover, the code will probably be subject to a major refactoring and cleaning.
 
 ## Supported features
 
@@ -76,6 +68,11 @@ These versions are not optimized for usage in HW environment.
 
 Optimized versions are `agent_lite.py` and `trezor_lite.py`.
 
+Currently, the agent functionality is used just for testing and as a PoC. 
+The Trezor support has been integrated to the official 
+Monero [CLI](https://github.com/monero-project/monero) and 
+[GUI](https://github.com/monero-project/monero-gui) wallets.
+
 ## Serialize lib
 
 The project depends on my `monero-serialize` library.
@@ -86,7 +83,7 @@ https://github.com/ph4r05/monero-serialize
 
 ## Crypto
 
-Monero uses Ed25519 elliptic curve. The current implementation is not optimized to avoid side-channel leaks (e.g., timing)
+Monero uses Ed25519 elliptic curve. The pure-python implementation is not optimized to avoid side-channel leaks (e.g., timing)
 as it serves mainly as PoC.
 
 The project uses Ed25519 implementation which
@@ -103,12 +100,30 @@ for scalar operations such as addition, division, comparison use the `crypto.sc_
 
 ## Trezor-crypto
 
-A new crypto backend was added, `trezor-crypto`.
-I implemented missing cryptographic algorithms to the [trezor-crypto], branch `lib` (abbrev. TCRY).
-Compiled shared library `libtrezor-crypto.so` can be used instead of the Python crypto backend.
+Additionally to pure-python crypto backend, there is a production-ready `trezor-crypto` backend.
+I implemented required Monero-related cryptographic algorithms to the [trezor-crypto] (TCRY).
 TCRY implements constant-time curve operations, uses [libsodium] to generate random values.
-
 Borromean Range proof was reimplemented in C for CPU and memory efficiency.
+
+I created a python binding [py-trezor-crypto] which can be installed from pip. The pip builds [trezor-crypto]
+library. Please refer to the readme of the [py-trezor-crypto] for installation details (dependencies).
+
+To install python bindings with agent run:
+
+```bash
+pip install -U --no-cache 'monero_agent[tcry]'
+
+# Or laternativelly
+pip install -U --no-cache py_trezor_crypto_ph4 
+```
+
+Dependencies:
+
+- libsodium
+- pkg-config
+- gcc
+- python-dev
+
 
 Travis tests with both crypto backends. In order to test with TCRY install all its dependencies. `libsodium` is the only one
 dependency for the shared lib. For more info take a look at `travis-install-libtrezor-crypto.sh`.
@@ -139,16 +154,15 @@ Ran 68 tests in 84.057s
 OK
 ```
 
-UPDATE: I created a python binding [py-trezor-crypto] which can be installed from pip. The pip builds [trezor-crypto]
-library. Please refer to the readme of the [py-trezor-crypto] for installation details (dependencies).
-
-To install python bindings with agent run:
+## Testing with Trezor
 
 ```bash
-pip install 'monero_agent[tcry]'
-```
+pip3 install -U --no-cache monero-agent py_trezor_crypto_ph4 
+python3 -m unittest trezor_monero_test.test_trezor
 
-Libsodium, pkg-config, gcc, python-dev are required for the installation.
+# To test only one transaction:
+TREZOR_TEST_ONLY_TX=1 TREZOR_TEST_NUM_TX=1 python3 -m unittest trezor_monero_test.test_trezor.py
+```
 
 ## More on using the repo
 
