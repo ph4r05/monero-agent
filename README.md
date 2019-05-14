@@ -161,7 +161,12 @@ pip3 install -U --no-cache monero-agent py_trezor_crypto_ph4
 python3 -m unittest trezor_monero_test.test_trezor
 
 # To test only one transaction:
-TREZOR_TEST_ONLY_TX=1 TREZOR_TEST_NUM_TX=1 python3 -m unittest trezor_monero_test.test_trezor.py
+TREZOR_TEST_ONLY_TX=1 TREZOR_TEST_NUM_TX=1 python3 -m unittest trezor_monero_test.test_trezor
+
+# To test with interactive Trezor prompts:
+TREZOR_TEST_INTERACTIVE=1 TREZOR_TEST_ONLY_TX=1 TREZOR_TEST_NUM_TX=1 python3 -m unittest trezor_monero_test.test_trezor
+
+# Note: if testing with local py files, use trezor_monero_test/test_trezor.py
 ```
 
 ## More on using the repo
