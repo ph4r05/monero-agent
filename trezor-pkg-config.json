@@ -1,0 +1,20 @@
+{
+  "paths": [
+    {
+      "path": "core/src"
+    },
+    {
+      "path": "core/mocks",
+      "depth": 1
+    },
+    {
+      "path": "core/mocks/generated"
+    }
+  ],
+
+  "packages": [
+    {"full":  "trezor.config"},
+    {"full":  "trezor.ui"},
+    {"full":  "trezor.utils"}
+  ]
+}

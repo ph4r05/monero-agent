@@ -3,9 +3,12 @@ Measures package memory sizes.
 
 ## Usage
 python monero_poc/tools/package_dump.py \
-    --config monero_poc/tools/trezor.json \
+    --config trezor-pkg-config.json \
     --size /tmp/psizes.json \
     --root-dir ~/workspace/trezor-firmware
+
+If package deps rendering is not desired (takes some time),
+add options --no-graphviz --no-render
 
 ## Requirements
 pip install -U networkx matplotlib graphviz coloredlogs trezor monero-agent
