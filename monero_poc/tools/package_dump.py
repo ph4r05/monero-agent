@@ -8,7 +8,7 @@ python monero_poc/tools/package_dump.py \
     --root-dir ~/workspace/trezor-firmware
 
 ## Requirements
-pip install -U networkx matplotlib graphviz coloredlogs
+pip install -U networkx matplotlib graphviz coloredlogs trezor monero-agent
 """
 
 import ast
@@ -29,7 +29,6 @@ import threading
 import coloredlogs
 
 import networkx as nx
-from graphviz import Digraph
 
 import matplotlib
 matplotlib.use('PS')  # https://github.com/scikit-optimize/scikit-optimize/issues/637
@@ -160,7 +159,7 @@ class ImportStatement:
         im = []
         if self.module:
             im += self.module.split('.')
-        im += [self.name]
+        im += self.name.split('.')
 
         if self.src is None:
             return im
@@ -327,11 +326,14 @@ class PackageDump:
         print('-'*100)
         print('-'*100)
 
+        # Connect to trezor and determine package sizes
         self.conn.connect()
+
         # mods = self.conn.get_mods()
         # print(mods)
 
-        if self.args.sizes and os.path.exists(self.args.sizes):
+        if self.args.sizes and os.path.exists(self.args.sizes) and not self.args.recompute_sizes:
+            logger.info('Loading package sizes from cache (no measurement)')
             self.load_package_sizes(json.load(open(self.args.sizes)))
 
         else:
@@ -339,18 +341,23 @@ class PackageDump:
             csizes = [(to_pkg(k), self.sizes[k]) for k in self.sizes]
             json.dump(sorted(csizes), open(self.args.sizes or '/tmp/sizes.json', 'w+'), indent=2)
 
-        print(self.sizes)
+        print(json.dumps([(to_pkg(k), self.sizes[k]) for k in self.sizes], indent=2))
 
         # msg = DebugMoneroDiagRequest(ins=10, p1=0, p2=0)
         # r = self.conn.diag(msg)
         # logger.info("DONE")
         # print(r)
 
-        # Self sizes computation
+        # Self-sizes computation (size of the package minus dependencies)
+        self.self_size_computation()
+
+    def self_size_computation(self):
         for cp in self.topo_order:
             cpt = to_tup(cp)
             if cpt not in self.sizes:
-                logger.info('Could not resolve size: %s' % cp)
+                # If the import imports a method/object from the module the size of the import
+                # cannot be computed, the module is imported as a whole.
+                logger.info('Could not resolve size: %s (maybe object import?)' % to_pkg(cpt))
                 continue
 
             dep_size = 0
@@ -386,6 +393,7 @@ class PackageDump:
             if 'packages' in js:
                 self.import_packages([x['full'] for x in js['packages']])
 
+        self.sizes[('typing',)] = 0  # manual set as typing is not used in production micropython
         logger.info('Loaded paths: %s' % self.paths)
 
     def read_paths(self):
@@ -397,9 +405,7 @@ class PackageDump:
             if c.path == '-':
                 data = sys.stdin.read()
             elif not c.is_dir:
-                print(c)
-                print(c.path)
-                data = open(self.fix_path(c.path)).read()
+                data = open(c.path).read()
             else:
                 as_dir = True
 
@@ -414,12 +420,15 @@ class PackageDump:
                 cdepth = (subdir.count('/') + 1) if subdir else 0
                 if c.alias:
                     pkg = c.alias + pkg
-                logger.debug('%s | sub=%s | d=%s | pkg=%s' % (c.path, subdir, cdepth, pkg))
+
+                if c.depth is not None and cdepth >= c.depth:
+                    continue
 
                 if subdir in c.exclude:
                     logger.debug('Excluded: %s' % subdir)
                     continue
 
+                logger.debug('%s | sub=%s | d=%s | pkg=%s' % (c.path, subdir, cdepth, pkg))
                 for fl in files:
                     full_path = os.path.join(root, fl)
                     is_main_pkg = fl == '__init__.py'
@@ -454,10 +463,12 @@ class PackageDump:
         return ImportStatement.from_package(root_pkg, src=src)
 
     def process_deps(self, proc_files):
+        logger.info('Processing deps...')
         for pf in proc_files:  # type: ProcFile
             try:
                 pf_imp = tuple(pf.full_import())
-                logger.debug('Processing: %s' % ('.'.join(pf_imp)))
+                pf_str = '.'.join(pf_imp)
+                logger.debug('Processing: %s' % pf_str)
 
                 self.imports[pf_imp] = []
 
@@ -471,11 +482,13 @@ class PackageDump:
                     pk = self.find_package(ifull)
                     imp.root_pkg = pk
                     self.imports[pf_imp].append(imp)
+                    # logger.debug('  .. %s' % imp)
 
             except Exception as e:
                 logger.warning('Parsing error: %s, fl: %s' % (e, pf.path))
 
     def compute_pkg_sizes(self):
+        logger.info('Computing package sizes...')
         for p in self.packages:
             p = list(p)
             if not p:
@@ -497,8 +510,11 @@ class PackageDump:
             self.sizes[pkg] = max(0, r[1])
 
     def compute_graphs(self):
-        self.G2 = Digraph(comment='Deps graph')
         self.G = nx.DiGraph()
+
+        if not self.args.no_graphviz:
+            from graphviz import Digraph
+            self.G2 = Digraph(comment='Deps graph')
 
         edges = set()
         seen = set()
@@ -519,18 +535,21 @@ class PackageDump:
             logger.debug('  %s | %s' % (cur.root_pkg, len(queue)))
 
             self.G.add_node(to_pkg(cur.root_pkg))
-            self.G2.node(to_pkg(cur.root_pkg), to_pkg(cur.root_pkg))
+            if self.G2:
+                self.G2.node(to_pkg(cur.root_pkg), to_pkg(cur.root_pkg))
             self.layers.append((cur.root_pkg, depth))
 
             if src:
-                self.G2.node(to_pkg(src), to_pkg(src))
+                if self.G2:
+                    self.G2.node(to_pkg(src), to_pkg(src))
                 self.G.add_node(to_pkg(src))
 
                 ce = to_pkg(src), to_pkg(cur.root_pkg)
                 rev = to_pkg(cur.root_pkg), to_pkg(src)  # cycle prot, simple
                 if ce not in edges and rev not in edges:
                     self.G.add_edge(to_pkg(src), to_pkg(cur.root_pkg))
-                    self.G2.edge(to_pkg(src), to_pkg(cur.root_pkg))
+                    if self.G2:
+                        self.G2.edge(to_pkg(src), to_pkg(cur.root_pkg))
                     edges.add(ce)
 
             if cur.root_pkg in seen:
@@ -560,7 +579,7 @@ class PackageDump:
             if not cycle:
                 break
 
-            logger.info('Cycle found: %s' % cycle)
+            logger.warning('Cycle found: %s' % cycle)
             edge_removed = False
             for edge in cycle:
                 if edge[0].startswith('trezor') and edge[1].startswith('apps'):
@@ -589,6 +608,9 @@ class PackageDump:
         #     ng.remove_nodes_from(leaves)
 
     def plot_deps(self):
+        if self.args.no_render:
+            return
+        logger.info('Rendering deps...')
         # print('-' * 100)
         # print(self.imports[('apps', 'monero', 'xmr', 'bulletproof')])
         # for x in self.imports[('trezor', 'ui', 'passphrase')]:
@@ -608,8 +630,15 @@ class PackageDump:
         plt.savefig("/tmp/deps.png", dpi=400)
         # plt.show()
 
-        # G2.engine = 'neato'
-        self.G2.render('/tmp/round-table.gv', view=True)
+        if not self.G2:
+            return
+
+        try:
+            logger.info('Graphviz rendering...')
+            # G2.engine = 'neato'
+            self.G2.render('/tmp/package-deps.pdf', view=False)
+        except Exception as e:
+            logger.exception('Could not render Graphviz', exc_info=e)
 
     async def main(self):
         parser = argparse.ArgumentParser(
@@ -636,6 +665,33 @@ class PackageDump:
             dest="sizes",
             default=None,
             help="JSON package sizes file (output/cache)"
+        )
+
+        parser.add_argument(
+            "--no-render",
+            dest="no_render",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Disables graph rendering (faster run)"
+        )
+
+        parser.add_argument(
+            "--no-graphviz",
+            dest="no_graphviz",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Disables graphviz support"
+        )
+
+        parser.add_argument(
+            "--recompute-sizes",
+            dest="recompute_sizes",
+            default=False,
+            action='store_const',
+            const=True,
+            help="Forces package sizes recomputation even if size JSON cache is provided (Trezor measurement)"
         )
 
         parser.add_argument(
