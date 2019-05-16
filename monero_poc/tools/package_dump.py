@@ -1,3 +1,16 @@
+"""
+Measures package memory sizes.
+
+## Usage
+python monero_poc/tools/package_dump.py \
+    --config monero_poc/tools/trezor.json \
+    --size /tmp/psizes.json \
+    --root-dir ~/workspace/trezor-firmware
+
+## Requirements
+pip install -U networkx matplotlib graphviz coloredlogs
+"""
+
 import ast
 import argparse
 import asyncio
@@ -13,20 +26,24 @@ import time
 import re
 import itertools
 import threading
+import coloredlogs
 
 import networkx as nx
-import matplotlib.pyplot as plt
 from graphviz import Digraph
 
+import matplotlib
+matplotlib.use('PS')  # https://github.com/scikit-optimize/scikit-optimize/issues/637
+import matplotlib.pyplot as plt
 
-import coloredlogs
 from monero_glue.messages import DebugMoneroDiagRequest
+
 
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
 coloredlogs.install(level=logging.DEBUG, use_chroot=False)
 
 
+# System-provided packages
 PACKAGES = [
     "array",
     "cmath",
@@ -40,6 +57,7 @@ PACKAGES = [
     "struct",
     "sys",
     "time",
+    "typing",
     "ubinascii",
     "ucollections",
     "uerrno",
@@ -77,6 +95,7 @@ def to_tup(pkg):
 
 
 def mylay(shells):
+    """Custom graph layout"""
     res = {}
     for lvl, sh in enumerate(shells):
         ch = 1000 / (len(sh)+1)
@@ -172,6 +191,7 @@ class ImportStatement:
 
 
 class PyImportVisitor(ast.NodeVisitor):
+    """Import visitor object for AST"""
     def __init__(self, src, max_depth=3):
         self.imports = []
         self.src = src
@@ -223,6 +243,7 @@ class PyImportVisitor(ast.NodeVisitor):
 
 
 class TrezorDiag:
+    """Simple Trezor connector / client"""
     def __init__(self):
         self.trezor_proxy = None  # type: TokenProxy
         self.loop = asyncio.get_event_loop()
@@ -300,6 +321,7 @@ class PackageDump:
 
         self.process_deps(proc_files)
         self.compute_graphs()
+        self.plot_deps()
 
         print('-'*100)
         print('-'*100)
@@ -346,13 +368,19 @@ class PackageDump:
         rsizes = [(to_pkg(k), self.self_size[k]) for k in self.self_size]
         json.dump(sorted(rsizes), open('/tmp/rsizes.json', 'w+'), indent=2)
 
+    def fix_path(self, pth):
+        if os.path.isabs(pth):  # absolute
+            return pth
+        return os.path.join(self.args.root_dir, pth)
+
     def read_config(self):
         for fl in self.args.files:
-            self.paths.append(PathCfg(fl))
+            self.paths.append(PathCfg(self.fix_path(fl)))
 
         if self.args.config:
             js = json.load(open(self.args.config))
             for r in js['paths']:
+                r['path'] = self.fix_path(r['path'])
                 self.paths.append(PathCfg.from_json(r))
 
             if 'packages' in js:
@@ -369,7 +397,9 @@ class PackageDump:
             if c.path == '-':
                 data = sys.stdin.read()
             elif not c.is_dir:
-                data = open(c.path).read()
+                print(c)
+                print(c.path)
+                data = open(self.fix_path(c.path)).read()
             else:
                 as_dir = True
 
@@ -425,8 +455,6 @@ class PackageDump:
 
     def process_deps(self, proc_files):
         for pf in proc_files:  # type: ProcFile
-            # if pf.path != '/Users/dusanklinec/workspace/trezor-core/src/apps/monero/xmr/key_image.py':
-            #     continue
             try:
                 pf_imp = tuple(pf.full_import())
                 logger.debug('Processing: %s' % ('.'.join(pf_imp)))
@@ -581,7 +609,7 @@ class PackageDump:
         # plt.show()
 
         # G2.engine = 'neato'
-        # G2.render('/tmp/round-table.gv', view=True)
+        self.G2.render('/tmp/round-table.gv', view=True)
 
     async def main(self):
         parser = argparse.ArgumentParser(
@@ -589,10 +617,11 @@ class PackageDump:
         )
 
         parser.add_argument(
-            "--dest",
+            "--root-dir",
+            dest="root_dir",
+            required=True,
             default=None,
-            required=False,
-            help="Destination address to transform to",
+            help="Root dir for trezor-firmware"
         )
 
         parser.add_argument(
@@ -606,7 +635,7 @@ class PackageDump:
             "--sizes",
             dest="sizes",
             default=None,
-            help="JSON sizes file"
+            help="JSON package sizes file (output/cache)"
         )
 
         parser.add_argument(
