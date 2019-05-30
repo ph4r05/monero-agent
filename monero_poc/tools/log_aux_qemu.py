@@ -239,7 +239,7 @@ class LogAnalyzer(object):
 
     def read_files(self, files):
         for idx, line in enumerate(fileinput.input(files)):
-            self.process(line)
+            anz.process(line)
 
         if self.mem_diffs_sec:
             print(
