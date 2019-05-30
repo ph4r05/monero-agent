@@ -46,12 +46,6 @@ class AddrInfo(object):
         )
         return self
 
-    def recompute_sub(self, spend_key, view_key, major=0, minor=0):
-        self.spend_key = spend_key
-        self.view_key = view_key
-        self.is_sub_address = major != 0 and minor != 0
-        self.recompute_addr()
-
 
 def addr_to_hash(addr):
     """

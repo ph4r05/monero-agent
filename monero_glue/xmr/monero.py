@@ -479,3 +479,23 @@ def ecdh_hash(shared_sec):
     data[6:] = shared_sec
     return crypto.cn_fast_hash(data)
 
+
+def build_address_info(creds, subidx=None, payment_id=None, net_type=NetworkTypes.MAINNET):
+    if (subidx is not None and subidx != (0, 0)) and payment_id:
+        raise ValueError('Subaddress cannot be integrated')
+
+    pub_spend, pub_view = creds.spend_key_public, creds.view_key_public
+    if subidx:
+        pub_spend, pub_view = generate_sub_address_keys(
+            creds.view_key_private, creds.spend_key_public, subidx[0], subidx[1]
+        )
+
+    ai = AddrInfo()
+    ai.spend_key = crypto.encodepoint(pub_spend)
+    ai.view_key = crypto.encodepoint(pub_view)
+    ai.payment_id = payment_id
+    ai.net_type = net_type
+    ai.is_integrated = payment_id is not None
+    ai.is_sub_address = subidx is not None
+    ai.recompute_addr()
+    return ai
