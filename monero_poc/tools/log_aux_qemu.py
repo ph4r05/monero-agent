@@ -72,16 +72,30 @@ class TxtSymbol(object):
         self.addr = addr
         self.obj = obj
         self.offset = offset
+        self._shortid = None
+
+    @property
+    def shortid(self):
+        if not self._shortid:
+            iid = self.fid
+            if os.path.sep in self.fid:
+                iid = os.path.basename(iid)
+            self._shortid = iid[:3]
+        return self._shortid
 
     def fulldesc(self):
         sobj = (': %s:%s' % (self.obj, hex(self.offset) if self.offset else '0x0')) if self.obj else ''
         return 'Symbol(%s -> %s%s)' % (self.symbol, hex(self.addr), sobj)
 
+    def shortref(self):
+        return '%s:%s' % (self.shortid, self.symbol)
+
     def __repr__(self):
         sobj = ''
         if self.obj:
             sobj = ': %s' % self.obj.split('/')[-1]
-        return 'Symbol(%s -> %s%s)' % (self.symbol, hex(self.addr), sobj)
+        iid = '%s:' % self.fid[:2]
+        return 'Symbol(%s%s -> %s%s)' % (iid, self.symbol, hex(self.addr), sobj)
 
 
 class Mapper(object):
@@ -194,6 +208,7 @@ class QEMULogAnalyzer(object):
         self.max_line_len = 0
         self.tee_file = None
         self.time_prev = 0
+        self.frame = []
 
     def print_line(self, line):
         print(line)
@@ -228,14 +243,37 @@ class QEMULogAnalyzer(object):
             self.print_line(line)
             return
 
+        # symbol resolution on line
         symbs = []
         for x in m:
+            if int(x, 16) < 32:
+                continue
             pr, cs = 1, self.mapper.resolve(x)
             if cs is None:
                 pr, cs = 0, self.mapper.resolve_ish(x)
             symbs.append((pr, cs))
 
-        symbss = ', '.join([('%s%s' % ('?' if not x[0] else '', x[1].symbol if x[1] else '?')) for x in symbs])
+        # instruction analysis
+        # 0x0807394c:  460e       mov r6, r1
+        m2 = re.match(r'^\s*(0x[0-9a-fA-F]+):\s+([0-9a-fA-F]+)(?:\s+([0-9a-fA-F]+))?\s+(.+?)\s*$', line)
+        if m2:
+            instline = m2.group(4)
+            instparts = instline.split(' ')
+            inst = instparts[0]
+            if inst.startswith('ldr'):
+                if 'pc' == instparts[1]:
+                    self.frame.pop()
+            elif inst.startswith('pop'):
+                if 'pc' in instline:
+                    self.frame.pop()
+            elif inst.startswith('bl'):
+                self.frame.append(symbs[-1])
+            elif inst == 'b':
+                self.frame.append(symbs[-1])
+            else:
+                pass
+
+        symbss = ', '.join([('%s%s' % ('?' if not x[0] else '', x[1].shortref() if x[1] else '?')) for x in symbs])
         ldiff = self.max_line_len - len(line)
 
         self.print_line(
