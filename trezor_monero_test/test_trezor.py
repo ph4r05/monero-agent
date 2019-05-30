@@ -5,6 +5,7 @@
 import os
 import time
 
+from monero_glue.xmr.sub.addr import AddrInfo
 from trezorlib import debuglink, device
 
 from monero_glue.agent import agent_lite
@@ -20,6 +21,7 @@ class TrezorTest(BaseAgentTest):
         self.agent = None  # type: agent_lite.Agent
         self.creds = None
         self.test_only_tsx = False
+        self.is_debug = True
 
     def get_trezor_path(self):
         tpath = os.getenv('TREZOR_PATH')
@@ -28,13 +30,13 @@ class TrezorTest(BaseAgentTest):
     def reinit_trezor(self):
         self.deinit()
         path = self.get_trezor_path()
-        is_debug = not int(os.getenv('TREZOR_TEST_INTERACTIVE', '0'))
+        self.is_debug = not int(os.getenv('TREZOR_TEST_INTERACTIVE', '0'))
         self.creds = self.get_trezor_creds(0)
-        self.trezor_proxy = tmanager.Trezor(path=path, debug=is_debug)
+        self.trezor_proxy = tmanager.Trezor(path=path, debug=self.is_debug)
         self.agent = agent_lite.Agent(self.trezor_proxy, network_type=monero.NetworkTypes.TESTNET)
 
         client = self.trezor_proxy.client
-        if is_debug:
+        if self.is_debug:
             client.open()
             device.wipe(client)
             debuglink.load_device_by_mnemonic(
@@ -77,6 +79,18 @@ class TrezorTest(BaseAgentTest):
         res = await self.agent.get_address()
         self.assertIsNotNone(res)
         self.assertEqual(res.address, self.creds.address)
+
+        ai = monero.build_address_info(self.creds, (0, 1), None, self.agent.network_type)
+        res = await self.agent.get_address(account=0, minor=1, payment_id=ai.payment_id, show_display=True)
+        self.assertEqual(res.address, ai.addr)
+
+        ai = monero.build_address_info(self.creds, (10, 10), None, self.agent.network_type)
+        res = await self.agent.get_address(account=10, minor=10, payment_id=ai.payment_id, show_display=True)
+        self.assertEqual(res.address, ai.addr)
+
+        # ai = monero.build_address_info(self.creds, None, [0]*8, self.agent.network_type)
+        # res = await self.agent.get_address(account=0, minor=11, payment_id=ai.payment_id, show_display=True)
+        # self.assertEqual(res.address, ai.addr)
 
     async def test_get_watch(self):
         if self.should_test_only_tx():
@@ -146,7 +160,7 @@ class TrezorTest(BaseAgentTest):
             self.skipTest('Tx Sign cl1 hf9 skipped')
         await self.int_test_trezor_txs(as_bulletproof=True, client_version=0, hf=9)
 
-    async def xtest_transactions_bp_c1_hf9(self):
+    async def test_transactions_bp_c1_hf9(self):
         if not int(os.getenv('TREZOR_TEST_SIGN_CL1_HF9', '0')):
             self.skipTest('Tx Sign cl1 hf9 skipped')
         await self.int_test_trezor_txs(as_bulletproof=True, client_version=1, hf=9)
