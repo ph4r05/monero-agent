@@ -152,7 +152,7 @@ class Agent(object):
         self.address_n = address_n if address_n else DEFAULT_MONERO_BIP44
         self.network_type = network_type
         if not slip0010:
-            raise ValueError('Non-SLIP0010 not supported anymore')
+            raise ValueError("Non-SLIP0010 not supported anymore")
         if address_n and 0 in address_n:
             raise ValueError("SLIP0010 cannto contain public derivation")
         if address_n is None:
@@ -741,14 +741,22 @@ class Agent(object):
         """
         return self.ct
 
-    async def get_address(self, account=0):
+    async def get_address(
+        self, account=0, minor=0, payment_id=None, show_display=False
+    ):
         """
         Get address from the device
         :return:
         """
         msg = MoneroGetAddress(
-            address_n=self.address_n, network_type=self.network_type, account=account
+            address_n=self.address_n,
+            network_type=self.network_type,
+            account=account,
+            minor=minor,
+            show_display=show_display,
         )
+
+        msg.payment_id = payment_id
         res = await self.trezor.call(msg)
         return res
 
