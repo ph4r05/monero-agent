@@ -3,12 +3,11 @@ import fileinput
 import io
 import json
 import logging
-import math
 import os
 import re
 import time
-
-from monero_poc.tools.mem_cmp import MemReader
+import copy
+import collections
 
 import coloredlogs
 
@@ -17,34 +16,12 @@ coloredlogs.CHROOT_FILES = []
 coloredlogs.install(level=logging.INFO, use_chroot=False)
 
 
-TICKS_PER_SECOND = 1000000.0
-MAX_TICKS = 1073741824  # 2**30
-
-
-def tic2sec(tic):
-    return tic / TICKS_PER_SECOND
-
-
 def remove_ctl(line):
     return re.sub(r"\x1b\[\d+m", "", line.rstrip("\n"))
 
 
 def avg(iterable):
     return sum(iterable) / float(len(iterable))
-
-
-def bins(iterable, nbins=1, key=lambda x: x, ceil_bin=False):
-    vals = [key(x) for x in iterable]
-    min_v = min(vals)
-    max_v = max(vals)
-    bin_size = (1 + max_v - min_v) / float(nbins)
-    bin_size = math.ceil(bin_size) if ceil_bin else bin_size
-    bins = [[] for _ in range(nbins)]
-    for c in iterable:
-        cv = key(c)
-        cbin = int((cv - min_v) / bin_size)
-        bins[cbin].append(c)
-    return bins
 
 
 def count_elements(seq) -> dict:
@@ -61,23 +38,162 @@ def ascii_histogram(seq) -> None:
         print("{0:5d} {1}".format(k, "+" * counted[k]))
 
 
-class LogAnalyzer(object):
+def toi(x):
+    return int(x, 16)
+
+
+def binary_search(data, val):
+    highIndex = len(data)-1
+    lowIndex = 0
+    while highIndex > lowIndex:
+        index = (highIndex + lowIndex) // 2
+        sub = data[index]
+        if data[lowIndex] == val:
+            return [lowIndex, lowIndex]
+        elif sub == val:
+            return [index, index]
+        elif data[highIndex] == val:
+            return [highIndex, highIndex]
+        elif sub > val:
+            if highIndex == index:
+                return sorted([highIndex, lowIndex])
+            highIndex = index
+        else:
+            if lowIndex == index:
+                return sorted([highIndex, lowIndex])
+            lowIndex = index
+    return sorted([highIndex, lowIndex])
+
+
+class TxtSymbol(object):
+    def __init__(self, fid=None, symbol=None, addr=None, obj=None, offset=None):
+        self.fid = fid
+        self.symbol = symbol
+        self.addr = addr
+        self.obj = obj
+        self.offset = offset
+
+    def fulldesc(self):
+        sobj = (': %s:%s' % (self.obj, hex(self.offset) if self.offset else '0x0')) if self.obj else ''
+        return 'Symbol(%s -> %s%s)' % (self.symbol, hex(self.addr), sobj)
+
+    def __repr__(self):
+        sobj = ''
+        if self.obj:
+            sobj = ': %s' % self.obj.split('/')[-1]
+        return 'Symbol(%s -> %s%s)' % (self.symbol, hex(self.addr), sobj)
+
+
+class Mapper(object):
+    """Linker map file parser - extracts symbols for symbol resolution"""
+    SEC = 'Linker script and memory map'
+
+    def __init__(self):
+        self.bases = collections.defaultdict(lambda: None)
+        self.symbs = collections.defaultdict(lambda: None)
+        self.addrs = []
+
+    def resolve(self, addr):
+        if isinstance(addr, str):
+            addr = int(addr, 16)
+        return self.symbs[hex(addr)]
+
+    def resolve_ish(self, addr):
+        if isinstance(addr, str):
+            addr = int(addr, 16)
+
+        prec = self.symbs[hex(addr)]
+        if prec:
+            return prec
+
+        lo, hi = binary_search(self.addrs, addr)
+        return self.symbs[hex(self.addrs[lo])]
+
+    def add_map(self, fname):
+        data = open(fname).read()
+        ix = data.find('SEC')
+        if ix < 0:
+            raise ValueError('Section not found')
+
+        lines = data[ix:].split('\n')
+
+        csec = None
+        csymb = None
+        is_txt = False
+        is_txt_scanning = False
+
+        for ix, line in enumerate(lines):
+            msec = re.match(r' \.(\w+).*', line)  # just simple section det
+            msecfull = re.match(r' \.(\w+)(?:\.([\w.\-]+))?\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+(.*)\s*', line)
+            msecshort = re.match(r' \.(\w+)\.([\w.\-]+).*', line)
+
+            if msec:
+                csec = msec.group(1)
+                is_txt = csec == 'text'
+
+            if msecfull:
+                csymb = TxtSymbol(fname, None,
+                                  addr=toi(msecfull.group(3)),
+                                  obj=msecfull.group(5),
+                                  offset=toi(msecfull.group(4)))
+                is_txt_scanning = is_txt
+
+            elif msecshort:
+                is_txt_scanning = is_txt
+                csymb = msecshort.group(2)
+                csymb = TxtSymbol(fname, csymb, None)
+
+            elif msec:
+                pass
+
+            elif is_txt_scanning:
+                #                 0x0000000008005404       0x70 build/boardloader/vendor/blabla.o
+                maddr = re.match(r'^\s*(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)\s+(.*)\s*', line)
+                #                 0x0000000008005324                HAL_SRAM_Init
+                msymb = re.match(r'^\s*(0x[0-9a-fA-F]+)\s+([^.\s][\w_\-.]+)\s*', line)
+
+                if maddr:
+                    csymb.addr = toi(maddr.group(1))
+                    csymb.offset = toi(maddr.group(2))
+                    csymb.obj = maddr.group(3)
+                    self.add_symbol(csymb)
+
+                elif msymb:
+                    csymb.addr = toi(msymb.group(1))
+                    csymb.symbol = msymb.group(2)
+                    self.add_symbol(csymb)
+                    csymb.symbol = None
+
+                else:
+                    is_txt_scanning = False
+
+            else:
+                pass
+
+        self.addrs = sorted([x.addr for x in self.symbs.values()])
+
+    def add_symbol(self, o):
+        # TODO: conflicting addresses? shared symbol ...
+        self.symbs[hex(o.addr)] = copy.deepcopy(o)
+
+    def add_txt_symbol(self, fid, symb, addr, object=None, offset=None):
+        if self.bases[fid] is None:
+            self.bases[fid] = os.path.basename(fid)
+
+        bname = self.bases[fid]
+        intaddr = int(addr, 16)
+        o = TxtSymbol(bname, symb, intaddr, object, offset)
+        self.symbs[hex(intaddr)] = o
+        return o
+
+
+class QEMULogAnalyzer(object):
     def __init__(self):
         self.args = None
+        self.mapper = Mapper()
         self.max_line_len = 0
-        self.time_prev = 0
-        self.time_prev_o = 0
-        self.time_ref = 0
-        self.time_ref_r = 0
-        self.mem_alloc_prev = 0
-        self.mem_alloc_ref = None
-        self.mem_alloc_max = 0
-        self.serial_device = None
         self.tee_file = None
-        self.initial_ticks = None
-        self.mem_reader = None
-        self.mem_diffs_sec = []
-        self.mem_diffs_all = []
+        self.time_prev = 0
 
     def print_line(self, line):
         print(line)
@@ -93,195 +209,58 @@ class LogAnalyzer(object):
         line = line.strip()
         if self.args.no_ctl:
             line = remove_ctl(line)
+
         if not self.args.tee_aux:
             self.tee_line(line)
 
-        m = re.match(r"^(\d+)\s([^\s]+?)\s([^\s]+?)\s(.*)$", line)
-        if m is None:
+        line = line.replace('\t', ' ')
+        m = re.findall(r'(0x[0-9a-fA-F]+)', line)
+        if not m:
             self.print_line(line)
             return
 
         ctime_r = time.time()
-        ctime = int(m.group(1))
-        ctime_o = ctime
         c_prev = self.time_prev
-        c_prev_alloc = self.mem_alloc_prev
-
-        if self.args.no_time:
-            line = re.sub(r"^\d+\s*", "", line)
-
-        elif self.args.norm_time:
-            if self.initial_ticks is None:
-                self.initial_ticks = ctime
-                ctime = 0
-            elif ctime < self.time_prev_o:
-                ctime = self.time_prev + (ctime + (1073741824 - self.time_prev_o))
-            else:
-                ctime = self.time_prev + (ctime - self.time_prev_o)
-            line = re.sub(r"^\d+", "%011d" % ctime, line)
-
-        self.time_prev = ctime
-        self.time_prev_o = ctime_o
-
-        if "----diagnostic" in line:
-            self.time_ref = ctime
-            self.time_ref_r = ctime_r
-            return
-
-        self.max_line_len = max(self.max_line_len, min(len(line), 140))
-        abs_time = tic2sec(ctime - self.time_ref)
-        diff_time = tic2sec(ctime - c_prev)
-
-        mem_free = None
-        mem_alloc = None
-
-        mmem = re.match(r".+?F:\s*(\d+)\s*,?\s*A:\s*(\d+)", line)
-        if mmem:
-            mem_free = int(mmem.group(1))
-            mem_alloc = int(mmem.group(2))
-
-        mmem = re.match(r".+?Free:\s*(\d+)\s*,?\s*Allocated:\s*(\d+)", line)
-        if mmem:
-            mem_free = int(mmem.group(1))
-            mem_alloc = int(mmem.group(2))
-
-        memstr = ""
-        is_sec = "====" in line or "####" in line
-
-        if mem_alloc:
-            self.mem_alloc_prev = mem_alloc
-            self.mem_alloc_max = max(self.mem_alloc_max, mem_alloc)
-            if self.mem_alloc_ref is None:
-                self.mem_alloc_ref = mem_alloc
-
-            memstr = "Alloc diff: %6d, refdi: %6d" % (
-                mem_alloc - self.mem_alloc_ref,
-                mem_alloc - c_prev_alloc,
-            )
-
-            if self.mem_reader:
-                memb = self.mem_reader.next(is_sec)
-                if memb:
-                    memsuf = " skipped: %3d" % memb[2] if is_sec and memb[2] > 0 else ""
-                    memstr += " | Alloc cmp diff: %5d %s" % (
-                        mem_alloc - memb[0],
-                        memsuf,
-                    )
-                    if self.args.full_mem:
-                        memline = self.mem_reader.full_line()
-                        if self.args.no_ctl:
-                            memline = remove_ctl(memline)
-                        memstr += " | " + memline
-
-                    if is_sec:
-                        self.mem_diffs_sec.append(mem_alloc - memb[0])
-                    else:
-                        self.mem_diffs_all.append(mem_alloc - memb[0])
+        self.time_prev = ctime_r
+        self.max_line_len = max(self.max_line_len, min(len(line), 160))
 
         if self.args.no_aug:
             self.print_line(line)
             return
 
+        symbs = []
+        for x in m:
+            pr, cs = 1, self.mapper.resolve(x)
+            if cs is None:
+                pr, cs = 0, self.mapper.resolve_ish(x)
+            symbs.append((pr, cs))
+
+        symbss = ', '.join([('%s%s' % ('?' if not x[0] else '', x[1].symbol if x[1] else '?')) for x in symbs])
         ldiff = self.max_line_len - len(line)
+
         self.print_line(
-            "%s%s |  AbsTime: %7.3f,   Diff %5.3f  | %s"
-            % (line, " " * ldiff, abs_time, diff_time, memstr)
+            "%s%s |  %s"
+            % (line, (" " * ldiff), symbss)
         )
-
-        if is_sec:
-            abs_r = ""
-            if self.serial_device:
-                abs_time_r = ctime_r - self.time_ref_r
-                abs_r = "r: %7.2f, ticks p.s.: %7.3f" % (
-                    abs_time_r,
-                    (ctime - self.time_ref) / float(abs_time_r),
-                )
-            self.print_line(
-                " ++ TOTAL: %7.2f, %s mem max: %s"
-                % (
-                    abs_time,
-                    abs_r,
-                    self.mem_alloc_max - self.mem_alloc_ref
-                    if self.mem_alloc_ref is not None
-                    else "?",
-                )
-            )
-
-            self.time_ref = ctime
-            self.time_ref_r = ctime_r
-            if mem_alloc is not None:
-                self.mem_alloc_ref = mem_alloc
-                self.mem_alloc_max = mem_alloc
-
-    def read_serial(self, device, brate):
-        try:
-            import serial  # pip install pyserial
-        except ImportError:
-            raise ValueError("pip install pyserial")
-
-        while True:
-            try:
-                ser = serial.Serial(device, brate, timeout=0.1)
-                logger.info("Connected: %s" % ser)
-
-                sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser))
-                while True:
-                    line = sio.readline()
-                    line = line.strip()
-                    if len(line) == 0:
-                        continue
-
-                    self.process(line)
-
-            except Exception as e:
-                logger.warning("Exc: %s" % e)
-                time.sleep(2)
 
     def read_files(self, files):
         for idx, line in enumerate(fileinput.input(files)):
-            anz.process(line)
+            self.process(line)
 
-        if self.mem_diffs_sec:
-            print(
-                "Mem diff avg, sec: %8.3f, all: %8.3f"
-                % (avg(self.mem_diffs_sec), avg(self.mem_diffs_all))
-            )
-
-            if self.args.mem_json:
-                print("JSON sec difs: ")
-                print(json.dumps(self.mem_diffs_sec))
-                print("JSON all difs: ")
-                print(json.dumps(self.mem_diffs_all))
-
-            if self.args.mem_bin:
-                print("Binned memory differences:")
-                for bi in bins(self.mem_diffs_all, 100):
-                    if len(bi) == 0:
-                        continue
-                    print(
-                        "[%5d, %5d] (avg = %5d): %5d"
-                        % (min(bi), max(bi), avg(bi), len(bi))
-                    )
+    def process_maps(self):
+        if not self.args.mmap:
+            return
+        for fl in self.args.mmap:
+            self.mapper.add_map(fl)
 
     def main(self):
-        parser = argparse.ArgumentParser(description="Trezor log reader and parser")
-        parser.add_argument("--serial", default=None, help="Serial device to read from")
-        parser.add_argument("--brate", type=int, default=115200, help="Baud rate")
+        parser = argparse.ArgumentParser(description="QEMU log reader and parser")
         parser.add_argument(
-            "--retry",
-            dest="retry",
-            default=True,
-            action="store_const",
-            const=True,
-            help="Retry reconnect",
-        )
-        parser.add_argument(
-            "--norm-time",
-            dest="norm_time",
-            default=False,
-            action="store_const",
-            const=True,
-            help="Normalize time",
+            "--map",
+            dest="mmap",
+            nargs="*",
+            help="linker memory maps used for translation",
+            default=[],
         )
         parser.add_argument(
             "--no-time",
@@ -324,34 +303,7 @@ class LogAnalyzer(object):
             default=False,
             action="store_const",
             const=True,
-            help="Removes shell controll sequences",
-        )
-        parser.add_argument(
-            "--mem-file", dest="mem_file", default=None, help="Memory log to compare to"
-        )
-        parser.add_argument(
-            "--full-mem",
-            dest="full_mem",
-            default=False,
-            action="store_const",
-            const=True,
-            help="Prints full corresponding memory line",
-        )
-        parser.add_argument(
-            "--mem-json",
-            dest="mem_json",
-            default=False,
-            action="store_const",
-            const=True,
-            help="Dumps mem differences in json",
-        )
-        parser.add_argument(
-            "--mem-bin",
-            dest="mem_bin",
-            default=False,
-            action="store_const",
-            const=True,
-            help="Dumps mem differences binned",
+            help="Removes shell control sequences",
         )
         parser.add_argument(
             "files",
@@ -371,16 +323,9 @@ class LogAnalyzer(object):
             if ex:
                 self.tee_file.write(("=" * 80) + (" Time: %s" % time.time()))
 
-        if args.mem_file:
-            with open(args.mem_file, "r") as fh:
-                self.mem_reader = MemReader(fh.readlines())
-
+        self.process_maps()
         try:
-            if args.serial:
-                self.serial_device = args.serial
-                self.read_serial(args.serial, args.brate)
-            else:
-                self.read_files(args.files)
+            self.read_files(args.files)
 
         except KeyboardInterrupt:
             logger.info("Terminating")
@@ -390,7 +335,7 @@ class LogAnalyzer(object):
 
 
 def main():
-    anz = LogAnalyzer()
+    anz = QEMULogAnalyzer()
     anz.main()
 
 
