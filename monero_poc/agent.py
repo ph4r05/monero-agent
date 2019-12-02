@@ -154,7 +154,7 @@ class HostAgent(cli.BaseCli):
         flags_suffix = "|" + flags_str if len(flags_str) > 0 else ""
 
         self.prompt = "[wallet %s%s]: " % (
-            self.address[:6].decode("ascii"),
+            self.address[:6].decode("ascii") if self.address else "",
             flags_suffix,
         )
 
@@ -487,7 +487,10 @@ class HostAgent(cli.BaseCli):
             await self.open_with_keys(self.priv_view, self.address)
 
         except Exception as e:
-            raise ValueError(e)
+            if not self.args:
+                raise ValueError(e)
+            else:
+                logger.warning("Loading watch-only keys failed (but init is not required), %s" % (e,))
 
     async def get_entropy(self, size, path):
         """
@@ -624,15 +627,19 @@ class HostAgent(cli.BaseCli):
         if account_file_set and not account_file_ex:
             await self.save_account(self.args.account_file)
 
-        print(
-            "Public spend key: %s"
-            % binascii.hexlify(crypto.encodepoint(self.pub_spend)).decode("ascii")
-        )
-        print(
-            "Public view key : %s"
-            % binascii.hexlify(crypto.encodepoint(self.pub_view)).decode("ascii")
-        )
-        print("Address:          %s" % self.address.decode("utf8"))
+        if self.pub_spend:
+            print(
+                "Public spend key: %s"
+                % binascii.hexlify(crypto.encodepoint(self.pub_spend)).decode("ascii")
+            )
+            print(
+                "Public view key : %s"
+                % binascii.hexlify(crypto.encodepoint(self.pub_view)).decode("ascii")
+            )
+
+        if self.address:
+            print("Address:          %s" % self.address.decode("utf8"))
+
         self.update_intro()
         self.update_prompt()
 
@@ -794,9 +801,10 @@ class HostAgent(cli.BaseCli):
             return
 
         key_file = "%s.keys" % self.wallet_file
-        if os.path.exists(key_file):
+        match, addr = False, None
+
+        if self.pub_view and os.path.exists(key_file):
             logger.debug("Watch only wallet key file exists: %s" % key_file)
-            match, addr = False, None
             try:
                 addr, match = await self.check_existing_wallet_file(key_file)
             except Exception as e:
@@ -804,9 +812,17 @@ class HostAgent(cli.BaseCli):
 
             if not match:
                 logger.error("Key file address is not correct: %s" % addr)
-                print("Please, move the file so Agent can create correct key file")
-                sys.exit(2)
+                if not self.args.no_init:
+                    print("Please, move the file so Agent can create correct key file")
+                    sys.exit(2)
             return
+
+        if not addr and self.args.no_init:
+            logger.info("Device not initialized, skipping wallet setup")
+            return
+
+        if not self.args.no_init and not self.pub_view:
+            raise ValueError("Wallet key not loaded")
 
         self.fresh_wallet = True
         account_keys = xmrtypes.AccountKeys()
@@ -1705,6 +1721,15 @@ class HostAgent(cli.BaseCli):
             action="store_const",
             const=True,
             help="Monkey pathing of Trezor client",
+        )
+
+        parser.add_argument(
+            "--no-init",
+            dest="no_init",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Do not require device initialization",
         )
 
         args_src = sys.argv
