@@ -7,12 +7,8 @@ There are the following components:
 - Trezor agent, host-based utility implementing host side of the  signing protocol.
 - Agent spawns custom `monero-wallet-rpc`
 
-This code relied on the watch-only features implemented to `monero-wallet-rpc`.
 
-https://github.com/monero-project/monero/pull/3780
-
-
-PR is already merged but should you need any more unmerged features here is my fork:
+Should you need any more unmerged features here is my fork:
 
 https://github.com/ph4r05/monero/tree/ph4master
 
