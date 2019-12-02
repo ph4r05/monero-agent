@@ -188,6 +188,7 @@ def decodeint_into(r, x, offset=0):
 
 
 def decodeint_into_noreduce(r, x, offset=0):
+    r = r if r else new_scalar()
     tcry.expand_raw256_modm(r, tcry.KEY_BUFF(*_offset(x, offset)))
     return r
 
@@ -280,11 +281,18 @@ def sc_init(x):
     return tcry.init256_modm_r(x)
 
 
+def sc_copy(d, x):
+    d = d if d else new_scalar()
+    return sc_add_into(d, x, sc_init(0))
+    #return tcry.init256_modm(d, x)
+
+
 def sc_init_into(r, x):
     """
     Sets x to the scalar value Zmod(m)
     :return:
     """
+    r = r if r else new_scalar()
     if x >= (1 << 64):
         raise ValueError("Initialization works up to 64-bit only")
     tcry.init256_modm(r, x)
@@ -329,6 +337,7 @@ def sc_add(aa, bb):
 
 
 def sc_add_into(r, aa, bb):
+    r = r if r else new_scalar()
     tcry.add256_modm(r, aa, bb)
     return r
 
@@ -338,6 +347,7 @@ def sc_sub(aa, bb):
 
 
 def sc_sub_into(r, aa, bb):
+    r = r if r else new_scalar()
     tcry.sub256_modm(r, aa, bb)
     return r
 
@@ -347,6 +357,7 @@ def sc_mul(aa, bb):
 
 
 def sc_mul_into(r, aa, bb):
+    r = r if r else new_scalar()
     tcry.mul256_modm(r, aa, bb)
     return r
 
@@ -370,6 +381,7 @@ def sc_mulsub_into(r, aa, bb, cc):
     """
     (cc - aa * bb) % l
     """
+    r = r if r else new_scalar()
     tcry.mulsub256_modm(r, aa, bb, cc)
     return r
 
@@ -385,6 +397,7 @@ def sc_muladd_into(r, aa, bb, cc):
     """
     (cc + aa * bb) % l
     """
+    r = r if r else new_scalar()
     tcry.muladd256_modm(r, aa, bb, cc)
     return r
 
@@ -400,6 +413,7 @@ def sc_inv_into(r, x):
     :param x:
     :return:
     """
+    r = r if r else new_scalar()
     global ED25519_ORD_BN
     if ED25519_ORD_BN is None:
         bf_p = tcry.KEY_BUFF.from_buffer(bytearray(ED25519_ORD))
@@ -424,6 +438,7 @@ def random_scalar():
 
 
 def random_scalar_into(r):
+    r = r if r else new_scalar()
     tcry.xmr_random_scalar(r)
     return r
 
@@ -446,6 +461,7 @@ def scalarmult_base(a):
 
 
 def scalarmult_base_into(r, a):
+    r = r if r else new_point()
     tcry.ge25519_scalarmult_base_wrapper(r, a)
     return r
 
@@ -455,6 +471,7 @@ def scalarmult(P, e):
 
 
 def scalarmult_into(r, P, e):
+    r = r if r else new_point()
     tcry.ge25519_scalarmult(r, P, e)
     return r
 
@@ -464,6 +481,7 @@ def point_add(P, Q):
 
 
 def point_add_into(r, P, Q):
+    r = r if r else new_point()
     tcry.ge25519_add(r, P, Q, 0)
     return r
 
@@ -473,6 +491,7 @@ def point_sub(P, Q):
 
 
 def point_sub_into(r, P, Q):
+    r = r if r else new_point()
     tcry.ge25519_add(r, P, Q, 1)
     return r
 
@@ -486,6 +505,7 @@ def point_double(P):
 
 
 def point_double_into(r, P):
+    r = r if r else new_point()
     tcry.ge25519_double(r, P)
     return r
 
@@ -509,6 +529,7 @@ def point_mulinv8(P):
 
 
 def point_mul8_into(r, P):
+    r = r if r else new_point()
     tcry.ge25519_mul8(r, P)
     return r
 
@@ -582,6 +603,7 @@ def identity_into(r):
     Identity point
     :return:
     """
+    r = r if r else new_point()
     tcry.ge25519_set_neutral(r)
     return r
 

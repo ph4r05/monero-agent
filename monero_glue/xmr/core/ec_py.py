@@ -267,10 +267,12 @@ def decodeint(x, offset=0):
 
 
 def decodeint_into(r, x, offset=0):
+    r = r if r else new_scalar()
     return r.init(_offset(x, offset))
 
 
 def decodeint_into_noreduce(r, x, offset=0):
+    r = r if r else new_scalar()
     r.v = _decodeint(_offset(x, offset))
     return r
 
@@ -369,6 +371,7 @@ def decodepoint(b, offset=0):
 
 
 def decodepoint_into(r, b, offset=0):
+    r = r if r else new_point()
     return r.init(_offset(b, offset))
 
 
@@ -437,6 +440,7 @@ def sc_0():
 
 
 def sc_0_into(r):
+    r = r if r else new_scalar()
     return r.init(0)
 
 
@@ -447,8 +451,14 @@ def sc_init(x):
 
 
 def sc_init_into(r, x):
+    r = r if r else new_scalar()
     if x >= (1 << 64):
         raise ValueError("Initialization works up to 64-bit only")
+    return r.init(x)
+
+
+def sc_copy(r, x):
+    r = r if r else new_scalar()
     return r.init(x)
 
 
@@ -487,6 +497,7 @@ def sc_add(aa, bb):
 
 
 def sc_add_into(r, aa, bb):
+    r = r if r else new_scalar()
     return r.init(aa + bb)
 
 
@@ -495,6 +506,7 @@ def sc_sub(aa, bb):
 
 
 def sc_sub_into(r, aa, bb):
+    r = r if r else new_scalar()
     return r.init(aa - bb)
 
 
@@ -511,6 +523,7 @@ def sc_mul(a, b):
 
 
 def sc_mul_into(r, a, b):
+    r = r if r else new_scalar()
     return r.init(a * b)
 
 
@@ -525,6 +538,7 @@ def sc_mulsub_into(r, aa, bb, cc):
     """
     (cc - aa * bb) % l
     """
+    r = r if r else new_scalar()
     return r.init(cc - aa * bb)
 
 
@@ -533,6 +547,7 @@ def sc_muladd(aa, bb, cc):
 
 
 def sc_muladd_into(r, aa, bb, cc):
+    r = r if r else new_scalar()
     return r.init(cc + aa * bb)
 
 
@@ -541,6 +556,7 @@ def sc_inv(aa):
 
 
 def sc_inv_into(r, x):
+    r = r if r else new_scalar()
     return r.init(x).modinv()
 
 
@@ -549,6 +565,7 @@ def random_scalar():
 
 
 def random_scalar_into(r):
+    r = r if r else new_scalar()
     return r.init(random_scalar())
 
 
@@ -589,6 +606,7 @@ def scalarmult_base(a):
 
 
 def scalarmult_base_into(r, a):
+    r = r if r else new_point()
     return r.init(ed25519_2.scalarmult_B(a.v))
 
 
@@ -597,6 +615,7 @@ def scalarmult(P, e):
 
 
 def scalarmult_into(r, P, e):
+    r = r if r else new_point()
     return r.init(P * e)
 
 
@@ -605,6 +624,7 @@ def point_add(A, B):
 
 
 def point_add_into(r, A, B):
+    r = r if r else new_point()
     return r.init(A + B)
 
 
@@ -613,6 +633,7 @@ def point_sub(A, B):
 
 
 def point_sub_into(r, A, B):
+    r = r if r else new_point()
     return r.init(A - B)
 
 
@@ -621,6 +642,7 @@ def point_double(P):
 
 
 def point_double_into(r, P):
+    r = r if r else new_point()
     return r.init(P + P)
 
 
@@ -645,6 +667,7 @@ def point_mulinv8(P):
 
 
 def point_mul8_into(r, P):
+    r = r if r else new_point()
     return r.init(P * INV_EIGHT_SC)
 
 
@@ -709,6 +732,7 @@ def identity(byte_enc=False):
 
 
 def identity_into(r):
+    r = r if r else new_point()
     return r.init(ed25519_2.ident)
 
 
@@ -808,6 +832,7 @@ def hash_to_scalar(data, length=None):
 
 
 def hash_to_scalar_into(r, data, length=None):
+    r = r if r else new_scalar()
     return r.init(hash_to_scalar(data, length))
 
 
@@ -882,6 +907,7 @@ def hash_to_point(buf):
 
 
 def hash_to_point_into(r, buf):
+    r = r if r else new_point()
     return r.init(hash_to_point(buf))
 
 
@@ -924,6 +950,7 @@ def add_keys2(a, b, B):
 
 
 def add_keys2_into(r, a, b, B):
+    r = r if r else new_point()
     return r.init(add_keys2(a, b, B))
 
 
@@ -940,6 +967,7 @@ def add_keys3(a, A, b, B):
 
 
 def add_keys3_into(r, a, A, b, B):
+    r = r if r else new_point()
     return r.init(add_keys3(a, A, b, B))
 
 
