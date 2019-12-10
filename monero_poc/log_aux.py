@@ -184,7 +184,7 @@ class LogAnalyzer(object):
 
         ldiff = self.max_line_len - len(line)
         self.print_line(
-            "%s%s |  AbsTime: %7.3f,   Diff %5.3f  | %s"
+            "%s%s |  AbsTime: %8.4f,   Diff %6.4f  | %s"
             % (line, " " * ldiff, abs_time, diff_time, memstr)
         )
 
