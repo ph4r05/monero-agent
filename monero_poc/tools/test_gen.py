@@ -10,7 +10,7 @@ import sys
 import time
 
 from monero_glue.hwtoken import misc
-from monero_glue.xmr import crypto, monero, wallet
+from monero_glue.xmr import crypto, monero, wallet, common
 from monero_glue.xmr.monero import (
     XmrNoSuchAddressException,
     generate_key_image_helper_precomp,
@@ -19,6 +19,7 @@ from monero_glue.xmr.sub import addr
 from monero_glue.xmr.sub.creds import AccountCreds
 from monero_serialize.helpers import ArchiveException
 from monero_serialize.xmrtypes import (
+    AccountPublicAddress,
     TxDestinationEntry,
     TxExtraAdditionalPubKeys,
     TxExtraNonce,
@@ -217,11 +218,12 @@ class TestGen(object):
                 )
             )
             print(
-                "  Out: num_std: %2d, num_sub: %2d, single_dest_sub: %s"
+                "  Out: num_std: %2d, num_sub: %2d, single_dest_sub: %s, total: %s"
                 % (
                     num_stdaddresses,
                     num_subaddresses,
                     1 if single_dest_subaddress else 0,
+                    len(dsts),
                 )
             )
 
@@ -289,17 +291,23 @@ class TestGen(object):
                     change_idx = idx
                     break
 
+        if self.args.outs_subs:
+            for ix, o in enumerate(tx.splitted_dsts):
+                if change_idx is None or ix != change_idx:
+                    o.is_subaddress = True
+
         if change_idx is None:
             logger.warning('Could not fix change addr')
             return
 
-        logger.debug("Change addr adjust @idx: %s" % change_idx)
         change_addr = await self.primary_change_address(
             self.dest_keys, self.dest_sub_major
         )
         tx.change_dts.amount = change_dts.amount
         tx.change_dts.addr.m_spend_public_key = change_addr.spend_public_key
         tx.change_dts.addr.m_view_public_key = change_addr.view_public_key
+        logger.debug("Change addr adjust @idx: %s, spend key: %s"
+                     % (change_idx, binascii.hexlify(change_addr.spend_public_key)))
 
         tx.splitted_dsts[
             change_idx
@@ -307,6 +315,8 @@ class TestGen(object):
         tx.splitted_dsts[
             change_idx
         ].addr.m_view_public_key = change_addr.view_public_key
+
+        return change_idx
 
     async def amplify_inputs(self, tx, new_keys=None, new_subs=None):
         lst = tx.sources[-1]
@@ -356,21 +366,112 @@ class TestGen(object):
 
             tx.sources.append(new_inp)
 
-    async def amplify_outs(self, tx):
-        lst = tx.splitted_dsts[-1]
+    async def find_change_idx(self, tx, change_idx=None):
+        if change_idx is not None:
+            return change_idx
+
+        out_txs2 = await self.reformat_outs(tx.splitted_dsts)
+        change_dts = await self.reformat_out(tx.change_dts) if tx.change_dts else None
+        change_idx = addr.get_change_addr_idx(out_txs2, change_dts)
+        return change_idx
+
+    async def shuffle_outs(self, tx, change_idx=None):
+        change_idx = await self.find_change_idx(tx, change_idx)
+        permutation = list(range(len(tx.splitted_dsts)))
+        random.shuffle(permutation)
+
+        def swapper(x, y):
+            tx.splitted_dsts[x], tx.splitted_dsts[y] = tx.splitted_dsts[y], tx.splitted_dsts[x]
+
+        common.apply_permutation(permutation, swapper)
+        new_change = permutation.index(change_idx) if change_idx is not None else None
+        logger.debug('Outputs shuffled, change tsx idx: %d' % new_change)
+        return new_change
+
+    async def reduce_outs(self, tx, change_idx=None):
+        tgtn = self.args.outs
+        if tgtn >= len(tx.splitted_dsts):
+            return change_idx
+
+        change_idx = await self.find_change_idx(tx, change_idx)
+
+        # change first, if some
+        if change_idx is not None:
+            chg = tx.splitted_dsts[change_idx]
+            del tx.splitted_dsts[change_idx]
+            tx.splitted_dsts.insert(0, chg)
+
+        # amount adjust
+        leftover = sum([x.amount for x in tx.splitted_dsts[tgtn:]])
+        tx.splitted_dsts[tgtn-1].amount += leftover
+        tx.splitted_dsts = tx.splitted_dsts[:tgtn]
+
+        if tgtn == 1 and tx.change_dts:
+            tx.change_dts.amount = tx.splitted_dsts[0].amount
+
+        return await self.shuffle_outs(tx, change_idx)
+
+    async def amplify_outs(self, tx, change_idx=None):
+        if self.args.outs <= len(tx.splitted_dsts):
+            return change_idx
+
+        change_idx = await self.find_change_idx(tx, change_idx)
+        lstidx = len(tx.splitted_dsts) - 1
+        lst = tx.splitted_dsts[lstidx]
         orig_amount = lst.amount
-        partial = orig_amount // (self.args.outs + 1)
+        toadd = self.args.outs - len(tx.splitted_dsts)
+        partial = orig_amount // (toadd + 1)
         amnt_sum = partial
         lst.amount = partial
 
-        for i in range(1, self.args.outs + 1):
-            is_lst = i >= self.args.outs
+        for i in range(toadd):
+            is_lst = i >= toadd - 1
             new_amnt = orig_amount - amnt_sum if is_lst else partial
             amnt_sum += partial
+            naddr = AccountPublicAddress(
+                m_spend_public_key=bytes(lst.addr.m_spend_public_key),
+                m_view_public_key=bytes(lst.addr.m_view_public_key),
+            )
             new_tx = TxDestinationEntry(
-                amount=new_amnt, is_subaddress=lst.is_subaddress, addr=lst.addr
+                amount=new_amnt, is_subaddress=lst.is_subaddress, addr=naddr
             )
             tx.splitted_dsts.append(new_tx)
+
+        if tx.change_dts and change_idx is not None and change_idx == lstidx:
+            tx.change_dts.amount = tx.splitted_dsts[0].amount
+
+        return await self.shuffle_outs(tx, change_idx)
+
+    async def subadress_outs(self, tx, change_idx=None):
+        change_idx = await self.find_change_idx(tx, change_idx)
+
+        for ix, ox in enumerate(tx.splitted_dsts):
+            if change_idx is not None and ix == change_idx:
+                continue
+            # if ox.is_subaddress:
+            #     continue
+
+            spkey = bytes(ox.addr.m_spend_public_key)
+            orig_keys = self.dest_keys
+            orig_idx = self.dest_sub_major, 0
+
+            if spkey in self.cur_subs:
+                orig_keys = self.cur_keys
+                orig_idx = self.cur_subs[spkey]
+                logger.debug('Out %d, in cur subs, idx: %s' % (ix, orig_idx))
+
+            elif spkey in self.dest_subs:
+                orig_idx = self.dest_subs[spkey]
+                logger.debug('Out %d, in dst subs, idx: %s' % (ix, orig_idx))
+
+            naddr = monero.generate_sub_address_keys(orig_keys.view_key_private, orig_keys.spend_key_public,
+                                                     orig_idx[0], ix+1)
+
+            ox.addr.m_spend_public_key = crypto.encodepoint(naddr[0])
+            ox.addr.m_view_public_key = crypto.encodepoint(naddr[1])
+            ox.is_subaddress = True
+
+        return change_idx
 
     async def add_nonce(self, tx):
         # TX_EXTRA_NONCE = 2 | extralen+1 | TX_EXTRA_NONCE_ENCRYPTED_PAYMENT_ID = 1 | nonce
@@ -394,22 +495,28 @@ class TestGen(object):
                 % (len(tx.sources), len(tx.splitted_dsts), len(tx.sources[0].outputs))
             )
 
+            if self.args.inputs:
+                await self.amplify_inputs(tx, self.dest_keys, self.dest_subs)
+
             for inp in tx.sources:
                 self.rekey_input(
                     inp, self.cur_keys, self.cur_subs, self.dest_keys, self.dest_subs, self.args.mixin
                 )
 
-            if self.args.inputs:
-                await self.amplify_inputs(tx, self.dest_keys, self.dest_subs)
-
-            if tx.change_dts and (tx.subaddr_account != self.dest_sub_major) or (self.dest_keys != self.cur_keys):
-                await self.adjust_change(tx)
+            change_idx = None
+            if tx.change_dts and (tx.subaddr_account != self.dest_sub_major) \
+                    or (self.dest_keys != self.cur_keys) or self.args.outs_subs:
+                change_idx = await self.adjust_change(tx)
 
             tx.subaddr_account = self.dest_sub_major
             tx.subaddr_indices = self.args.minors
 
             if self.args.outs is not None:
-                await self.amplify_outs(tx)
+                change_idx = await self.reduce_outs(tx, change_idx)
+                change_idx = await self.amplify_outs(tx, change_idx)
+
+            if self.args.outs_subs:
+                change_idx = await self.subadress_outs(tx, change_idx)
 
             if self.args.add_nonce is not None:
                 await self.add_nonce(tx)
@@ -540,7 +647,7 @@ class TestGen(object):
             crypto.decodepoint(x) for x in inp.real_out_additional_tx_keys
         ]
 
-        secs = monero.generate_key_image_helper(
+        _ = monero.generate_key_image_helper(
             new_keys,
             new_subs,
             crypto.decodepoint(real_out_key.dest),
@@ -633,7 +740,16 @@ class TestGen(object):
             dest="outs",
             default=None,
             type=int,
-            help="Amplify the last output to outs - increases tx outputs",
+            help="Change number of transaction outputs",
+        )
+
+        parser.add_argument(
+            "--outs-subs",
+            dest="outs_subs",
+            default=False,
+            action="store_const",
+            const=True,
+            help="Make all outputs go to a subaddr.",
         )
 
         parser.add_argument(
