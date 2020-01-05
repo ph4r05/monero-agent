@@ -665,7 +665,7 @@ class Agent(object):
                 rsig_buff = b"".join(tsig_data.rsig_parts)
 
             if self.client_version >= 1 and tsig_data.mask:
-                logger.info("MASK received")
+                logger.debug("MASK received")
                 self.ct.rsig_gamma.append(tsig_data.mask)
 
         # Client1: send generated BP if offloading
