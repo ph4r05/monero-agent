@@ -24,6 +24,7 @@ from monero_glue.agent import agent_lite, agent_misc
 from monero_glue.agent.agent_lite import SignAuxData
 from monero_glue.messages import DebugMoneroDiagRequest, Entropy, GetEntropy
 from monero_glue.xmr import common, crypto, daemon_rpc, monero, wallet, wallet_rpc
+from monero_glue.xmr.common import try_fnc
 from monero_glue.xmr.enc import chacha, chacha_poly
 from monero_glue.xmr.sub import addr as xmr_addr
 from monero_poc.utils import cli, misc, trace_logger
@@ -1080,8 +1081,11 @@ class HostAgent(cli.BaseCli):
                 time.sleep(0.01)
 
             ret_code = p.commands[0].returncode
-            add_output([p.stdout.read(-1, False)])
-            add_output([p.stderr.read(-1, False)], True)
+            try_fnc(lambda: p.stdout.close())
+            try_fnc(lambda: p.stderr.close())
+            add_output([p.stdout.read(-1, True, 0.15)])
+            add_output([p.stderr.read(-1, True, 0.15)], True)
+
             self.rpc_running = False
             self.update_prompt()
 

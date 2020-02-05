@@ -199,3 +199,10 @@ def chunk(arr, size=1):
         if len(c) != size:
             break
     return res
+
+
+def try_fnc(fnc):
+    try:
+        fnc()
+    except:
+        pass
