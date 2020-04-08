@@ -6,7 +6,7 @@
 import argparse
 import os
 
-from trezorlib import coins, debuglink, device, tx_api, ui
+from trezorlib import debuglink, device, ui
 from trezorlib.client import TrezorClient
 from trezorlib.debuglink import TrezorClientDebugLink
 from trezorlib.transport import get_transport
