@@ -4,9 +4,10 @@ from .. import protobuf as p
 
 if __debug__:
     try:
-        from typing import List
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
     except ImportError:
-        List = None  # type: ignore
+        pass
 
 
 class DebugMoneroDiagRequest(p.MessageType):
@@ -20,6 +21,7 @@ class DebugMoneroDiagRequest(p.MessageType):
         pd: List[int] = None,
         data1: bytes = None,
         data2: bytes = None,
+        data3: List[bytes] = None,
     ) -> None:
         self.ins = ins
         self.p1 = p1
@@ -27,9 +29,10 @@ class DebugMoneroDiagRequest(p.MessageType):
         self.pd = pd if pd is not None else []
         self.data1 = data1
         self.data2 = data2
+        self.data3 = data3 if data3 is not None else []
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('ins', p.UVarintType, 0),
             2: ('p1', p.UVarintType, 0),
@@ -37,4 +40,5 @@ class DebugMoneroDiagRequest(p.MessageType):
             4: ('pd', p.UVarintType, p.FLAG_REPEATED),
             5: ('data1', p.BytesType, 0),
             6: ('data2', p.BytesType, 0),
+            7: ('data3', p.BytesType, p.FLAG_REPEATED),
         }
