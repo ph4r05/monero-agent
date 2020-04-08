@@ -6,9 +6,10 @@ from .NEMMosaic import NEMMosaic
 
 if __debug__:
     try:
-        from typing import List
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
     except ImportError:
-        List = None  # type: ignore
+        pass
 
 
 class NEMTransfer(p.MessageType):
@@ -28,7 +29,7 @@ class NEMTransfer(p.MessageType):
         self.mosaics = mosaics if mosaics is not None else []
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('recipient', p.UnicodeType, 0),
             2: ('amount', p.UVarintType, 0),

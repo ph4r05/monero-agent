@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class WordAck(p.MessageType):
     MESSAGE_WIRE_TYPE = 47
@@ -13,7 +20,7 @@ class WordAck(p.MessageType):
         self.word = word
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('word', p.UnicodeType, 0),  # required
         }

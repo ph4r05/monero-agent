@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class StellarSetOptionsOp(p.MessageType):
     MESSAGE_WIRE_TYPE = 215
@@ -35,7 +42,7 @@ class StellarSetOptionsOp(p.MessageType):
         self.signer_weight = signer_weight
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('source_account', p.UnicodeType, 0),
             2: ('inflation_destination_account', p.UnicodeType, 0),

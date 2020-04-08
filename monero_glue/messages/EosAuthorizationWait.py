@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class EosAuthorizationWait(p.MessageType):
 
@@ -14,7 +21,7 @@ class EosAuthorizationWait(p.MessageType):
         self.weight = weight
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('wait_sec', p.UVarintType, 0),
             2: ('weight', p.UVarintType, 0),

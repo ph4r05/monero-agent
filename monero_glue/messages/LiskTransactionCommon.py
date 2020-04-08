@@ -4,12 +4,20 @@ from .. import protobuf as p
 
 from .LiskTransactionAsset import LiskTransactionAsset
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+        EnumTypeLiskTransactionType = Literal[0, 1, 2, 3, 4, 5, 6, 7]
+    except ImportError:
+        pass
+
 
 class LiskTransactionCommon(p.MessageType):
 
     def __init__(
         self,
-        type: int = None,
+        type: EnumTypeLiskTransactionType = None,
         amount: int = None,
         fee: int = None,
         recipient_id: str = None,
@@ -30,10 +38,10 @@ class LiskTransactionCommon(p.MessageType):
         self.asset = asset
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
-            1: ('type', p.UVarintType, 0),
-            2: ('amount', p.UVarintType, 0),  # default=0
+            1: ('type', p.EnumType("LiskTransactionType", (0, 1, 2, 3, 4, 5, 6, 7)), 0),
+            2: ('amount', p.UVarintType, 0),
             3: ('fee', p.UVarintType, 0),
             4: ('recipient_id', p.UnicodeType, 0),
             5: ('sender_public_key', p.BytesType, 0),

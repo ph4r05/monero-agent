@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class SignedIdentity(p.MessageType):
     MESSAGE_WIRE_TYPE = 54
@@ -17,7 +24,7 @@ class SignedIdentity(p.MessageType):
         self.signature = signature
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('address', p.UnicodeType, 0),
             2: ('public_key', p.BytesType, 0),

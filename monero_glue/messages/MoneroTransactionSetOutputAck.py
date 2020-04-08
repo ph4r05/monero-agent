@@ -4,6 +4,13 @@ from .. import protobuf as p
 
 from .MoneroTransactionRsigData import MoneroTransactionRsigData
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class MoneroTransactionSetOutputAck(p.MessageType):
     MESSAGE_WIRE_TYPE = 512
@@ -23,7 +30,7 @@ class MoneroTransactionSetOutputAck(p.MessageType):
         self.ecdh_info = ecdh_info
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('tx_out', p.BytesType, 0),
             2: ('vouti_hmac', p.BytesType, 0),

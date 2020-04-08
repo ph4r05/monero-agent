@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class EosTxHeader(p.MessageType):
 
@@ -22,7 +29,7 @@ class EosTxHeader(p.MessageType):
         self.delay_sec = delay_sec
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('expiration', p.UVarintType, 0),  # required
             2: ('ref_block_num', p.UVarintType, 0),  # required

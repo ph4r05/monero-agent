@@ -3,13 +3,21 @@
 from .. import protobuf as p
 
 from .TezosContractID import TezosContractID
+from .TezosParametersManager import TezosParametersManager
+
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
 
 
 class TezosTransactionOp(p.MessageType):
 
     def __init__(
         self,
-        source: TezosContractID = None,
+        source: bytes = None,
         fee: int = None,
         counter: int = None,
         gas_limit: int = None,
@@ -17,6 +25,7 @@ class TezosTransactionOp(p.MessageType):
         amount: int = None,
         destination: TezosContractID = None,
         parameters: bytes = None,
+        parameters_manager: TezosParametersManager = None,
     ) -> None:
         self.source = source
         self.fee = fee
@@ -26,11 +35,12 @@ class TezosTransactionOp(p.MessageType):
         self.amount = amount
         self.destination = destination
         self.parameters = parameters
+        self.parameters_manager = parameters_manager
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
-            1: ('source', TezosContractID, 0),
+            9: ('source', p.BytesType, 0),
             2: ('fee', p.UVarintType, 0),
             3: ('counter', p.UVarintType, 0),
             4: ('gas_limit', p.UVarintType, 0),
@@ -38,4 +48,5 @@ class TezosTransactionOp(p.MessageType):
             6: ('amount', p.UVarintType, 0),
             7: ('destination', TezosContractID, 0),
             8: ('parameters', p.BytesType, 0),
+            10: ('parameters_manager', TezosParametersManager, 0),
         }

@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class TxOutputBinType(p.MessageType):
 
@@ -16,7 +23,7 @@ class TxOutputBinType(p.MessageType):
         self.decred_script_version = decred_script_version
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('amount', p.UVarintType, 0),  # required
             2: ('script_pubkey', p.BytesType, 0),  # required

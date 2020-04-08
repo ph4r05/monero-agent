@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class EosPublicKey(p.MessageType):
     MESSAGE_WIRE_TYPE = 601
@@ -15,7 +22,7 @@ class EosPublicKey(p.MessageType):
         self.raw_public_key = raw_public_key
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('wif_public_key', p.UnicodeType, 0),
             2: ('raw_public_key', p.BytesType, 0),

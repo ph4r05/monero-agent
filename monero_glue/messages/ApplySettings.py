@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class ApplySettings(p.MessageType):
     MESSAGE_WIRE_TYPE = 25
@@ -12,23 +19,26 @@ class ApplySettings(p.MessageType):
         label: str = None,
         use_passphrase: bool = None,
         homescreen: bytes = None,
-        passphrase_source: int = None,
         auto_lock_delay_ms: int = None,
+        display_rotation: int = None,
+        passphrase_always_on_device: bool = None,
     ) -> None:
         self.language = language
         self.label = label
         self.use_passphrase = use_passphrase
         self.homescreen = homescreen
-        self.passphrase_source = passphrase_source
         self.auto_lock_delay_ms = auto_lock_delay_ms
+        self.display_rotation = display_rotation
+        self.passphrase_always_on_device = passphrase_always_on_device
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('language', p.UnicodeType, 0),
             2: ('label', p.UnicodeType, 0),
             3: ('use_passphrase', p.BoolType, 0),
             4: ('homescreen', p.BytesType, 0),
-            5: ('passphrase_source', p.UVarintType, 0),
             6: ('auto_lock_delay_ms', p.UVarintType, 0),
+            7: ('display_rotation', p.UVarintType, 0),
+            8: ('passphrase_always_on_device', p.BoolType, 0),
         }

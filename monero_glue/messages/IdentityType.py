@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class IdentityType(p.MessageType):
 
@@ -22,7 +29,7 @@ class IdentityType(p.MessageType):
         self.index = index
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('proto', p.UnicodeType, 0),
             2: ('user', p.UnicodeType, 0),

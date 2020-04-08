@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class StellarBumpSequenceOp(p.MessageType):
     MESSAGE_WIRE_TYPE = 221
@@ -15,7 +22,7 @@ class StellarBumpSequenceOp(p.MessageType):
         self.bump_to = bump_to
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('source_account', p.UnicodeType, 0),
             2: ('bump_to', p.UVarintType, 0),

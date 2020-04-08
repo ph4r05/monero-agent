@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class MoneroMultisigKLRki(p.MessageType):
 
@@ -18,7 +25,7 @@ class MoneroMultisigKLRki(p.MessageType):
         self.ki = ki
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('K', p.BytesType, 0),
             2: ('L', p.BytesType, 0),

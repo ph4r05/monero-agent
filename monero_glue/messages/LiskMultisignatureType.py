@@ -4,9 +4,10 @@ from .. import protobuf as p
 
 if __debug__:
     try:
-        from typing import List
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
     except ImportError:
-        List = None  # type: ignore
+        pass
 
 
 class LiskMultisignatureType(p.MessageType):
@@ -22,7 +23,7 @@ class LiskMultisignatureType(p.MessageType):
         self.keys_group = keys_group if keys_group is not None else []
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('min', p.UVarintType, 0),
             2: ('life_time', p.UVarintType, 0),

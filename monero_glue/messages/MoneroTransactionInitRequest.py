@@ -6,9 +6,10 @@ from .MoneroTransactionData import MoneroTransactionData
 
 if __debug__:
     try:
-        from typing import List
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
     except ImportError:
-        List = None  # type: ignore
+        pass
 
 
 class MoneroTransactionInitRequest(p.MessageType):
@@ -27,7 +28,7 @@ class MoneroTransactionInitRequest(p.MessageType):
         self.tsx_data = tsx_data
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('version', p.UVarintType, 0),
             2: ('address_n', p.UVarintType, p.FLAG_REPEATED),

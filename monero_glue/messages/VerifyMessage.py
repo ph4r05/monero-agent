@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class VerifyMessage(p.MessageType):
     MESSAGE_WIRE_TYPE = 39
@@ -19,7 +26,7 @@ class VerifyMessage(p.MessageType):
         self.coin_name = coin_name
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('address', p.UnicodeType, 0),
             2: ('signature', p.BytesType, 0),

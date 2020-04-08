@@ -6,9 +6,10 @@ from .HDNodeType import HDNodeType
 
 if __debug__:
     try:
-        from typing import List
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
     except ImportError:
-        List = None  # type: ignore
+        pass
 
 
 class HDNodePathType(p.MessageType):
@@ -22,7 +23,7 @@ class HDNodePathType(p.MessageType):
         self.address_n = address_n if address_n is not None else []
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('node', HDNodeType, 0),  # required
             2: ('address_n', p.UVarintType, p.FLAG_REPEATED),

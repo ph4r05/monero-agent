@@ -4,6 +4,13 @@ from .. import protobuf as p
 
 from .EosPermissionLevel import EosPermissionLevel
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class EosAuthorizationAccount(p.MessageType):
 
@@ -16,7 +23,7 @@ class EosAuthorizationAccount(p.MessageType):
         self.weight = weight
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('account', EosPermissionLevel, 0),
             2: ('weight', p.UVarintType, 0),

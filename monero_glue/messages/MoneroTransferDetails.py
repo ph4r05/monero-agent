@@ -4,9 +4,10 @@ from .. import protobuf as p
 
 if __debug__:
     try:
-        from typing import List
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
     except ImportError:
-        List = None  # type: ignore
+        pass
 
 
 class MoneroTransferDetails(p.MessageType):
@@ -24,7 +25,7 @@ class MoneroTransferDetails(p.MessageType):
         self.internal_output_index = internal_output_index
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('out_key', p.BytesType, 0),
             2: ('tx_pub_key', p.BytesType, 0),

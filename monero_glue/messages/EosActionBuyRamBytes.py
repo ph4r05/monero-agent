@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class EosActionBuyRamBytes(p.MessageType):
 
@@ -16,7 +23,7 @@ class EosActionBuyRamBytes(p.MessageType):
         self.bytes = bytes
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('payer', p.UVarintType, 0),
             2: ('receiver', p.UVarintType, 0),

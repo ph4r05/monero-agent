@@ -5,6 +5,13 @@ from .. import protobuf as p
 from .MoneroTransactionDestinationEntry import MoneroTransactionDestinationEntry
 from .MoneroTransactionRsigData import MoneroTransactionRsigData
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class MoneroTransactionSetOutputRequest(p.MessageType):
     MESSAGE_WIRE_TYPE = 511
@@ -22,7 +29,7 @@ class MoneroTransactionSetOutputRequest(p.MessageType):
         self.is_offloaded_bp = is_offloaded_bp
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('dst_entr', MoneroTransactionDestinationEntry, 0),
             2: ('dst_entr_hmac', p.BytesType, 0),

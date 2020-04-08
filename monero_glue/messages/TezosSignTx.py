@@ -2,16 +2,19 @@
 # fmt: off
 from .. import protobuf as p
 
+from .TezosBallotOp import TezosBallotOp
 from .TezosDelegationOp import TezosDelegationOp
 from .TezosOriginationOp import TezosOriginationOp
+from .TezosProposalOp import TezosProposalOp
 from .TezosRevealOp import TezosRevealOp
 from .TezosTransactionOp import TezosTransactionOp
 
 if __debug__:
     try:
-        from typing import List
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
     except ImportError:
-        List = None  # type: ignore
+        pass
 
 
 class TezosSignTx(p.MessageType):
@@ -25,6 +28,8 @@ class TezosSignTx(p.MessageType):
         transaction: TezosTransactionOp = None,
         origination: TezosOriginationOp = None,
         delegation: TezosDelegationOp = None,
+        proposal: TezosProposalOp = None,
+        ballot: TezosBallotOp = None,
     ) -> None:
         self.address_n = address_n if address_n is not None else []
         self.branch = branch
@@ -32,9 +37,11 @@ class TezosSignTx(p.MessageType):
         self.transaction = transaction
         self.origination = origination
         self.delegation = delegation
+        self.proposal = proposal
+        self.ballot = ballot
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
             2: ('branch', p.BytesType, 0),
@@ -42,4 +49,6 @@ class TezosSignTx(p.MessageType):
             4: ('transaction', TezosTransactionOp, 0),
             5: ('origination', TezosOriginationOp, 0),
             6: ('delegation', TezosDelegationOp, 0),
+            7: ('proposal', TezosProposalOp, 0),
+            8: ('ballot', TezosBallotOp, 0),
         }

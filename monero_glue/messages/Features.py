@@ -2,6 +2,15 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+        EnumTypeCapability = Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+        EnumTypeBackupType = Literal[0, 1, 2]
+    except ImportError:
+        pass
+
 
 class Features(p.MessageType):
     MESSAGE_WIRE_TYPE = 17
@@ -23,7 +32,6 @@ class Features(p.MessageType):
         bootloader_hash: bytes = None,
         imported: bool = None,
         pin_cached: bool = None,
-        passphrase_cached: bool = None,
         firmware_present: bool = None,
         needs_backup: bool = None,
         flags: int = None,
@@ -35,6 +43,14 @@ class Features(p.MessageType):
         fw_vendor_keys: bytes = None,
         unfinished_backup: bool = None,
         no_backup: bool = None,
+        recovery_mode: bool = None,
+        capabilities: List[EnumTypeCapability] = None,
+        backup_type: EnumTypeBackupType = None,
+        sd_card_present: bool = None,
+        sd_protection: bool = None,
+        wipe_code_protection: bool = None,
+        session_id: bytes = None,
+        passphrase_always_on_device: bool = None,
     ) -> None:
         self.vendor = vendor
         self.major_version = major_version
@@ -51,7 +67,6 @@ class Features(p.MessageType):
         self.bootloader_hash = bootloader_hash
         self.imported = imported
         self.pin_cached = pin_cached
-        self.passphrase_cached = passphrase_cached
         self.firmware_present = firmware_present
         self.needs_backup = needs_backup
         self.flags = flags
@@ -63,9 +78,17 @@ class Features(p.MessageType):
         self.fw_vendor_keys = fw_vendor_keys
         self.unfinished_backup = unfinished_backup
         self.no_backup = no_backup
+        self.recovery_mode = recovery_mode
+        self.capabilities = capabilities if capabilities is not None else []
+        self.backup_type = backup_type
+        self.sd_card_present = sd_card_present
+        self.sd_protection = sd_protection
+        self.wipe_code_protection = wipe_code_protection
+        self.session_id = session_id
+        self.passphrase_always_on_device = passphrase_always_on_device
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('vendor', p.UnicodeType, 0),
             2: ('major_version', p.UVarintType, 0),
@@ -82,7 +105,6 @@ class Features(p.MessageType):
             14: ('bootloader_hash', p.BytesType, 0),
             15: ('imported', p.BoolType, 0),
             16: ('pin_cached', p.BoolType, 0),
-            17: ('passphrase_cached', p.BoolType, 0),
             18: ('firmware_present', p.BoolType, 0),
             19: ('needs_backup', p.BoolType, 0),
             20: ('flags', p.UVarintType, 0),
@@ -94,4 +116,12 @@ class Features(p.MessageType):
             26: ('fw_vendor_keys', p.BytesType, 0),
             27: ('unfinished_backup', p.BoolType, 0),
             28: ('no_backup', p.BoolType, 0),
+            29: ('recovery_mode', p.BoolType, 0),
+            30: ('capabilities', p.EnumType("Capability", (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17)), p.FLAG_REPEATED),
+            31: ('backup_type', p.EnumType("BackupType", (0, 1, 2)), 0),
+            32: ('sd_card_present', p.BoolType, 0),
+            33: ('sd_protection', p.BoolType, 0),
+            34: ('wipe_code_protection', p.BoolType, 0),
+            35: ('session_id', p.BytesType, 0),
+            36: ('passphrase_always_on_device', p.BoolType, 0),
         }

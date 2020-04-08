@@ -4,9 +4,10 @@ from .. import protobuf as p
 
 if __debug__:
     try:
-        from typing import List
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
     except ImportError:
-        List = None  # type: ignore
+        pass
 
 
 class MoneroTransactionRsigData(p.MessageType):
@@ -30,7 +31,7 @@ class MoneroTransactionRsigData(p.MessageType):
         self.bp_version = bp_version
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('rsig_type', p.UVarintType, 0),
             2: ('offload_type', p.UVarintType, 0),

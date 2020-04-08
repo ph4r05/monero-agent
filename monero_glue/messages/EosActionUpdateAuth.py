@@ -4,6 +4,13 @@ from .. import protobuf as p
 
 from .EosAuthorization import EosAuthorization
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class EosActionUpdateAuth(p.MessageType):
 
@@ -20,7 +27,7 @@ class EosActionUpdateAuth(p.MessageType):
         self.auth = auth
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('account', p.UVarintType, 0),
             2: ('permission', p.UVarintType, 0),

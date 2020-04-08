@@ -2,6 +2,13 @@
 # fmt: off
 from .. import protobuf as p
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class CardanoSignedTx(p.MessageType):
     MESSAGE_WIRE_TYPE = 310
@@ -15,7 +22,7 @@ class CardanoSignedTx(p.MessageType):
         self.tx_body = tx_body
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('tx_hash', p.BytesType, 0),
             2: ('tx_body', p.BytesType, 0),

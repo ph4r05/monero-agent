@@ -6,9 +6,11 @@ from .MultisigRedeemScriptType import MultisigRedeemScriptType
 
 if __debug__:
     try:
-        from typing import List
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+        EnumTypeInputScriptType = Literal[0, 1, 2, 3, 4]
     except ImportError:
-        List = None  # type: ignore
+        pass
 
 
 class TxInputType(p.MessageType):
@@ -20,7 +22,7 @@ class TxInputType(p.MessageType):
         prev_index: int = None,
         script_sig: bytes = None,
         sequence: int = None,
-        script_type: int = None,
+        script_type: EnumTypeInputScriptType = None,
         multisig: MultisigRedeemScriptType = None,
         amount: int = None,
         decred_tree: int = None,
@@ -42,14 +44,14 @@ class TxInputType(p.MessageType):
         self.prev_block_height_bip115 = prev_block_height_bip115
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('address_n', p.UVarintType, p.FLAG_REPEATED),
             2: ('prev_hash', p.BytesType, 0),  # required
             3: ('prev_index', p.UVarintType, 0),  # required
             4: ('script_sig', p.BytesType, 0),
             5: ('sequence', p.UVarintType, 0),  # default=4294967295
-            6: ('script_type', p.UVarintType, 0),  # default=SPENDADDRESS
+            6: ('script_type', p.EnumType("InputScriptType", (0, 1, 2, 3, 4)), 0),  # default=SPENDADDRESS
             7: ('multisig', MultisigRedeemScriptType, 0),
             8: ('amount', p.UVarintType, 0),
             9: ('decred_tree', p.UVarintType, 0),

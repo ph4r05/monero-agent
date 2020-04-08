@@ -7,9 +7,10 @@ from .MoneroTransactionRsigData import MoneroTransactionRsigData
 
 if __debug__:
     try:
-        from typing import List
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
     except ImportError:
-        List = None  # type: ignore
+        pass
 
 
 class MoneroTransactionData(p.MessageType):
@@ -29,6 +30,8 @@ class MoneroTransactionData(p.MessageType):
         rsig_data: MoneroTransactionRsigData = None,
         integrated_indices: List[int] = None,
         client_version: int = None,
+        hard_fork: int = None,
+        monero_version: bytes = None,
     ) -> None:
         self.version = version
         self.payment_id = payment_id
@@ -43,9 +46,11 @@ class MoneroTransactionData(p.MessageType):
         self.rsig_data = rsig_data
         self.integrated_indices = integrated_indices if integrated_indices is not None else []
         self.client_version = client_version
+        self.hard_fork = hard_fork
+        self.monero_version = monero_version
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('version', p.UVarintType, 0),
             2: ('payment_id', p.BytesType, 0),
@@ -60,4 +65,6 @@ class MoneroTransactionData(p.MessageType):
             11: ('rsig_data', MoneroTransactionRsigData, 0),
             12: ('integrated_indices', p.UVarintType, p.FLAG_REPEATED),
             13: ('client_version', p.UVarintType, 0),
+            14: ('hard_fork', p.UVarintType, 0),
+            15: ('monero_version', p.BytesType, 0),
         }

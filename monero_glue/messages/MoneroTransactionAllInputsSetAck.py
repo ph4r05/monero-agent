@@ -4,6 +4,13 @@ from .. import protobuf as p
 
 from .MoneroTransactionRsigData import MoneroTransactionRsigData
 
+if __debug__:
+    try:
+        from typing import Dict, List  # noqa: F401
+        from typing_extensions import Literal  # noqa: F401
+    except ImportError:
+        pass
+
 
 class MoneroTransactionAllInputsSetAck(p.MessageType):
     MESSAGE_WIRE_TYPE = 510
@@ -15,7 +22,7 @@ class MoneroTransactionAllInputsSetAck(p.MessageType):
         self.rsig_data = rsig_data
 
     @classmethod
-    def get_fields(cls):
+    def get_fields(cls) -> Dict:
         return {
             1: ('rsig_data', MoneroTransactionRsigData, 0),
         }
