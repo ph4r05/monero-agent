@@ -208,6 +208,11 @@ Thanks for your support!
 Monero address:
 `47BEukN83whUdvuXbaWmDDQLYNUpLsvFR2jioQtpP5vD8b3o74b9oFgQ3KFa3ibjbwBsaJEehogjiUCfGtugUGAuJAfbh1Z`
 
+# Internal notes
+
+- Signing client version 3 is not yet implemented. Subaddr index is needed for each UTXO. 
+- CLSAG algorithm is implemented, but not yet used in the signing client
+
 # Related projects
 
 - [monero-trezor-doc] - Technical report describing the integration design

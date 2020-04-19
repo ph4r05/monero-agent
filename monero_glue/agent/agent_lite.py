@@ -160,6 +160,7 @@ class Agent(object):
 
         self.hf = 10
         self.client_version = 1
+        self.subaddresses = {}
 
     def is_simple(self, rv):
         """
@@ -449,6 +450,7 @@ class Agent(object):
                 src_entr=src_pb,
                 vini=await tmisc.dump_msg(self.ct.tx.vin[idx], prefix=b"\x02"),
                 vini_hmac=self.ct.tx_in_hmacs[idx],
+                orig_idx=self.ct.source_permutation[idx],
             )
             t_res = await self.trezor.tsx_sign(msg)
             self.handle_error(t_res)
@@ -527,6 +529,7 @@ class Agent(object):
                 pseudo_out_hmac=self.ct.pseudo_outs[idx][1],
                 pseudo_out_alpha=self.ct.alphas[idx],
                 spend_key=self.ct.spend_encs[idx],
+                orig_idx=self.ct.source_permutation[idx],
             )
             t_res = await self.trezor.tsx_sign(
                 msg
