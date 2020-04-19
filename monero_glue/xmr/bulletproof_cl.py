@@ -81,19 +81,19 @@ def comp_folding(rrcons, nprime, v, ix):
 def comp_offdots(Gprime, Hprime, aprime, bprime, nprime):
     # Computing dot products in-memory, blinded
     npr2 = nprime * 2
-    cL = bp._inner_product(
+    cL = bp.inner_product(
         aprime.slice_view(0, nprime), bprime.slice_view(nprime, npr2), None
     )
 
-    cR = bp._inner_product(
+    cR = bp.inner_product(
         aprime.slice_view(nprime, npr2), bprime.slice_view(0, nprime), None
     )
 
-    LcA = bp._vector_sum_aA(None, aprime.slice_view(0, nprime), Gprime.slice_view(nprime, npr2))
-    LcB = bp._vector_sum_aA(None, bprime.slice_view(nprime, npr2), Hprime.slice_view(0, nprime))
+    LcA = bp.vector_sum_aA(None, aprime.slice_view(0, nprime), Gprime.slice_view(nprime, npr2))
+    LcB = bp.vector_sum_aA(None, bprime.slice_view(nprime, npr2), Hprime.slice_view(0, nprime))
 
-    RcA = bp._vector_sum_aA(None, aprime.slice_view(nprime, npr2), Gprime.slice_view(0, nprime))
-    RcB = bp._vector_sum_aA(None, bprime.slice_view(0, nprime), Hprime.slice_view(nprime, npr2))
+    RcA = bp.vector_sum_aA(None, aprime.slice_view(nprime, npr2), Gprime.slice_view(0, nprime))
+    RcB = bp.vector_sum_aA(None, bprime.slice_view(0, nprime), Hprime.slice_view(nprime, npr2))
     return cL, cR, LcA, LcB, RcA, RcB
 
 
@@ -116,7 +116,7 @@ def dechunk_res(buffers, exp_res=1):
 
 
 def vect_clone(dst, src):
-    dst = bp._ensure_dst_keyvect(dst, len(src))
+    dst = bp.ensure_dst_keyvect(dst, len(src))
     for i in range(len(src)):
         dst.read(i, src.to(i))
     return dst
@@ -130,7 +130,7 @@ def count_bytes(buffers):
     elif isinstance(buffers, (bytearray, bytes, str)):
         return len(buffers)
     else:
-        logger.warn("Unknown type: ", type(buffers))
+        logger.debug("Unknown type for count_bytes(): %s " % (type(buffers),))
         return 0
 
 
@@ -229,10 +229,10 @@ class BulletproofClient:
         else:
             # round 0 - aLow, bHigh; aHigh, bLow in memory
             logger.debug('r0, cLcR off, nprime: %s' % str(self.MN // 2))
-            yinvpow = vect_clone(None, bp.KeyVPowers(self.MN, bp._invert(None, y)))
+            yinvpow = vect_clone(None, bp.KeyVPowers(self.MN, bp.invert(None, y)))
             Gprec = vect_clone(None, bpi._gprec_aux(self.MN))
             Hprec = vect_clone(None, bpi._hprec_aux(self.MN))
-            Hprime = vect_clone(None, bp.KeyVEval(self.MN, lambda i, d: bp._scalarmult_key(d, Hprec[i], yinvpow[i])))
+            Hprime = vect_clone(None, bp.KeyVEval(self.MN, lambda i, d: bp.scalarmult_key(d, Hprec[i], yinvpow[i])))
 
             cL, cR, LcA, LcB, RcA, RcB = comp_offdots(Gprec, Hprime, bp.KeyV(self.MN, l), bp.KeyV(self.MN, r), self.MN // 2)
             rrcons = await self.bp_tx_buffers((cL, cR, LcA, LcB, RcA, RcB))
@@ -265,8 +265,8 @@ class BulletproofClient:
 
             logger.debug('r0 in-mem meth3 fold Hprime')
             Hprec_ = vect_clone(None, bpi._hprec_aux(self.MN))
-            ypowinv = vect_clone(None, bp.KeyVPowers(self.MN, bp._invert(_tmp_bf_0, y)))
-            Hprec = vect_clone(None, bp.KeyVEval(self.MN, lambda i, d: bp._scalarmult_key(d, Hprec_.to(i), yinvpow[i])))
+            ypowinv = vect_clone(None, bp.KeyVPowers(self.MN, bp.invert(_tmp_bf_0, y)))
+            Hprec = vect_clone(None, bp.KeyVEval(self.MN, lambda i, d: bp.scalarmult_key(d, Hprec_.to(i), yinvpow[i])))
             comp_folding(rrcons, self.MN // 2, Hprec, 1)
 
             logger.debug('r0 in-mem meth3 correct G, H')
@@ -394,3 +394,131 @@ class BulletproofClient:
         proof = await tmisc.parse_msg(proof[0], BulletproofFull())
         self.prove_time = time.time() - ttstart
         return proof
+
+
+class BulletproofMPCRunner:
+    def __init__(self):
+        self.state = None
+        self.prev_mem = 0
+        self.cur_mes = 0
+
+    def bpp(self, instance=None):
+        if instance:
+            self.state = instance
+        return self.state
+
+    def check_mem(self, x):
+        # gc.collect()
+        free = 0  # gc.mem_free()
+        diff = self.prev_mem - free
+        logger.debug(
+            "======= {} {} Diff: {} Free: {} Allocated: {}".format(
+                self.cur_mes, x, diff, free, '?', # gc.mem_alloc()
+            ),
+        )
+        # micropython.mem_info()
+        # gc.collect()
+        self.cur_mes += 1
+        self.prev_mem = free
+
+    def log_trace(self, x=None):
+        logger.debug(
+            "Log trace %s, ... F: %s A: %s, S: %s",
+            x,
+            '?',  # gc.mem_free(),
+            '?',  # gc.mem_alloc(),
+            '?',  # micropython.stack_use(),
+        )
+
+    async def step(self, p1=0, p2=2, params=None, buffers=None):
+        if p1 == 0:
+            self.bpp(None)  # clear old state
+
+        self.check_mem("+++BP START: %s; %s" % (p1, p2))
+        # gc.collect()
+        self.log_trace("BP START")
+
+        # Crypto function call number reporting not implemented here
+        # It is in git: ph4r05/trezor-firmware/pr/bpoff-counting-exp
+
+        bpi, res = None, None
+        if p1 == 0:
+            # crypto.report_reset()
+            bp.set_prng(crypto.prng(bp.ZERO))
+            bpi = bp.BulletProofBuilder()
+            # bpi.gc_fnc = gc.collect
+            bpi.gc_trace = self.log_trace
+            sv = [crypto.sc_init(137 * i) for i in range(p2)]
+            gamma = [crypto.sc_init(991 * i) for i in range(p2)]
+
+            bpi.off_method = 2 if not params and len(params) <= 1 else params[0]
+            if params and len(params) >= 4:
+                bpi.nprime_thresh = params[1]
+                bpi.off2_thresh = params[2]
+                bpi.batching = params[3]
+
+            res = bpi.prove_batch_off(sv, gamma, buffers)
+            # crypto.report()
+            state = bpi.dump_state()
+            # del (bp, bpi)
+            # gc.collect()
+            self.log_trace("BP STATE")
+            self.bpp((state, None))
+            # self.bpp((state, crypto.report_get()))
+            # del (crypto)
+            # gc.collect()
+            self.log_trace("BP STATE2")
+
+        else:
+            # crypto.report_reset()
+            state, fncs = self.bpp()
+            bpi = bp.BulletProofBuilder()
+            bpi.load_state(state)
+            del (state)
+            self.bpp(None)
+            # gc.collect()
+            self.log_trace("From state")
+
+            # bp.PRNG = crypto.prng(bp._ZERO)
+            # bpi.gc_fnc = gc.collect
+            bpi.gc_trace = self.log_trace
+
+            # crypto.report_reset()
+            # crypto.report_set(fncs)
+            res = bpi.prove_batch_off_step(buffers)
+            # crypto.report()
+            state = bpi.dump_state()
+            del bpi
+            # del (bp, bpi)
+            # gc.collect()
+            self.log_trace("BP STATE")
+            self.bpp((state, fncs))
+            # del (crypto)
+            # gc.collect()
+            self.log_trace("BP STATE2")
+
+        # gc.collect()
+        self.log_trace("BP STEP")
+        self.check_mem("+++BP STEP")
+        if isinstance(res, tuple) and res[0] == 1:
+            from monero_glue.hwtoken import misc as tmisc
+            B = res[1]
+            B2 = BulletproofFull()
+            B2.V = B.V
+            B2.S = B.S
+            B2.A = B.A
+            B2.T1 = B.T1
+            B2.T2 = B.T2
+            B2.taux = B.taux
+            B2.mu = B.mu
+            B2.L = B.L
+            B2.R = B.R
+            B2.a = B.a
+            B2.b = B.b
+            B2.t = B.t
+            res = await tmisc.dump_msg(B2)
+
+        msg = None
+        if res:
+            msg = res if isinstance(res, (list, tuple)) else [res]
+        return msg

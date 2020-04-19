@@ -96,6 +96,11 @@ def const(x):
     return x
 
 
+def set_prng(o):
+    global PRNG
+    PRNG = o
+
+
 def _eprint(*args, **kwargs):
     if not _PRINT_INT:
         return
@@ -376,6 +381,10 @@ class KeyVBase:
 
     def slice_view(self, start, stop):
         return KeyVSliced(self, start, stop)
+
+    def assrt(self, cond, msg=None, *args, **kwargs):
+        if not cond:
+            raise ValueError(msg)
 
     def sdump(self):
         return None
@@ -2941,7 +2950,7 @@ class BulletProofBuilder:
         # blinvs indices: [2 * (i // 4) + (i % 2)]: 0 1 0 1, 2 3 2 3, ...
         #
         # Method 3 blinding for LO parts: (m_0 w^{-1} + bl0)
-        w0 = crypto.decodeint_into_noreduce(self.w_round)
+        w0 = crypto.decodeint_into_noreduce(None, self.w_round)
         wi = crypto.sc_inv_into(None, w0)
         blinvs = [crypto.new_scalar(), crypto.new_scalar()]
         tconst = [_ensure_dst_key() for _ in range(4*4)]
@@ -3636,8 +3645,13 @@ class BulletProofBuilder:
         return True
 
 
+# Exports:
+ensure_dst_keyvect = _ensure_dst_keyvect
 multiexp = _multiexp
 vector_exponent_custom = _vector_exponent_custom
 hadamard_fold = _hadamard_fold
 scalar_fold = _scalar_fold
-
+inner_product = _inner_product
+vector_sum_aA = _vector_sum_aA
+invert = _invert
+scalarmult_key = _scalarmult_key
