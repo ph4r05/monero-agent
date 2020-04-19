@@ -15,6 +15,8 @@ tcry = tcryr
 
 ED25519_ORD = b"\xed\xd3\xf5\x5c\x1a\x63\x12\x58\xd6\x9c\xf7\xa2\xde\xf9\xde\x14\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10"
 ED25519_ORD_BN = None
+Ge25519 = tcry.ge25519
+Sc25519 = tcry.bignum256modm
 
 
 # Load & init the library
@@ -714,7 +716,7 @@ def hash_to_point_into(r, buf):
     :param key:
     :return:
     """
-    bf = tcry.KEY_BUFF.from_buffer(buf)
+    bf = tcry.KEY_BUFF.from_buffer_copy(buf)
     tcry.xmr_hash_to_ec(r, bf)
     return r
 

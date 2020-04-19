@@ -159,6 +159,8 @@ class EdPoint(object):
 
 
 BASE = EdPoint(ed25519_2.B)
+Ge25519 = EdPoint
+Sc25519 = EdScalar
 
 
 def new_point():
