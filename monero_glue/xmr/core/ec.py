@@ -30,7 +30,10 @@ else:
 
 from monero_glue.compat.utils import memcpy
 
+
 class PRNG:
+    BLOCK_SIZE = 32
+
     def __init__(self, seed=b""):
         self.seed = bytes(seed)
         self.state = bytes(self.seed)
@@ -54,27 +57,18 @@ class PRNG:
         self.h.update(self.state + self.ctr.to_bytes(32, 'big'))
         return self.h.digest()
 
-    def _nleft(self):
-        self.leftover = self._gen()
-        self.leftover_bytes = len(self.leftover)
-
     def rewind(self, n):
         self.next(n)
 
     def next(self, num, buff=None):
         buff = buff if buff is not None else bytearray(num)
         off = 0
-        while off < num:
+        while (num - off) > 0:
             left = num - off
-            if self.leftover_bytes > 0:
-                tocopy = min(self.leftover_bytes, left)
-                memcpy(buff, off, self.leftover, 0, tocopy)
-                off += tocopy
-                self.leftover_bytes -= tocopy
-                self.leftover = self.leftover[:self.leftover_bytes]
-
-            if self.leftover_bytes == 0:
-                self._nleft()
+            cur = self._gen()
+            tocopy = min(len(cur), left)
+            memcpy(buff, off, cur, 0, tocopy)
+            off += tocopy
         return buff
 
 

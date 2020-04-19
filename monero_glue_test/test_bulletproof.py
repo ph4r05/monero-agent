@@ -26,20 +26,10 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         if not self.can_test():
             self.skipTest("Crypto backend does not implement required functions")
 
-    def test_constants(self):
-        """
-        Bulletproof constants testing
-        :return:
-        """
-        self.skip_if_cannot_test()
-        bpi = bp.BulletProofBuilder()
-        Gi, Hi = bp._init_exponents()
-        res = bp._init_constants()
-
     def mask_consistency_check(self, bpi):
         sv = [crypto.sc_init(123)]
         gamma = [crypto.sc_init(432)]
-        
+
         M, logM, aL, aR, V, gamma = bpi.prove_setup(sv, gamma)
         x = bp._ensure_dst_key()
         y = bp._ensure_dst_key()
@@ -49,9 +39,18 @@ class BulletproofTest(aiounittest.AsyncTestCase):
 
         self.assertEqual(sL.to(0, x), sL.to(0, y))
         self.assertEqual(sL.to(1, x), sL.to(1, y))
+
+        o63 = bytearray(sL.to(63))
+        o43 = bytearray(sL.to(43))
         self.assertEqual(sL.to(63, x), sL.to(63, y))
         self.assertNotEqual(sL.to(1, x), sL.to(0, y))
         self.assertNotEqual(sL.to(10, x), sL.to(0, y))
+        self.assertNotEqual(sL.to(15, x), o63)
+        self.assertEqual(sL.to(63, x), o63)
+        self.assertEqual(sL.to(43, x), o43)
+        self.assertEqual(sL.to(63, x), o63)
+        sL.to(22)
+        self.assertEqual(sL.to(43, x), o43)
 
         self.assertEqual(sR.to(0, x), sR.to(0, y))
         self.assertEqual(sR.to(1, x), sR.to(1, y))
@@ -303,7 +302,6 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         # fmt: on
 
     def test_masks(self):
-        self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
         self.mask_consistency_check(bpi)
 
@@ -312,61 +310,40 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         self.mask_consistency_check(bpi)
 
     def test_verify(self):
-        self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
+        self.assertTrue(bpi.verify(self.bproof_1()))
+        self.assertTrue(bpi.verify(self.bproof_2()))
+        self.assertTrue(bpi.verify(self.bproof_4()))
 
-        # fmt: off
-        bp_proof = Bulletproof(
-            V=[
-                unhexlify(b"3c705e1da4bbe43a0535a5ad3a8e6c148fb8c1a4118ba6b65412b2fe6511b261"),
-            ],
-            A=unhexlify(b"fd0336a21efd088edc4634153f6795ff18707815d32d6e07abfd52dbceaf65b5"),
-            S=unhexlify(b"3716a1ece9ad971ab9339aae011c343e4aadeee8b7316c928deb4a1678b4d540"),
-            T1=unhexlify(b"744a9ec79e7dcd263fc2e4e828b885ae3286e4dcca0fc43d1ad0f82bb5e84097"),
-            T2=unhexlify(b"5d61e98dce355faaa7498e3b3453e4a25c40a002596dfe8066b804963fb70de3"),
-            taux=unhexlify(b"2cc0207a5d8c0ce4f56fe381f451a44d6f1123516b3ee34c84c5bd73681e950b"),
-            mu=unhexlify(b"35554b56e85392ba9ef955019cdd0336b44e361f50eba6c8aa1b8e520ee32a03"),
-            L=[unhexlify(b"511e4e6c210dff90ce6dd9b42f99922d052a6d3a233ee1dcd247355fc2d1c6f3"),
-               unhexlify(b"a1d4a8f563f5beb5301df7f9b77cac6cb1750f41e32a87c448035476fabd95fb"),
-               unhexlify(b"f35d024182a47b2f1c6fd63a81e261de4a4c6304c08081c8f6be7ea376403de6"),
-               unhexlify(b"55f3c43c4e4b739b0c5b778594d89a0b8898dadcc344d33f0b9ebb17c6902c56"),
-               unhexlify(b"f284735fb774f653686cba437ed79e3a220491ba63b87154b02fb50531b22793"),
-               unhexlify(b"01aa0cb066bc7e4fd8da3a0a822c0bc40f6568b9ff7c3c22c2bbd506444ae079"),
-               ],
-            R=[unhexlify(b"8e202216359b2883edc516546d03aa6308b3403fcf78e771508aa17fb15dafd9"),
-               unhexlify(b"0dc6d53f7651cd1efdc434af1ab732ef96ff2a2df00ba41fe746edd1261e7303"),
-               unhexlify(b"0bf935f41ef1a97f8f75321f164a1951b3a6e12a4099a6751d6158abccb3b613"),
-               unhexlify(b"45f3ef0dae0bdac2f19142bffc57db12cf9dd2a6038d317467491788ff53ba88"),
-               unhexlify(b"bbfcf74131f8cb51db3ff1d25f01a8b27cbc8ad2b5a22ea53f196e82f68aef37"),
-               unhexlify(b"ca5a73f4770c0fd6bcce7d13f61bea6d0947840dd13c832544d37f75c875d0ae"),
-               ],
-            a=unhexlify(b"f77e9ce6aa4e2ee83b437d18c1683ec50cdfe43d0d05af2094cbb5a5e79c5f09"),
-            b=unhexlify(b"1ab637c922e87d9690f9b6d754d501277ca14935f69197cbf64b7f83f5a07e01"),
-            t=unhexlify(b"9e7e8ca9e482d8ab601139fa862649328c00aac2e567aefdefc1c41b505cf202")
-        )
-        # fmt: on
+    def test_prove(self):
+        bpi = bp.BulletProofBuilder()
+        val = crypto.sc_init(123)
+        mask = crypto.sc_init(432)
 
-        self.assertTrue(bpi.verify(bp_proof))
-        with self.assertRaises(ValueError):
-            bp_proof.S = bp_proof.A
-            self.assertTrue(bpi.verify(bp_proof))
+        bp_res = bpi.prove(val, mask)
+        self.assertTrue(bpi.verify(bp_res))
+
+    def test_prove_2(self):
+        bpi = bp.BulletProofBuilder()
+        val = crypto.sc_init((1 << 30) - 1 + 16)
+        mask = crypto.random_scalar()
+
+        bp_res = bpi.prove(val, mask)
+        bpi.verify(bp_res)
 
     def test_verify_batch_1(self):
-        self.skip_if_cannot_test()
-
         bpi = bp.BulletProofBuilder()
         bpi.verify_batch([self.bproof_1()])
         bpi.verify_batch([self.bproof_2()])
-        bpi.verify_batch([self.bproof_1(), self.bproof_2()])
-        bpi.verify_batch([self.bproof_4(), self.bproof_8(), self.bproof_2()])
-        bpi.verify_batch([self.bproof_2(), self.bproof_16()])
+        bpi.verify_batch([self.bproof_4()])
+        bpi.verify_batch([self.bproof_8()])
+        bpi.verify_batch([self.bproof_16()])
         with self.assertRaises(Exception):
-            bpi.verify_batch([self.bproof_4(), self.bproof_2_invalid()])
+            bpi.verify_batch([self.bproof_2_invalid()])
         with self.assertRaises(Exception):
-            bpi.verify_batch([self.bproof_2_invalid(), self.bproof_2_invalid()])
+            bpi.verify_batch([self.bproof_2_invalid()])
 
     def test_prove_random_masks(self):
-        self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
         bpi.use_det_masks = False  # trully randomly generated mask vectors
         val = crypto.sc_init((1 << 30) - 1 + 16)
@@ -375,8 +352,7 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         bp_res = bpi.prove(val, mask)
         bpi.verify(bp_res)
 
-    def test_multiexp(self):
-        self.skip_if_cannot_test()
+    def ctest_multiexp(self):
         scalars = [0, 1, 2, 3, 4, 99]
         point_base = [0, 2, 4, 7, 12, 18]
         scalar_sc = [crypto.sc_init(x) for x in scalars]
@@ -388,26 +364,24 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         self.assertEqual(len(muex), len(scalars))
         res = bp.multiexp(None, muex)
         res2 = bp.vector_exponent_custom(
-            A=bp.KeyVEval(3, lambda i, d: crypto.encodepoint_into(d, crypto.scalarmult_base(crypto.sc_init(point_base[i])))),
-            B=bp.KeyVEval(3, lambda i, d: crypto.encodepoint_into(d, crypto.scalarmult_base(crypto.sc_init(point_base[3+i])))),
-            a=bp.KeyVEval(3, lambda i, d: crypto.encodeint_into(d, crypto.sc_init(scalars[i]))),
-            b=bp.KeyVEval(3, lambda i, d: crypto.encodeint_into(d, crypto.sc_init(scalars[i+3]))),
+            A=bp.KeyVEval(3, lambda i, d: crypto.encodepoint_into(crypto.scalarmult_base(crypto.sc_init(point_base[i])), d)),
+            B=bp.KeyVEval(3, lambda i, d: crypto.encodepoint_into(crypto.scalarmult_base(crypto.sc_init(point_base[3+i])), d)),
+            a=bp.KeyVEval(3, lambda i, d: crypto.encodeint_into(crypto.sc_init(scalars[i]), d),),
+            b=bp.KeyVEval(3, lambda i, d: crypto.encodeint_into(crypto.sc_init(scalars[i+3]), d)),
         )
         self.assertEqual(res, res2)
 
     def test_prove_batch(self):
-        self.skip_if_cannot_test()
         bpi = bp.BulletProofBuilder()
-        sv = [crypto.sc_init(123), crypto.sc_init(768),
-              crypto.sc_init(1231), crypto.sc_init(7681),
-              crypto.sc_init(1232), crypto.sc_init(7682),
-              crypto.sc_init(1232), crypto.sc_init(7682),
-              ]
-        gamma = [crypto.sc_init(456), crypto.sc_init(901),
-                 crypto.sc_init(4561), crypto.sc_init(9011),
-                 crypto.sc_init(4562), crypto.sc_init(9012),
-                 crypto.sc_init(4562), crypto.sc_init(9012),
-                 ]
+        sv = [crypto.sc_init(123), crypto.sc_init(768)]
+        gamma = [crypto.sc_init(456), crypto.sc_init(901)]
+        proof = bpi.prove_batch(sv, gamma)
+        bpi.verify_batch([proof])
+
+    def test_prove_batch16(self):
+        bpi = bp.BulletProofBuilder()
+        sv = [crypto.sc_init(137 * i) for i in range(16)]
+        gamma = [crypto.sc_init(991 * i) for i in range(16)]
         proof = bpi.prove_batch(sv, gamma)
         bpi.verify_batch([proof])
 

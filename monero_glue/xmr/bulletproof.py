@@ -917,7 +917,8 @@ class KeyVPrngMask(KeyVBase):
                 self.reset()
                 prev = 0
 
-            rev = 64 * (item - prev - 1)
+            blocksize = self.prng.BLOCK_SIZE if hasattr(self.prng, 'BLOCK_SIZE') else 64
+            rev = blocksize * (item - prev - 1)
             self.prng.rewind(rev)
             return self._next()
 
