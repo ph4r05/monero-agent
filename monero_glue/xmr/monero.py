@@ -18,6 +18,8 @@ from .sub.recode import *
 from .sub.recode_ext import *
 from .sub.tsx_helper import *
 from .sub.xmr_net import *
+from typing import Tuple, Optional
+from .crypto import Ge25519, Sc25519
 
 DISPLAY_DECIMAL_POINT = 12
 
@@ -43,7 +45,7 @@ class TxScanInfo(object):
     ]
 
 
-def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
+def get_subaddress_secret_key(secret_key: Sc25519, index=None, major=None, minor=None) -> Sc25519:
     """
     Builds subaddress secret key from the subaddress index
     Hs(SubAddr || a || index_major || index_minor)
@@ -58,7 +60,7 @@ def get_subaddress_secret_key(secret_key, index=None, major=None, minor=None):
     return crypto.get_subaddress_secret_key(secret_key, major, minor)
 
 
-def get_subaddress_spend_public_key(view_private, spend_public, major, minor):
+def get_subaddress_spend_public_key(view_private: Sc25519, spend_public: Ge25519, major, minor) -> Ge25519:
     """
     Generates subaddress spend public key D_{major, minor}
     """
@@ -71,7 +73,7 @@ def get_subaddress_spend_public_key(view_private, spend_public, major, minor):
     return D
 
 
-def derive_subaddress_public_key(out_key, derivation, output_index):
+def derive_subaddress_public_key(out_key, derivation: Ge25519, output_index) -> Ge25519:
     """
     out_key - H_s(derivation || varint(output_index))G
     """
@@ -82,7 +84,7 @@ def derive_subaddress_public_key(out_key, derivation, output_index):
     return point4
 
 
-def generate_key_image(public_key, secret_key):
+def generate_key_image(public_key: Ge25519, secret_key: Sc25519) -> Ge25519:
     """
     Key image: secret_key * H_p(pub_key)
     """
@@ -92,7 +94,7 @@ def generate_key_image(public_key, secret_key):
 
 
 def is_out_to_acc_precomp(
-    subaddresses, out_key, derivation, additional_derivations, output_index
+    subaddresses, out_key: Ge25519, derivation, additional_derivations, output_index
 ):
     """
     Searches subaddresses for the computed subaddress_spendkey.
@@ -123,7 +125,7 @@ def is_out_to_acc_precomp(
 
 def generate_key_image_helper_precomp(
     ack, out_key, recv_derivation, real_output_index, received_index
-):
+) -> Tuple[Sc25519, Ge25519]:
     """
     Generates UTXO spending key and key image.
 
@@ -133,7 +135,7 @@ def generate_key_image_helper_precomp(
     :param recv_derivation:
     :param real_output_index:
     :param received_index: subaddress index this payment was received to
-    :return:
+    :return: (spending private key, KI)
     """
     if not crypto.sc_isnonzero(ack.spend_key_private):
         raise ValueError("Watch-only wallet not supported")
@@ -182,11 +184,11 @@ def generate_key_image_helper_precomp(
 def generate_key_image_helper(
     creds,
     subaddresses,
-    out_key,
-    tx_public_key,
+    out_key: Ge25519,
+    tx_public_key: Ge25519,
     additional_tx_public_keys,
     real_output_index,
-):
+) -> Tuple[Sc25519, Ge25519, Ge25519]:
     """
     Generates UTXO spending key and key image.
     Supports subaddresses.
@@ -197,7 +199,7 @@ def generate_key_image_helper(
     :param tx_public_key: R, transaction public key
     :param additional_tx_public_keys: Additional Rs, for subaddress destinations
     :param real_output_index: index of the real output in the RCT
-    :return:
+    :return: (private spending key, KI, recv_derivation)
     """
     recv_derivation = crypto.generate_key_derivation(
         tx_public_key, creds.view_key_private

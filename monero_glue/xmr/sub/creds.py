@@ -1,6 +1,8 @@
 from monero_glue.xmr import crypto
 from monero_glue.xmr.sub.addr import encode_addr
 from monero_glue.xmr.sub.xmr_net import NetworkTypes, net_version
+from typing import Optional
+from monero_glue.xmr.crypto import Ge25519, Sc25519
 
 
 class AccountCreds(object):
@@ -10,10 +12,10 @@ class AccountCreds(object):
 
     def __init__(
         self,
-        view_key_private=None,
-        spend_key_private=None,
-        view_key_public=None,
-        spend_key_public=None,
+        view_key_private: Optional[Sc25519] = None,
+        spend_key_private: Optional[Sc25519] = None,
+        view_key_public: Optional[Ge25519] = None,
+        spend_key_public: Optional[Ge25519] = None,
         address=None,
         network_type=NetworkTypes.MAINNET,
     ):

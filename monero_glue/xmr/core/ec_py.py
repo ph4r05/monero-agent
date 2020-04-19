@@ -1055,7 +1055,7 @@ def derive_secret_key(derivation, output_index, base):
     return sc_add(base, scalar)
 
 
-def get_subaddress_secret_key(secret_key, major=0, minor=0):
+def get_subaddress_secret_key(secret_key: Sc25519, major=0, minor=0) -> Sc25519:
     """
     Builds subaddress secret key from the subaddress index
     Hs(SubAddr || a || index_major || index_minor)
