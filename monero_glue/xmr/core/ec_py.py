@@ -671,7 +671,7 @@ def point_mulinv8(P):
 
 def point_mul8_into(r, P):
     r = r if r else new_point()
-    return r.init(P * INV_EIGHT_SC)
+    return r.init(P * EIGHT)
 
 
 def sc_inv_eight():
