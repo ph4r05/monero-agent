@@ -4,14 +4,22 @@
 
 import os
 import time
+import logging
+import coloredlogs
+from monero_glue.messages.DebugMoneroDiagRequest import DebugMoneroDiagRequest
 
-from monero_glue.xmr.sub.addr import AddrInfo
 from trezorlib import debuglink, device
 
 from monero_glue.agent import agent_lite
 from monero_glue.xmr import crypto, monero, wallet
+from monero_glue.xmr import bulletproof as bp
+from monero_glue.xmr import bulletproof_cl as bpcl
 from monero_glue_test.base_agent_test import BaseAgentTest
 from monero_glue.trezor import manager as tmanager
+
+logger = logging.getLogger(__name__)
+coloredlogs.CHROOT_FILES = []
+coloredlogs.install(level=logging.INFO, use_chroot=False)
 
 
 class TrezorTest(BaseAgentTest):
@@ -22,10 +30,14 @@ class TrezorTest(BaseAgentTest):
         self.creds = None
         self.test_only_tsx = False
         self.is_debug = True
+        self.do_timing = int(os.getenv('TREZOR_TEST_TIMING', '1'))
+        self.do_bp_off = int(os.getenv('TREZOR_TEST_BP_OFF', '0'))
+        self.time_start = None
+        self.timing_bins = {}
 
     def get_trezor_path(self):
         tpath = os.getenv('TREZOR_PATH')
-        return tpath if tpath is not None else 'udp:127.0.0.1:21324'
+        return tpath if tpath is not None else 'webusb:020:2'  # 'udp:127.0.0.1:21324'
 
     def reinit_trezor(self):
         self.deinit()
@@ -58,9 +70,14 @@ class TrezorTest(BaseAgentTest):
     def setUp(self):
         super().setUp()
         self.reinit_trezor()
+        self.time_start = time.time()
 
     def tearDown(self):
+        tellapsed = time.time() - self.time_start
+        self.timing_bins[self._testMethodName] = tellapsed
         self.deinit()
+        if self.do_timing:
+            print('Test %s took %.2f s' % (self._testMethodName, tellapsed))
         super().tearDown()
 
     def should_test_only_tx(self):
@@ -114,7 +131,7 @@ class TrezorTest(BaseAgentTest):
         await self.verify_ki_export(res, ki_loaded)
 
     async def test_live_refresh(self):
-        if self.should_test_only_tx() or not int(os.getenv("TREZOR_TEST_LIVE_REFRESH", '0')):
+        if self.should_test_only_tx() or not int(os.getenv("TREZOR_TEST_LIVE_REFRESH", '1')):
             self.skipTest("Live refresh skipped")
 
         creds = self.get_trezor_creds(0)
@@ -155,23 +172,27 @@ class TrezorTest(BaseAgentTest):
             time.sleep(0.1)
         await self.agent.live_refresh_final()
 
-    async def test_transactions_bp_c0_hf9(self):
-        if not int(os.getenv('TREZOR_TEST_SIGN_CL0_HF9', '0')):
-            self.skipTest('Tx Sign cl1 hf9 skipped')
-        await self.int_test_trezor_txs(as_bulletproof=True, client_version=0, hf=9)
-
-    async def test_transactions_bp_c1_hf9(self):
-        if not int(os.getenv('TREZOR_TEST_SIGN_CL1_HF9', '0')):
-            self.skipTest('Tx Sign cl1 hf9 skipped')
-        await self.int_test_trezor_txs(as_bulletproof=True, client_version=1, hf=9)
-
     async def test_transactions_bp_c1_hf10(self):
         if not int(os.getenv('TREZOR_TEST_SIGN_CL1_HF10', '1')):
             self.skipTest('Tx Sign cl1 hf10 skipped')
         await self.int_test_trezor_txs(as_bulletproof=True, client_version=1, hf=10)
 
+    def get_trezor_tsx_tests_paper(self):
+        return [
+          'tsx_t_uns_xx_in02-out02-ring12.txt',
+          'tsx_t_uns_xx_in02-out02-ring24.txt',
+          'tsx_t_uns_xx_in02-out02-ring48.txt',
+          'tsx_t_uns_xx_in16-out02-ring12.txt',
+          'tsx_t_uns_xx_in32-out02-ring12.txt',
+          'tsx_t_uns_xx_in64-out02-ring12.txt',
+          'tsx_t_uns_xx_in128-out02-ring12.txt',
+          'tsx_t_uns_xx_in02-out16-ring12.txt',
+          'tsx_t_uns_xx_in16-out16-ring12.txt',
+        ]
+
     def get_testing_files(self):
-        fl = self.get_trezor_tsx_tests()
+        test_paperset = int(os.getenv('TREZOR_TEST_PAPER', 0))
+        fl = self.get_trezor_tsx_tests_paper() if test_paperset else self.get_trezor_tsx_tests()
         env_num = os.getenv('TREZOR_TEST_NUM_TX')
         if env_num:
             try:
@@ -199,6 +220,7 @@ class TrezorTest(BaseAgentTest):
             print('Testing[bp=%s,cl=%s,hf=%s]: %s' % (as_bulletproof, client_version, hf, fl))
             last_test_ok = False
             last_test_name = fl
+            tstart = time.time()
 
             with self.subTest(msg=fl):
                 unsigned_tx_c = self.get_data_file(fl)
@@ -214,4 +236,28 @@ class TrezorTest(BaseAgentTest):
                 await self.tx_sign_test(self.agent, unsigned_tx, creds, all_creds, fl)
                 await self.agent.get_address()  # resets flow
                 last_test_ok = True
-                print('OK')
+                print('OK in %.2f s' % (time.time() - tstart))
+
+    async def test_comm_diag(self):
+        if not self.do_bp_off:
+            self.skipTest("Comm skipped")
+        msg = DebugMoneroDiagRequest(ins=0, p1=0, p2=0)
+        for i in range(100):
+            await self.trezor_proxy.call(msg)
+
+    async def test_bp_off(self):
+        if not self.do_bp_off:
+            self.skipTest("BP offloading not tested")
+        ln = int(os.getenv('BP_M', '16'))
+
+        async def diagMessenger(p1=0, p2=0, params=None, buffers=None):
+            msg = DebugMoneroDiagRequest(ins=7, p1=p1, p2=p2, pd=params, data3=buffers)
+            return (await self.trezor_proxy.call(msg)).data3
+
+        cl = bpcl.BulletproofClient(ln, messenger=diagMessenger)
+        proof = await cl.compute_bp()
+
+        bpi = bp.BulletProofBuilder()
+        bpi.verify_batch([proof])
+
+        logger.info('M: %s, Nmsgs %s, Sent %s, Recv %s, time %.2f' % (ln, cl.n_msgs, cl.n_sent, cl.n_recv, cl.prove_time))
