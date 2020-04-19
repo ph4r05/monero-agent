@@ -52,6 +52,10 @@ class KeccakWrapper(object):
     def __repr__(self):
         return "<KeccakHash: %s>" % self.h
 
+    def reset(self):
+        self.h = tcry.xmr_hasher_init_r()
+        return self
+
     def copy(self):
         h_copy = tcry.xmr_hasher_copy_r(self.h)
         return KeccakWrapper(h_copy)
@@ -59,8 +63,12 @@ class KeccakWrapper(object):
     def update(self, s):
         tcry.xmr_hasher_update(self.h, bytes(s))
 
-    def digest(self):
+    def digest(self, buff=None):
         r = tcry.xmr_hasher_final_r(self.h)
+        if buff:
+            for i in range(len(r)):
+                buff[i] = r[i]
+            r = buff
         self.h = None
         return r
 

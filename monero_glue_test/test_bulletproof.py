@@ -44,8 +44,8 @@ class BulletproofTest(aiounittest.AsyncTestCase):
         x = bp._ensure_dst_key()
         y = bp._ensure_dst_key()
 
-        sL = bpi.sL_vct(64)
-        sR = bpi.sR_vct(64)
+        sL = bpi.sL_vct(64, allow_nonlinear=True)
+        sR = bpi.sR_vct(64, allow_nonlinear=True)
 
         self.assertEqual(sL.to(0, x), sL.to(0, y))
         self.assertEqual(sL.to(1, x), sL.to(1, y))

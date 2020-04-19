@@ -309,6 +309,8 @@ class KeccakHash(object):
 
         # hashlib interface members
         assert output_bits % 8 == 0
+        self.capacity_bits = capacity_bits
+        self.bitrate_bits = bitrate_bits
         self.digest_size = bits2bytes(output_bits)
         self.block_size = bits2bytes(bitrate_bits)
 
@@ -323,14 +325,24 @@ class KeccakHash(object):
     def copy(self):
         return deepcopy(self)
 
+    def reset(self):
+        self.sponge = KeccakSponge(
+            self.bitrate_bits, self.bitrate_bits + self.capacity_bits, multirate_padding, keccak_f
+        )
+
     def update(self, s):
         self.sponge.absorb(s)
 
-    def digest(self):
+    def digest(self, buff=None):
         finalised = self.sponge.copy()
         finalised.absorb_final()
         digest = finalised.squeeze(self.digest_size)
-        return KeccakState.bytes2str(digest)
+        res = KeccakState.bytes2str(digest)
+        if buff:
+            for i in range(len(res)):
+                buff[i] = res[i]
+            return buff
+        return res
 
     def hexdigest(self):
         return self.digest().encode("hex")
