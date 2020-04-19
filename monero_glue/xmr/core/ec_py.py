@@ -189,18 +189,19 @@ def get_keccak(*args, **kwargs):
     return k
 
 
-def keccak_hash(inp):
+def keccak_hash(inp, size=None):
     """
     Hashesh input in one call
     :return:
     """
+    inpx = inp if size is None else inp[:size]
     ctx = get_keccak()
-    ctx.update(inp)
+    ctx.update(inpx)
     return ctx.digest()
 
 
-def keccak_hash_into(r, inp):
-    b = keccak_hash(inp)
+def keccak_hash_into(r, inp, size=None):
+    b = keccak_hash(inp, size)
     return memcpy(r, 0, b, 0, 32)
 
 
@@ -1070,6 +1071,8 @@ def get_subaddress_secret_key(secret_key, major=0, minor=0):
     )
     return hash_to_scalar(buffer)
 
+
+ge25519_double_scalarmult_base_vartime = ge_double_scalarmult_base_vartime
 
 #
 # Backend config

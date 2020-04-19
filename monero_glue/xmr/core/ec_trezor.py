@@ -87,13 +87,13 @@ def keccak_hash(inp):
     return tcry.xmr_fast_hash_r(bytes(inp))
 
 
-def keccak_hash_into(r, inp):
+def keccak_hash_into(r, inp, size=None):
     """
     Hashesh input in one call
     :return:point_add
     """
     bf = tcry.KEY_BUFF.from_buffer(r)
-    tcry.cl().xmr_fast_hash(bf, bytes(inp), len(inp))
+    tcry.cl().xmr_fast_hash(bf, bytes(inp), size if size else len(inp))
     return r
 
 
@@ -898,6 +898,9 @@ def prove_range(amount, last_mask=None):
     #     nrsig.asig.s1[i] = bytes(nrsig.asig.s1[i])
     #
     # return C, a, nrsig
+
+
+ge25519_double_scalarmult_base_vartime = ge_double_scalarmult_base_vartime
 
 
 #
