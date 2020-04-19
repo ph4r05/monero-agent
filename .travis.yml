@@ -1,6 +1,6 @@
 language: python
 sudo: false
-dist: stretch
+dist: bionic
 
 compiler:
   - clang
@@ -28,9 +28,7 @@ cache:
     - $HOME/libtrezor-crypto
 
 python:
-  - "3.5"
-  - "3.6"
-  - "pypy3"
+  - "3.7"
 
 install:
   - ./travis-install-libsodium.sh
