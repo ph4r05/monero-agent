@@ -18,9 +18,11 @@ from .sub.recode import *
 from .sub.recode_ext import *
 from .sub.tsx_helper import *
 from .sub.xmr_net import *
-from typing import Tuple, Optional
+from typing import Tuple, List, Dict, Optional
 from .crypto import Ge25519, Sc25519
 
+
+Subaddresses = Dict[bytes, Tuple[int, int]]
 DISPLAY_DECIMAL_POINT = 12
 
 
@@ -94,8 +96,8 @@ def generate_key_image(public_key: Ge25519, secret_key: Sc25519) -> Ge25519:
 
 
 def is_out_to_acc_precomp(
-    subaddresses, out_key: Ge25519, derivation, additional_derivations, output_index
-):
+    subaddresses: Subaddresses, out_key: Ge25519, derivation: Ge25519, additional_derivations: Optional[List[Ge25519]], output_index
+) -> Optional[Tuple[Tuple[int, int], Ge25519]]:
     """
     Searches subaddresses for the computed subaddress_spendkey.
     If found, returns (major, minor), derivation.
@@ -227,7 +229,7 @@ def generate_key_image_helper(
     return xi, ki, recv_derivation
 
 
-def check_acc_out_precomp(tx_out, subaddresses, derivation, additional_derivations, i):
+def check_acc_out_precomp(tx_out: Ge25519, subaddresses: Subaddresses, derivation: Ge25519, additional_derivations: Optional[List[Ge25519]], i) -> TxScanInfo:
     """
     wallet2::check_acc_out_precomp
     Detects whether the tx output belongs to the subaddresses. If yes, computes the derivation.
@@ -425,7 +427,7 @@ def generate_keys(recovery_key):
     return recovery_key, pub
 
 
-def generate_monero_keys(seed):
+def generate_monero_keys(seed: Sc25519) -> Tuple[Sc25519, Ge25519, Sc25519, Ge25519]:
     """
     Generates spend key / view key from the seed in the same manner as Monero code does.
 
@@ -440,7 +442,7 @@ def generate_monero_keys(seed):
     return spend_sec, spend_pub, view_sec, view_pub
 
 
-def generate_sub_address_keys(view_sec, spend_pub, major, minor):
+def generate_sub_address_keys(view_sec: Sc25519, spend_pub: Ge25519, major, minor) -> Tuple[Ge25519, Ge25519]:
     """
     Computes generic public sub-address
     :param view_sec:
