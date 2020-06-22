@@ -61,7 +61,6 @@ parser.add_argument(
     help="Monero master secret seed",
 )
 
-
 parser.add_argument(
     "--mainnet",
     dest="mainnet",
@@ -108,6 +107,7 @@ parser.add_argument(
 )
 
 parser.add_argument("--path", dest="path", default=None, help="Custom derivation path")
+parser.add_argument("--passphrase", dest="passphrase", default="", help="Specify a passphrase for seed derivation")
 
 parser.add_argument(
     "--debug",
@@ -162,7 +162,7 @@ async def amain(args):
         sd = SeedDerivation.from_master_seed(seed, **deriv_args)
 
     else:
-        sd = SeedDerivation.from_mnemonics(mnems, args.wlist_seed, **deriv_args)
+        sd = SeedDerivation.from_mnemonics(mnems, args.wlist_seed, args.passphrase.encode("utf8"), **deriv_args)
 
     main_addr = sd.creds(network_type=NetworkTypes.MAINNET)
     test_addr = sd.creds(network_type=NetworkTypes.TESTNET)

@@ -94,15 +94,18 @@ class SeedDerivation(object):
         return cleaned
 
     @classmethod
-    def from_mnemonics(cls, mnemonics, as_index=False, *args, **kwargs):
+    def from_mnemonics(cls, mnemonics, as_index=False, passphrase=b"", *args, **kwargs):
         mnems = SeedDerivation.clean_input(mnemonics)
 
         if as_index:
+            if passphrase:
+                raise ValueError("Passphrase not supported for index mnemonic interpretation")
+
             indices = [bip39.english_words.index(x) for x in mnems]
             seed = bip32.Wallet.indices_to_bytes(indices)
 
         else:
-            seed = bip39_deriv.mnemonics_to_seed(" ".join(mnems))
+            seed = bip39_deriv.mnemonics_to_seed(" ".join(mnems), passphrase=passphrase)
 
         r = cls()
         r.mnemonics = mnems
