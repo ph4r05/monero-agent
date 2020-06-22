@@ -541,6 +541,56 @@ Testnet Sub addresses:
  4, 4: BaWCZzMwtXFTaCj4wSNDnni13zVszkiBbeP2v7KDG9mZUvQWoE7PtXV5ga4WRrvCrUJ1PjmFP1kFNTowckgndCQYVsmA5nH
 ```
 
+## Trezor seeds
+The seed utility can help with generation of the Monero-related secrets from the master Trezor seed.
+
+*Warning*: you should never execute these scripts with your real seeds in an insecure environment, which is basically every workstation.
+Entering seeds to electronic devices should be only the last recovery option, performed on a freshly booted, security-oriented system, such as Tails or Whonix.
+
+Recovery without passphrase:
+```bash
+monero-seed --slip0010 -- 'permit universe parent weapon amused modify essay borrow tobacco budget walnut lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple'
+# OR: python3 -m monero_poc.seed --slip0010 -- 'permit universe parent weapon amused modify essay borrow tobacco budget walnut lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple'
+
+Seed bip39 words: permit universe parent weapon amused modify essay borrow tobacco budget walnut lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple
+Seed bip32 b58:   019a688cb29a48235e6b92dc557798eab567e60916e60711b87fceb15f2e26b7d52066515c1d14fdba5b92e44ee33b74b0cfebba1d545e61b34822410dd76cdd
+
+Seed Monero:      14821d0bc5659b24cafbc889dc4fc60785ee08b65d71c525f81eeaba4f3a570f
+Seed Monero wrds: geek together unwind nostril tugs afraid both keyboard zoom oncoming vixen withdrawn napkin railway imagine friendly zebra candy deftly ferry aerial axle jaded light jaded
+
+Private spend key: 14821d0bc5659b24cafbc889dc4fc60785ee08b65d71c525f81eeaba4f3a570f
+Private view key:  a6ccd4ac344a295d1387f8d18c81bdd394f1845de84188e204514ef9370fd403
+
+Public spend key:  c59186a85caae34510668d4eb7a71d1717f7d0dbea991feb877be781e9f851b7
+Public view key:   049b7cf656b84fabeb88bce18f804f847c6e0dd57bf4bba67479458b162063cb
+
+Mainnet Address:   497MP7bh5MkCZ1TiZZoYi84s39n5V5HpSgPvrqqUMqw6XcWDu4QhBs4VkqiPsNMhTUPAHHE6DUo9UUqpfSZfxkANPw44Fgn
+Testnet Address:   9zetsNFxMirCZ1TiZZoYi84s39n5V5HpSgPvrqqUMqw6XcWDu4QhBs4VkqiPsNMhTUPAHHE6DUo9UUqpfSZfxkANPwbdsur
+Stagenet Address:  59KPTxWeixrCZ1TiZZoYi84s39n5V5HpSgPvrqqUMqw6XcWDu4QhBs4VkqiPsNMhTUPAHHE6DUo9UUqpfSZfxkANPv8LFHX
+```
+
+Or with a passphrase:
+```bash
+monero-seed --slip0010 --passphrase 'a' -- 'permit universe parent weapon amused modify essay borrow tobacco budget walnut lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple'
+# OR: python3 -m monero_poc.seed --slip0010 --passphrase 'a' -- 'permit universe parent weapon amused modify essay borrow tobacco budget walnut lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple'
+
+Seed bip39 words: permit universe parent weapon amused modify essay borrow tobacco budget walnut lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple
+Seed bip32 b58:   ca23c96aa8552adf211ebbe1d23f78670b5ffb541b5276e26db1b2c7943ae7b354b013805b1836390187a1a3d5915f109a0f7a67c4e4603bb451a5df12bb5931
+
+Seed Monero:      0b86cf0e71204ca3cdc389daf0bb1cf654ac7d54edfed68a9faf921ba140a708
+Seed Monero wrds: maul loudly nearby buffet hacksaw zones kernels edgy baffles match extra eclipse uphill arena hounded wobbly actress muppet pebbles onward rift tether scrub snake rift
+
+Private spend key: 0b86cf0e71204ca3cdc389daf0bb1cf654ac7d54edfed68a9faf921ba140a708
+Private view key:  3b1213f644062fbfb15c4fa35e656659e4105ac728b791ce5ad10af98bc6d200
+
+Public spend key:  fc25f0a1a1fb4e6afe5ffa15cd06fcbb913eb55605d09adf5de735163d4f4a3e
+Public view key:   2ba093948b429ec90729ecd0f705b87f36154612756433fc3dc7d8dbbf646529
+
+Mainnet Address:   4BBKEeg8iH3JtyQKfdh5KRYNe2WK4aDMBeMwPvkjrm45BQ8bVHurmLyadDx3EiM6AjNH7JJx5TMNrjC4JLZEhszc5f3G8Yg
+Testnet Address:   A2iriuLPze9JtyQKfdh5KRYNe2WK4aDMBeMwPvkjrm45BQ8bVHurmLyadDx3EiM6AjNH7JJx5TMNrjC4JLZEhszc5dqa8Po
+Stagenet Address:  5BPMKVb6Mt9JtyQKfdh5KRYNe2WK4aDMBeMwPvkjrm45BQ8bVHurmLyadDx3EiM6AjNH7JJx5TMNrjC4JLZEhszc5eeaUED
+```
+
 # Testing with Trezor
 
 Agent supports also communication with Trezor directly.
