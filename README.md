@@ -205,8 +205,10 @@ It thus take 184 B and 320 B to store an EC point in the natural form compared t
 # Donations
 Thanks for your support!
 
-Monero address:
-`47BEukN83whUdvuXbaWmDDQLYNUpLsvFR2jioQtpP5vD8b3o74b9oFgQ3KFa3ibjbwBsaJEehogjiUCfGtugUGAuJAfbh1Z`
+Monero donation address:
+```
+88np3NiHwTVDZCNAZWth856ZwriMpp3iRBoAEy4yGWpR17eqqtQYs1RiwcWZexg8Wa8x143p2pu8LWJ7qYutJHjhTQB8gC1
+```
 
 # Internal notes
 
