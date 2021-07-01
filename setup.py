@@ -13,7 +13,7 @@ from distutils.errors import DistutilsError
 logger = logging.getLogger(__name__)
 
 
-version = "3.0.1"
+version = "3.0.2"
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
@@ -217,6 +217,7 @@ setup(
             'monero-agent = monero_poc.agent:main',
             'monero-trezor-poc = monero_poc.trezor:main',
             'monero-trezor-init = monero_poc.trezor_init:main',
+            'monero-trezor-address = monero_poc.trezor_address:main',
             'monero-trezor-log = monero_poc.log_aux:main',
             'monero-test-gen = monero_poc.tools.test_gen:main',
         ],

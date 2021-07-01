@@ -17,10 +17,10 @@ from monero_glue.xmr.sub.xmr_net import NetworkTypes, net_version
 
 import coloredlogs
 
+
 logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
 coloredlogs.install(level=logging.WARNING, use_chroot=False)
-
 
 parser = argparse.ArgumentParser(description="Monero seed utility")
 parser.add_argument("input", metavar="mnemonics", nargs="*", help="Input")
@@ -234,10 +234,10 @@ def gen_sub_address(sd, net_type, major_max, minor_max):
                 crypto.encodepoint(D),
                 crypto.encodepoint(C),
             )
-            yield (major, minor, addr)
+            yield major, minor, addr
 
 
-def main(args):
+def main(args=None):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(amain(args))
     loop.close()

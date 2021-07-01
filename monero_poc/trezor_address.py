@@ -7,6 +7,8 @@ import argparse
 import os
 import sys
 import asyncio
+import coloredlogs
+import logging
 
 from monero_glue.trezor import manager as tmanager
 from monero_glue.xmr.sub.xmr_net import NetworkTypes
@@ -15,6 +17,10 @@ from trezorlib import debuglink, device, ui
 from trezorlib.client import TrezorClient
 from trezorlib.debuglink import TrezorClientDebugLink
 from trezorlib.transport import get_transport
+
+
+logger = logging.getLogger(__name__)
+coloredlogs.CHROOT_FILES = []
 
 
 async def amain():
@@ -36,6 +42,11 @@ async def amain():
         "--debug", dest="debug", default=False, action="store_const", const=True, help="Debug",
     )
     args = parser.parse_args()
+
+    if args.debug:
+        coloredlogs.install(level=logging.DEBUG, use_chroot=False)
+    else:
+        coloredlogs.install(level=logging.INFO, use_chroot=False)
 
     debug_mode = args.debug
     if args.trezor_path:
