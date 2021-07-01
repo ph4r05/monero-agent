@@ -13,7 +13,7 @@ from distutils.errors import DistutilsError
 logger = logging.getLogger(__name__)
 
 
-version = "3.0.2"
+version = "3.0.3"
 
 # Please update tox.ini when modifying dependency version requirements
 install_requires = [
@@ -21,6 +21,7 @@ install_requires = [
     "pycryptodome",
     "py-cryptonight>=0.1.2",
     "chacha20poly1305",
+    "protobuf==3.17.3",
 ]
 
 dev_extras = [
@@ -36,7 +37,6 @@ dev_extras = [
     "pycparser",
     "ctypeslib2",
     "cryptography",  # chacha20poly1305
-    "protobuf==3.4.0",
 ]
 
 poc_extras = [
@@ -52,6 +52,7 @@ poc_extras = [
     "eventlet",
     "gevent",
     "sarge>=0.1.5",
+    "attrs==21.2.0",
 ]
 
 # trezor-crypto backend, secure and fast

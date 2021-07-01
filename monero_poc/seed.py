@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
+# install dependencies with `pip install .[poc,trezor]`
 
 
 import argparse
