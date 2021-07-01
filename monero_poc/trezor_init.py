@@ -5,11 +5,20 @@
 
 import argparse
 import os
+import logging
 
 from trezorlib import debuglink, device, ui
 from trezorlib.client import TrezorClient
 from trezorlib.debuglink import TrezorClientDebugLink
 from trezorlib.transport import get_transport
+
+
+logger = logging.getLogger(__name__)
+try:
+    import coloredlogs
+    coloredlogs.CHROOT_FILES = []
+except Exception as e:
+    pass
 
 
 def main():
@@ -42,7 +51,19 @@ def main():
     parser.add_argument(
         "--debug", dest="debug", default=False, action="store_const", const=True, help="Debug",
     )
+    parser.add_argument(
+        "--debug-link", dest="debug_link", default=False, action="store_const", const=True,
+        help="Debug link with Trezor. May skip some dialogs (e.g., passphrase entry)",
+    )
     args = parser.parse_args()
+
+    try:
+        if args.debug:
+            coloredlogs.install(level=logging.DEBUG, use_chroot=False)
+        else:
+            coloredlogs.install(level=logging.INFO, use_chroot=False)
+    except Exception as e:
+        pass
 
     mnemonic12 = (
         "alcohol woman abuse must during monitor noble actual mixed trade anger aisle"
@@ -52,7 +73,7 @@ def main():
         "lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple"
     )
 
-    debug_mode = args.debug
+    debug_mode = args.debug_link
     if args.trezor_path:
         path = args.trezor_path
     elif args.trezor_idx:

@@ -7,7 +7,6 @@ import argparse
 import os
 import sys
 import asyncio
-import coloredlogs
 import logging
 
 from monero_glue.trezor import manager as tmanager
@@ -20,7 +19,12 @@ from trezorlib.transport import get_transport
 
 
 logger = logging.getLogger(__name__)
-coloredlogs.CHROOT_FILES = []
+try:
+    import coloredlogs
+    coloredlogs.CHROOT_FILES = []
+    coloredlogs.install(level=logging.WARNING, use_chroot=False)
+except:
+    pass
 
 
 async def amain():
@@ -41,14 +45,21 @@ async def amain():
     parser.add_argument(
         "--debug", dest="debug", default=False, action="store_const", const=True, help="Debug",
     )
+    parser.add_argument(
+        "--debug-link", dest="debug_link", default=False, action="store_const", const=True,
+        help="Debug link with Trezor. May skip some dialogs (e.g., passphrase entry)",
+    )
     args = parser.parse_args()
 
-    if args.debug:
-        coloredlogs.install(level=logging.DEBUG, use_chroot=False)
-    else:
-        coloredlogs.install(level=logging.INFO, use_chroot=False)
+    try:
+        if args.debug:
+            coloredlogs.install(level=logging.DEBUG, use_chroot=False)
+        else:
+            coloredlogs.install(level=logging.INFO, use_chroot=False)
+    except Exception as e:
+        pass
 
-    debug_mode = args.debug
+    debug_mode = args.debug_link
     if args.trezor_path:
         path = args.trezor_path
     elif args.trezor_idx:
@@ -64,7 +75,7 @@ async def amain():
     )
 
     # client.transport.session_begin()
-    trezor_proxy = tmanager.Trezor(path=path, debug=True)
+    trezor_proxy = tmanager.Trezor(path=path, debug=args.debug_link)
     network_type = NetworkTypes.MAINNET
     agent = agent_lite.Agent(trezor_proxy, network_type=network_type)
     res = await agent.get_address()

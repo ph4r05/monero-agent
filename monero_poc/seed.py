@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Author: Dusan Klinec, ph4r05, 2018
-# install dependencies with `pip install .[poc,trezor]`
+#
+# Install dependencies with `pip install .[poc,trezor]`
 
 
 import argparse
@@ -16,12 +17,14 @@ from monero_glue.xmr.sub.addr import encode_addr
 from monero_glue.xmr.sub.seed import SeedDerivation
 from monero_glue.xmr.sub.xmr_net import NetworkTypes, net_version
 
-import coloredlogs
-
 
 logger = logging.getLogger(__name__)
-coloredlogs.CHROOT_FILES = []
-coloredlogs.install(level=logging.WARNING, use_chroot=False)
+try:
+    import coloredlogs
+    coloredlogs.CHROOT_FILES = []
+    coloredlogs.install(level=logging.WARNING, use_chroot=False)
+except:
+    pass
 
 
 async def amain():
