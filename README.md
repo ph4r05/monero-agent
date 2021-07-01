@@ -171,7 +171,7 @@ TREZOR_TEST_INTERACTIVE=1 TREZOR_TEST_ONLY_TX=1 TREZOR_TEST_NUM_TX=1 python3 -m 
 
 ## More on using the repo
 
-Please refer to the PoC.md for more usage examples.
+Please refer to the [PoC.md](PoC.md) for more usage examples.
 
 ### Memory considerations
 

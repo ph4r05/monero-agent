@@ -547,6 +547,11 @@ The seed utility can help with generation of the Monero-related secrets from the
 *Warning*: you should never execute these scripts with your real seeds in an insecure environment, which is basically every workstation.
 Entering seeds to electronic devices should be only the last recovery option, performed on a freshly booted, security-oriented system, such as Tails or Whonix.
 
+Install dependencies
+```bash
+$> pip install .[poc,trezor]
+```
+
 Recovery without passphrase:
 ```bash
 monero-seed --slip0010 -- 'permit universe parent weapon amused modify essay borrow tobacco budget walnut lunch consider gallery ride amazing frog forget treat market chapter velvet useless topple'
