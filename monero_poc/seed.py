@@ -23,106 +23,106 @@ logger = logging.getLogger(__name__)
 coloredlogs.CHROOT_FILES = []
 coloredlogs.install(level=logging.WARNING, use_chroot=False)
 
-parser = argparse.ArgumentParser(description="Monero seed utility")
-parser.add_argument("input", metavar="mnemonics", nargs="*", help="Input")
 
-parser.add_argument(
-    "--seed",
-    dest="seed",
-    default=False,
-    action="store_const",
-    const=True,
-    help="Input is hexcoded seed / master secret, input to Hnode derivation",
-)
+async def amain():
+    parser = argparse.ArgumentParser(description="Monero seed utility")
+    parser.add_argument("input", metavar="mnemonics", nargs="*", help="Input")
 
-parser.add_argument(
-    "--wlist-seed",
-    dest="wlist_seed",
-    default=False,
-    action="store_const",
-    const=True,
-    help="Mnemonics converted to seed using the wordlist indices",
-)
+    parser.add_argument(
+        "--seed",
+        dest="seed",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Input is hexcoded seed / master secret, input to Hnode derivation",
+    )
 
-parser.add_argument(
-    "--electrum-mnemonics",
-    dest="electrum_mnemonics",
-    default=False,
-    action="store_const",
-    const=True,
-    help="Monero electrum mneomonics encoding Monero master secret seed",
-)
+    parser.add_argument(
+        "--wlist-seed",
+        dest="wlist_seed",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Mnemonics converted to seed using the wordlist indices",
+    )
 
-parser.add_argument(
-    "--monero-master",
-    dest="monero_master",
-    default=False,
-    action="store_const",
-    const=True,
-    help="Monero master secret seed",
-)
+    parser.add_argument(
+        "--electrum-mnemonics",
+        dest="electrum_mnemonics",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Monero electrum mneomonics encoding Monero master secret seed",
+    )
 
-parser.add_argument(
-    "--mainnet",
-    dest="mainnet",
-    default=False,
-    action="store_const",
-    const=True,
-    help="Mainnet",
-)
+    parser.add_argument(
+        "--monero-master",
+        dest="monero_master",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Monero master secret seed",
+    )
 
-parser.add_argument(
-    "--testnet",
-    dest="testnet",
-    default=False,
-    action="store_const",
-    const=True,
-    help="Testnet",
-)
+    parser.add_argument(
+        "--mainnet",
+        dest="mainnet",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Mainnet",
+    )
 
-parser.add_argument(
-    "--stagenet",
-    dest="stagenet",
-    default=False,
-    action="store_const",
-    const=True,
-    help="Stagenet",
-)
+    parser.add_argument(
+        "--testnet",
+        dest="testnet",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Testnet",
+    )
 
-parser.add_argument(
-    "--subs",
-    dest="subs",
-    default=False,
-    action="store_const",
-    const=True,
-    help="Compute 5x5 sub addresses given network",
-)
+    parser.add_argument(
+        "--stagenet",
+        dest="stagenet",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Stagenet",
+    )
 
-parser.add_argument(
-    "--slip0010",
-    dest="slip0010",
-    default=False,
-    action="store_const",
-    const=True,
-    help="Use SLIP-0010 derivation with ED25519",
-)
+    parser.add_argument(
+        "--subs",
+        dest="subs",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Compute 5x5 sub addresses given network",
+    )
 
-parser.add_argument("--path", dest="path", default=None, help="Custom derivation path")
-parser.add_argument("--passphrase", dest="passphrase", default="", help="Specify a passphrase for seed derivation")
+    parser.add_argument(
+        "--slip0010",
+        dest="slip0010",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Use SLIP-0010 derivation with ED25519",
+    )
 
-parser.add_argument(
-    "--debug",
-    dest="debug",
-    default=False,
-    action="store_const",
-    const=True,
-    help="Debug",
-)
+    parser.add_argument("--path", dest="path", default=None, help="Custom derivation path")
+    parser.add_argument("--passphrase", dest="passphrase", default="", help="Specify a passphrase for seed derivation")
 
-args = parser.parse_args()
+    parser.add_argument(
+        "--debug",
+        dest="debug",
+        default=False,
+        action="store_const",
+        const=True,
+        help="Debug",
+    )
 
+    args = parser.parse_args()
 
-async def amain(args):
     mnems = []
     for w in args.input:
         mnems += w.split(" ")
@@ -238,11 +238,11 @@ def gen_sub_address(sd, net_type, major_max, minor_max):
             yield major, minor, addr
 
 
-def main(args=None):
+def main():
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(amain(args))
+    loop.run_until_complete(amain())
     loop.close()
 
 
 if __name__ == "__main__":
-    main(args)
+    main()
