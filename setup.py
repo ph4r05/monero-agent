@@ -21,7 +21,7 @@ install_requires = [
     "pycryptodome",
     "py-cryptonight>=0.1.2",
     "chacha20poly1305",
-    "protobuf==3.17.3",
+    "protobuf==3.18.3",
 ]
 
 dev_extras = [
